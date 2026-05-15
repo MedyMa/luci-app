@@ -137,14 +137,18 @@ function normalizeModules(modules) {
 }
 
 function renderUnavailable(status) {
-	return buildModuleBlock(null, [
-		{ label: _('Status'), render: function() { return valueOrDash(status?.error || _('Unavailable')); } },
-		{ label: _('Interface'), render: function() { return valueOrDash(status?.interface); } },
-		{ label: _('Available Interfaces'), render: function() {
-			const interfaces = Array.isArray(status?.interfaces) ? status.interfaces : [];
-			return interfaces.length ? interfaces.join(', ') : '-';
-		} }
-	], status || {});
+	const fields = [
+		{ label: _('Status'), render: function() { return valueOrDash(status?.error || _('Unavailable')); } }
+	];
+	const interfaces = Array.isArray(status?.interfaces) ? status.interfaces : [];
+
+	if (status?.interface)
+		fields.push({ label: _('Interface'), render: function() { return valueOrDash(status.interface); } });
+
+	if (interfaces.length)
+		fields.push({ label: _('SFP Interfaces'), render: function() { return interfaces.join(', '); } });
+
+	return buildModuleBlock(null, fields, status || {});
 }
 
 
@@ -226,10 +230,13 @@ function loadStatuses(interfaceName, timeoutMs) {
 			settled = true;
 			window.clearTimeout(timer);
 
-			if (Array.isArray(status?.modules) && status.modules.length)
+			if (Array.isArray(status?.modules) && status.modules.length) {
 				lastSuccessfulReply = status;
+				resolve(status);
+				return;
+			}
 
-			resolve(status || fallback);
+			resolve(lastSuccessfulReply || status || fallback);
 		}).catch(function() {
 			if (settled)
 				return;

@@ -68,6 +68,19 @@ read_field() {
 	'
 }
 
+read_first_field() {
+	local dump="$1" value
+	shift
+
+	while [ $# -gt 0 ]; do
+		value="$(read_field "$dump" "$1")"
+		[ -n "$value" ] && printf '%s\n' "$value" && return 0
+		shift
+	done
+
+	return 1
+}
+
 get_speed() {
 	local iface="$1"
 	local link_dump speed
@@ -84,7 +97,7 @@ get_speed() {
 }
 
 is_dom_capable_dump() {
-	[ -n "$1" ] && printf '%s\n' "$1" | grep -Eiq 'Identifier|Vendor name|Vendor PN|Vendor SN|Module temperature|Module voltage|Laser bias current|Laser output power|Receiver signal|Optical diagnostics'
+	[ -n "$1" ] && printf '%s\n' "$1" | grep -Eiq 'Identifier|Vendor[[:space:]]+(name|PN|SN|part|serial)|Module[[:space:]]+(temperature|voltage)|Temperature|Voltage|Bias[[:space:]]+current|Laser[[:space:]]+(bias|output|wavelength)|Receiver[[:space:]]+signal|RX[[:space:]]+Power|TX[[:space:]]+Power|Optical[[:space:]]+(diagnostics|power)|Wavelength'
 }
 
 module_slot_for_interface() {
@@ -122,18 +135,17 @@ json_add_supported_status() {
 	local temperature voltage bias_current rx_power tx_power duplex port link_detected
 	local module_name module_slot
 
-	identifier="$(read_field "$dom_dump" 'Identifier')"
-	vendor_name="$(read_field "$dom_dump" 'Vendor name')"
-	vendor_part="$(read_field "$dom_dump" 'Vendor PN')"
-	vendor_revision="$(read_field "$dom_dump" 'Vendor rev')"
-	serial="$(read_field "$dom_dump" 'Vendor SN')"
-	wavelength="$(read_field "$dom_dump" 'Laser wavelength')"
-	temperature="$(read_field "$dom_dump" 'Module temperature')"
-	voltage="$(read_field "$dom_dump" 'Module voltage')"
-	bias_current="$(read_field "$dom_dump" 'Laser bias current')"
-	rx_power="$(read_field "$dom_dump" 'Receiver signal average optical power')"
-	[ -z "$rx_power" ] && rx_power="$(read_field "$dom_dump" 'Receiver signal OMA')"
-	tx_power="$(read_field "$dom_dump" 'Laser output power')"
+	identifier="$(read_first_field "$dom_dump" 'Identifier' 'Transceiver type')"
+	vendor_name="$(read_first_field "$dom_dump" 'Vendor name' 'Vendor Name')"
+	vendor_part="$(read_first_field "$dom_dump" 'Vendor PN' 'Vendor part number' 'Vendor part' 'Vendor Part Number')"
+	vendor_revision="$(read_first_field "$dom_dump" 'Vendor rev' 'Vendor revision' 'Vendor Rev')"
+	serial="$(read_first_field "$dom_dump" 'Vendor SN' 'Vendor serial number' 'Vendor Serial Number')"
+	wavelength="$(read_first_field "$dom_dump" 'Laser wavelength' 'Wavelength')"
+	temperature="$(read_first_field "$dom_dump" 'Module temperature' 'Temperature')"
+	voltage="$(read_first_field "$dom_dump" 'Module voltage' 'Voltage')"
+	bias_current="$(read_first_field "$dom_dump" 'Laser bias current' 'Bias current' 'TX bias current' 'Tx bias current')"
+	rx_power="$(read_first_field "$dom_dump" 'Receiver signal average optical power' 'Receiver signal OMA' 'RX Power' 'Rx Power' 'RX power' 'Rx power' 'Optical receive power')"
+	tx_power="$(read_first_field "$dom_dump" 'Laser output power' 'TX Power' 'Tx Power' 'TX power' 'Tx power' 'Optical transmit power')"
 	duplex="$(read_field "$link_dump" 'Duplex')"
 	port="$(read_field "$link_dump" 'Port')"
 	link_detected="$(read_field "$link_dump" 'Link detected')"
@@ -182,10 +194,22 @@ auto_detect_interface() {
 
 json_add_interfaces() {
 	json_add_array interfaces
-	for iface in $(list_interfaces); do
+	for iface in $(list_sfp_interfaces); do
 		json_add_string '' "$iface"
 	done
 	json_close_array
+}
+
+list_sfp_interfaces() {
+	local iface dom_dump
+
+	[ -x "$ETHTOOL_BIN" ] || return 0
+
+	for iface in $(list_probe_interfaces); do
+		dom_dump="$($ETHTOOL_BIN -m "$iface" 2>/dev/null)"
+		is_dom_capable_dump "$dom_dump" || continue
+		echo "$iface"
+	done
 }
 
 get_interfaces() {

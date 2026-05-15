@@ -46,6 +46,10 @@ msgid "Available Interfaces"
 msgstr "可用接口"
 
 #: htdocs/luci-static/resources/view/status/include/15_sfp.js
+msgid "SFP Interfaces"
+msgstr "SFP接口"
+
+#: htdocs/luci-static/resources/view/status/include/15_sfp.js
 msgid "Status"
 msgstr "状态"
 
