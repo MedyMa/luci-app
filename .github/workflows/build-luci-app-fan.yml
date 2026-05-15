@@ -126,24 +126,16 @@ jobs:
       - name: Inject package into LuCI feed
         run: |
           set -eux
-          package_src=''
-          package_makefile=''
+          package_makefile="$(find "$GITHUB_WORKSPACE" -type f -name Makefile \
+            -not -path "$GITHUB_WORKSPACE/.git/*" \
+            -not -path "$GITHUB_WORKSPACE/openwrt-sdk-*/*" \
+            -not -path "$GITHUB_WORKSPACE/immortalwrt-sdk-*/*" \
+            -exec grep -l '^PKG_NAME:=luci-app-fan$' {} + | head -n1)"
+          package_src="${package_makefile%/Makefile}"
 
-          for candidate in \
-            "$GITHUB_WORKSPACE/Luci-app/luci-app-fan" \
-            "$GITHUB_WORKSPACE/luci-app-fan" \
-            "$GITHUB_WORKSPACE"
-          do
-            if [ -f "$candidate/Makefile" ] && grep -q '^PKG_NAME:=luci-app-fan$' "$candidate/Makefile"; then
-              package_src="$candidate"
-              package_makefile="$candidate/Makefile"
-              break
-            fi
-          done
-
-          if [ -z "$package_src" ]; then
+          if [ -z "$package_makefile" ] || [ ! -f "$package_makefile" ]; then
             echo "Unable to locate luci-app-fan Makefile in workspace" >&2
-            echo "Checked: $GITHUB_WORKSPACE/Luci-app/luci-app-fan/Makefile, $GITHUB_WORKSPACE/luci-app-fan/Makefile and $GITHUB_WORKSPACE/Makefile (PKG_NAME must be luci-app-fan)" >&2
+            echo "Searched under $GITHUB_WORKSPACE for PKG_NAME:=luci-app-fan" >&2
             if [ -f "$GITHUB_WORKSPACE/Makefile" ]; then
               echo "Workspace root Makefile PKG_NAME:" >&2
               grep '^PKG_NAME:=' "$GITHUB_WORKSPACE/Makefile" >&2 || true
