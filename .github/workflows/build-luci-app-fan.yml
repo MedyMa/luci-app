@@ -38,10 +38,12 @@ on:
     paths:
       - '.github/workflows/build-luci-app-fan.yml'
       - 'luci-app-fan/**'
+      - 'Luci-app/luci-app-fan/**'
   pull_request:
     paths:
       - '.github/workflows/build-luci-app-fan.yml'
       - 'luci-app-fan/**'
+      - 'Luci-app/luci-app-fan/**'
 
 permissions:
   contents: write
@@ -128,8 +130,8 @@ jobs:
           package_makefile=''
 
           for candidate in \
-            "$GITHUB_WORKSPACE/luci-app-fan" \
             "$GITHUB_WORKSPACE/Luci-app/luci-app-fan" \
+            "$GITHUB_WORKSPACE/luci-app-fan" \
             "$GITHUB_WORKSPACE"
           do
             if [ -f "$candidate/Makefile" ] && grep -q '^PKG_NAME:=luci-app-fan$' "$candidate/Makefile"; then
@@ -141,7 +143,7 @@ jobs:
 
           if [ -z "$package_src" ]; then
             echo "Unable to locate luci-app-fan Makefile in workspace" >&2
-            echo "Checked: $GITHUB_WORKSPACE/luci-app-fan/Makefile, $GITHUB_WORKSPACE/Luci-app/luci-app-fan/Makefile and $GITHUB_WORKSPACE/Makefile (PKG_NAME must be luci-app-fan)" >&2
+            echo "Checked: $GITHUB_WORKSPACE/Luci-app/luci-app-fan/Makefile, $GITHUB_WORKSPACE/luci-app-fan/Makefile and $GITHUB_WORKSPACE/Makefile (PKG_NAME must be luci-app-fan)" >&2
             if [ -f "$GITHUB_WORKSPACE/Makefile" ]; then
               echo "Workspace root Makefile PKG_NAME:" >&2
               grep '^PKG_NAME:=' "$GITHUB_WORKSPACE/Makefile" >&2 || true

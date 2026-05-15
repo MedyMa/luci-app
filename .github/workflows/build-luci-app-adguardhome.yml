@@ -130,8 +130,6 @@ jobs:
           package_makefile=''
 
           for candidate in \
-            "$GITHUB_WORKSPACE/luci-app-adguardhome/luci-app-adguardhome" \
-            "$GITHUB_WORKSPACE/Luci-app/luci-app-adguardhome/luci-app-adguardhome" \
             "$GITHUB_WORKSPACE/Luci-app/luci-app-adguardhome" \
             "$GITHUB_WORKSPACE/luci-app-adguardhome" \
             "$GITHUB_WORKSPACE"
@@ -145,7 +143,7 @@ jobs:
 
           if [ -z "$package_src" ]; then
             echo "Unable to locate luci-app-adguardhome Makefile in workspace" >&2
-            echo "Checked nested and root candidates under $GITHUB_WORKSPACE" >&2
+            echo "Checked: $GITHUB_WORKSPACE/Luci-app/luci-app-adguardhome/Makefile, $GITHUB_WORKSPACE/luci-app-adguardhome/Makefile and $GITHUB_WORKSPACE/Makefile" >&2
             exit 1
           fi
 

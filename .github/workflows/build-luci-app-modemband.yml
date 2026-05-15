@@ -132,8 +132,6 @@ jobs:
           package_makefile=''
 
           for candidate in \
-            "$GITHUB_WORKSPACE/luci-app-modemband/luci-app-modemband" \
-            "$GITHUB_WORKSPACE/Luci-app/luci-app-modemband/luci-app-modemband" \
             "$GITHUB_WORKSPACE/Luci-app/luci-app-modemband" \
             "$GITHUB_WORKSPACE/luci-app-modemband" \
             "$GITHUB_WORKSPACE"
@@ -147,7 +145,7 @@ jobs:
 
           if [ -z "$package_src" ]; then
             echo "Unable to locate luci-app-modemband Makefile in workspace" >&2
-            echo "Checked nested and root candidates under $GITHUB_WORKSPACE" >&2
+            echo "Checked: $GITHUB_WORKSPACE/Luci-app/luci-app-modemband/Makefile, $GITHUB_WORKSPACE/luci-app-modemband/Makefile and $GITHUB_WORKSPACE/Makefile" >&2
             exit 1
           fi
 

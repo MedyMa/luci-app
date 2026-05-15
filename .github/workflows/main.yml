@@ -29,19 +29,21 @@ on:
         default: false
         type: boolean
       release_tag:
-        description: 'Release tag to use when publishing from workflow_dispatch (for example: v0.1.0)'
+        description: 'Release tag to use when publishing from workflow_dispatch (for example: sfp-status-v0.1.0)'
         required: false
         default: ''
   push:
     tags:
-      - 'v*'
+      - 'sfp-status-v*'
     paths:
       - '.github/workflows/main.yml'
       - 'luci-app-sfp-status/**'
+      - 'Luci-app/luci-app-sfp-status/**'
   pull_request:
     paths:
       - '.github/workflows/main.yml'
       - 'luci-app-sfp-status/**'
+      - 'Luci-app/luci-app-sfp-status/**'
 
 permissions:
   contents: write
@@ -124,15 +126,28 @@ jobs:
       - name: Inject package into LuCI feed
         run: |
           set -eux
-          if [ -f "$GITHUB_WORKSPACE/luci-app-sfp-status/Makefile" ]; then
-            package_src="$GITHUB_WORKSPACE/luci-app-sfp-status"
-          elif [ -f "$GITHUB_WORKSPACE/Makefile" ]; then
-            package_src="$GITHUB_WORKSPACE"
-          else
+          package_src=''
+          package_makefile=''
+
+          for candidate in \
+            "$GITHUB_WORKSPACE/Luci-app/luci-app-sfp-status" \
+            "$GITHUB_WORKSPACE/luci-app-sfp-status" \
+            "$GITHUB_WORKSPACE"
+          do
+            if [ -f "$candidate/Makefile" ] && grep -q '^PKG_NAME:=luci-app-sfp-status$' "$candidate/Makefile"; then
+              package_src="$candidate"
+              package_makefile="$candidate/Makefile"
+              break
+            fi
+          done
+
+          if [ -z "$package_src" ]; then
             echo "Unable to locate luci-app-sfp-status Makefile in workspace" >&2
-            echo "Checked: $GITHUB_WORKSPACE/luci-app-sfp-status/Makefile and $GITHUB_WORKSPACE/Makefile" >&2
+            echo "Checked: $GITHUB_WORKSPACE/Luci-app/luci-app-sfp-status/Makefile, $GITHUB_WORKSPACE/luci-app-sfp-status/Makefile and $GITHUB_WORKSPACE/Makefile" >&2
             exit 1
           fi
+
+          grep -q '^PKG_NAME:=luci-app-sfp-status$' "$package_makefile"
 
           sdk_feed_dir="$SDK_DIR/feeds/luci/applications/luci-app-sfp-status"
           sdk_pkg_dir="$SDK_DIR/package/feeds/luci/luci-app-sfp-status"
@@ -151,6 +166,7 @@ jobs:
           ln -sfn "../../../feeds/luci/applications/luci-app-sfp-status" "$sdk_pkg_dir"
           test -f "$sdk_feed_dir/Makefile"
           test -f "$sdk_pkg_dir/Makefile"
+          grep -q '^PKG_NAME:=luci-app-sfp-status$' "$sdk_feed_dir/Makefile"
 
       - name: Install package definitions
         working-directory: ${{ env.SDK_DIR }}
@@ -162,8 +178,29 @@ jobs:
         working-directory: ${{ env.SDK_DIR }}
         run: |
           set -eux
+          package_po_dir="$SDK_DIR/feeds/luci/applications/luci-app-sfp-status/po"
+          sfp_status_i18n_langs=''
+
+          if [ -d "$package_po_dir" ]; then
+            sfp_status_i18n_langs="$(find "$package_po_dir" -mindepth 2 -maxdepth 2 -type f -name '*.po' -printf '%h\n' | sed 's#^.*/##' | sort -u | tr '\n' ' ' | sed 's/[[:space:]]\+$//')"
+          fi
+
           echo 'CONFIG_PACKAGE_luci-app-sfp-status=y' >> .config
+
+          for lang in $sfp_status_i18n_langs; do
+            echo "CONFIG_PACKAGE_luci-i18n-sfp-status-${lang}=y" >> .config
+          done
+
           make defconfig
+
+          {
+            echo 'SFP_STATUS_I18N_LANGS<<EOF'
+            printf '%s\n' "$sfp_status_i18n_langs"
+            echo 'EOF'
+          } >> "$GITHUB_ENV"
+
+          grep '^CONFIG_PACKAGE_luci-app-sfp-status=' .config
+          grep '^CONFIG_PACKAGE_luci-i18n-sfp-status-' .config || true
 
       - name: Compile package
         working-directory: ${{ env.SDK_DIR }}
@@ -171,18 +208,44 @@ jobs:
           set -eux
           make package/feeds/luci/luci-app-sfp-status/compile -j"$(nproc)" V=s
 
+      - name: Collect build artifacts
+        run: |
+          set -eux
+          artifact_dir="$RUNNER_TEMP/luci-app-sfp-status-artifacts"
+          rm -rf "$artifact_dir"
+          mkdir -p "$artifact_dir"
+
+          find "$SDK_DIR/bin/packages" -type f \( -name 'luci-app-sfp-status*.ipk' -o -name 'luci-i18n-sfp-status*.ipk' -o -path '*/luci/Packages*' \) -exec cp -f {} "$artifact_dir/" \;
+
+          if ! find "$artifact_dir" -maxdepth 1 -type f -name 'luci-app-sfp-status*.ipk' | grep -q .; then
+            echo 'No luci-app-sfp-status ipk was produced by the build.' >&2
+            find "$SDK_DIR/bin/packages" -maxdepth 4 -type f | sort >&2
+            exit 1
+          fi
+
+          if [ -n "${SFP_STATUS_I18N_LANGS:-}" ]; then
+            for lang in $SFP_STATUS_I18N_LANGS; do
+              if ! find "$artifact_dir" -maxdepth 1 -type f -name "luci-i18n-sfp-status-${lang}_*.ipk" | grep -q .; then
+                echo "No luci-i18n-sfp-status-${lang} ipk was produced by the build." >&2
+                find "$SDK_DIR/bin/packages" -maxdepth 4 -type f | sort >&2
+                exit 1
+              fi
+            done
+          fi
+
+          echo "ARTIFACT_DIR=$artifact_dir" >> "$GITHUB_ENV"
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: luci-app-sfp-status-${{ env.SDK_DISTRIBUTION }}-${{ env.OPENWRT_TARGET }}-${{ env.OPENWRT_SUBTARGET }}-ipk
-          path: |
-            ${{ env.SDK_DIR }}/bin/packages/*/luci/luci-app-sfp-status*.ipk
-            ${{ env.SDK_DIR }}/bin/packages/*/luci/Packages*
+          path: ${{ env.ARTIFACT_DIR }}/
+          if-no-files-found: error
 
   release:
     needs: build
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.publish_release)
+    if: startsWith(github.ref, 'refs/tags/sfp-status-v') || (github.event_name == 'workflow_dispatch' && inputs.publish_release)
 
     env:
       SDK_DISTRIBUTION: ${{ inputs.sdk_distribution || 'openwrt' }}
@@ -206,8 +269,15 @@ jobs:
             exit 1
           fi
 
+          display_tag="$tag"
+          case "$tag" in
+            sfp-status-v*)
+              display_tag="v${tag#sfp-status-v}"
+              ;;
+          esac
+
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          echo "name=luci-app-sfp-status $tag" >> "$GITHUB_OUTPUT"
+          echo "name=luci-app-sfp-status $display_tag" >> "$GITHUB_OUTPUT"
 
       - name: Download build artifact
         uses: actions/download-artifact@v4
