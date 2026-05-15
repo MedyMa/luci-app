@@ -1,0 +1,31 @@
+{
+    "luci-app-adguardhome": {
+        "description": "Grant access to AdGuard Home LuCI rpcd backend",
+        "read": {
+            "ubus": {
+                "luci.adguardhome": [
+                    "getStatus",
+                    "getMeta",
+                    "getYaml",
+                    "getCurrentYaml",
+                    "getTemplateConfig",
+                    "getLog"
+                ]
+            },
+            "uci": [ "AdGuardHome" ]
+        },
+        "write": {
+            "ubus": {
+                "luci.adguardhome": [
+                    "saveYaml",
+                    "discardYaml",
+                    "clearLog",
+                    "startUpdate",
+                    "gfwAction",
+                    "setLinks"
+                ]
+            },
+            "uci": [ "AdGuardHome" ]
+        }
+    }
+}

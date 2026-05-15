@@ -1,0 +1,8 @@
+#!/bin/sh
+[ -f /usr/libexec/rpcd/luci.sfp-status ] && chmod 0755 /usr/libexec/rpcd/luci.sfp-status
+uci -q delete sfp-status.settings.interface
+uci -q commit sfp-status
+rm -rf /var/luci-modulecache/
+rm -f /var/luci-indexcache.*
+[ -x /etc/init.d/rpcd ] && /etc/init.d/rpcd reload
+exit 0

@@ -1,0 +1,2 @@
+config settings 'settings'
+	option overview_enabled '1'

@@ -1,0 +1,360 @@
+#!/bin/sh
+# TechRef: https://openwrt.org/docs/techref/rpcd
+
+. "${IPKG_INSTROOT}/usr/share/libubox/jshn.sh"
+
+readonly CONFIG_NAME="sfp-status"
+readonly ETHTOOL_BIN="${IPKG_INSTROOT}/usr/sbin/ethtool"
+
+is_valid_interface() {
+	printf '%s' "$1" | grep -Eq '^[A-Za-z0-9_.:-]+$'
+}
+
+list_interfaces() {
+	for iface in $(ls /sys/class/net 2>/dev/null); do
+		[ "$iface" = "lo" ] && continue
+		echo "$iface"
+	done
+}
+
+should_probe_interface() {
+	local iface="$1"
+
+	case "$iface" in
+		''|lo|bonding_masters|br-*|docker*|dummy*|ifb*|teql*|veth*|wg*|wwan*|phy*.*-ap*)
+			return 1
+			;;
+		eth*|lan*|wan*|sfp*)
+			return 0
+			;;
+		*)
+			[ -e "/sys/class/net/$iface/device" ]
+			return $?
+			;;
+	esac
+}
+
+list_probe_interfaces() {
+	local iface
+
+	for iface in $(list_interfaces); do
+		should_probe_interface "$iface" || continue
+		echo "$iface"
+	done
+}
+
+current_timestamp() {
+	date '+%Y-%m-%d %H:%M:%S'
+}
+
+read_field() {
+	printf '%s\n' "$1" | awk -v label="$2" '
+		{
+			line = $0
+			gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
+			sep = index(line, ":")
+			if (sep > 0) {
+				key = substr(line, 1, sep - 1)
+				val = substr(line, sep + 1)
+				gsub(/[[:space:]]+$/, "", key)
+				gsub(/^[[:space:]]+/, "", val)
+
+				if (key == label) {
+					print val
+					exit
+				}
+			}
+		}
+	'
+}
+
+get_speed() {
+	local iface="$1"
+	local link_dump speed
+
+	link_dump="$($ETHTOOL_BIN "$iface" 2>/dev/null)"
+	speed="$(read_field "$link_dump" 'Speed')"
+
+	if [ -z "$speed" ] && [ -r "/sys/class/net/$iface/speed" ]; then
+		speed="$(cat "/sys/class/net/$iface/speed" 2>/dev/null)"
+		[ -n "$speed" ] && [ "$speed" != "-1" ] && speed="${speed}Mb/s"
+	fi
+
+	printf '%s\n' "$speed"
+}
+
+is_dom_capable_dump() {
+	[ -n "$1" ] && printf '%s\n' "$1" | grep -Eq 'Identifier|Vendor name|Module temperature|Laser output power|Receiver signal'
+}
+
+module_slot_for_interface() {
+	local interface="$1"
+
+	case "$interface" in
+		*[0-9])
+			printf 'SFP%s\n' "${interface##*[!0-9]}"
+			;;
+		*)
+			printf '%s\n' "$interface" | tr '[:lower:]' '[:upper:]'
+			;;
+	esac
+}
+
+json_add_unsupported_status() {
+	local interface="$1"
+	local speed="$2"
+	local error="$3"
+
+	json_add_boolean supported 0
+	[ -n "$interface" ] && json_add_string interface "$interface"
+	[ -n "$interface" ] && json_add_string module_slot "$(module_slot_for_interface "$interface")"
+	[ -n "$speed" ] && json_add_string speed "$speed"
+	json_add_string error "$error"
+}
+
+json_add_supported_status() {
+	local interface="$1"
+	local auto_detected="$2"
+	local dom_dump="$3"
+	local link_dump="$4"
+	local speed="$5"
+	local identifier vendor_name vendor_part vendor_revision serial wavelength
+	local temperature voltage bias_current rx_power tx_power duplex port link_detected
+	local module_name module_slot
+
+	identifier="$(read_field "$dom_dump" 'Identifier')"
+	vendor_name="$(read_field "$dom_dump" 'Vendor name')"
+	vendor_part="$(read_field "$dom_dump" 'Vendor PN')"
+	vendor_revision="$(read_field "$dom_dump" 'Vendor rev')"
+	serial="$(read_field "$dom_dump" 'Vendor SN')"
+	wavelength="$(read_field "$dom_dump" 'Laser wavelength')"
+	temperature="$(read_field "$dom_dump" 'Module temperature')"
+	voltage="$(read_field "$dom_dump" 'Module voltage')"
+	bias_current="$(read_field "$dom_dump" 'Laser bias current')"
+	rx_power="$(read_field "$dom_dump" 'Receiver signal average optical power')"
+	[ -z "$rx_power" ] && rx_power="$(read_field "$dom_dump" 'Receiver signal OMA')"
+	tx_power="$(read_field "$dom_dump" 'Laser output power')"
+	duplex="$(read_field "$link_dump" 'Duplex')"
+	port="$(read_field "$link_dump" 'Port')"
+	link_detected="$(read_field "$link_dump" 'Link detected')"
+
+	module_name="$vendor_name"
+	[ -n "$vendor_part" ] && module_name="${module_name:+$module_name }$vendor_part"
+	[ -z "$module_name" ] && module_name="$identifier"
+	module_slot="$(module_slot_for_interface "$interface")"
+
+	json_add_boolean supported 1
+	json_add_boolean auto_detected "$auto_detected"
+	json_add_boolean link_up "$([ "$link_detected" = 'yes' ] && echo 1 || echo 0)"
+	json_add_string interface "$interface"
+	json_add_string module_slot "$module_slot"
+	json_add_string module_name "$module_name"
+	json_add_string identifier "$identifier"
+	json_add_string vendor_name "$vendor_name"
+	json_add_string vendor_part "$vendor_part"
+	json_add_string vendor_revision "$vendor_revision"
+	json_add_string serial "$serial"
+	json_add_string wavelength "$wavelength"
+	json_add_string temperature "$temperature"
+	json_add_string voltage "$voltage"
+	json_add_string bias_current "$bias_current"
+	json_add_string rx_power "$rx_power"
+	json_add_string tx_power "$tx_power"
+	json_add_string speed "$speed"
+	json_add_string duplex "$duplex"
+	json_add_string port "$port"
+	json_add_string source 'ethtool DOM'
+}
+
+auto_detect_interface() {
+	local iface dom_dump
+
+	for iface in $(list_probe_interfaces); do
+		dom_dump="$($ETHTOOL_BIN -m "$iface" 2>/dev/null)"
+		if is_dom_capable_dump "$dom_dump"; then
+			printf '%s\n' "$iface"
+			return 0
+		fi
+	done
+
+	return 1
+}
+
+json_add_interfaces() {
+	json_add_array interfaces
+	for iface in $(list_interfaces); do
+		json_add_string '' "$iface"
+	done
+	json_close_array
+}
+
+get_interfaces() {
+	json_init
+	json_add_interfaces
+	json_dump
+	json_cleanup
+}
+
+get_status() {
+	local requested_interface="$1"
+	local interface auto_detected dom_dump link_dump speed
+
+	interface="$requested_interface"
+	auto_detected=0
+
+	if [ -n "$interface" ] && ! is_valid_interface "$interface"; then
+		interface=''
+	fi
+
+	if [ -z "$interface" ]; then
+		interface="$(auto_detect_interface)"
+		[ -n "$interface" ] && auto_detected=1
+	fi
+
+	json_init
+	json_add_interfaces
+	json_add_string sampled_at "$(current_timestamp)"
+
+	if [ ! -x "$ETHTOOL_BIN" ]; then
+		json_add_boolean supported 0
+		json_add_string error 'ethtool is not installed'
+		json_dump
+		json_cleanup
+		return 0
+	fi
+
+	if [ -z "$interface" ]; then
+		json_add_boolean supported 0
+		json_add_string error 'No SFP DOM capable interface was detected.'
+		json_dump
+		json_cleanup
+		return 0
+	fi
+
+	dom_dump="$($ETHTOOL_BIN -m "$interface" 2>/dev/null)"
+	link_dump="$($ETHTOOL_BIN "$interface" 2>/dev/null)"
+	speed="$(get_speed "$interface")"
+
+	if ! is_dom_capable_dump "$dom_dump"; then
+		json_add_unsupported_status "$interface" "$speed" 'SFP DOM data is not available on the selected interface.'
+		json_dump
+		json_cleanup
+		return 0
+	fi
+
+	json_add_supported_status "$interface" "$auto_detected" "$dom_dump" "$link_dump" "$speed"
+	json_dump
+	json_cleanup
+}
+
+get_statuses() {
+	local requested_interface="$1"
+	local interface auto_detected dom_dump link_dump speed has_modules
+
+	interface="$requested_interface"
+	auto_detected=0
+	has_modules=0
+
+	if [ -n "$interface" ] && ! is_valid_interface "$interface"; then
+		interface=''
+	fi
+
+	json_init
+	json_add_interfaces
+	json_add_string sampled_at "$(current_timestamp)"
+
+	if [ ! -x "$ETHTOOL_BIN" ]; then
+		json_add_array modules
+		json_close_array
+		json_add_boolean supported 0
+		json_add_string error 'ethtool is not installed'
+		json_dump
+		json_cleanup
+		return 0
+	fi
+
+	json_add_array modules
+
+	if [ -n "$interface" ]; then
+		dom_dump="$($ETHTOOL_BIN -m "$interface" 2>/dev/null)"
+		link_dump="$($ETHTOOL_BIN "$interface" 2>/dev/null)"
+		speed="$(get_speed "$interface")"
+
+		json_add_object ''
+		if is_dom_capable_dump "$dom_dump"; then
+			json_add_supported_status "$interface" 0 "$dom_dump" "$link_dump" "$speed"
+			has_modules=1
+		else
+			json_add_unsupported_status "$interface" "$speed" 'SFP DOM data is not available on the selected interface.'
+		fi
+		json_close_object
+	else
+		for interface in $(list_probe_interfaces); do
+			dom_dump="$($ETHTOOL_BIN -m "$interface" 2>/dev/null)"
+			if ! is_dom_capable_dump "$dom_dump"; then
+				continue
+			fi
+
+			link_dump="$($ETHTOOL_BIN "$interface" 2>/dev/null)"
+			speed="$(get_speed "$interface")"
+
+			json_add_object ''
+			json_add_supported_status "$interface" 1 "$dom_dump" "$link_dump" "$speed"
+			json_close_object
+			has_modules=1
+			auto_detected=1
+		done
+	fi
+
+	json_close_array
+	json_add_boolean supported "$has_modules"
+	json_add_boolean auto_detected "$auto_detected"
+
+	if [ "$has_modules" != "1" ] && [ -z "$requested_interface" ]; then
+		json_add_string error 'No SFP DOM capable interface was detected.'
+	fi
+
+	json_dump
+	json_cleanup
+}
+
+case "$1" in
+	list)
+		json_init
+		json_add_object getInterfaces
+		json_close_object
+		json_add_object getStatus
+			json_add_string interface string
+		json_close_object
+		json_add_object getStatuses
+			json_add_string interface string
+		json_close_object
+		json_dump
+		json_cleanup
+		;;
+	call)
+		case "$2" in
+			getInterfaces)
+				get_interfaces
+				;;
+			getStatus)
+				input="$(cat)"
+				if [ -n "$input" ]; then
+					json_load "$input"
+					json_get_var interface interface
+					json_cleanup
+				fi
+				get_status "$interface"
+				;;
+			getStatuses)
+				input="$(cat)"
+				if [ -n "$input" ]; then
+					json_load "$input"
+					json_get_var interface interface
+					json_cleanup
+				fi
+				get_statuses "$interface"
+				;;
+		esac
+		;;
+esac
