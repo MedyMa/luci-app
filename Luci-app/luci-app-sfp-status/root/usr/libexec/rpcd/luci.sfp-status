@@ -223,12 +223,26 @@ read_eeprom_word_dec() {
 }
 
 format_decimal() {
-	awk -v value="$1" -v scale="$2" -v suffix="$3" -v precision="$4" 'BEGIN {
-		if (value == "" || scale == "" || scale == 0)
+	awk -v number="$1" -v scale="$2" -v suffix="$3" -v precision="$4" 'BEGIN {
+		if (number == "" || scale == "" || scale == 0)
 			exit
 		if (precision == "")
 			precision = 2
-		printf "%.*f%s\n", precision, value / scale, suffix
+		scaled = number / scale
+		if (precision == 0)
+			printf "%.0f%s\n", scaled, suffix
+		else if (precision == 1)
+			printf "%.1f%s\n", scaled, suffix
+		else if (precision == 3)
+			printf "%.3f%s\n", scaled, suffix
+		else if (precision == 4)
+			printf "%.4f%s\n", scaled, suffix
+		else if (precision == 5)
+			printf "%.5f%s\n", scaled, suffix
+		else if (precision == 6)
+			printf "%.6f%s\n", scaled, suffix
+		else
+			printf "%.2f%s\n", scaled, suffix
 	}'
 }
 

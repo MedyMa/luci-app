@@ -15,7 +15,7 @@
 
 如果未配置接口，后端会自动探测所有可读取 SFP DOM 数据的网络设备，并在概览页逐个展示。
 
-应用包不会把 ethtool 作为硬依赖，以便通过 LuCI 本地上传方式安装到不同 OpenWrt/ImmortalWrt 架构的设备。设备上需要已安装 ethtool 才能读取真实 DOM 数据；如果缺少 ethtool，页面会显示运行时提示。
+应用包会把 ethtool 作为硬依赖，以确保安装完成后即可读取真实 DOM 数据。安装本地 ipk 前，请先确认设备软件源可提供与当前架构匹配的 ethtool 软件包。
 
 ## 文件说明
 
@@ -85,9 +85,8 @@ git push origin v0.1.0
 安装生成的 ipk 后，执行：
 
 ```sh
-opkg install luci-app-sfp-status_0.1.0-r27_all.ipk
 opkg update
-opkg install ethtool
+opkg install luci-app-sfp-status_0.1.0-r29_all.ipk
 ubus -v list luci.sfp-status
 ubus call luci.sfp-status getStatuses '{}'
 ```
