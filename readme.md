@@ -92,7 +92,8 @@
 
 ### AdGuardHome 效果图
 
-![AdGuardHome 界面效果图](https://github.com/user-attachments/assets/e6363031-c67b-4ac1-a180-236790efc1a9)
+<img width="1673" height="699" alt="image" src="https://github.com/user-attachments/assets/516627ac-07a9-48d8-badb-f69bd0c85ef6" />
+
 
 ## luci-app-fan
 
@@ -144,7 +145,8 @@
 
 ### Fan 效果图
 
-![Fan 界面效果图](https://github.com/user-attachments/assets/052e9855-bbbe-45d2-9b56-a7a6452fd063)
+<img width="1613" height="1358" alt="image" src="https://github.com/user-attachments/assets/2610f636-0159-4e5e-975e-50611eeefee7" />
+
 
 ## luci-app-modemband
 
@@ -203,7 +205,8 @@
 
 ### Modemband 效果图
 
-![Modemband 界面效果图](https://github.com/user-attachments/assets/b69f6a85-4507-4db0-b774-7a441440a361)
+<img width="1628" height="1290" alt="image" src="https://github.com/user-attachments/assets/3a62a73f-6348-46a5-a46d-bceaa91525ba" />
+
 
 ## luci-app-sfp-status
 
