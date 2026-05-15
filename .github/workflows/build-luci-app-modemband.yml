@@ -146,7 +146,7 @@ jobs:
             exit 1
           fi
 
-          grep -q '^PKG_NAME:=luci-app-modemband$' "$package_makefile"
+          sed 's/\r$//' "$package_makefile" | grep -q '^PKG_NAME:=luci-app-modemband$'
 
           sdk_feed_dir="$SDK_DIR/feeds/luci/applications/luci-app-modemband"
           sdk_pkg_dir="$SDK_DIR/package/feeds/luci/luci-app-modemband"
@@ -162,10 +162,18 @@ jobs:
             --exclude 'immortalwrt-sdk-*' \
             "$package_src/" "$sdk_feed_dir/"
 
+          find "$sdk_feed_dir" -type f \( \
+            -name Makefile -o \
+            -name '*.sh' -o \
+            -path '*/root/etc/init.d/*' -o \
+            -path '*/root/etc/uci-defaults/*' -o \
+            -path '*/root/usr/libexec/*' \
+          \) -exec sed -i 's/\r$//' {} +
+
           ln -sfn "../../../feeds/luci/applications/luci-app-modemband" "$sdk_pkg_dir"
           test -f "$sdk_feed_dir/Makefile"
           test -f "$sdk_pkg_dir/Makefile"
-          grep -q '^PKG_NAME:=luci-app-modemband$' "$sdk_feed_dir/Makefile"
+          sed 's/\r$//' "$sdk_feed_dir/Makefile" | grep -q '^PKG_NAME:=luci-app-modemband$'
 
       - name: Install package definitions
         working-directory: ${{ env.SDK_DIR }}
