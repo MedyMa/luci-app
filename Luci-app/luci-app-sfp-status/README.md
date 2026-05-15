@@ -15,6 +15,8 @@
 
 如果未配置接口，后端会自动探测所有可读取 SFP DOM 数据的网络设备，并在概览页逐个展示。
 
+应用包不会把 ethtool 作为硬依赖，以便通过 LuCI 本地上传方式安装到不同 OpenWrt/ImmortalWrt 架构的设备。设备上需要已安装 ethtool 才能读取真实 DOM 数据；如果缺少 ethtool，页面会显示运行时提示。
+
 ## 文件说明
 
 - root/usr/libexec/rpcd/luci.sfp-status：rpcd 后端，提供 luci.sfp-status 的 ubus 方法。
@@ -38,7 +40,7 @@ make package/feeds/luci/luci-app-sfp-status/compile V=s
 
 - 默认下载适用于 ARMv8 设备的 OpenWrt 24.10.0 官方 SDK（mediatek/filogic）。
 - 将当前仓库中的 luci-app-sfp-status 挂载到 SDK 的 feeds/luci/applications/ 目录，并显式注册到 package/feeds/luci。
-- 安装 luci-base 和 ethtool 的软件包定义。
+- 安装 luci-base 相关软件包定义。
 - 运行 make package/feeds/luci/luci-app-sfp-status/compile 生成 ipk。
 - 将生成的 ipk 作为 GitHub Actions artifact 上传。
 - 在版本 tag 构建成功后，自动把 ipk 发布到 GitHub Releases。
@@ -83,7 +85,9 @@ git push origin v0.1.0
 安装生成的 ipk 后，执行：
 
 ```sh
-opkg install luci-app-sfp-status_0.1.0-r17_all.ipk
+opkg install luci-app-sfp-status_0.1.0-r22_all.ipk
+opkg update
+opkg install ethtool
 ubus -v list luci.sfp-status
 ubus call luci.sfp-status getStatuses '{}'
 ```

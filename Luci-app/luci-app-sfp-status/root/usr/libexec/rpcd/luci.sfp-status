@@ -84,7 +84,34 @@ get_speed() {
 }
 
 is_dom_capable_dump() {
-	[ -n "$1" ] && printf '%s\n' "$1" | grep -Eq 'Identifier|Vendor name|Module temperature|Laser output power|Receiver signal'
+	[ -n "$1" ] && printf '%s\n' "$1" | grep -Eiq 'Identifier|Vendor name|Vendor PN|Vendor SN|Module temperature|Module voltage|Laser output power|Receiver signal|Transceiver|Optical diagnostics|SFP|QSFP'
+}
+
+is_sfp_like_link_dump() {
+	[ -n "$1" ] && printf '%s\n' "$1" | grep -Eiq 'Port:[[:space:]]*(FIBRE|Fiber)|Supported ports:[[:space:]].*FIBRE|Transceiver:[[:space:]]*(internal|external)'
+}
+
+is_bananapi_bpi_r4() {
+	local model
+
+	model="$(cat /tmp/sysinfo/model /proc/device-tree/model 2>/dev/null | tr '\0' '\n' | head -n1)"
+	printf '%s\n' "$model" | grep -Eiq 'Bananapi BPI-R4|Banana Pi BPI-R4|BPI-R4'
+}
+
+is_sfp_like_interface() {
+	local iface="$1"
+
+	case "$iface" in
+		sfp*|*sfp*)
+			return 0
+			;;
+		eth1|eth2)
+			is_bananapi_bpi_r4
+			return $?
+			;;
+	esac
+
+	return 1
 }
 
 module_slot_for_interface() {
@@ -167,7 +194,7 @@ json_add_supported_status() {
 }
 
 auto_detect_interface() {
-	local iface dom_dump
+	local iface dom_dump link_dump fallback_iface
 
 	for iface in $(list_probe_interfaces); do
 		dom_dump="$($ETHTOOL_BIN -m "$iface" 2>/dev/null)"
@@ -175,7 +202,19 @@ auto_detect_interface() {
 			printf '%s\n' "$iface"
 			return 0
 		fi
+
+		[ -n "$fallback_iface" ] && continue
+
+		link_dump="$($ETHTOOL_BIN "$iface" 2>/dev/null)"
+		if is_sfp_like_link_dump "$link_dump" || is_sfp_like_interface "$iface"; then
+			fallback_iface="$iface"
+		fi
 	done
+
+	if [ -n "$fallback_iface" ]; then
+		printf '%s\n' "$fallback_iface"
+		return 0
+	fi
 
 	return 1
 }
@@ -291,15 +330,19 @@ get_statuses() {
 	else
 		for interface in $(list_probe_interfaces); do
 			dom_dump="$($ETHTOOL_BIN -m "$interface" 2>/dev/null)"
-			if ! is_dom_capable_dump "$dom_dump"; then
-				continue
-			fi
-
 			link_dump="$($ETHTOOL_BIN "$interface" 2>/dev/null)"
 			speed="$(get_speed "$interface")"
 
+			if ! is_dom_capable_dump "$dom_dump" && ! is_sfp_like_link_dump "$link_dump" && ! is_sfp_like_interface "$interface"; then
+				continue
+			fi
+
 			json_add_object ''
-			json_add_supported_status "$interface" 1 "$dom_dump" "$link_dump" "$speed"
+			if is_dom_capable_dump "$dom_dump"; then
+				json_add_supported_status "$interface" 1 "$dom_dump" "$link_dump" "$speed"
+			else
+				json_add_unsupported_status "$interface" "$speed" 'SFP interface was detected, but DOM data is not available.'
+			fi
 			json_close_object
 			has_modules=1
 			auto_detected=1
