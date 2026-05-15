@@ -197,7 +197,7 @@ return view.extend({
 	renderStyle: function() {
 		return E('style', { 'type': 'text/css' }, [
 			'.mb-config-layout{display:block !important}',
-			'.mb-config-shell{display:block;--mb-editor-log-bg:rgb(8,17,29);--mb-editor-log-fg:rgb(220,231,248);--mb-editor-log-border:rgba(61,90,126,.55)}',
+			'.mb-config-shell{display:block;--mb-editor-log-bg:rgb(8,17,29);--mb-editor-log-fg:rgb(220,231,248);--mb-editor-log-border:rgba(124,147,186,.22);--mb-editor-log-shadow:0 12px 30px rgba(17,48,54,.08)}',
 			'.mb-config-layout > .mb-config-shell{max-width:62rem}',
 			'.mb-config-shell .cbi-map{max-width:62rem}',
 			'.mb-config-shell .cbi-map h2{margin-bottom:.35rem}',
@@ -209,7 +209,7 @@ return view.extend({
 			'.mb-config-shell .mb-config-editor-row{display:grid !important;grid-template-columns:1fr !important;align-items:start !important;padding-left:12px;padding-right:12px}',
 			'.mb-config-shell .mb-config-editor-row > .cbi-value-title,.mb-config-shell .mb-config-editor-row > label.cbi-value-title{display:block !important;width:auto !important;max-width:none !important;margin:0 0 .4rem !important;padding:0 !important;text-align:left !important}',
 			'.mb-config-shell .mb-config-editor-field,.mb-config-shell .mb-config-editor-field > div{width:100% !important;max-width:none !important;min-width:0 !important;margin:0 !important;justify-self:stretch !important}',
-			'.mb-config-shell .mb-config-editor-textarea{display:block !important;width:min(100%,58rem) !important;max-width:58rem !important;min-height:30rem;padding:1rem 1.1rem;margin:0 auto !important;border:1px solid var(--mb-editor-log-border);border-radius:16px;text-align:left;background:var(--mb-editor-log-bg) !important;color:var(--mb-editor-log-fg) !important;-webkit-text-fill-color:var(--mb-editor-log-fg);caret-color:var(--mb-editor-log-fg);font-family:Consolas,Monaco,monospace;line-height:1.55;resize:vertical;box-sizing:border-box;box-shadow:inset 0 0 0 1px rgba(255,255,255,.02);white-space:pre-wrap !important;overflow-wrap:anywhere !important;word-break:break-word !important}',
+			'.mb-config-shell .mb-config-editor-textarea{display:block !important;width:min(100%,58rem) !important;max-width:58rem !important;min-height:30rem;padding:1rem 1.1rem;margin:0 auto !important;border:1px solid transparent !important;border-radius:16px;text-align:left;background:var(--mb-editor-log-bg) !important;color:var(--mb-editor-log-fg) !important;-webkit-text-fill-color:var(--mb-editor-log-fg);caret-color:var(--mb-editor-log-fg);font-family:Consolas,Monaco,monospace;line-height:1.55;resize:vertical;box-sizing:border-box;box-shadow:var(--mb-editor-log-shadow),0 0 0 1px var(--mb-editor-log-border),inset 0 0 0 1px rgba(255,255,255,.015);white-space:pre-wrap !important;overflow-wrap:anywhere !important;word-break:break-word !important}',
 			'.mb-config-shell .mb-config-editor-description{width:min(100%,58rem);max-width:58rem;margin:10px auto 0 !important;text-align:left}',
 			'.mb-config-shell .cbi-value[data-name="modemid"] select,.mb-config-shell .cbi-value[data-name="restartcmd"] input[type="text"],.mb-config-shell .cbi-value[data-name="restartcmd"] input:not([type]),.mb-config-shell .cbi-value[data-name="restartcmd"] .cbi-input-text{width:100% !important;font-family:Consolas,Monaco,monospace}',
 			'.mb-config-shell .cbi-value[data-name="_template_loaded"] .cbi-value-field,.mb-config-shell .cbi-value[data-name="modemid"] select option{font-family:Consolas,Monaco,monospace}',
