@@ -1,0 +1,303 @@
+name: Build luci-app-fan
+
+on:
+  workflow_dispatch:
+    inputs:
+      sdk_distribution:
+        description: SDK distribution
+        required: false
+        default: 'openwrt'
+        type: choice
+        options:
+          - openwrt
+          - immortalwrt
+      openwrt_version:
+        description: OpenWrt release version
+        required: false
+        default: '24.10.0'
+      openwrt_target:
+        description: OpenWrt target
+        required: false
+        default: 'mediatek'
+      openwrt_subtarget:
+        description: OpenWrt subtarget
+        required: false
+        default: 'filogic'
+      publish_release:
+        description: Publish the built ipk to GitHub Releases
+        required: false
+        default: false
+        type: boolean
+      release_tag:
+        description: 'Release tag to use when publishing from workflow_dispatch (for example: fan-v0.1.0)'
+        required: false
+        default: ''
+  push:
+    tags:
+      - 'fan-v*'
+    paths:
+      - '.github/workflows/build-luci-app-fan.yml'
+      - 'luci-app-fan/**'
+  pull_request:
+    paths:
+      - '.github/workflows/build-luci-app-fan.yml'
+      - 'luci-app-fan/**'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      SDK_DISTRIBUTION: ${{ inputs.sdk_distribution || 'openwrt' }}
+      OPENWRT_VERSION: ${{ inputs.openwrt_version || '24.10.0' }}
+      OPENWRT_TARGET: ${{ inputs.openwrt_target || 'mediatek' }}
+      OPENWRT_SUBTARGET: ${{ inputs.openwrt_subtarget || 'filogic' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            clang \
+            curl \
+            file \
+            flex \
+            bison \
+            g++ \
+            gawk \
+            gcc-multilib \
+            gettext \
+            git \
+            libncurses5-dev \
+            libssl-dev \
+            python3 \
+            python3-pyelftools \
+            python3-setuptools \
+            rsync \
+            subversion \
+            swig \
+            unzip \
+            wget \
+            zlib1g-dev \
+            zstd
+
+      - name: Download SDK
+        run: |
+          set -eux
+          case "$SDK_DISTRIBUTION" in
+            openwrt)
+              sdk_base_url="https://downloads.openwrt.org/releases/${OPENWRT_VERSION}/targets/${OPENWRT_TARGET}/${OPENWRT_SUBTARGET}"
+              sdk_prefix='openwrt-sdk'
+              ;;
+            immortalwrt)
+              sdk_base_url="https://downloads.immortalwrt.org/releases/${OPENWRT_VERSION}/targets/${OPENWRT_TARGET}/${OPENWRT_SUBTARGET}"
+              sdk_prefix='immortalwrt-sdk'
+              ;;
+            *)
+              echo "Unsupported SDK distribution: $SDK_DISTRIBUTION" >&2
+              exit 1
+              ;;
+          esac
+
+          sdk_target_id="${OPENWRT_TARGET}-${OPENWRT_SUBTARGET}"
+          sdk_file="$(curl -fsSL "$sdk_base_url/" | grep -oE "${sdk_prefix}-${OPENWRT_VERSION}-${sdk_target_id}_[^\"[:space:]]+\.tar\.zst" | head -n1)"
+          test -n "$sdk_file"
+          wget -q "$sdk_base_url/$sdk_file" -O sdk.tar.zst
+          tar --zstd -xf sdk.tar.zst
+          sdk_dir="$(find . -maxdepth 1 -type d -name "${sdk_prefix}-*" | head -n1)"
+          test -n "$sdk_dir"
+          echo "SDK_DIR=$sdk_dir" >> "$GITHUB_ENV"
+
+      - name: Update feeds
+        working-directory: ${{ env.SDK_DIR }}
+        run: |
+          set -eux
+          ./scripts/feeds update -a
+
+      - name: Inject package into LuCI feed
+        run: |
+          set -eux
+          package_src=''
+          package_makefile=''
+
+          for candidate in \
+            "$GITHUB_WORKSPACE/luci-app-fan" \
+            "$GITHUB_WORKSPACE/Luci-app/luci-app-fan" \
+            "$GITHUB_WORKSPACE"
+          do
+            if [ -f "$candidate/Makefile" ] && grep -q '^PKG_NAME:=luci-app-fan$' "$candidate/Makefile"; then
+              package_src="$candidate"
+              package_makefile="$candidate/Makefile"
+              break
+            fi
+          done
+
+          if [ -z "$package_src" ]; then
+            echo "Unable to locate luci-app-fan Makefile in workspace" >&2
+            echo "Checked: $GITHUB_WORKSPACE/luci-app-fan/Makefile, $GITHUB_WORKSPACE/Luci-app/luci-app-fan/Makefile and $GITHUB_WORKSPACE/Makefile (PKG_NAME must be luci-app-fan)" >&2
+            if [ -f "$GITHUB_WORKSPACE/Makefile" ]; then
+              echo "Workspace root Makefile PKG_NAME:" >&2
+              grep '^PKG_NAME:=' "$GITHUB_WORKSPACE/Makefile" >&2 || true
+            fi
+            exit 1
+          fi
+
+          grep -q '^PKG_NAME:=luci-app-fan$' "$package_makefile"
+
+          sdk_feed_dir="$SDK_DIR/feeds/luci/applications/luci-app-fan"
+          sdk_pkg_dir="$SDK_DIR/package/feeds/luci/luci-app-fan"
+
+          mkdir -p "$SDK_DIR/feeds/luci/applications"
+          mkdir -p "$SDK_DIR/package/feeds/luci"
+          rm -rf "$sdk_feed_dir" "$sdk_pkg_dir"
+
+          rsync -a \
+            --exclude '.git/' \
+            --exclude '.github/' \
+            --exclude 'openwrt-sdk-*' \
+            --exclude 'immortalwrt-sdk-*' \
+            "$package_src/" "$sdk_feed_dir/"
+
+          ln -sfn "../../../feeds/luci/applications/luci-app-fan" "$sdk_pkg_dir"
+          test -f "$sdk_feed_dir/Makefile"
+          test -f "$sdk_pkg_dir/Makefile"
+          grep -q '^PKG_NAME:=luci-app-fan$' "$sdk_feed_dir/Makefile"
+
+      - name: Install package definitions
+        working-directory: ${{ env.SDK_DIR }}
+        run: |
+          set -eux
+          ./scripts/feeds install -a
+
+      - name: Configure SDK
+        working-directory: ${{ env.SDK_DIR }}
+        run: |
+          set -eux
+          package_po_dir="$SDK_DIR/feeds/luci/applications/luci-app-fan/po"
+          fan_i18n_langs=''
+
+          if [ -d "$package_po_dir" ]; then
+            fan_i18n_langs="$(find "$package_po_dir" -mindepth 2 -maxdepth 2 -type f -name '*.po' -printf '%h\n' | sed 's#^.*/##' | sort -u | tr '\n' ' ' | sed 's/[[:space:]]\+$//')"
+          fi
+
+          echo 'CONFIG_PACKAGE_luci-app-fan=y' >> .config
+
+          for lang in $fan_i18n_langs; do
+            echo "CONFIG_PACKAGE_luci-i18n-fan-${lang}=y" >> .config
+          done
+
+          make defconfig
+
+          {
+            echo 'FAN_I18N_LANGS<<EOF'
+            printf '%s\n' "$fan_i18n_langs"
+            echo 'EOF'
+          } >> "$GITHUB_ENV"
+
+          grep '^CONFIG_PACKAGE_luci-app-fan=' .config
+          grep '^CONFIG_PACKAGE_luci-i18n-fan-' .config || true
+
+      - name: Compile package
+        working-directory: ${{ env.SDK_DIR }}
+        run: |
+          set -eux
+          make package/feeds/luci/luci-app-fan/compile -j"$(nproc)" V=s
+
+      - name: Collect build artifacts
+        run: |
+          set -eux
+          artifact_dir="$RUNNER_TEMP/luci-app-fan-artifacts"
+          rm -rf "$artifact_dir"
+          mkdir -p "$artifact_dir"
+
+          find "$SDK_DIR/bin/packages" -type f \( -name 'luci-app-fan*.ipk' -o -name 'luci-i18n-fan*.ipk' -o -path '*/luci/Packages*' \) -exec cp -f {} "$artifact_dir/" \;
+
+          if ! find "$artifact_dir" -maxdepth 1 -type f -name 'luci-app-fan*.ipk' | grep -q .; then
+            echo 'No luci-app-fan ipk was produced by the build.' >&2
+            find "$SDK_DIR/bin/packages" -maxdepth 4 -type f | sort >&2
+            exit 1
+          fi
+
+          if [ -n "${FAN_I18N_LANGS:-}" ]; then
+            for lang in $FAN_I18N_LANGS; do
+              if ! find "$artifact_dir" -maxdepth 1 -type f -name "luci-i18n-fan-${lang}_*.ipk" | grep -q .; then
+                echo "No luci-i18n-fan-${lang} ipk was produced by the build." >&2
+                find "$SDK_DIR/bin/packages" -maxdepth 4 -type f | sort >&2
+                exit 1
+              fi
+            done
+          fi
+
+          echo "ARTIFACT_DIR=$artifact_dir" >> "$GITHUB_ENV"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: luci-app-fan-${{ env.SDK_DISTRIBUTION }}-${{ env.OPENWRT_TARGET }}-${{ env.OPENWRT_SUBTARGET }}-ipk
+          path: ${{ env.ARTIFACT_DIR }}/
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/fan-v') || (github.event_name == 'workflow_dispatch' && inputs.publish_release)
+
+    env:
+      SDK_DISTRIBUTION: ${{ inputs.sdk_distribution || 'openwrt' }}
+      OPENWRT_VERSION: ${{ inputs.openwrt_version || '24.10.0' }}
+      OPENWRT_TARGET: ${{ inputs.openwrt_target || 'mediatek' }}
+      OPENWRT_SUBTARGET: ${{ inputs.openwrt_subtarget || 'filogic' }}
+
+    steps:
+      - name: Determine release metadata
+        id: meta
+        run: |
+          set -eu
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            tag="${{ inputs.release_tag }}"
+          else
+            tag="$GITHUB_REF_NAME"
+          fi
+
+          if [ -z "$tag" ]; then
+            echo "release_tag is required when publishing from workflow_dispatch" >&2
+            exit 1
+          fi
+
+          display_tag="$tag"
+          case "$tag" in
+            fan-v*)
+              display_tag="v${tag#fan-v}"
+              ;;
+          esac
+
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "name=luci-app-fan $display_tag" >> "$GITHUB_OUTPUT"
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: luci-app-fan-${{ env.SDK_DISTRIBUTION }}-${{ env.OPENWRT_TARGET }}-${{ env.OPENWRT_SUBTARGET }}-ipk
+          path: release-assets
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: ${{ steps.meta.outputs.name }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          files: release-assets/**/*.ipk
+          fail_on_unmatched_files: true
+          body: |
+            SDK distribution: ${{ env.SDK_DISTRIBUTION }}
+            SDK release: ${{ env.OPENWRT_VERSION }}
+            Target: ${{ env.OPENWRT_TARGET }}/${{ env.OPENWRT_SUBTARGET }}
+            Package architecture: all
