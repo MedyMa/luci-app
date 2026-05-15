@@ -4,7 +4,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-sfp-status
 PKG_VERSION:=0.1.0
-PKG_RELEASE:=25
+PKG_RELEASE:=27
 PKG_LICENSE:=Apache-2.0
 PKGARCH:=all
 
@@ -26,6 +26,7 @@ define Package/$(PKG_NAME)/postinst
 #!/bin/sh
 if [ -z "$$IPKG_INSTROOT" ]; then
 	[ -f /usr/libexec/rpcd/luci.sfp-status ] && chmod 0755 /usr/libexec/rpcd/luci.sfp-status
+	rm -rf /tmp/luci-sfp-status
 	uci -q delete sfp-status.settings.interface
 	uci -q commit sfp-status
 	rm -rf /var/luci-modulecache/
