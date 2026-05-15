@@ -132,7 +132,7 @@ msgid "Configuration panel for modemband and gui application."
 msgstr "调制解调器应用程序和用户界面设置"
 
 msgid "Manage modem communication, restart behavior and template customization from one page."
-msgstr "在一个页面中完成接口、重启策略和模板管理。"
+msgstr "集中管理接口、重启策略与模板。"
 
 msgid "Device communication"
 msgstr "设备通信"
@@ -147,10 +147,10 @@ msgid "Template editor"
 msgstr "模板编辑器"
 
 msgid "Interface"
-msgstr "网络接口"
+msgstr "联网接口"
 
 msgid "Network interface for Internet access."
-msgstr "选择调制解调器用于联网的接口。"
+msgstr "选择调制解调器出网所用接口。"
 
 msgid "WAN restart after making changes to bands."
 msgstr "应用频段变更后自动重连WAN。"
@@ -162,19 +162,19 @@ msgid "Modem restart after making changes to bands."
 msgstr "应用频段变更后自动重启调制解调器。"
 
 msgid "Restart with AT command"
-msgstr "调制解调器重启指令"
+msgstr "AT 重启指令"
 
 msgid "AT command to restart the modem."
-msgstr "启用调制解调器重启后发送的AT指令。"
+msgstr "启用自动重启后执行的 AT 指令。"
 
 msgid "Port for communication with the modem"
-msgstr "通信端口"
+msgstr "控制端口"
 
 msgid "Please select a port"
-msgstr "请选择通信端口"
+msgstr "请选择控制端口"
 
 msgid "Select one of the available ttyUSBX ports."
-msgstr "选择用于AT或控制命令的通信端口。"
+msgstr "选择用于 AT 或控制命令的端口。"
 
 msgid "No supported modem was found, quitting..."
 msgstr "不支持的调制解调器，正在退出..."
@@ -216,13 +216,13 @@ msgid "Enable"
 msgstr "启用"
 
 msgid "Turn off notifications"
-msgstr "关闭成功通知"
+msgstr "关闭提示通知"
 
 msgid "Appearance and action settings"
 msgstr "外观和动作设置"
 
 msgid "Checking this option disables the notification that appears every time the bands are changed."
-msgstr "关闭频段变更完成后的提示通知。"
+msgstr "关闭频段变更完成后的弹出提示。"
 
 msgid "Modem settings template"
 msgstr "调制解调器模板配置"
@@ -237,16 +237,16 @@ msgid "Edit script"
 msgstr "编辑脚本"
 
 msgid "Supported bands depend on the region in which the modem operates. By modifying the DEFAULT_LTE_BANDS variable, you can easily adapt the package to your modem."
-msgstr "支持的频段取决于调制解调器运行的国家。通过修改DEFAULT_LTE_BANDS变量，您可以轻松地使软件包适应您的调制解调器"
+msgstr "按需修改 DEFAULT_LTE_BANDS 等变量，以适配当前模组。"
 
 msgid "Waiting to read data from the modem..."
 msgstr "等待从调制解调器读取数据..."
 
 msgid "Edit"
-msgstr "编辑"
+msgstr "模板内容"
 
 msgid "Template loaded"
-msgstr "当前模板"
+msgstr "已匹配模板"
 
 msgid "Refresh the view"
 msgstr "刷新视图"
@@ -255,10 +255,10 @@ msgid "Reload"
 msgstr "重载"
 
 msgid "Select the modem settings file"
-msgstr "模板文件"
+msgstr "模板文件映射"
 
 msgid "Select the template assigned to the Vendor and ProdID of the modem."
-msgstr "选择与当前调制解调器 Vendor / Product ID 对应的模板。"
+msgstr "按当前模组的 Vendor / Product ID 选择模板。"
 
 msgid "Band selection switch"
 msgstr "频段选择"
