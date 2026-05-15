@@ -125,6 +125,17 @@ function buildMergedOverview(modules) {
 	return table;
 }
 
+function normalizeModules(modules) {
+	return (Array.isArray(modules) ? modules : []).filter(function(module) {
+		return module && module.supported !== false;
+	}).sort(function(left, right) {
+		return valueOrDash(left.module_slot || left.interface).localeCompare(valueOrDash(right.module_slot || right.interface), undefined, {
+			numeric: true,
+			sensitivity: 'base'
+		});
+	});
+}
+
 function renderUnavailable(status) {
 	return buildModuleBlock(null, [
 		{ label: _('Status'), render: function() { return valueOrDash(status?.error || _('Unavailable')); } },
@@ -173,7 +184,7 @@ function renderModuleOverview(status, options) {
 }
 
 function renderOverview(reply) {
-	const modules = Array.isArray(reply?.modules) ? reply.modules : [];
+	const modules = normalizeModules(reply?.modules);
 	const children = [ E('style', {}, widgetStyle) ];
 
 	if (!modules.length)

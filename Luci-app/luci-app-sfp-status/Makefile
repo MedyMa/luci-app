@@ -4,9 +4,8 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-sfp-status
 PKG_VERSION:=0.1.0
-PKG_RELEASE:=22
+PKG_RELEASE:=23
 PKG_LICENSE:=Apache-2.0
-PKG_MAINTAINER:=GitHub Copilot
 PKGARCH:=all
 
 LUCI_TITLE:=LuCI SFP status monitor
