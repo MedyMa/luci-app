@@ -132,7 +132,12 @@ jobs:
             -not -path "$GITHUB_WORKSPACE/.git/*" \
             -not -path "$GITHUB_WORKSPACE/openwrt-sdk-*/*" \
             -not -path "$GITHUB_WORKSPACE/immortalwrt-sdk-*/*" \
-            -exec grep -l '^PKG_NAME:=luci-app-modemband$' {} + | head -n1)"
+            -print | while IFS= read -r candidate; do
+              if sed 's/\r$//' "$candidate" | grep -q '^PKG_NAME:=luci-app-modemband$'; then
+                printf '%s\n' "$candidate"
+                break
+              fi
+            done | head -n1)"
           package_src="${package_makefile%/Makefile}"
 
           if [ -z "$package_makefile" ] || [ ! -f "$package_makefile" ]; then
