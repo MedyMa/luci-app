@@ -44,9 +44,23 @@ function isDarkTheme() {
 	if (typeof window === 'undefined' || typeof document === 'undefined' || !document.body)
 		return false;
 
+	var html = document.documentElement;
+	var htmlClass = html ? (html.className || '') : '';
+	var bodyClass = document.body.className || '';
+	var htmlTheme = html ? (html.getAttribute('data-theme') || '') : '';
+	var bodyTheme = document.body.getAttribute('data-theme') || '';
 	var background = window.getComputedStyle(document.body).backgroundColor || '';
 	var channels = background.match(/\d+(?:\.\d+)?/g);
 	var luminance;
+
+	if (/\b(?:dark|mode-dark|argon-dark)\b/i.test(htmlClass) || /\b(?:dark|mode-dark|argon-dark)\b/i.test(bodyClass))
+		return true;
+
+	if (/dark/i.test(htmlTheme) || /dark/i.test(bodyTheme))
+		return true;
+
+	if (/light/i.test(htmlTheme) || /light/i.test(bodyTheme))
+		return false;
 
 	if (!channels || channels.length < 3)
 		return false;
@@ -61,6 +75,8 @@ function applyThemeClass(node, darkClass) {
 	}
 	var retries = [ 0, 80, 220, 480, 900 ];
 	var index;
+	var themeObserver;
+	var mediaQuery;
 
 	syncThemeClass();
 
@@ -70,6 +86,28 @@ function applyThemeClass(node, darkClass) {
 
 		if (window.requestAnimationFrame)
 			window.requestAnimationFrame(syncThemeClass);
+
+		if (typeof MutationObserver !== 'undefined' && document.documentElement) {
+			themeObserver = new MutationObserver(syncThemeClass);
+			themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: [ 'class', 'style', 'data-theme' ] });
+
+			if (document.body && document.body !== document.documentElement)
+				themeObserver.observe(document.body, { attributes: true, attributeFilter: [ 'class', 'style', 'data-theme' ] });
+		}
+
+		if (window.matchMedia) {
+			mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+			if (mediaQuery) {
+				if (mediaQuery.addEventListener)
+					mediaQuery.addEventListener('change', syncThemeClass);
+				else if (mediaQuery.addListener)
+					mediaQuery.addListener(syncThemeClass);
+			}
+		}
+
+		window.addEventListener('pageshow', syncThemeClass);
+		window.addEventListener('focus', syncThemeClass);
 	}
 
 	return node;
