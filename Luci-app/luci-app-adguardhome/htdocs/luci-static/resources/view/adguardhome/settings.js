@@ -323,7 +323,7 @@ return view.extend({
 		return m.render().then(function(formNode) {
 			return applyThemeClass(E('div', { 'class': 'agh-settings' }, [
 				E('style', {}, style),
-				E('section', { 'class': 'agh-hero' }, [ E('h2', {}, t('AdGuard Home Settings', 'AdGuard Home 设置中心')), E('p', {}, t('Operate the service, update the core, manage download sources and tune UCI options from one grouped page.', '在一个分组页面中完成服务控制、核心更新、下载源管理和 UCI 参数调整。')) ]),
+				E('section', { 'class': 'agh-hero' }, [ E('h2', {}, t('AdGuard Home Settings', 'AdGuard Home 设置中心')) ]),
 				statusSummary(status, rpcError),
 				E('section', { 'class': 'agh-actions' }, [ updateCard(rpcError), linksCard(channelSelect, archSelect, linksBox, rpcError), passwordCard(), gfwCard(rpcError, yes(status.running)) ]),
 				formNode

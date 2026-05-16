@@ -318,7 +318,7 @@ return view.extend({
 
 		var node = applyThemeClass(E('div', { 'class': 'agh-yaml' }, [
 			E('style', {}, style),
-			E('section', { 'class': 'agh-hero' }, [ E('h2', {}, t('YAML Editor', 'YAML 编辑器')), E('p', {}, t('Edit the file-backed AdGuard Home YAML configuration with template generation, validation and apply through rpcd.', '通过 rpcd 编辑文件型 AdGuard Home YAML 配置，支持模板生成、校验和应用。')) ]),
+			E('section', { 'class': 'agh-hero' }, [ E('h2', {}, t('YAML Editor', 'YAML 编辑器')) ]),
 			E('section', { 'class': 'agh-card' }, [
 				rpcError ? E('div', { 'class': 'agh-alert' }, actionError(rpcError, t('YAML backend unavailable', 'YAML 后端不可用'))) : '',
 				lockNote || '',

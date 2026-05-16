@@ -248,7 +248,7 @@ return view.extend({
 
 		return applyThemeClass(E('div', { 'class': 'agh-log' }, [
 			E('style', {}, style),
-			E('section', { 'class': 'agh-hero' }, [ E('h2', {}, t('Runtime Logs', '运行日志')), E('p', {}, t('Follow service and core update output from one responsive console.', '在一个响应式控制台里查看服务运行日志和核心更新日志。')) ]),
+			E('section', { 'class': 'agh-hero' }, [ E('h2', {}, t('Runtime Logs', '运行日志')) ]),
 			E('section', { 'class': 'agh-card' }, [
 				rpcError ? E('div', { 'class': 'agh-alert' }, actionError(rpcError, t('Log backend unavailable', '日志后端不可用'))) : '',
 				E('div', { 'class': 'agh-toolbar' }, [

@@ -120,9 +120,19 @@ var style = [
 	'.agh-shell:before{content:"";position:absolute;right:-90px;top:-100px;width:300px;height:300px;border-radius:999px;background:radial-gradient(circle,rgba(160,196,255,.26),rgba(160,196,255,0) 70%)}',
 	'.agh-shell:after{content:"";position:absolute;left:-110px;bottom:-140px;width:340px;height:340px;border-radius:999px;background:radial-gradient(circle,rgba(214,230,255,.20),rgba(214,230,255,0) 70%)}',
 	'.agh-hero{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(260px,.75fr);gap:18px;padding:26px;color:#f7fbf8}',
+	'.agh-hero-main{display:grid;align-content:start;gap:14px}',
 	'.agh-eyebrow{display:inline-flex;align-items:center;width:max-content;padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.13);font-size:12px;letter-spacing:.08em;text-transform:uppercase}',
 	'.agh-title{all:unset;display:block!important;margin:14px 0 10px!important;font-size:30px!important;line-height:1.16!important;font-weight:700!important;color:#fff!important;background:transparent!important;border:0!important;box-shadow:none!important}',
 	'.agh-copy{max-width:68rem;margin:0;color:rgba(247,251,248,.86);font-size:14px;line-height:1.75}',
+	'.agh-actions{display:flex;flex-wrap:wrap;gap:10px}',
+	'.agh-hero-link{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 16px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.12);color:#fff!important;-webkit-text-fill-color:#fff!important;text-decoration:none!important;box-shadow:none!important;text-shadow:none!important;font-weight:600;transition:background .2s ease,border-color .2s ease,transform .2s ease,box-shadow .2s ease}',
+	'.agh-hero-link:hover,.agh-hero-link:focus{color:#fff!important;-webkit-text-fill-color:#fff!important;transform:translateY(-1px);box-shadow:0 10px 24px rgba(10,21,38,.18)}',
+	'.agh-hero-link-panel{background:linear-gradient(135deg,#1f9a5b 0%,#36b46f 100%);border-color:rgba(162,245,196,.42)}',
+	'.agh-hero-link-panel:hover,.agh-hero-link-panel:focus{background:linear-gradient(135deg,#23aa63 0%,#3cc97b 100%);border-color:rgba(189,255,215,.58)}',
+	'.agh-hero-link-settings{background:linear-gradient(135deg,#bd4659 0%,#d65d6d 100%);border-color:rgba(255,188,196,.42)}',
+	'.agh-hero-link-settings:hover,.agh-hero-link-settings:focus{background:linear-gradient(135deg,#cc4e62 0%,#e46d7c 100%);border-color:rgba(255,208,214,.58)}',
+	'.agh-hero-link-log{background:linear-gradient(135deg,#5b6675 0%,#707b8c 100%);border-color:rgba(223,230,238,.32)}',
+	'.agh-hero-link-log:hover,.agh-hero-link-log:focus{background:linear-gradient(135deg,#667284 0%,#7d899a 100%);border-color:rgba(235,241,248,.46)}',
 	'.agh-quick{display:grid;gap:10px;align-content:start}',
 	'.agh-chip{display:flex;justify-content:space-between;gap:12px;padding:12px 14px;border-radius:16px;background:var(--agh-chip-bg);border:1px solid var(--agh-chip-border);color:#fff}',
 	'.agh-chip span{color:rgba(247,251,248,.72);font-size:12px}.agh-chip strong{font-size:15px}',
@@ -144,6 +154,55 @@ function pathItem(label, value) {
 	return E('div', { 'class': 'agh-path' }, [ E('span', {}, label), E('code', {}, text(value, '-')) ]);
 }
 
+function redirectModeLabel(value) {
+	switch (value) {
+	case 'dnsmasq-upstream':
+		return t('Use as dnsmasq upstream', '作为 dnsmasq 上游');
+	case 'redirect':
+		return t('Redirect port 53', '重定向 53 端口');
+	case 'exchange':
+		return t('Swap with dnsmasq port', '与 dnsmasq 交换端口');
+	case 'none':
+	case '':
+	case null:
+	case undefined:
+		return t('None', '无');
+	default:
+		return t('Unknown', '未知');
+	}
+}
+
+function formatHost(hostname) {
+	hostname = hostname == null ? '' : String(hostname);
+	return hostname.indexOf(':') >= 0 && hostname.charAt(0) !== '[' ? '[' + hostname + ']' : hostname;
+}
+
+function panelUrl(status) {
+	var current = typeof window !== 'undefined' ? window.location : null;
+	var hostname = current && current.hostname ? current.hostname : '';
+	var port = text(status && status.httpport, '3000');
+	var scheme = port === '443' ? 'https://' : 'http://';
+
+	if (!hostname)
+		return '#';
+
+	if ((scheme === 'http://' && port === '80') || (scheme === 'https://' && port === '443'))
+		return scheme + formatHost(hostname);
+
+	return scheme + formatHost(hostname) + ':' + port;
+}
+
+function heroLink(label, href, extraClass, newTab) {
+	var attrs = { 'class': 'agh-hero-link' + (extraClass ? ' ' + extraClass : ''), 'href': href || '#' };
+
+	if (newTab) {
+		attrs.target = '_blank';
+		attrs.rel = 'noopener noreferrer';
+	}
+
+	return E('a', attrs, label);
+}
+
 return view.extend({
 	load: function() {
 		return safeCall(callGetStatus(), {});
@@ -153,21 +212,27 @@ return view.extend({
 		var rpcError = status._rpc_error;
 		var state = yes(status.running) ? t('Running', '运行中') : t('Stopped', '未运行');
 		var stateClass = yes(status.running) ? 'agh-ok' : 'agh-bad';
+		var settingsUrl = L.url('admin', 'services', 'adguardhome', 'settings');
+		var logUrl = L.url('admin', 'services', 'adguardhome', 'log');
 
 		root.appendChild(E('style', {}, style));
 		if (rpcError)
 			root.appendChild(E('section', { 'class': 'agh-alert' }, actionError(rpcError, t('Overview data unavailable', '概览数据不可用'))));
 		root.appendChild(E('section', { 'class': 'agh-shell' }, E('div', { 'class': 'agh-hero' }, [
-			E('div', {}, [
+			E('div', { 'class': 'agh-hero-main' }, [
 				E('span', { 'class': 'agh-eyebrow' }, t('Network DNS Guard', '网络 DNS 防护')),
 				E('h2', { 'class': 'agh-title' }, 'AdGuard Home'),
-				E('p', { 'class': 'agh-copy' }, t('Modern LuCI dashboard for service state, DNS redirect, core update readiness and runtime path health. Designed for OpenWrt 24.10/25.12 and Argon theme.', '面向 OpenWrt 24.10/25.12 与 Argon 主题重新构建的现代 LuCI 状态页，集中展示服务状态、DNS 重定向、核心更新就绪情况以及运行目录健康度。'))
+				E('div', { 'class': 'agh-actions' }, [
+					heroLink(t('Control Panel', '控制面板'), panelUrl(status), 'agh-hero-link-panel', true),
+					heroLink(t('Open Settings', '打开设置'), settingsUrl, 'agh-hero-link-settings'),
+					heroLink(t('View Logs', '查看日志'), logUrl, 'agh-hero-link-log')
+				])
 			]),
 			E('div', { 'class': 'agh-quick' }, [
 				E('div', { 'class': 'agh-chip' }, [ E('span', {}, t('Service', '服务')), E('strong', { 'class': rpcError ? 'agh-bad' : stateClass }, rpcError ? t('Backend missing', '后端缺失') : state) ]),
 				E('div', { 'class': 'agh-chip' }, [ E('span', {}, t('Core', '核心')), E('strong', { 'class': yes(status.core_ready) ? 'agh-ok' : 'agh-warn' }, yes(status.core_ready) ? text(status.version) : t('Missing', '缺失')) ]),
 				E('div', { 'class': 'agh-chip' }, [ E('span', {}, t('DNS Port', 'DNS 端口')), E('strong', {}, text(status.dns_port, rpcError ? '?' : '-')) ]),
-				E('div', { 'class': 'agh-chip' }, [ E('span', {}, t('Redirect', '重定向')), E('strong', { 'class': yes(status.redirected) ? 'agh-ok' : '' }, yes(status.redirected) ? t('Active', '已启用') : text(status.redirect, 'none')) ])
+				E('div', { 'class': 'agh-chip' }, [ E('span', {}, t('Redirect', '重定向')), E('strong', { 'class': yes(status.redirected) ? 'agh-ok' : '' }, yes(status.redirected) ? t('Active', '已启用') : redirectModeLabel(status.redirect)) ])
 			])
 		])));
 
