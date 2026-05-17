@@ -10,7 +10,7 @@ PKGARCH:=all
 
 LUCI_TITLE:=LuCI SFP status monitor
 LUCI_DESCRIPTION:=Overview and detailed DOM status for SFP modules
-LUCI_DEPENDS:=+luci-base +ethtool
+LUCI_DEPENDS:=+luci-base +ethtool-full
 
 define Build/Prepare/$(PKG_NAME)
 	$(call Build/Prepare/Default)
@@ -25,13 +25,14 @@ endef
 define Package/$(PKG_NAME)/postinst
 #!/bin/sh
 if [ -z "$$IPKG_INSTROOT" ]; then
+	[ -f /etc/uci-defaults/40_luci-sfp-status ] && chmod 0755 /etc/uci-defaults/40_luci-sfp-status
 	[ -f /usr/libexec/rpcd/luci.sfp-status ] && chmod 0755 /usr/libexec/rpcd/luci.sfp-status
 	rm -rf /tmp/luci-sfp-status
 	uci -q delete sfp-status.settings.interface
 	uci -q commit sfp-status
-	rm -rf /var/luci-modulecache/
-	rm -f /var/luci-indexcache.*
-	[ -x /etc/init.d/rpcd ] && /etc/init.d/rpcd reload
+	rm -rf /tmp/luci-modulecache/ /var/luci-modulecache/
+	rm -f /tmp/luci-indexcache /tmp/luci-indexcache.* /var/luci-indexcache.* 2>/dev/null
+	[ -x /etc/init.d/rpcd ] && /etc/init.d/rpcd reload >/dev/null 2>&1 || true
 fi
 exit 0
 endef
