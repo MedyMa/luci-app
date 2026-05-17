@@ -333,6 +333,7 @@ return view.extend({
 	degreeUnit: ' ' + String.fromCharCode(176) + 'C',
 	lastTick: 0,
 	rotorAngle: 0,
+	animationStarted: false,
 	runtimeSignature: null,
 	pendingSyncFrame: null,
 
@@ -890,8 +891,19 @@ return view.extend({
 	},
 
 	animationLoop: function(timestamp) {
-		if (!this.root || !document.body.contains(this.root))
+		if (!this.root)
 			return;
+
+		if (!document.body || !document.body.contains(this.root)) {
+			this.lastTick = 0;
+
+			if (!this.animationStarted)
+				this.requestFrame(this.animationLoop.bind(this));
+
+			return;
+		}
+
+		this.animationStarted = true;
 
 		var preview = this.runtime ? this.getPreview() : { enabled: false, mode: 'smart', manual_pwm: 70, on: null, off: null };
 		var demand = this.runtime ? this.deriveDemand(preview) : 0;

@@ -30,10 +30,18 @@ endef
 define Package/luci-app-fan/postinst
 #!/bin/sh
 if [ -z "$$IPKG_INSTROOT" ]; then
-	rm -rf /var/luci-modulecache/
-	rm -f /var/luci-indexcache.*
+	for runtime_file in \
+		/etc/init.d/luci-fan \
+		/etc/uci-defaults/luci-fan \
+		/usr/libexec/fan-control \
+		/usr/libexec/rpcd/luci.fan
+	do
+		[ -f "$$runtime_file" ] && chmod 0755 "$$runtime_file"
+	done
+	rm -rf /tmp/luci-modulecache/ /var/luci-modulecache/
+	rm -f /tmp/luci-indexcache /tmp/luci-indexcache.* /var/luci-indexcache.* 2>/dev/null
 	[ -x /etc/init.d/luci-fan ] && /etc/init.d/luci-fan restart >/dev/null 2>&1
-	[ -x /etc/init.d/rpcd ] && /etc/init.d/rpcd reload
+	[ -x /etc/init.d/rpcd ] && /etc/init.d/rpcd reload >/dev/null 2>&1 || true
 fi
 exit 0
 endef
