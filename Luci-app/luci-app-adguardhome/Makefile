@@ -39,6 +39,22 @@ endef
 define Package/luci-app-adguardhome/postinst
 #!/bin/sh
 if [ -z "$$IPKG_INSTROOT" ]; then
+	for runtime_file in \
+		/etc/init.d/AdGuardHome \
+		/etc/uci-defaults/40_luci-AdGuardHome \
+		/usr/libexec/rpcd/luci.adguardhome \
+		/usr/share/AdGuardHome/addhost.sh \
+		/usr/share/AdGuardHome/firewall.start \
+		/usr/share/AdGuardHome/getsyslog.sh \
+		/usr/share/AdGuardHome/gfw2adg.sh \
+		/usr/share/AdGuardHome/gfwipset2adg.sh \
+		/usr/share/AdGuardHome/tailto.sh \
+		/usr/share/AdGuardHome/update_core.sh \
+		/usr/share/AdGuardHome/waitnet.sh \
+		/usr/share/AdGuardHome/watchconfig.sh
+	do
+		[ -f "$$runtime_file" ] && chmod 0755 "$$runtime_file"
+	done
 	for legacy_file in \
 		/usr/lib/lua/luci/controller/AdGuardHome.lua \
 		/usr/lib/lua/luci/model/cbi/AdGuardHome/base.lua \
