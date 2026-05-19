@@ -1,0 +1,149 @@
+msgid ""
+msgstr "Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "WiFi 7"
+msgstr "WiFi 7"
+
+msgid "Overview"
+msgstr "概览"
+
+msgid "MLD config"
+msgstr "MLD 配置"
+
+msgid "Radio"
+msgstr "射频"
+
+msgid "Networks"
+msgstr "网络"
+
+msgid "Stations"
+msgstr "客户端"
+
+msgid "Diagnostics"
+msgstr "诊断"
+
+msgid "MT7996 / MLO control"
+msgstr "MT7996 / MLO 控制"
+
+msgid "Save & apply"
+msgstr "保存并应用"
+
+msgid "Discard"
+msgstr "放弃"
+
+msgid "Cancel"
+msgstr "取消"
+
+msgid "Create network"
+msgstr "创建网络"
+
+msgid "Add network"
+msgstr "添加网络"
+
+msgid "+ Add network"
+msgstr "+ 添加网络"
+
+msgid "+ Add MLD network"
+msgstr "+ 添加 MLD 网络"
+
+msgid "Remove"
+msgstr "删除"
+
+msgid "Show"
+msgstr "显示"
+
+msgid "Hide"
+msgstr "隐藏"
+
+msgid "SSID"
+msgstr "SSID"
+
+msgid "Password"
+msgstr "密码"
+
+msgid "Encryption"
+msgstr "加密"
+
+msgid "Country code"
+msgstr "国家/地区代码"
+
+msgid "Channel"
+msgstr "信道"
+
+msgid "HT mode"
+msgstr "HT 模式"
+
+msgid "TX power"
+msgstr "发射功率"
+
+msgid "Disabled"
+msgstr "禁用"
+
+msgid "Network bridge"
+msgstr "网络桥接"
+
+msgid "Hidden SSID"
+msgstr "隐藏 SSID"
+
+msgid "Client isolation"
+msgstr "客户端隔离"
+
+msgid "Max clients"
+msgstr "最大客户端数"
+
+msgid "Firmware"
+msgstr "固件"
+
+msgid "MT76 driver"
+msgstr "MT76 驱动"
+
+msgid "Thermal"
+msgstr "温度"
+
+msgid "Log collection"
+msgstr "日志收集"
+
+msgid "SSID cannot be empty"
+msgstr "SSID 不能为空"
+
+msgid "Password must be at least 8 characters"
+msgstr "密码至少需要 8 个字符"
+
+msgid "MLO requires at least 2 radios selected"
+msgstr "MLO 至少需要选择 2 个射频"
+
+msgid "Open network not allowed on 6 GHz"
+msgstr "6 GHz 不允许开放网络"
+
+msgid "Applying configuration..."
+msgstr "正在应用配置..."
+
+msgid "Applying radio configuration..."
+msgstr "正在应用射频配置..."
+
+msgid "Writing UCI..."
+msgstr "正在写入 UCI..."
+
+msgid "Committing..."
+msgstr "正在提交..."
+
+msgid "Running wifi restart..."
+msgstr "正在重启 WiFi..."
+
+msgid "Running wifi reload..."
+msgstr "正在重载 WiFi..."
+
+msgid "Collecting..."
+msgstr "正在收集..."
+
+msgid "Done"
+msgstr "完成"
+
+msgid "Done -- WiFi active"
+msgstr "完成 -- WiFi 已启用"
+
+msgid "Done -- REBOOT REQUIRED"
+msgstr "完成 -- 需要重启"
+
+msgid "Done -- log downloaded"
+msgstr "完成 -- 日志已下载"
