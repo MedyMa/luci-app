@@ -24,14 +24,44 @@ var callExec = rpc.declare({
     expect: {}
 });
 
-// network.wireless status via exec (rpcd ACL for network.wireless is session-restricted)
-function callWirelessStatusExec() {
-    return L.resolveDefault(callExec('/bin/sh', [
-        '-c', 'ubus call network.wireless status 2>/dev/null'
-    ]), { stdout: '' }).then(function(r) {
-        try { return JSON.parse(r.stdout || '{}'); }
-        catch(e) { return {}; }
+function callThermalStatus() {
+    return L.resolveDefault(fs.list('/sys/class/thermal'), []).then(function(entries) {
+        var zones = (entries || []).filter(function(entry) {
+            return entry && /^thermal_zone\d+$/.test(entry.name || '');
+        });
+
+        return Promise.all(zones.map(function(zone) {
+            var base = '/sys/class/thermal/' + zone.name;
+
+            return Promise.all([
+                L.resolveDefault(fs.read(base + '/type'), ''),
+                L.resolveDefault(fs.read(base + '/temp'), '')
+            ]).then(function(values) {
+                var name = String(values[0] || '').trim();
+                var temp = parseInt(String(values[1] || '').trim(), 10);
+
+                if (!name || isNaN(temp))
+                    return '';
+
+                return name + ' ' + Math.round(temp / 1000);
+            });
+        }));
+    }).then(function(lines) {
+        return { stdout: (lines || []).filter(Boolean).join('\n') };
+    }, function() {
+        return { stdout: '' };
     });
+}
+
+function tailLines(text, count) {
+    var lines = String(text || '').split('\n');
+    return lines.slice(Math.max(lines.length - count, 0)).join('\n');
+}
+
+function filterWifiLog(text, count) {
+    return tailLines(String(text || '').split('\n').filter(function(line) {
+        return /mt76|wifi|mld|hostapd/i.test(line);
+    }).join('\n'), count);
 }
 
 function parseStat(raw) {
@@ -81,6 +111,7 @@ var zhHansMap = {
     'Done -- removed': '完成 -- 已删除',
     'Done -- log downloaded': '完成 -- 日志已下载',
     'Done -- REBOOT REQUIRED': '完成 -- 需要重启',
+    'Failed to create network': '创建网络失败',
     'Writing UCI...': '正在写入 UCI...',
     'Committing...': '正在提交...',
     'Running wifi restart...': '正在重启 WiFi...',
@@ -712,11 +743,12 @@ return view.extend({
             ['/bin/cat', ['/sys/kernel/debug/ieee80211/phy0/netdev:ap-mld-1/link-1/txpower']],
             ['/bin/cat', ['/sys/kernel/debug/ieee80211/phy0/netdev:ap-mld-1/link-2/txpower']],
             ['/bin/cat', ['/proc/version']],
-            ['/bin/sh',  ['-c', 'for d in /sys/class/thermal/thermal_zone*; do t=$(cat $d/temp 2>/dev/null); n=$(cat $d/type 2>/dev/null); [ -n "$t" ] && [ -n "$n" ] && echo "$n $((t/1000))"; done']],
+            null,
             ['/bin/cat', ['/sys/kernel/debug/ieee80211/phy0/netdev:ap-mld-1/mt76_links_info']],
-            ['/bin/sh',  ['-c', 'ubus call network.wireless status 2>/dev/null']],
         ].forEach(function(c) {
-            calls.push(L.resolveDefault(callExec(c[0], c[1]), { stdout: '' }));
+            calls.push(c
+                ? L.resolveDefault(callExec(c[0], c[1]), { stdout: '' })
+                : callThermalStatus());
         });
 
         return Promise.all(calls).then(function(data) {
@@ -876,8 +908,6 @@ return view.extend({
         var skuRaw    = data[2].stdout ? data[2].stdout.trim() : '1';
         var mldSIDs   = data._mldSIDs || ['ap_mld_1'];
         var diagBase  = data._diagBase || 10;
-        var wlStatus  = data[diagBase + 12] || {};
-
         // Get hostapd stat for first MLD network (primary)
         var statBase = data._mldStatBase || 3;
         var stat0 = parseStat(data[statBase]     ? (data[statBase].stdout || '')     : '');
@@ -1275,6 +1305,8 @@ return view.extend({
                 // --- Add MLD network section ---
                 var callUciSetMld2   = rpc.declare({ object:'uci', method:'set',
                     params:['config','section','values'], expect:{} });
+                var callUciAddMld2   = rpc.declare({ object:'uci', method:'add',
+                    params:['config','type','name','values'], expect:{ section:'' } });
                 var callUciCommitMld2 = rpc.declare({ object:'uci', method:'commit',
                     params:['config'], expect:{} });
 
@@ -1359,26 +1391,20 @@ return view.extend({
                     cancelAddBtn.disabled = true;
                     setI18nText(addStatusSpan, 'Creating ' + newSID + '...');
 
-                    // UCI add wifi-iface + set values + commit + wifi restart
-                    // Build UCI commands as single shell script
-                    var devList = selectedRadios.map(function(r) {
-                        return 'uci add_list wireless.' + newSID + '.device=' + r;
-                    }).join('; ');
-                    var uciScript = [
-                        'uci set wireless.' + newSID + '=wifi-iface',
-                        'uci set wireless.' + newSID + '.ssid=' + JSON.stringify(ssid),
-                        'uci set wireless.' + newSID + '.key=' + JSON.stringify(key),
-                        'uci set wireless.' + newSID + '.encryption=' + enc,
-                        'uci set wireless.' + newSID + '.ieee80211w=2',
-                        'uci set wireless.' + newSID + '.mlo=1',
-                        'uci set wireless.' + newSID + '.mode=ap',
-                        'uci set wireless.' + newSID + '.network=lan',
-                        devList,
-                        'uci commit wireless'
-                    ].join(' && ');
-
                     setI18nText(addStatusSpan, 'Writing UCI (' + newSID + ')...');
-                    L.resolveDefault(callExec('/bin/sh', ['-c', uciScript]), null)
+                    callUciAddMld2('wireless', 'wifi-iface', newSID, {
+                        ssid: ssid,
+                        key: key,
+                        encryption: enc,
+                        ieee80211w: '2',
+                        mlo: '1',
+                        mode: 'ap',
+                        network: 'lan',
+                        device: selectedRadios
+                    })
+                    .then(function() {
+                        return L.resolveDefault(callUciCommitMld2('wireless'), null);
+                    })
                     .then(function() {
                         setI18nText(addStatusSpan, 'Running wifi reload...');
                         return callExec('/sbin/wifi', ['reload']);
@@ -1388,6 +1414,13 @@ return view.extend({
                         addStatusSpan.style.color = '#1d9e75';
                         doAddBtn.disabled   = false;
                         cancelAddBtn.disabled = false;
+                    })
+                    .catch(function(err) {
+                        setI18nText(addStatusSpan, 'Failed to create network');
+                        addStatusSpan.style.color = '#e24b4a';
+                        doAddBtn.disabled = false;
+                        cancelAddBtn.disabled = false;
+                        throw err;
                     });
                 });
 
@@ -1534,6 +1567,7 @@ return view.extend({
         r1chWrap.appendChild(r1ch); r1chWrap.appendChild(dfsNote);
         var callUciSet=rpc.declare({object:'uci',method:'set',params:['config','section','values'],expect:{}});
         var callUciCommit=rpc.declare({object:'uci',method:'commit',params:['config'],expect:{}});
+        var callUciDeleteOption=rpc.declare({object:'uci',method:'delete',params:['config','section','option'],expect:{}});
         var progressDiv=E('div',{'style':'display:none;margin-top:12px'},[
             E('div',{'style':'background:#1a1a2e;border:1px solid #444;border-radius:6px;padding:12px 14px;text-align:center'},[
                 E('div',{'style':'font-size:13px;font-weight:bold;margin-bottom:6px'},i18nText('Applying radio configuration...')),
@@ -1588,9 +1622,16 @@ return view.extend({
                 }
             });
             var txpWrites = [];
-            if(r0txp._inp.value && i0sid) txpWrites.push(L.resolveDefault(callUciSet('wireless',i0sid,{vif_txpower:r0txp._inp.value}),null));
-            if(r1txp._inp.value && i1sid) txpWrites.push(L.resolveDefault(callUciSet('wireless',i1sid,{vif_txpower:r1txp._inp.value}),null));
-            if(r2txp._inp.value && i2sid) txpWrites.push(L.resolveDefault(callUciSet('wireless',i2sid,{vif_txpower:r2txp._inp.value}),null));
+            function pushTxpWrite(sid, value) {
+                if (!sid) return;
+                value = String(value || '').trim();
+                txpWrites.push(value
+                    ? L.resolveDefault(callUciSet('wireless', sid, { vif_txpower: value }), null)
+                    : L.resolveDefault(callUciDeleteOption('wireless', sid, 'vif_txpower'), null));
+            }
+            pushTxpWrite(i0sid, r0txp._inp.value);
+            pushTxpWrite(i1sid, r1txp._inp.value);
+            pushTxpWrite(i2sid, r2txp._inp.value);
             Promise.all([
                 L.resolveDefault(callUciSet('wireless','radio0',{channel:r0ch.value,htmode:r0ht.value,
                     disabled:r0dis.checked?'1':'0',noscan:r0noscan.checked?'1':'0',country:country,sku_idx:skuIdx,
@@ -1694,6 +1735,8 @@ return view.extend({
             params:['config','type'], expect:{ section:'' } });
         var callUciDelete = rpc.declare({ object:'uci', method:'delete',
             params:['config','section'], expect:{} });
+        var callUciDeleteOption = rpc.declare({ object:'uci', method:'delete',
+            params:['config','section','option'], expect:{} });
 
         var inputStyle = 'background:#1a1a2e;border:1px solid #444;border-radius:4px;' +
                          'color:#fff;padding:4px 8px;font-size:12px;width:220px';
@@ -1982,9 +2025,17 @@ return view.extend({
                                  hidden:   hiddenChk.checked?'1':'0',
                                  isolate:  isolateChk.checked?'1':'0',
                                  wmm:      wmmChk.checked?'1':'0' };
+                    var deleteOptions = [];
                     if (maxassocInp.value) vals.maxassoc = maxassocInp.value;
+                    else deleteOptions.push('maxassoc');
                     if (newEnc !== 'none') vals.key = newKey;
+                    else deleteOptions.push('key');
                     L.resolveDefault(callUciSet('wireless', sid, vals), null)
+                    .then(function() {
+                        return Promise.all(deleteOptions.map(function(option) {
+                            return L.resolveDefault(callUciDeleteOption('wireless', sid, option), null);
+                        }));
+                    })
                     .then(function() {
                         setI18nText(statusSpan, 'Committing...');
                         return L.resolveDefault(callUciCommit('wireless'), null);
@@ -2386,11 +2437,18 @@ return view.extend({
                         logBtn.addEventListener('click', function() {
                             logBtn.disabled = true;
                             setI18nText(logStatus, 'Collecting...');
-                            L.resolveDefault(callExec('/bin/sh', ['-c',
-                                'echo "=== dmesg WiFi ===" && dmesg | grep -i "mt76\|wifi\|mld\|hostapd" | tail -100 && ' +
-                                'echo "=== logread ===" && logread 2>/dev/null | tail -200'
-                            ]), { stdout: '' }).then(function(r) {
-                                var blob = new Blob([r.stdout || 'No output'], { type: 'text/plain' });
+                            Promise.all([
+                                L.resolveDefault(callExec('/bin/dmesg', []), { stdout: '' }),
+                                L.resolveDefault(callExec('/sbin/logread', []), { stdout: '' })
+                            ]).then(function(results) {
+                                var output = [
+                                    '=== dmesg WiFi ===',
+                                    filterWifiLog(results[0] && results[0].stdout, 100) || 'No matching dmesg lines',
+                                    '',
+                                    '=== logread ===',
+                                    tailLines(results[1] && results[1].stdout, 200) || 'No logread output'
+                                ].join('\n');
+                                var blob = new Blob([output], { type: 'text/plain' });
                                 var url = URL.createObjectURL(blob);
                                 var a = document.createElement('a');
                                 a.href = url;

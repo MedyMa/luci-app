@@ -147,3 +147,6 @@ msgstr "完成 -- 需要重启"
 
 msgid "Done -- log downloaded"
 msgstr "完成 -- 日志已下载"
+
+msgid "Failed to create network"
+msgstr "创建网络失败"
