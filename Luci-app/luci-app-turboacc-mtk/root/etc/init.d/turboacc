@@ -6,6 +6,34 @@ START=90
 STOP=10
 USE_PROCD=1
 
+module_loaded() {
+	local module
+
+	for module in "$@"; do
+		[ -d "/sys/module/$module" ] && return 0
+	done
+
+	return 1
+}
+
+try_modprobe() {
+	local module
+
+	for module in "$@"; do
+		modprobe "$module" 2>"/dev/null" && return 0
+	done
+
+	return 1
+}
+
+hnat_module_loaded() {
+	module_loaded "mtkhnat" "mediatek_hnat"
+}
+
+load_hnat_module() {
+	try_modprobe "mtkhnat" "mediatek_hnat"
+}
+
 is_valid_ipv4() {
 	echo "$1" | grep -qE '^([0-9]{1,3}\.){3}[0-9]{1,3}$'
 }
@@ -94,6 +122,7 @@ start_service() {
 	local fastpath_mh_eth_hnat="0"
 	local fastpath_mh_eth_hnat_ap=""
 	config_get fastpath "config" "fastpath"
+	[ -n "$fastpath" ] || fastpath="none"
 
 	if [ "$fastpath" != "fast_classifier" ] && lsmod | grep -q "fast_classifier"; then
 		echo "0" > "/sys/fast_classifier/skip_to_bridge_ingress" 2>"/dev/null"
@@ -105,7 +134,7 @@ start_service() {
 		rmmod "shortcut_fe_cm" 2>"/dev/null"
 	fi
 
-	if [ "$fastpath" != "mediatek_hnat" ] && lsmod | grep -q "mtkhnat" && [ -e "$hnat_path/hook_toggle" ]; then
+	if [ "$fastpath" != "mediatek_hnat" ] && hnat_module_loaded && [ -e "$hnat_path/hook_toggle" ]; then
 		echo "0" > "$hnat_path/hook_toggle" 2>"/dev/null"
 	fi
 
@@ -128,6 +157,7 @@ start_service() {
 		;;
 	"mediatek_hnat")
 		config_get_bool fastpath_mh_eth_hnat "config" "fastpath_mh_eth_hnat" "1"
+		load_hnat_module
 		[ -e "$hnat_path/hook_toggle" ] && echo "$fastpath_mh_eth_hnat" > "$hnat_path/hook_toggle" 2>"/dev/null"
 
 		if [ "$fastpath_mh_eth_hnat" -eq "1" ]; then

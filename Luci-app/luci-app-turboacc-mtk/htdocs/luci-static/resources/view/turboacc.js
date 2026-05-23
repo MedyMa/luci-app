@@ -89,6 +89,14 @@ function normalizeFastpathValue(value) {
 	return (!value || value === 'none') ? 'disabled' : value;
 }
 
+function configUsesEngine(config, key) {
+	return normalizeFastpathValue(config && config.fastpath) === key;
+}
+
+function isEngineAvailable(flag, config, key) {
+	return !!flag || configUsesEngine(config, key);
+}
+
 function getDefaultFullcone(features) {
 	return features && features.hasXTFULLCONENAT ? '1' : '2';
 }
@@ -108,16 +116,16 @@ function getConfigState(features) {
 	};
 }
 
-function getAvailableEngines(features) {
+function getAvailableEngines(features, config) {
 	var engines = [];
 
-	if (features.hasFLOWOFFLOADING)
+	if (isEngineAvailable(features.hasFLOWOFFLOADING, config, 'flow_offloading'))
 		engines.push({ key: 'flow_offloading', label: _('流量分载') });
-	if (features.hasFASTCLASSIFIER)
+	if (isEngineAvailable(features.hasFASTCLASSIFIER, config, 'fast_classifier'))
 		engines.push({ key: 'fast_classifier', label: _('快速分类器') });
-	if (features.hasSHORTCUTFECM)
+	if (isEngineAvailable(features.hasSHORTCUTFECM, config, 'shortcut_fe_cm'))
 		engines.push({ key: 'shortcut_fe_cm', label: _('SFE 连接管理器') });
-	if (features.hasMEDIATEKHNAT)
+	if (isEngineAvailable(features.hasMEDIATEKHNAT, config, 'mediatek_hnat'))
 		engines.push({ key: 'mediatek_hnat', label: _('MediaTek HNAT') });
 
 	return engines;
@@ -172,12 +180,14 @@ function getRuntimeLabel(token) {
 	token = trimValue(token);
 
 	switch (token) {
+	case 'Flow Offloading':
 	case 'Flow offloading':
 		return _('流量分载');
 	case 'Fast classifier':
 		return _('快速分类器');
 	case 'Shortcut-FE CM':
 		return _('SFE 连接管理器');
+	case 'MediaTek HWNAT':
 	case 'MediaTek HNAT':
 		return _('MediaTek HNAT');
 	case 'xt_FULLCONENAT':
@@ -199,13 +209,13 @@ function getRuntimeEngineKey(value) {
 	if (!value)
 		return 'disabled';
 
-	if (value.indexOf('MediaTek HNAT') >= 0)
+	if (value.indexOf('MediaTek HNAT') >= 0 || value.indexOf('MediaTek HWNAT') >= 0)
 		return 'mediatek_hnat';
 	if (value.indexOf('Fast classifier') >= 0)
 		return 'fast_classifier';
 	if (value.indexOf('Shortcut-FE CM') >= 0)
 		return 'shortcut_fe_cm';
-	if (value.indexOf('Flow offloading') >= 0)
+	if (value.indexOf('Flow offloading') >= 0 || value.indexOf('Flow Offloading') >= 0)
 		return 'flow_offloading';
 
 	return 'disabled';
@@ -680,7 +690,7 @@ function renderSummaryGrid(state, health) {
 	var config = state.config || {};
 	var ppe = state.ppe || {};
 	var ipv6Text = getIPv6ModeText(config, features);
-	var availableEngines = getAvailableEngines(features);
+	var availableEngines = getAvailableEngines(features, config);
 	var engineCount = availableEngines.length;
 	var sessionValue = normalizeFastpathValue(config.fastpath) === 'mediatek_hnat'
 		? formatSessions(ppe.totalBound, ppe.totalAll)
@@ -757,7 +767,7 @@ function renderFocusGrid(state, health) {
 }
 
 function renderEngineRail(state, health) {
-	var availableEngines = getAvailableEngines(state.features || {});
+	var availableEngines = getAvailableEngines(state.features || {}, state.config || {});
 
 	if (!availableEngines.length)
 		return null;
@@ -827,6 +837,10 @@ function renderOverviewContent(state) {
 	return E('div', { 'class': 'ta-overview' }, compactChildren([
 		renderHero(state, health),
 		renderStatusStrip(state, health),
+		renderSummaryGrid(state, health),
+		renderFocusGrid(state, health),
+		renderEngineRail(state, health),
+		renderTelemetryGrid(state, health),
 		renderPPEPanel(state.ppe)
 	]));
 }
@@ -837,23 +851,27 @@ function buildForm(features, config) {
 	var s = m.section(form.NamedSection, 'config', 'turboacc');
 	var o;
 	var tcpccaOptions = parseTokenList(features.hasTCPCCA);
+	var showFlowOffloading = isEngineAvailable(features.hasFLOWOFFLOADING, config, 'flow_offloading');
+	var showFastClassifier = isEngineAvailable(features.hasFASTCLASSIFIER, config, 'fast_classifier');
+	var showShortcutFeCm = isEngineAvailable(features.hasSHORTCUTFECM, config, 'shortcut_fe_cm');
+	var showMediatekHnat = isEngineAvailable(features.hasMEDIATEKHNAT, config, 'mediatek_hnat');
 
 	s.tab('engine', _('主通路'), _('选择主加速引擎。'));
 	s.tab('experience', _('体验优化'), _('NAT 与 TCP 设置。'));
 
-	if (features.hasMEDIATEKHNAT)
+	if (showMediatekHnat)
 		s.tab('hnat', _('HNAT 高级项'), _('MediaTek HNAT 专用设置。'));
 
 	o = s.taboption('engine', form.ListValue, 'fastpath', _('主加速引擎'),
 		_('选择当前使用的加速通路。'));
 	o.value('disabled', _('禁用'));
-	if (features.hasFLOWOFFLOADING)
+	if (showFlowOffloading)
 		o.value('flow_offloading', _('流量分载'));
-	if (features.hasFASTCLASSIFIER)
+	if (showFastClassifier)
 		o.value('fast_classifier', _('快速分类器'));
-	if (features.hasSHORTCUTFECM)
+	if (showShortcutFeCm)
 		o.value('shortcut_fe_cm', _('SFE 连接管理器'));
-	if (features.hasMEDIATEKHNAT)
+	if (showMediatekHnat)
 		o.value('mediatek_hnat', _('MediaTek HNAT'));
 	o.default = config.fastpath || 'disabled';
 	o.rmempty = false;
@@ -864,7 +882,7 @@ function buildForm(features, config) {
 		return uci.set('turboacc', section_id, 'fastpath', value === 'disabled' ? 'none' : value);
 	};
 
-	if (features.hasFLOWOFFLOADING) {
+	if (showFlowOffloading) {
 		o = s.taboption('engine', form.Flag, 'fastpath_fo_hw', _('启用硬件流量分载'),
 			_('硬件支持时可开启。'));
 		o.default = o.disabled;
@@ -872,7 +890,7 @@ function buildForm(features, config) {
 		o.depends('fastpath', 'flow_offloading');
 	}
 
-	if (features.hasFASTCLASSIFIER) {
+	if (showFastClassifier) {
 		o = s.taboption('engine', form.Flag, 'fastpath_fc_br', _('启用桥接加速'),
 			_('可能影响桥接 VPN。'));
 		o.default = o.disabled;
@@ -908,7 +926,7 @@ function buildForm(features, config) {
 	o.default = config.tcpcca || 'cubic';
 	o.rmempty = false;
 
-	if (features.hasMEDIATEKHNAT) {
+	if (showMediatekHnat) {
 		o = s.taboption('hnat', form.Flag, 'fastpath_mh_eth_hnat', _('启用有线 HNAT'),
 			_('启用有线硬件加速。'));
 		o.default = o.enabled;

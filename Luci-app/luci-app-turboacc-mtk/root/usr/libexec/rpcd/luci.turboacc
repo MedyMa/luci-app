@@ -13,18 +13,61 @@ local function readfile(path)
 	return s and (s:gsub("^%s+", ""):gsub("%s+$", ""))
 end
 
+local function module_file_exists(kernel, names)
+	local name
+
+	if not kernel or kernel == "" then
+		return false
+	end
+
+	for _, name in ipairs(names) do
+		if fs.access("/lib/modules/" .. kernel .. "/" .. name .. ".ko") then
+			return true
+		end
+	end
+
+	return false
+end
+
+local function module_loaded(names)
+	local name
+
+	for _, name in ipairs(names) do
+		if fs.stat("/sys/module/" .. name, "type") == "dir" then
+			return true
+		end
+	end
+
+	return false
+end
+
+local function is_hnat_enabled(value)
+	value = (value or ""):lower()
+
+	return value == "1" or value == "enabled" or value == "enable" or
+		value == "on" or value == "true" or value == "y" or value == "yes"
+end
+
+local function has_mediatek_wireless_dat()
+	return fs.stat("/etc/wireless/mediatek", "type") == "dir" and
+		sys.call("set -- /etc/wireless/mediatek/*.dat; [ -e \"$1\" ]") == 0
+end
+
 local methods = {
 	getSystemFeatures = {
 		call = function()
 			local boardinfo = util.ubus("system", "board") or {}
+			local kernel    = tostring(boardinfo.kernel or "")
 			local features  = {
 				hasIPV6           = fs.access("/proc/net/ipv6_route"),
 				-- disable FLOWOFFLOADING for mt798x
 				hasFLOWOFFLOADING = false,
-				hasFASTCLASSIFIER = fs.access("/lib/modules/" .. boardinfo.kernel .. "/fast-classifier.ko"),
-				hasSHORTCUTFECM   = fs.access("/lib/modules/" .. boardinfo.kernel .. "/shortcut-fe-cm.ko"),
-				hasMEDIATEKHNAT   = fs.access("/lib/modules/" .. boardinfo.kernel .. "/mtkhnat.ko"),
-				hasXTFULLCONENAT  = fs.access("/lib/modules/" .. boardinfo.kernel .. "/xt_FULLCONENAT.ko"),
+				hasFASTCLASSIFIER = module_file_exists(kernel, { "fast-classifier" }) or module_loaded({ "fast_classifier" }),
+				hasSHORTCUTFECM   = module_file_exists(kernel, { "shortcut-fe-cm" }) or module_loaded({ "shortcut_fe_cm" }),
+				hasMEDIATEKHNAT   = module_file_exists(kernel, { "mtkhnat", "mediatek_hnat" }) or
+					module_loaded({ "mtkhnat", "mediatek_hnat" }) or
+					fs.stat("/sys/kernel/debug/hnat", "type") == "dir",
+				hasXTFULLCONENAT  = module_file_exists(kernel, { "xt_FULLCONENAT" }) or module_loaded({ "xt_FULLCONENAT" }),
 				hasTCPCCA         = readfile("/proc/sys/net/ipv4/tcp_available_congestion_control")
 			}
 			print(json.stringify(features))
@@ -40,12 +83,20 @@ local methods = {
 				fptype = "Fast classifier"
 			elseif fs.stat("/sys/module/shortcut_fe_cm", "type") == "dir" then
 				fptype = "Shortcut-FE CM"
-			elseif fs.stat("/sys/kernel/debug/hnat", "type") == "dir" then
-				local ethernet_hnat = readfile("/sys/kernel/debug/hnat/hook_toggle")
-				ethernet_hnat = (ethernet_hnat ~= "enabled") and " / Ethernet HNAT Disabled" or ""
+			elseif fs.stat("/sys/kernel/debug/hnat", "type") == "dir" or module_loaded({ "mtkhnat", "mediatek_hnat" }) then
+				local hook_toggle = readfile("/sys/kernel/debug/hnat/hook_toggle")
+				local ethernet_hnat = hook_toggle
+				local wireless_hnat = ""
 
-				local wireless_hnat = (sys.call("grep -q 'WHNAT=1' '/etc/wireless/mediatek/'*.dat") ~= 0) and " / Wireless HNAT Disabled" or ""
-				if (ethernet_hnat == "") or (wireless_hnat == "") then
+				ethernet_hnat = (ethernet_hnat and not is_hnat_enabled(ethernet_hnat)) and " / Ethernet HNAT Disabled" or ""
+
+				if has_mediatek_wireless_dat() and
+					sys.call("grep -q 'WHNAT=1' /etc/wireless/mediatek/*.dat") ~= 0
+				then
+					wireless_hnat = " / Wireless HNAT Disabled"
+				end
+
+				if (ethernet_hnat == "") or (wireless_hnat == "") or not hook_toggle then
 					fptype = "MediaTek HNAT" .. ethernet_hnat .. wireless_hnat
 				end
 			end
