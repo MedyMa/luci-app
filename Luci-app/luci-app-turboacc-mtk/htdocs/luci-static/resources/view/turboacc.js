@@ -238,9 +238,9 @@ function buildStatusMeta(value, emptyDetail, activeDetail) {
 function getFullconeConfigLabel(value) {
 	switch (trimValue(value)) {
 	case '1':
-		return _('XT_FULLCONE_NAT');
+		return _('XT_FULLCONE_NAT(更佳的兼容性)');
 	case '2':
-		return _('Boardcom_FULLCONE_NAT');
+		return _('Boardcom_FULLCONE_NAT(旧实现兼容)');
 	default:
 		return _('已禁用');
 	}
@@ -531,6 +531,7 @@ function renderPPEPanel(ppe) {
 			var value = card.bound == null || card.all == null
 				? '--'
 				: formatSessions(card.bound, card.all) + ' (' + card.percent + '%)';
+			var fillClass = 'ta-progress-fill' + (width > 0 ? ' is-active' : '');
 
 			return E('div', { 'class': 'ta-progress-row' }, [
 				E('div', { 'class': 'ta-progress-head' }, [
@@ -538,7 +539,7 @@ function renderPPEPanel(ppe) {
 					E('div', { 'class': 'ta-progress-value' }, value)
 				]),
 				E('div', { 'class': 'ta-progress-track' }, [
-					E('div', { 'class': 'ta-progress-fill', 'style': 'width:' + String(width) + '%' })
+					E('div', { 'class': fillClass, 'style': 'width:' + String(width) + '%' })
 				])
 			]);
 		}))
@@ -573,6 +574,12 @@ function getHealthState(state) {
 		headline = _('已禁用');
 		headlineTone = 'is-disabled';
 		summary = _('当前未启用主加速引擎。');
+	}
+	else if (configuredKey === 'disabled' && runtimeKey !== 'disabled') {
+		level = 'is-attention';
+		headline = _('已启用');
+		headlineTone = 'is-enabled';
+		summary = _('实时通路仍在工作，但当前配置已经设为禁用。');
 	}
 	else if (configuredKey !== 'disabled' && runtimeKey === configuredKey) {
 		level = 'is-healthy';
@@ -637,15 +644,18 @@ function getHealthState(state) {
 function renderHero(state, health) {
 	var config = state.config || {};
 	var ppe = state.ppe || {};
-	var hnatProfile = normalizeFastpathValue(config.fastpath) === 'mediatek_hnat';
+	var activeKey = health.runtimeKey !== 'disabled'
+		? health.runtimeKey
+		: normalizeFastpathValue(config.fastpath);
+	var hnatProfile = activeKey === 'mediatek_hnat';
 	var summaryValue = hnatProfile
 		? formatSessions(ppe.totalBound, ppe.totalAll)
-		: health.runtimeMeta.primary;
+		: getEngineLabel(activeKey);
 
 	return E('div', { 'class': 'ta-hero ' + health.level }, [
 		E('div', { 'class': 'ta-hero-main' }, [
 			E('div', { 'class': 'ta-hero-badge' }, [
-				E('span', { 'class': 'ta-hero-badge-code' }, getEngineShortLabel(config.fastpath)),
+				E('span', { 'class': 'ta-hero-badge-code' }, getEngineShortLabel(activeKey)),
 				E('span', { 'class': 'ta-hero-badge-dot' })
 			]),
 			E('div', { 'class': 'ta-hero-copy' }, [
@@ -656,7 +666,7 @@ function renderHero(state, health) {
 		]),
 		E('div', { 'class': 'ta-hero-side' }, compactChildren([
 			renderSectionPill(_('实时通路'), health.runtimeMeta.primary, health.runtimeKey === 'disabled' ? 'is-muted' : 'is-good'),
-			hnatProfile ? renderSectionPill(_('PPE 连接数'), summaryValue, 'is-accent') : null
+			renderSectionPill(hnatProfile ? _('PPE 连接数') : _('当前配置'), summaryValue, hnatProfile ? 'is-accent' : 'is-info')
 		]))
 	]);
 }
@@ -855,7 +865,7 @@ function renderCompactHero(state, health) {
 	]));
 }
 
-function renderCompactOverview(state, health) {
+function renderCompactOverviewLegacy(state, health) {
 	var features = state.features || {};
 	var config = state.config || {};
 	var ppe = state.ppe || {};
@@ -887,12 +897,113 @@ function renderCompactOverview(state, health) {
 	]));
 }
 
+function renderCompactOverview(state, health) {
+	var features = state.features || {};
+	var config = state.config || {};
+	var ppe = state.ppe || {};
+	var statusTone = health.level === 'is-healthy'
+		? 'is-good'
+		: (health.level === 'is-attention' || health.level === 'is-warning')
+			? 'is-warning'
+			: 'is-accent';
+	var ipv6Text = getIPv6ModeText(config, features);
+	var runtimeChips = health.runtimeMeta.warnings.length
+		? health.runtimeMeta.warnings.map(function(tag) {
+			return renderChip(tag, 'is-warning');
+		})
+		: [ renderChip(_('状态正常'), 'is-ok') ];
+	var metricCards = [
+		renderStatCard(
+			_('总状态'),
+			health.headline,
+			health.summary,
+			statusTone,
+			[
+				renderChip(_('配置') + ' 路 ' + getEngineLabel(config.fastpath), 'is-info')
+			]
+		),
+		renderStatCard(
+			_('实时通路'),
+			health.runtimeMeta.primary,
+			health.runtimeMeta.detail,
+			health.runtimeKey === 'disabled' ? 'is-accent' : 'is-good',
+			runtimeChips
+		),
+		renderStatCard(
+			_('NAT / TCP'),
+			getFullconeConfigLabel(config.fullcone),
+			_('TCP CCA') + ' 路 ' + health.tcpccaLabel,
+			'is-warning',
+			[
+				renderChip(_('IPv6') + ' 路 ' + ipv6Text, ipv6Text === _('已启用') ? 'is-ok' : 'is-muted')
+			]
+		)
+	];
+	var rows = [
+		[ _('主加速引擎'), getEngineLabel(config.fastpath) ],
+		[ _('实时通路'), health.runtimeMeta.primary ],
+		[ _('运行告警'), health.runtimeMeta.warnings.length ? health.runtimeMeta.warnings.join(' / ') : _('无') ],
+		[ _('全锥形 NAT'), health.fullconeMeta.primary ],
+		[ _('TCP CCA'), health.tcpccaLabel ],
+		[ _('IPv6'), ipv6Text ]
+	];
+
+	if (normalizeFastpathValue(config.fastpath) === 'mediatek_hnat') {
+		metricCards.push(renderStatCard(
+			_('PPE 连接'),
+			formatSessions(ppe.totalBound, ppe.totalAll),
+			_('通道') + ' 路 ' + displayValue(ppe.count) + ' 路 ' + _('阈值') + ' 路 ' +
+				(config.fastpath_mh_eth_hnat ? (config.fastpath_mh_eth_hnat_bind_rate + ' pps') : '--'),
+			'is-accent',
+			[
+				renderChip(
+					config.fastpath_mh_eth_hnat ? _('有线 HNAT 已启用') : _('有线 HNAT 未启用'),
+					config.fastpath_mh_eth_hnat ? 'is-ok' : 'is-muted'
+				)
+			]
+		));
+		rows.push(
+			[ _('PPE 通道数'), displayValue(ppe.count) ],
+			[ _('PPE 连接数'), formatSessions(ppe.totalBound, ppe.totalAll) ],
+			[ _('绑定阈值'), config.fastpath_mh_eth_hnat ? (config.fastpath_mh_eth_hnat_bind_rate + ' pps') : null ]
+		);
+	}
+	else {
+		metricCards.push(renderStatCard(
+			_('当前配置'),
+			getEngineLabel(config.fastpath),
+			getEngineDescription(config.fastpath),
+			'is-primary',
+			[
+				renderChip(_('主通路'), 'is-info')
+			]
+		));
+	}
+
+	return E('div', { 'class': 'ta-compact-grid' }, [
+		E('div', { 'class': 'ta-panel ta-compact-status-panel' }, [
+			E('div', { 'class': 'ta-panel-head' }, [
+				E('div', { 'class': 'ta-panel-title' }, _('运行状态')),
+				E('div', { 'class': 'ta-panel-subtitle' }, _('把当前配置、实时通路和关键策略拆开看，排查与确认都会更直接。'))
+			]),
+			E('div', { 'class': 'ta-summary-grid ta-compact-summary-grid' }, metricCards)
+		]),
+		E('div', { 'class': 'ta-panel ta-compact-detail-panel' }, [
+			E('div', { 'class': 'ta-panel-head' }, [
+				E('div', { 'class': 'ta-panel-title' }, _('运行明细')),
+				E('div', { 'class': 'ta-panel-subtitle' }, _('保留最常用的实时明细，避免页面信息过多又不易定位。'))
+			]),
+			renderInfoGrid(rows)
+		])
+	]);
+}
+
 function renderOverviewContent(state) {
 	var health = getHealthState(state);
 
 	return E('div', { 'class': 'ta-overview' }, compactChildren([
-		renderCompactHero(state, health),
-		renderCompactOverview(state, health),
+		renderHero(state, health),
+		renderStatusStrip(state, health),
 		renderPPEPanel(state.ppe)
 	]));
 }
@@ -1127,8 +1238,66 @@ function renderStyle() {
 		'.ta-config-shell .cbi-page-actions .cbi-button:hover{transform:translateY(-1px);filter:brightness(1.02)}',
 		'.ta-config-shell .cbi-page-actions .cbi-button-apply,.ta-config-shell .cbi-page-actions .cbi-button-save{border-color:transparent !important;background:var(--ta-button-primary) !important;color:#fff !important;box-shadow:var(--ta-button-shadow) !important}',
 		'.ta-config-shell .cbi-page-actions .cbi-button-reset{background:rgba(148,163,184,.12) !important;color:var(--ta-text-muted) !important}',
+		'.ta-compact-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}',
+		'.ta-compact-summary-grid .ta-stat-card{min-height:0;padding:16px}',
+		'.ta-compact-detail-panel .ta-info-grid{height:100%}',
+		'.ta-page{position:relative;gap:16px;padding-top:14px;--ta-bg:linear-gradient(180deg,#f3f6fb,#eef3f8);--ta-panel-bg:linear-gradient(180deg,rgba(255,255,255,.96),rgba(250,252,255,.98));--ta-panel-border:rgba(210,222,237,.95);--ta-panel-border-soft:rgba(225,233,243,.96);--ta-shadow:0 8px 18px rgba(114,131,159,.08);--ta-text:#1f3150;--ta-text-strong:#0d1a33;--ta-text-muted:#6f84a4;--ta-chip:#304762;--ta-chip-bg:rgba(237,242,248,.95);--ta-chip-border:rgba(214,224,237,.95);--ta-info:#5878a6;--ta-info-bg:rgba(241,245,250,.96);--ta-good:#17786a;--ta-good-bg:rgba(220,244,234,.98);--ta-warn:#b87812;--ta-warn-bg:rgba(255,243,214,.98);--ta-danger:#b0374f;--ta-danger-bg:rgba(255,228,234,.95);--ta-accent:#5c6ddb;--ta-accent-bg:rgba(232,237,255,.98);--ta-hero-orb:none;--ta-hero-badge:linear-gradient(145deg,#2d5ce9,#4c96ef);--ta-button-bg:linear-gradient(180deg,#ffffff,#f7f9fc);--ta-button-primary:linear-gradient(90deg,#19959c,#5470ef);--ta-button-shadow:0 10px 18px rgba(84,112,239,.16)}',
+		'.ta-page.ta-dark,body.dark .ta-page,html.dark .ta-page,body.mode-dark .ta-page,body.argon-dark .ta-page,html[data-theme="dark"] .ta-page,body[data-theme="dark"] .ta-page{--ta-bg:linear-gradient(180deg,#f3f6fb,#eef3f8);--ta-panel-bg:linear-gradient(180deg,rgba(255,255,255,.96),rgba(250,252,255,.98));--ta-panel-border:rgba(210,222,237,.95);--ta-panel-border-soft:rgba(225,233,243,.96);--ta-shadow:0 8px 18px rgba(114,131,159,.08);--ta-text:#1f3150;--ta-text-strong:#0d1a33;--ta-text-muted:#6f84a4;--ta-chip:#304762;--ta-chip-bg:rgba(237,242,248,.95);--ta-chip-border:rgba(214,224,237,.95);--ta-info:#5878a6;--ta-info-bg:rgba(241,245,250,.96);--ta-good:#17786a;--ta-good-bg:rgba(220,244,234,.98);--ta-warn:#b87812;--ta-warn-bg:rgba(255,243,214,.98);--ta-danger:#b0374f;--ta-danger-bg:rgba(255,228,234,.95);--ta-accent:#5c6ddb;--ta-accent-bg:rgba(232,237,255,.98);--ta-hero-orb:none;--ta-hero-badge:linear-gradient(145deg,#2d5ce9,#4c96ef);--ta-button-bg:linear-gradient(180deg,#ffffff,#f7f9fc);--ta-button-primary:linear-gradient(90deg,#19959c,#5470ef);--ta-button-shadow:0 10px 18px rgba(84,112,239,.16)}',
+		'.ta-page:before{content:"";position:absolute;top:-8px;left:0;right:0;height:6px;border-radius:999px;background:linear-gradient(90deg,#4c63e6,#6f78eb);opacity:.92}',
+		'.ta-overview{gap:18px}',
+		'.ta-hero,.ta-panel,.ta-stat-card,.ta-insight-card,.ta-note-card,.ta-config-shell{border-radius:24px;border-color:var(--ta-panel-border);background:var(--ta-panel-bg);box-shadow:var(--ta-shadow)}',
+		'.ta-hero{grid-template-columns:minmax(0,1.6fr) minmax(310px,.92fr);gap:28px;padding:24px 28px;border-color:rgba(177,225,218,.95);background:linear-gradient(90deg,rgba(226,235,253,.96),rgba(244,241,251,.96) 58%,rgba(239,248,250,.96))}',
+		'.ta-hero:before{display:none}',
+		'.ta-hero-main{gap:22px;align-items:flex-start}',
+		'.ta-hero-badge{width:98px;height:98px;border-radius:28px;box-shadow:none}',
+		'.ta-hero-badge-code{font-size:1.16rem;letter-spacing:.03em}',
+		'.ta-hero-badge-dot{right:12px;bottom:12px;width:18px;height:18px;box-shadow:0 0 0 7px rgba(255,255,255,.36)}',
+		'.ta-hero-copy{gap:12px;padding-top:2px}',
+		'.ta-hero-kicker{font-size:.92rem;letter-spacing:0;color:#66778f}',
+		'.ta-hero-title{padding:14px 38px;border-radius:28px;border:1px solid #b9d8ca;background:linear-gradient(180deg,#edf7f3,#dcebdf);color:#146d61;box-shadow:none;font-size:1.18rem;letter-spacing:0}',
+		'.ta-hero-title.is-disabled{border-color:#f0c1cb;background:linear-gradient(180deg,#fff3f5,#ffe3e7);color:#b0374f}',
+		'.ta-hero-summary{font-size:1rem;line-height:1.62;color:#16304c;max-width:36rem}',
+		'.ta-hero-side{gap:16px}',
+		'.ta-section-pill{padding:20px 24px;border-radius:20px;background:rgba(252,253,255,.97);border:1px solid #e2eaf4;backdrop-filter:none}',
+		'.ta-section-pill-label{font-size:1rem;font-weight:700;color:#6b7f9b;letter-spacing:0}',
+		'.ta-section-pill-value{font-size:1.18rem;font-weight:800;color:#0d1a33}',
+		'.ta-status-strip{grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}',
+		'.ta-status-item{min-height:110px;padding:20px 24px;border-radius:20px;background:rgba(252,253,255,.98);border:1px solid #dde6f1;box-shadow:none;align-items:flex-start;justify-content:flex-start}',
+		'.ta-status-item span{font-size:1rem;color:#6a82a6}',
+		'.ta-status-item strong{width:100%;font-size:1.15rem;line-height:1.3;text-align:right;color:#0a1730}',
+		'.ta-panel{padding:22px 28px}',
+		'.ta-panel-head{margin-bottom:18px}',
+		'.ta-panel-title{font-size:1.08rem}',
+		'.ta-panel-subtitle{font-size:1rem;line-height:1.6;color:#6f84a4}',
+		'.ta-progress-list{gap:18px}',
+		'.ta-progress-head{align-items:flex-end}',
+		'.ta-progress-label{font-size:1.02rem}',
+		'.ta-progress-value{font-size:.95rem;color:#6b7f9b}',
+		'.ta-progress-track{height:12px;border-radius:999px;background:#e8edf4;overflow:hidden;border:1px solid #e2eaf2}',
+		'.ta-progress-fill{position:relative;background:linear-gradient(90deg,#44c15b,#3ebf78);box-shadow:none}',
+		'.ta-progress-fill.is-active:before{content:"";position:absolute;left:0;top:50%;width:14px;height:14px;border-radius:50%;background:#44c15b;transform:translateY(-50%);box-shadow:0 0 0 2px rgba(68,193,91,.18)}',
+		'.ta-config-shell{padding:18px}',
+		'.ta-config-shell>.cbi-map{padding:0;background:transparent}',
+		'.ta-config-shell h2{display:block;margin:0 0 16px;padding:18px 22px;border-radius:16px;border:1px solid #edf2f8;background:rgba(255,255,255,.98);font-size:1.28rem;font-weight:800;color:#0b1730}',
+		'.ta-config-shell .cbi-map-descr{margin:0 0 18px;padding:0 8px;color:#6f84a4;font-size:1rem}',
+		'.ta-config-shell .cbi-section{margin-top:0;padding:0 8px}',
+		'.ta-config-shell .cbi-section-node{border:1px solid #edf2f8;border-radius:16px;background:rgba(255,255,255,.98);padding:0;overflow:hidden}',
+		'.ta-config-shell .cbi-tabmenu{margin:0;padding:0 8px 12px;gap:12px}',
+		'.ta-config-shell .cbi-tabmenu li{border-radius:16px !important;border-color:#dfe7f2 !important;min-height:44px;background:#fff !important}',
+		'.ta-config-shell .cbi-tabmenu li a{min-height:44px;padding:12px 20px;font-size:1rem;font-weight:700}',
+		'.ta-config-shell .cbi-tabmenu li.cbi-tab,.ta-config-shell .cbi-tabmenu li.active{background:linear-gradient(90deg,#1d9a9c,#4771eb)!important;box-shadow:none!important}',
+		'.ta-config-shell .cbi-tab-descr,.ta-config-shell .cbi-section-descr,.ta-config-shell .cbi-value-description{font-size:1rem;line-height:1.6}',
+		'.ta-config-shell .cbi-value{padding:20px 24px;border-top:1px solid #eff4f9}',
+		'.ta-config-shell .cbi-value:first-child{border-top:none}',
+		'.ta-config-shell .cbi-value-title{font-size:1rem;font-weight:700;color:#29405e}',
+		'.ta-config-shell input[type="text"],.ta-config-shell input:not([type]),.ta-config-shell select,.ta-config-shell textarea,.ta-config-shell .cbi-dropdown{min-height:46px;border-radius:14px !important}',
+		'.ta-config-shell .cbi-page-actions{justify-content:flex-end;margin:18px 8px 0;padding:0;background:transparent;border:none;box-shadow:none}',
+		'.ta-config-shell .cbi-page-actions .cbi-button{min-height:52px;padding:0 24px;border-radius:10px !important}',
+		'.ta-config-shell .cbi-page-actions .cbi-button:hover{transform:none;filter:none}',
+		'.ta-config-shell .cbi-page-actions .cbi-button-apply,.ta-config-shell .cbi-page-actions .cbi-button-save{background:linear-gradient(90deg,#5672ef,#5d67ea)!important;box-shadow:none!important}',
+		'.ta-config-shell .cbi-page-actions .cbi-button-reset{background:linear-gradient(180deg,#ef4c70,#ea3758)!important;color:#fff !important;border-color:transparent !important}',
 		'@media (max-width:1040px){.ta-hero{grid-template-columns:1fr}.ta-telemetry-grid{grid-template-columns:1fr}.ta-status-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.ta-compact-grid{grid-template-columns:1fr}}',
-		'@media (max-width:760px){.ta-hero{padding:18px}.ta-hero-main{flex-direction:column}.ta-hero-badge{width:76px;height:76px;border-radius:24px}.ta-status-strip{grid-template-columns:1fr}.ta-status-item{align-items:flex-start;flex-direction:column}.ta-status-item strong{text-align:left}.ta-kv-row,.ta-info-row{grid-template-columns:1fr}.ta-kv-value,.ta-info-value,.ta-info-value .ta-chip-list{text-align:left;justify-content:flex-start}.ta-progress-head{flex-direction:column;align-items:flex-start}.ta-progress-value{white-space:normal}.ta-compact-hero-top{flex-direction:column;align-items:flex-start}.ta-compact-state{width:100%;justify-content:flex-start}.ta-config-shell>.cbi-map{padding:16px}.ta-config-shell .cbi-page-actions .cbi-button{width:100%;justify-content:center}}'
+		'@media (max-width:760px){.ta-page{padding-top:10px}.ta-page:before{top:-4px;height:4px}.ta-hero{padding:20px}.ta-hero-main{flex-direction:column}.ta-hero-badge{width:84px;height:84px;border-radius:24px}.ta-hero-title{padding:12px 24px}.ta-section-pill,.ta-status-item,.ta-panel{padding:18px 20px}.ta-status-strip{grid-template-columns:1fr}.ta-status-item strong{text-align:left}.ta-kv-row,.ta-info-row{grid-template-columns:1fr}.ta-kv-value,.ta-info-value,.ta-info-value .ta-chip-list{text-align:left;justify-content:flex-start}.ta-progress-head{flex-direction:column;align-items:flex-start}.ta-progress-value{white-space:normal}.ta-compact-hero-top{flex-direction:column;align-items:flex-start}.ta-compact-state{width:100%;justify-content:flex-start}.ta-compact-summary-grid{grid-template-columns:1fr}.ta-config-shell{padding:14px}.ta-config-shell h2{padding:16px 18px}.ta-config-shell .cbi-page-actions .cbi-button{width:100%;justify-content:center}}'
 	].join('\n'));
 }
 
