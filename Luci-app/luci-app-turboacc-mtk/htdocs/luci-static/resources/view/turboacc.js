@@ -831,16 +831,68 @@ function renderTelemetryGrid(state, health) {
 	]));
 }
 
+function renderCompactHero(state, health) {
+	var config = state.config || {};
+	var ppe = state.ppe || {};
+	var hnatProfile = normalizeFastpathValue(config.fastpath) === 'mediatek_hnat';
+	var chips = compactChildren([
+		renderChip(_('配置') + ' · ' + getEngineLabel(config.fastpath), 'is-info'),
+		renderChip(_('实时') + ' · ' + health.runtimeMeta.primary, health.runtimeKey === 'disabled' ? 'is-muted' : 'is-ok'),
+		renderChip(_('TCP') + ' · ' + health.tcpccaLabel, 'is-info'),
+		hnatProfile ? renderChip(_('PPE') + ' · ' + formatSessions(ppe.totalBound, ppe.totalAll), 'is-info') : null
+	]);
+
+	return E('div', { 'class': 'ta-panel ta-compact-hero ' + health.level }, compactChildren([
+		E('div', { 'class': 'ta-compact-hero-top' }, [
+			E('div', { 'class': 'ta-compact-hero-copy' }, [
+				E('div', { 'class': 'ta-compact-kicker' }, _('TurboACC 控制台')),
+				E('div', { 'class': 'ta-compact-headline' }, health.headline),
+				E('div', { 'class': 'ta-compact-summary' }, health.summary)
+			]),
+			E('div', { 'class': 'ta-compact-state ' + health.headlineTone }, health.runtimeMeta.primary)
+		]),
+		chips.length ? E('div', { 'class': 'ta-chip-list' }, chips) : null
+	]));
+}
+
+function renderCompactOverview(state, health) {
+	var features = state.features || {};
+	var config = state.config || {};
+	var ppe = state.ppe || {};
+	var rows = [
+		[ _('主加速引擎'), getEngineLabel(config.fastpath) ],
+		[ _('实时通路'), health.runtimeMeta.primary ],
+		[ _('全锥形 NAT'), health.fullconeMeta.primary ],
+		[ _('TCP CCA'), health.tcpccaLabel ],
+		[ _('IPv6'), getIPv6ModeText(config, features) ]
+	];
+
+	if (normalizeFastpathValue(config.fastpath) === 'mediatek_hnat') {
+		rows.push(
+			[ _('PPE 通道数'), displayValue(ppe.count) ],
+			[ _('PPE 连接数'), formatSessions(ppe.totalBound, ppe.totalAll) ],
+			[ _('绑定阈值'), config.fastpath_mh_eth_hnat ? (config.fastpath_mh_eth_hnat_bind_rate + ' pps') : null ]
+		);
+	}
+
+	return E('div', { 'class': 'ta-compact-grid' }, compactChildren([
+		E('div', { 'class': 'ta-panel' }, [
+			E('div', { 'class': 'ta-panel-head' }, [
+				E('div', { 'class': 'ta-panel-title' }, _('运行状态')),
+				E('div', { 'class': 'ta-panel-subtitle' }, _('只保留最常用的运行状态与实时信息。'))
+			]),
+			renderInfoGrid(rows)
+		]),
+		renderChecklist(_('提示'), health.notes.slice(0, 3), health.level)
+	]));
+}
+
 function renderOverviewContent(state) {
 	var health = getHealthState(state);
 
 	return E('div', { 'class': 'ta-overview' }, compactChildren([
-		renderHero(state, health),
-		renderStatusStrip(state, health),
-		renderSummaryGrid(state, health),
-		renderFocusGrid(state, health),
-		renderEngineRail(state, health),
-		renderTelemetryGrid(state, health),
+		renderCompactHero(state, health),
+		renderCompactOverview(state, health),
 		renderPPEPanel(state.ppe)
 	]));
 }
@@ -961,6 +1013,16 @@ function renderStyle() {
 		'.ta-page{display:flex;flex-direction:column;gap:18px;padding-top:22px;--ta-bg:linear-gradient(180deg,rgba(248,251,255,.98),rgba(240,245,252,.98));--ta-panel-bg:linear-gradient(180deg,rgba(255,255,255,.98),rgba(245,248,253,.98));--ta-panel-border:rgba(60,88,138,.13);--ta-panel-border-soft:rgba(60,88,138,.08);--ta-shadow:0 10px 24px rgba(15,23,42,.05);--ta-text:#122033;--ta-text-strong:#0f172a;--ta-text-muted:#5f728b;--ta-chip:#19324a;--ta-chip-bg:rgba(27,63,111,.06);--ta-chip-border:rgba(27,63,111,.10);--ta-info-bg:rgba(27,63,111,.04);--ta-good:#0f766e;--ta-good-bg:rgba(13,148,136,.13);--ta-warn:#b45309;--ta-warn-bg:rgba(245,158,11,.13);--ta-danger:#b91c1c;--ta-danger-bg:rgba(239,68,68,.13);--ta-info:#1d4ed8;--ta-info-bg:rgba(37,99,235,.14);--ta-accent:#7c3aed;--ta-accent-bg:rgba(124,58,237,.14);--ta-hero-orb:radial-gradient(circle at 20% 20%,rgba(37,99,235,.18),transparent 48%),radial-gradient(circle at 82% 12%,rgba(14,165,233,.16),transparent 34%),radial-gradient(circle at 70% 78%,rgba(124,58,237,.14),transparent 34%);--ta-hero-badge:linear-gradient(145deg,#1d4ed8,#3b82f6 52%,#0ea5e9);--ta-button-bg:linear-gradient(180deg,#ffffff,#f2f6fb);--ta-button-primary:linear-gradient(90deg,#0f766e,#2563eb);--ta-button-shadow:0 10px 18px rgba(37,99,235,.16)}',
 		'.ta-page.ta-dark,body.dark .ta-page,html.dark .ta-page,body.mode-dark .ta-page,body.argon-dark .ta-page,html[data-theme="dark"] .ta-page,body[data-theme="dark"] .ta-page{--ta-bg:linear-gradient(180deg,rgba(9,15,25,.99),rgba(13,21,34,.99));--ta-panel-bg:linear-gradient(180deg,rgba(17,27,42,.98),rgba(10,18,31,.99));--ta-panel-border:rgba(120,146,188,.22);--ta-panel-border-soft:rgba(120,146,188,.14);--ta-shadow:0 14px 30px rgba(0,0,0,.22);--ta-text:#d8e4f1;--ta-text-strong:#f8fbff;--ta-text-muted:#9cb0c9;--ta-chip:#edf5ff;--ta-chip-bg:rgba(114,157,232,.15);--ta-chip-border:rgba(114,157,232,.20);--ta-info-bg:rgba(255,255,255,.04);--ta-good:#bbf7d0;--ta-good-bg:rgba(16,185,129,.18);--ta-warn:#fde68a;--ta-warn-bg:rgba(245,158,11,.18);--ta-danger:#fecaca;--ta-danger-bg:rgba(239,68,68,.18);--ta-info:#dbeafe;--ta-info-bg:rgba(59,130,246,.20);--ta-accent:#ede9fe;--ta-accent-bg:rgba(139,92,246,.20);--ta-hero-orb:radial-gradient(circle at 18% 20%,rgba(59,130,246,.20),transparent 48%),radial-gradient(circle at 84% 14%,rgba(14,165,233,.16),transparent 34%),radial-gradient(circle at 68% 80%,rgba(124,58,237,.16),transparent 34%);--ta-hero-badge:linear-gradient(145deg,#1e3a8a,#2563eb 52%,#0891b2);--ta-button-bg:linear-gradient(180deg,rgba(35,47,67,.98),rgba(21,31,48,.98));--ta-button-primary:linear-gradient(90deg,#0f766e,#2563eb);--ta-button-shadow:0 12px 22px rgba(0,0,0,.24)}',
 		'.ta-overview{display:flex;flex-direction:column;gap:18px}',
+		'.ta-compact-hero{display:grid;gap:14px;padding:18px}',
+		'.ta-compact-hero-top{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}',
+		'.ta-compact-hero-copy{display:grid;gap:8px;min-width:0}',
+		'.ta-compact-kicker{font-size:.76rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ta-text-muted)}',
+		'.ta-compact-headline{font-size:1.18rem;font-weight:800;line-height:1.3;color:var(--ta-text-strong)}',
+		'.ta-compact-summary{font-size:.92rem;line-height:1.6;color:var(--ta-text-muted)}',
+		'.ta-compact-state{display:inline-flex;align-items:center;justify-content:center;min-width:132px;min-height:42px;padding:0 18px;border-radius:999px;font-size:.92rem;font-weight:800;line-height:1.2;text-align:center;box-shadow:0 8px 16px rgba(15,23,42,.08)}',
+		'.ta-compact-state.is-enabled{background:var(--ta-good-bg);color:var(--ta-good)}',
+		'.ta-compact-state.is-disabled{background:var(--ta-danger-bg);color:var(--ta-danger)}',
+		'.ta-compact-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(240px,.8fr);gap:14px}',
 		'.ta-hero,.ta-panel,.ta-stat-card,.ta-insight-card,.ta-note-card,.ta-config-shell{position:relative;border:1px solid var(--ta-panel-border);border-radius:22px;background:var(--ta-panel-bg);box-shadow:var(--ta-shadow);color:var(--ta-text);overflow:hidden}',
 		'.ta-hero{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(240px,.9fr);gap:18px;padding:22px;background-image:var(--ta-hero-orb),var(--ta-panel-bg)}',
 		'.ta-hero:before{content:"";position:absolute;inset:auto -60px -60px auto;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.22),transparent 62%);pointer-events:none}',
@@ -1065,8 +1127,8 @@ function renderStyle() {
 		'.ta-config-shell .cbi-page-actions .cbi-button:hover{transform:translateY(-1px);filter:brightness(1.02)}',
 		'.ta-config-shell .cbi-page-actions .cbi-button-apply,.ta-config-shell .cbi-page-actions .cbi-button-save{border-color:transparent !important;background:var(--ta-button-primary) !important;color:#fff !important;box-shadow:var(--ta-button-shadow) !important}',
 		'.ta-config-shell .cbi-page-actions .cbi-button-reset{background:rgba(148,163,184,.12) !important;color:var(--ta-text-muted) !important}',
-		'@media (max-width:1040px){.ta-hero{grid-template-columns:1fr}.ta-telemetry-grid{grid-template-columns:1fr}.ta-status-strip{grid-template-columns:repeat(2,minmax(0,1fr))}}',
-		'@media (max-width:760px){.ta-hero{padding:18px}.ta-hero-main{flex-direction:column}.ta-hero-badge{width:76px;height:76px;border-radius:24px}.ta-status-strip{grid-template-columns:1fr}.ta-status-item{align-items:flex-start;flex-direction:column}.ta-status-item strong{text-align:left}.ta-kv-row,.ta-info-row{grid-template-columns:1fr}.ta-kv-value,.ta-info-value,.ta-info-value .ta-chip-list{text-align:left;justify-content:flex-start}.ta-progress-head{flex-direction:column;align-items:flex-start}.ta-progress-value{white-space:normal}.ta-config-shell>.cbi-map{padding:16px}.ta-config-shell .cbi-page-actions .cbi-button{width:100%;justify-content:center}}'
+		'@media (max-width:1040px){.ta-hero{grid-template-columns:1fr}.ta-telemetry-grid{grid-template-columns:1fr}.ta-status-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.ta-compact-grid{grid-template-columns:1fr}}',
+		'@media (max-width:760px){.ta-hero{padding:18px}.ta-hero-main{flex-direction:column}.ta-hero-badge{width:76px;height:76px;border-radius:24px}.ta-status-strip{grid-template-columns:1fr}.ta-status-item{align-items:flex-start;flex-direction:column}.ta-status-item strong{text-align:left}.ta-kv-row,.ta-info-row{grid-template-columns:1fr}.ta-kv-value,.ta-info-value,.ta-info-value .ta-chip-list{text-align:left;justify-content:flex-start}.ta-progress-head{flex-direction:column;align-items:flex-start}.ta-progress-value{white-space:normal}.ta-compact-hero-top{flex-direction:column;align-items:flex-start}.ta-compact-state{width:100%;justify-content:flex-start}.ta-config-shell>.cbi-map{padding:16px}.ta-config-shell .cbi-page-actions .cbi-button{width:100%;justify-content:center}}'
 	].join('\n'));
 }
 
