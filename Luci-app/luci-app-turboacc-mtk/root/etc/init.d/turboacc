@@ -124,6 +124,11 @@ start_service() {
 	config_get fastpath "config" "fastpath"
 	[ -n "$fastpath" ] || fastpath="none"
 
+	# Ensure debugfs is mounted so /sys/kernel/debug/hnat is accessible
+	# after kmod-mediatek_hnat is loaded.
+	mountpoint -q /sys/kernel/debug || \
+		mount -t debugfs debugfs /sys/kernel/debug 2>"/dev/null"
+
 	if [ "$fastpath" != "fast_classifier" ] && lsmod | grep -q "fast_classifier"; then
 		echo "0" > "/sys/fast_classifier/skip_to_bridge_ingress" 2>"/dev/null"
 		rm -f "/dev/sfe_ipv6"
