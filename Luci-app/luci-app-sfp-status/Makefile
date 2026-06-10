@@ -6,7 +6,7 @@ PKG_NAME:=luci-app-sfp-status
 PKG_VERSION:=0.1.0
 PKG_RELEASE:=29
 PKG_LICENSE:=Apache-2.0
-PKGARCH:=all
+LUCI_PKGARCH:=all
 
 LUCI_TITLE:=LuCI SFP status monitor
 LUCI_DESCRIPTION:=Overview and detailed DOM status for SFP modules
