@@ -4,6 +4,7 @@
 'require poll';
 
 var callGetStatus = rpc.declare({ object: 'luci.adguardhome', method: 'getStatus', expect: { '': {} } });
+var callGetStats = rpc.declare({ object: 'luci.adguardhome', method: 'getStats', expect: { '': {} } });
 
 function hasChineseLocale() {
 	var htmlLang = document.documentElement ? (document.documentElement.lang || '') : '';
@@ -205,11 +206,17 @@ function heroLink(label, href, extraClass, newTab) {
 
 return view.extend({
 	load: function() {
-		return safeCall(callGetStatus(), {});
+		return Promise.all([
+			safeCall(callGetStatus(), {}),
+			safeCall(callGetStats(), { ok: false, num_dns_queries: 0, num_blocked_filtering: 0, avg_processing_time: '0' })
+		]);
 	},
-	render: function(status) {
+	render: function(data) {
+		var status = data[0] || {};
+		var stats = data[1] || {};
 		var root = applyThemeClass(E('div', { 'class': 'agh-page' }), 'agh-dark');
 		var rpcError = status._rpc_error;
+		var statsOk = stats.ok === true || stats.ok === 1 || stats.ok === '1';
 		var state = yes(status.running) ? t('Running', '运行中') : t('Stopped', '未运行');
 		var stateClass = yes(status.running) ? 'agh-ok' : 'agh-bad';
 		var settingsUrl = L.url('admin', 'services', 'adguardhome', 'settings');
@@ -229,10 +236,10 @@ return view.extend({
 				])
 			]),
 			E('div', { 'class': 'agh-quick' }, [
-				E('div', { 'class': 'agh-chip' }, [ E('span', {}, t('Service', '服务')), E('strong', { 'class': rpcError ? 'agh-bad' : stateClass }, rpcError ? t('Backend missing', '后端缺失') : state) ]),
+				E('div', { 'class': 'agh-chip agh-service-chip' }, [ E('span', {}, t('Service', '服务')), E('strong', { 'class': rpcError ? 'agh-bad' : stateClass }, rpcError ? t('Backend missing', '后端缺失') : state) ]),
 				E('div', { 'class': 'agh-chip' }, [ E('span', {}, t('Core', '核心')), E('strong', { 'class': yes(status.core_ready) ? 'agh-ok' : 'agh-warn' }, yes(status.core_ready) ? text(status.version) : t('Missing', '缺失')) ]),
 				E('div', { 'class': 'agh-chip' }, [ E('span', {}, t('DNS Port', 'DNS 端口')), E('strong', {}, text(status.dns_port, rpcError ? '?' : '-')) ]),
-				E('div', { 'class': 'agh-chip' }, [ E('span', {}, t('Redirect', '重定向')), E('strong', { 'class': yes(status.redirected) ? 'agh-ok' : '' }, yes(status.redirected) ? t('Active', '已启用') : redirectModeLabel(status.redirect)) ])
+				E('div', { 'class': 'agh-chip agh-redirect-chip' }, [ E('span', {}, t('Redirect', '重定向')), E('strong', { 'class': yes(status.redirected) ? 'agh-ok' : '' }, yes(status.redirected) ? t('Active', '已启用') : redirectModeLabel(status.redirect)) ])
 			])
 		])));
 
@@ -243,6 +250,44 @@ return view.extend({
 			card(t('Update Task', '更新任务'), yes(status.update_running) ? t('Running', '运行中') : t('Idle', '空闲'), yes(status.update_running) ? 'agh-warn' : 'agh-ok')
 		]));
 
+		var statsSectionRef = null;
+		var queriesEl = null;
+		var blockedEl = null;
+		var ratioEl = null;
+		var avgTimeEl = null;
+
+		if (statsOk) {
+			var numQueries = stats.num_dns_queries != null ? String(stats.num_dns_queries) : '0';
+			var numBlocked = stats.num_blocked_filtering != null ? String(stats.num_blocked_filtering) : '0';
+			var queriesInt = parseInt(stats.num_dns_queries, 10) || 0;
+			var blockedInt = parseInt(stats.num_blocked_filtering, 10) || 0;
+			var blockedPct = queriesInt > 0 ? ((blockedInt / queriesInt) * 100).toFixed(1) : '0.0';
+			var avgTime = text(stats.avg_processing_time, '0');
+
+			var qCard = card(t('DNS Queries', 'DNS 查询'), numQueries, 'agh-ok');
+			var bCard = card(t('Blocked', '已拦截'), numBlocked, 'agh-bad');
+			var rCard = card(t('Blocked Ratio', '拦截率'), blockedPct + '%', blockedInt > 0 ? 'agh-bad' : 'agh-ok');
+			var aCard = card(t('Avg. Processing', '平均处理'), avgTime + ' ms', '');
+
+			statsSectionRef = E('section', { 'class': 'agh-grid agh-stats-grid' });
+			statsSectionRef.appendChild(qCard);
+			statsSectionRef.appendChild(bCard);
+			statsSectionRef.appendChild(rCard);
+			statsSectionRef.appendChild(aCard);
+			root.appendChild(statsSectionRef);
+
+			queriesEl = qCard.querySelector('.agh-value');
+			blockedEl = bCard.querySelector('.agh-value');
+			ratioEl = rCard.querySelector('.agh-value');
+			avgTimeEl = aCard.querySelector('.agh-value');
+		} else if (yes(status.running)) {
+			var statsErr = stats.error || '';
+			var statsMsg = t('DNS statistics unavailable. AdGuard Home API may require authentication from localhost.', 'DNS 统计不可用。AdGuard Home API 可能要求来自 localhost 的认证。');
+			if (statsErr)
+				statsMsg = statsErr;
+			root.appendChild(E('section', { 'class': 'agh-alert agh-stats-error' }, statsMsg));
+		}
+
 		root.appendChild(E('section', { 'class': 'agh-card' }, [
 			E('div', { 'class': 'agh-paths' }, [
 				pathItem(t('Core Binary', '核心文件'), status.binpath),
@@ -250,6 +295,65 @@ return view.extend({
 				pathItem(t('Work Directory', '工作目录'), status.workdir)
 			])
 		]));
+
+		function refreshStatusChips(s) {
+			var serviceChip = root.querySelector('.agh-service-chip strong');
+			var redirectChip = root.querySelector('.agh-redirect-chip strong');
+			if (serviceChip) {
+				var isRun = yes(s.running);
+				serviceChip.textContent = isRun ? t('Running', '运行中') : t('Stopped', '未运行');
+				serviceChip.className = isRun ? 'agh-ok' : 'agh-bad';
+			}
+			if (redirectChip) {
+				var isRedir = yes(s.redirected);
+				redirectChip.textContent = isRedir ? t('Active', '已启用') : redirectModeLabel(s.redirect);
+				redirectChip.className = isRedir ? 'agh-ok' : '';
+			}
+		}
+
+		function updateStatsCards(s) {
+			if (!statsSectionRef) return;
+			if (s._rpc_error || s.ok !== true) {
+				var errEl = root.querySelector('.agh-stats-error');
+				if (!errEl) {
+					errEl = E('section', { 'class': 'agh-alert agh-stats-error' }, s.error || t('DNS statistics fetch failed.', 'DNS 统计数据获取失败。'));
+					statsSectionRef.parentNode && statsSectionRef.parentNode.insertBefore(errEl, statsSectionRef);
+					statsSectionRef.style.display = 'none';
+				}
+				return;
+			}
+			var errEl = root.querySelector('.agh-stats-error');
+			if (errEl && statsSectionRef.style.display === 'none') {
+				statsSectionRef.style.display = '';
+				errEl.parentNode && errEl.parentNode.removeChild(errEl);
+			}
+			var nq = s.num_dns_queries != null ? String(s.num_dns_queries) : '0';
+			var nb = s.num_blocked_filtering != null ? String(s.num_blocked_filtering) : '0';
+			var qi = parseInt(s.num_dns_queries, 10) || 0;
+			var bi = parseInt(s.num_blocked_filtering, 10) || 0;
+			var pct = qi > 0 ? ((bi / qi) * 100).toFixed(1) : '0.0';
+			var at = text(s.avg_processing_time, '0');
+			if (queriesEl) queriesEl.textContent = nq;
+			if (blockedEl) blockedEl.textContent = nb;
+			if (ratioEl) ratioEl.textContent = pct + '%';
+			if (avgTimeEl) avgTimeEl.textContent = at + ' ms';
+		}
+
+		function startPoll() {
+			poll.add(function() {
+				return safeCall(callGetStatus(), {}).then(function(s) {
+					refreshStatusChips(s);
+				});
+			}, 5);
+			poll.add(function() {
+				return safeCall(callGetStats(), { ok: false }).then(function(s) {
+					updateStatsCards(s);
+				});
+			}, 10);
+		}
+
+		if (typeof poll !== 'undefined' && poll.add)
+			startPoll();
 
 		return root;
 	}

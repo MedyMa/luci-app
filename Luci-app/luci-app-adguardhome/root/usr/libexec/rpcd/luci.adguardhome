@@ -452,9 +452,76 @@ set_links() {
 	json_init; json_add_boolean ok 1; json_dump
 }
 
+_http_get() {
+	local url="$1" timeout="${2:-5}"
+	if command -v curl >/dev/null 2>&1; then
+		curl -fsSL --connect-timeout "$timeout" --max-time "$((timeout + 2))" "$url" 2>/dev/null
+	elif command -v wget >/dev/null 2>&1; then
+		wget -qO- -T "$timeout" "$url" 2>/dev/null
+	fi
+}
+
+_json_extract_int() {
+	printf '%s\n' "$1" | awk -v key="$2" '
+		BEGIN { RS=","; FS=":" }
+		$0 ~ "\"" key "\"" {
+			gsub(/[^0-9-]/, "", $2)
+			print $2
+			exit
+		}
+	'
+}
+
+_json_extract_float() {
+	printf '%s\n' "$1" | awk -v key="$2" '
+		BEGIN { RS=","; FS=":" }
+		$0 ~ "\"" key "\"" {
+			gsub(/[^0-9.eE+-]/, "", $2)
+			print $2
+			exit
+		}
+	'
+}
+
+json_stats() {
+	local httpport data running
+	httpport=$(get_option httpport 3000)
+
+	if ! pgrep -f "$(resolve_binpath "$(get_option binpath "$DEFAULT_BINPATH")" 2>/dev/null || echo ADGUARDHOME_RUNNING_CHECK)" >/dev/null 2>&1; then
+		json_init
+		json_add_boolean ok 0
+		json_add_string error 'AdGuard Home is not running.'
+		json_dump
+		return
+	fi
+
+	data=$(_http_get "http://127.0.0.1:$httpport/control/stats" 5)
+	if [ -z "$data" ]; then
+		json_init
+		json_add_boolean ok 0
+		json_add_string error 'Unable to fetch stats from AdGuard Home API. Check if the web interface is accessible.'
+		json_dump
+		return
+	fi
+
+	if printf '%s\n' "$data" | grep -q '"num_dns_queries"'; then
+		json_init
+		json_add_boolean ok 1
+		json_add_int num_dns_queries "$(_json_extract_int "$data" num_dns_queries)"
+		json_add_int num_blocked_filtering "$(_json_extract_int "$data" num_blocked_filtering)"
+		json_add_string avg_processing_time "$(_json_extract_float "$data" avg_processing_time)"
+		json_dump
+	else
+		json_init
+		json_add_boolean ok 0
+		json_add_string error "$(printf '%s' "$data" | head -c 256)"
+		json_dump
+	fi
+}
+
 list_methods() {
 	cat <<'JSON'
-{"getStatus":{},"getMeta":{},"getYaml":{},"getCurrentYaml":{},"getTemplateConfig":{},"saveYaml":{"content":"string"},"discardYaml":{},"getLog":{"scope":"string","position":"number"},"clearLog":{"scope":"string"},"startUpdate":{"force":"boolean"},"gfwAction":{"action":"string"},"setLinks":{"content":"string","channel":"string","download_arch":"string"}}
+{"getStatus":{},"getMeta":{},"getYaml":{},"getCurrentYaml":{},"getTemplateConfig":{},"saveYaml":{"content":"string"},"discardYaml":{},"getLog":{"scope":"string","position":"number"},"clearLog":{"scope":"string"},"startUpdate":{"force":"boolean"},"gfwAction":{"action":"string"},"setLinks":{"content":"string","channel":"string","download_arch":"string"},"getStats":{}}
 JSON
 }
 
@@ -464,6 +531,7 @@ case "$1" in
 		case "$2" in
 			getStatus) json_status ;;
 			getMeta) json_meta ;;
+			getStats) json_stats ;;
 			getYaml) json_yaml ;;
 			getCurrentYaml) json_current_yaml ;;
 			getTemplateConfig) json_init; json_add_string content "$(build_template)"; json_dump ;;

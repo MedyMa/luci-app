@@ -145,6 +145,28 @@ stop_forward_dnsmasq() {
 	/etc/init.d/dnsmasq restart >/dev/null 2>&1
 }
 
+_nft_add_redirect() {
+	local port="$1" family="$2"
+	# nftables nat table may not exist on minimal configs; ignore errors
+	nft add rule "$family" nat PREROUTING udp dport 53 redirect to :"$port" 2>/dev/null || true
+	nft add rule "$family" nat PREROUTING tcp dport 53 redirect to :"$port" 2>/dev/null || true
+}
+
+_nft_clear_redirect() {
+	local family="$1" handle
+	# Remove all redirect:53 rules from the nat PREROUTING chain
+	nft --handle list chain "$family" nat PREROUTING 2>/dev/null | \
+		grep 'redirect to :' | \
+		sed 's/.*handle //' | \
+		while read handle; do
+			[ -n "$handle" ] && nft delete rule "$family" nat PREROUTING handle "$handle" 2>/dev/null || true
+		done
+}
+
+_has_cmd() {
+	command -v "$1" >/dev/null 2>&1
+}
+
 set_firewall_redirect() {
 	local port="$1"
 	[ -n "$port" ] || return 0
@@ -156,21 +178,35 @@ set_firewall_redirect() {
 		set firewall.AdGuardHome.reload=1
 		commit firewall
 	EOF
-	iptables -t nat -C PREROUTING -p udp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1 || iptables -t nat -A PREROUTING -p udp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1
-	iptables -t nat -C PREROUTING -p tcp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1 || iptables -t nat -A PREROUTING -p tcp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1
-	ip6tables -t nat -C PREROUTING -p udp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1 || ip6tables -t nat -A PREROUTING -p udp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1
-	ip6tables -t nat -C PREROUTING -p tcp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1 || ip6tables -t nat -A PREROUTING -p tcp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1
+	if _has_cmd nft; then
+		_nft_add_redirect "$port" ip
+		_nft_add_redirect "$port" ip6
+	elif _has_cmd iptables; then
+		iptables -t nat -C PREROUTING -p udp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1 || iptables -t nat -A PREROUTING -p udp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1
+		iptables -t nat -C PREROUTING -p tcp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1 || iptables -t nat -A PREROUTING -p tcp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1
+		if _has_cmd ip6tables; then
+			ip6tables -t nat -C PREROUTING -p udp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1 || ip6tables -t nat -A PREROUTING -p udp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1
+			ip6tables -t nat -C PREROUTING -p tcp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1 || ip6tables -t nat -A PREROUTING -p tcp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1
+		fi
+	fi
 }
 
 clear_firewall_redirect() {
 	local port="$1"
 	uci -q delete firewall.AdGuardHome
 	uci -q commit firewall
-	[ -n "$port" ] || return 0
-	while iptables -t nat -D PREROUTING -p udp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1; do :; done
-	while iptables -t nat -D PREROUTING -p tcp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1; do :; done
-	while ip6tables -t nat -D PREROUTING -p udp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1; do :; done
-	while ip6tables -t nat -D PREROUTING -p tcp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1; do :; done
+	if _has_cmd nft; then
+		_nft_clear_redirect ip
+		_nft_clear_redirect ip6
+	elif _has_cmd iptables; then
+		[ -n "$port" ] || return 0
+		while iptables -t nat -D PREROUTING -p udp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1; do :; done
+		while iptables -t nat -D PREROUTING -p tcp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1; do :; done
+		if _has_cmd ip6tables; then
+			while ip6tables -t nat -D PREROUTING -p udp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1; do :; done
+			while ip6tables -t nat -D PREROUTING -p tcp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1; do :; done
+		fi
+	fi
 }
 
 auto_apply_gfw() {
