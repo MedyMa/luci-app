@@ -292,6 +292,8 @@ module_slot_for_interface() {
 	local interface="$1"
 
 	case "$interface" in
+		sfppan) printf 'SFP-WAN\n' ;;
+		sfpuan) printf 'SFP-LAN\n' ;;
 		*[0-9])
 			printf 'SFP%s\n' "${interface##*[!0-9]}"
 			;;
