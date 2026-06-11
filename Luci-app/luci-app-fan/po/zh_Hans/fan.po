@@ -1,0 +1,216 @@
+msgid ""
+msgstr ""
+"Language: zh_Hans\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "Enabled"
+msgstr "已启用"
+
+msgid "Disabled"
+msgstr "未启用"
+
+msgid "Cooling active"
+msgstr "正在散热"
+
+msgid "Modulating"
+msgstr "调速中"
+
+msgid "Standby"
+msgstr "待机"
+
+msgid "Unavailable"
+msgstr "不可用"
+
+msgid "Sensor unavailable"
+msgstr "传感器不可用"
+
+msgid "to start"
+msgstr "后启动"
+
+msgid "Full-speed ceiling reached"
+msgstr "已达到满速温度上限"
+
+msgid "Save & Apply below to persist changes."
+msgstr "需要点击下方的“保存并应用”后，修改才会真正生效。"
+
+msgid "Enable the service and Save & Apply to start the fan daemon."
+msgstr "启用服务后，再点击“保存并应用”即可启动风扇守护进程。"
+
+msgid "Loaded into the form"
+msgstr "已写入表单"
+
+msgid "Not available"
+msgstr "不可用"
+
+msgid "This device needs a readable CPU thermal zone and a writable pwm-fan hwmon interface for the full temperature-driven control loop."
+msgstr "当前设备需要可读的 CPU 温区和可写的 PWM 风扇 hwmon 接口，才能使用完整的温度驱动控速。"
+
+msgid "Turbo and Manual modes require a writable pwm-fan hwmon interface on the target board."
+msgstr "狂暴模式和手动模式需要目标设备提供可写的 pwm-fan hwmon 接口。"
+
+msgid "Waiting for telemetry..."
+msgstr "正在等待遥测数据..."
+
+msgid "Monitoring state"
+msgstr "监控状态"
+
+msgid "Current device"
+msgstr "当前设备"
+
+msgid "BPI-R4 tuned layout with live CPU temperature, PWM duty, and fan speed feedback across smart, manual and turbo modes."
+msgstr "已针对 BPI-R4 优化，实时展示 CPU 温度、PWM 占空比，以及智能、手动、狂暴三种模式下的风扇转速反馈。"
+
+msgid "Live OpenWrt cooling dashboard with a configurable smart temperature window, plus manual and turbo profiles on pwm-fan capable hardware."
+msgstr "当目标硬件提供 pwm-fan 能力时，可在这里实时查看 OpenWrt 散热状态，并使用可配置智能温区、手动和狂暴三种模式。"
+
+msgid "Turbo"
+msgstr "狂暴"
+
+msgid "Smart"
+msgstr "智能"
+
+msgid "Manual"
+msgstr "手动"
+
+msgid "Turbo mode locks the fan at the configured full-speed RPM ceiling after Save & Apply."
+msgstr "狂暴模式在“保存并应用”后会把风扇锁定在已配置的满速转速上限。"
+
+msgid "Smart mode linearly ramps from the stop temperature to the configured full-speed RPM ceiling."
+msgstr "智能模式会在停转温度到满速温度之间线性调速，并遵循已配置的满速转速上限。"
+
+msgid "Manual mode applies the selected duty target after Save & Apply and reports the available fan speed feedback."
+msgstr "手动模式会在“保存并应用”后采用所选占空比，并显示当前可用的风扇转速反馈。"
+
+msgid "Mode target"
+msgstr "目标模式"
+
+msgid "Current fan duty"
+msgstr "当前风扇占空比"
+
+msgid "(estimated)"
+msgstr "（估算）"
+
+msgid "(actual)"
+msgstr "（真实）"
+
+msgid "PWM speed feedback"
+msgstr "PWM 转速反馈"
+
+msgid "Hardware speed feedback"
+msgstr "硬件转速反馈"
+
+msgid "Speed feedback unavailable"
+msgstr "转速反馈不可用"
+
+msgid "Speed feedback"
+msgstr "转速反馈"
+
+msgid "Fan stop below"
+msgstr "低于此温度停转"
+
+msgid "Full speed above"
+msgstr "高于此温度满速"
+
+msgid "The fan is linearly modulating between the stop floor and the full-speed ceiling."
+msgstr "当前风扇正在停转温度和满速温度之间线性调速。"
+
+msgid "Backend control uses the kernel thermal reading directly, so the smart curve tracks temperature changes at 0.1 C granularity."
+msgstr "后端直接使用内核热区读数，因此智能曲线按 0.1 摄氏度粒度跟踪温度变化。"
+
+msgid "Adaptive Fan Profile"
+msgstr "自适应风扇控制"
+
+msgid "Live Cooling Dashboard"
+msgstr "实时散热面板"
+
+msgid "CPU temperature"
+msgstr "CPU 温度"
+
+msgid "Fan speed"
+msgstr "风扇转速"
+
+msgid "Current PWM duty"
+msgstr "当前 PWM 占空比"
+
+msgid "Control mode"
+msgstr "控制模式"
+
+msgid "Smart curve"
+msgstr "智能曲线"
+
+msgid "Current temperature"
+msgstr "当前温度"
+
+msgid "Operating profiles"
+msgstr "运行模式"
+
+msgid "Use these shortcuts to load Turbo, Smart or Manual targets into the form below before Save & Apply."
+msgstr "可用这些快捷按钮把狂暴、智能或手动目标写入下方表单，然后再执行“保存并应用”。"
+
+msgid "Turbo mode"
+msgstr "狂暴模式"
+
+msgid "Smart mode"
+msgstr "智能模式"
+
+msgid "Manual mode"
+msgstr "手动模式"
+
+msgid "Runtime insight"
+msgstr "运行提示"
+
+msgid "Current config"
+msgstr "当前设置"
+
+msgid "Enabled in UCI"
+msgstr "UCI 启用状态"
+
+msgid "Manual target"
+msgstr "手动目标"
+
+msgid "Runtime fan speed"
+msgstr "当前风扇转速"
+
+msgid "Fan Control"
+msgstr "风扇控制"
+
+msgid "Configure Smart, Turbo and Manual fan profiles for pwm-fan capable boards such as the BPI-R4. The live panel reads CPU temperature, PWM duty, and fan speed feedback over ubus."
+msgstr "为 BPI-R4 等支持 pwm-fan 的设备配置智能、狂暴和手动风扇模式。实时面板会通过 ubus 读取 CPU 温度、PWM 占空比，以及风扇转速反馈。"
+
+msgid "Profile Settings"
+msgstr "基本设置"
+
+msgid "Enable fan service"
+msgstr "启用风扇服务"
+
+msgid "Start the fan daemon on Save & Apply. Smart mode uses the configured temperature window, Turbo holds the configured RPM ceiling, and Manual applies the slider target on pwm-fan capable boards."
+msgstr "点击“保存并应用”后会启动风扇守护进程。智能模式会按已配置的温度区间调速，狂暴模式固定在已配置的满速转速上限，手动模式会在支持 pwm-fan 的设备上应用滑条目标。"
+
+msgid "Smart mode follows the configured stop and full-speed temperatures. Turbo and Manual require pwm-fan hwmon support on the target board."
+msgstr "智能模式会按已配置的停转温度和满速温度调速。狂暴模式和手动模式需要目标设备提供 pwm-fan hwmon 支持。"
+
+msgid "Temperature in C below which the smart profile stops the fan. You can customize when the fan starts to stay off."
+msgstr "智能模式下低于该温度时风扇停转，可自定义风扇开始保持关闭的温度。"
+
+msgid "Temperature in C at which smart mode reaches the configured RPM ceiling."
+msgstr "智能模式下达到该温度时会拉到已配置的满速转速上限。"
+
+msgid "Maximum fan RPM"
+msgstr "风扇最大转速"
+
+msgid "Display and estimation ceiling for fan speed. Set values such as 2500, 3000 or 3500 to match your hardware."
+msgstr "风扇转速的显示和估算上限。可设置为 2500、3000 或 3500 等数值，以匹配你的风扇。"
+
+msgid "Manual PWM target"
+msgstr "手动 PWM 目标"
+
+msgid "Duty target in percent for Manual mode. 0 turns the fan off, 100 drives the maximum PWM value, which maps to the configured RPM ceiling in the display."
+msgstr "手动模式下的目标占空比，单位为百分比。0 表示关闭风扇，100 表示输出最大 PWM，对应页面显示中已配置的转速上限。"
+
+msgid "Polling interval"
+msgstr "轮询间隔"
+
+msgid "Fan daemon loop interval in seconds. The default 5-second cadence is usually enough for the configurable smart curve and reduces unnecessary PWM writes."
+msgstr "风扇守护进程的轮询间隔，单位为秒。默认 5 秒通常已足够匹配可配置智能曲线，并可减少无意义的 PWM 写入。"
