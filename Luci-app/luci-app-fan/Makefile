@@ -1,46 +1,37 @@
-# Copyright (C) 2016 Openwrt.org
-#
-# This is free software, licensed under the Apache License, Version 2.0 .
-#
+# This is free software, licensed under the Apache License, Version 2.0.
 
 include $(TOPDIR)/rules.mk
 
-PKG_NAME:=luci-app-fan
+PKG_NAME:=luci-app-sfp-status
 PKG_VERSION:=0.1.0
-PKG_RELEASE:=25
+PKG_RELEASE:=29
 PKG_LICENSE:=Apache-2.0
-
-LUCI_TITLE:=LuCI fan control
-LUCI_DESCRIPTION:=Modern LuCI fan control dashboard for BPI-R4 pwm-fan control and thermal telemetry
-LUCI_DEPENDS:=+luci-base +coreutils-stat
 LUCI_PKGARCH:=all
-PKG_MAINTAINER:=MedyMa
 
-define Package/luci-app-fan/conffiles
-/etc/config/luci-fan
-endef
+LUCI_TITLE:=LuCI SFP status monitor
+LUCI_DESCRIPTION:=Overview and detailed DOM status for SFP modules
+LUCI_DEPENDS:=+luci-base +ethtool-full
 
 define Build/Prepare/$(PKG_NAME)
-	chmod 0755 $(PKG_BUILD_DIR)/root/etc/init.d/luci-fan
-	chmod 0755 $(PKG_BUILD_DIR)/root/etc/uci-defaults/luci-fan
-	chmod 0755 $(PKG_BUILD_DIR)/root/usr/libexec/fan-control
-	chmod 0755 $(PKG_BUILD_DIR)/root/usr/libexec/rpcd/luci.fan
+	$(call Build/Prepare/Default)
+	chmod 0755 $(PKG_BUILD_DIR)/root/etc/uci-defaults/40_luci-sfp-status
+	chmod 0755 $(PKG_BUILD_DIR)/root/usr/libexec/rpcd/luci.sfp-status
 endef
 
-define Package/luci-app-fan/postinst
+define Package/$(PKG_NAME)/conffiles
+/etc/config/sfp-status
+endef
+
+define Package/$(PKG_NAME)/postinst
 #!/bin/sh
 if [ -z "$$IPKG_INSTROOT" ]; then
-	for runtime_file in \
-		/etc/init.d/luci-fan \
-		/etc/uci-defaults/luci-fan \
-		/usr/libexec/fan-control \
-		/usr/libexec/rpcd/luci.fan
-	do
-		[ -f "$$runtime_file" ] && chmod 0755 "$$runtime_file"
-	done
+	[ -f /etc/uci-defaults/40_luci-sfp-status ] && chmod 0755 /etc/uci-defaults/40_luci-sfp-status
+	[ -f /usr/libexec/rpcd/luci.sfp-status ] && chmod 0755 /usr/libexec/rpcd/luci.sfp-status
+	rm -rf /tmp/luci-sfp-status
+	uci -q delete sfp-status.settings.interface
+	uci -q commit sfp-status
 	rm -rf /tmp/luci-modulecache/ /var/luci-modulecache/
 	rm -f /tmp/luci-indexcache /tmp/luci-indexcache.* /var/luci-indexcache.* 2>/dev/null
-	[ -x /etc/init.d/luci-fan ] && /etc/init.d/luci-fan restart >/dev/null 2>&1
 	[ -x /etc/init.d/rpcd ] && /etc/init.d/rpcd reload >/dev/null 2>&1 || true
 fi
 exit 0
@@ -49,5 +40,3 @@ endef
 include $(TOPDIR)/feeds/luci/luci.mk
 
 # call BuildPackage - OpenWrt buildroot signature
-
-
