@@ -289,7 +289,7 @@ firewall_redirect_is_active() {
 		ip6tables -t nat -C PREROUTING -p udp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1 && return 0
 		ip6tables -t nat -C PREROUTING -p tcp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1 && return 0
 	fi
-	[ "$(uci -q get firewall.AdGuardHome.path 2>/dev/null)" = '/usr/share/AdGuardHome/firewall.start' ]
+	return 1
 }
 
 auto_apply_gfw() {
@@ -430,37 +430,54 @@ auto_heal_redirect_mode() {
 }
 
 _do_redirect() {
-	local enabled="$1" configpath redirect old_redirect old_port agh_port redirect_active
+	local enabled="$1" configpath redirect effective_redirect old_redirect old_port agh_port redirect_active
 	get_opt configpath configpath "$DEFAULT_CONFIGPATH"
 	get_opt redirect redirect "$DEFAULT_REDIRECT"
 	redirect=$(normalize_redirect_mode "$redirect")
 	redirect=$(auto_heal_redirect_mode "$redirect" "$configpath")
+	effective_redirect="$redirect"
 	old_redirect=$(uci -q get AdGuardHome.AdGuardHome.old_redirect 2>/dev/null)
 	old_port=$(uci -q get AdGuardHome.AdGuardHome.old_port 2>/dev/null)
 	agh_port=$(yaml_get 'dns.port' "$configpath")
 	[ -n "$agh_port" ] || agh_port='0'
 	redirect_active=0
 	case "$old_redirect" in
-		redirect) clear_firewall_redirect "$old_port" ;;
+		redirect)
+			clear_firewall_redirect "$old_port"
+			stop_forward_dnsmasq "$old_port"
+			;;
 		dnsmasq-upstream) stop_forward_dnsmasq "$old_port" ;;
 		exchange) restore_port53 "$configpath" ;;
 	esac
 	if [ "$enabled" = '1' ] && [ "$agh_port" != '0' ]; then
-		case "$redirect" in
-			redirect) set_firewall_redirect "$agh_port" ;;
+		case "$effective_redirect" in
+			redirect)
+				set_firewall_redirect "$agh_port"
+				set_forward_dnsmasq "$agh_port"
+				;;
 			dnsmasq-upstream) set_forward_dnsmasq "$agh_port" ;;
 			exchange) exchange_is_active "$configpath" || exchange_to_port53 "$configpath" ;;
 		esac
-		case "$redirect" in
-			redirect) firewall_redirect_is_active "$agh_port" && redirect_active=1 ;;
+		case "$effective_redirect" in
+			redirect)
+				(firewall_redirect_is_active "$agh_port" || dnsmasq_forward_is_active "$agh_port") && redirect_active=1
+				;;
 			dnsmasq-upstream) dnsmasq_forward_is_active "$agh_port" && redirect_active=1 ;;
 			exchange) exchange_is_active "$configpath" && redirect_active=1 ;;
 		esac
-		[ "$redirect" = 'none' ] || [ "$redirect_active" = '1' ] || logger -t AdGuardHome "redirect mode ${redirect} is not active on port ${agh_port}"
+		if [ "$effective_redirect" = 'redirect' ] && ! firewall_redirect_is_active "$agh_port"; then
+			logger -t AdGuardHome "redirect mode failed on port ${agh_port}, falling back to dnsmasq-upstream"
+			if dnsmasq_forward_is_active "$agh_port"; then
+				effective_redirect='dnsmasq-upstream'
+				redirect_active=1
+				uci -q set AdGuardHome.AdGuardHome.redirect="$effective_redirect"
+			fi
+		fi
+		[ "$effective_redirect" = 'none' ] || [ "$redirect_active" = '1' ] || logger -t AdGuardHome "redirect mode ${effective_redirect} is not active on port ${agh_port}"
 	fi
 	# Write status AFTER redirect setup, so the flag reflects actual state
 	[ "$redirect_active" = '1' ] && printf 1 > /var/run/AdGredir || printf 0 > /var/run/AdGredir
-	uci -q set AdGuardHome.AdGuardHome.old_redirect="$redirect"
+	uci -q set AdGuardHome.AdGuardHome.old_redirect="$effective_redirect"
 	uci -q set AdGuardHome.AdGuardHome.old_port="$agh_port"
 	uci -q set AdGuardHome.AdGuardHome.old_enabled="$enabled"
 	uci -q commit AdGuardHome
