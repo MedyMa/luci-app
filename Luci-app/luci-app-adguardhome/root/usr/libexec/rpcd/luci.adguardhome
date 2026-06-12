@@ -452,39 +452,85 @@ set_links() {
 	json_init; json_add_boolean ok 1; json_dump
 }
 
+_json_escape() {
+	printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
+}
+
 _http_get() {
-	local url="$1" timeout="${2:-5}" user="${3:-}" pass="${4:-}"
-	# Build URL with embedded credentials when auth is required.
-	# This works reliably with curl, GNU wget, and uclient-fetch alike.
-	local auth_url="$url"
-	if [ -n "$user" ] && [ -n "$pass" ]; then
-		local proto host_port path
-		proto="${url%%://*}"
-		host_port="${url#*://}"
-		path="/${host_port#*/}"
-		host_port="${host_port%%/*}"
-		auth_url="${proto}://${user}:${pass}@${host_port}${path}"
-	fi
+	local url="$1" timeout="${2:-5}" user="${3:-}" pass="${4:-}" cookie_file="${5:-}"
+
 	if command -v curl >/dev/null 2>&1; then
-		curl -sSL --connect-timeout "$timeout" --max-time "$((timeout + 2))" "$auth_url" 2>/dev/null
+		set -- -sSL --connect-timeout "$timeout" --max-time "$((timeout + 2))"
+		[ -n "$cookie_file" ] && [ -s "$cookie_file" ] && set -- "$@" --cookie "$cookie_file"
+		[ -n "$user" ] && [ -n "$pass" ] && set -- "$@" -u "$user:$pass"
+		curl "$@" "$url" 2>/dev/null
 	elif command -v wget-ssl >/dev/null 2>&1; then
-		wget-ssl -qO- -T "$timeout" "$auth_url" 2>/dev/null
+		set -- -qO- -T "$timeout"
+		[ -n "$cookie_file" ] && [ -s "$cookie_file" ] && set -- "$@" --load-cookies="$cookie_file"
+		[ -n "$user" ] && [ -n "$pass" ] && set -- "$@" --user="$user" --password="$pass"
+		wget-ssl "$@" "$url" 2>/dev/null
 	elif command -v wget >/dev/null 2>&1; then
-		wget -qO- -T "$timeout" "$auth_url" 2>/dev/null
+		set -- -qO- -T "$timeout"
+		[ -n "$cookie_file" ] && [ -s "$cookie_file" ] && set -- "$@" --load-cookies="$cookie_file"
+		[ -n "$user" ] && [ -n "$pass" ] && set -- "$@" --user="$user" --password="$pass"
+		wget "$@" "$url" 2>/dev/null
 	fi
+}
+
+_http_post_json() {
+	local url="$1" payload="$2" timeout="${3:-5}" cookie_file="${4:-}"
+
+	if command -v curl >/dev/null 2>&1; then
+		set -- -sSL --connect-timeout "$timeout" --max-time "$((timeout + 2))" -H 'Content-Type: application/json' --data "$payload"
+		[ -n "$cookie_file" ] && set -- "$@" --cookie-jar "$cookie_file" --cookie "$cookie_file"
+		curl "$@" "$url" 2>/dev/null
+	elif command -v wget-ssl >/dev/null 2>&1; then
+		set -- -qO- -T "$timeout" --header='Content-Type: application/json' --post-data="$payload"
+		[ -n "$cookie_file" ] && set -- "$@" --save-cookies="$cookie_file" --keep-session-cookies
+		wget-ssl "$@" "$url" 2>/dev/null
+	elif command -v wget >/dev/null 2>&1; then
+		set -- -qO- -T "$timeout" --header='Content-Type: application/json' --post-data="$payload"
+		[ -n "$cookie_file" ] && set -- "$@" --save-cookies="$cookie_file" --keep-session-cookies
+		wget "$@" "$url" 2>/dev/null
+	fi
+}
+
+_is_stats_payload() {
+	printf '%s\n' "$1" | grep -q '"num_dns_queries"'
 }
 
 _auth_get() {
 	local url="$1" timeout="${2:-5}"
-	local user pass data
+	local user pass data base_url login_url cookie_file login_payload
 	user=$(get_option username root)
 	pass=$(get_option password admin)
-	# Try with Basic auth first (YAML template includes users)
-	data=$(_http_get "$url" "$timeout" "$user" "$pass")
-	if [ -z "$data" ]; then
-		# Fall back to no auth (e.g. YAML without users section)
-		data=$(_http_get "$url" "$timeout")
+
+	data=$(_http_get "$url" "$timeout")
+	if _is_stats_payload "$data"; then
+		printf '%s\n' "$data"
+		return
 	fi
+
+	data=$(_http_get "$url" "$timeout" "$user" "$pass")
+	if _is_stats_payload "$data"; then
+		printf '%s\n' "$data"
+		return
+	fi
+
+	if [ -n "$user" ] && [ -n "$pass" ]; then
+		base_url="${url%/control/*}"
+		login_url="$base_url/control/login"
+		cookie_file="/tmp/AdGuardHome_rpcd_cookie.$$"
+		login_payload=$(printf '{"name":"%s","password":"%s"}' "$(_json_escape "$user")" "$(_json_escape "$pass")")
+		_http_post_json "$login_url" "$login_payload" "$timeout" "$cookie_file" >/dev/null
+		data=$(_http_get "$url" "$timeout" '' '' "$cookie_file")
+		rm -f "$cookie_file"
+		if _is_stats_payload "$data"; then
+			printf '%s\n' "$data"
+			return
+		fi
+	fi
+
 	printf '%s\n' "$data"
 }
 
@@ -526,7 +572,7 @@ json_stats() {
 	if [ -z "$data" ]; then
 		json_init
 		json_add_boolean ok 0
-		json_add_string error 'Unable to fetch stats from AdGuard Home API. Check that AdGuard Home is running on port '"$httpport"' and authentication is configured correctly.'
+		json_add_string error 'Unable to fetch stats from AdGuard Home API. Check that AdGuard Home is running on port '"$httpport"' and that the saved web login credentials match the AdGuard Home admin account.'
 		json_dump
 		return
 	fi

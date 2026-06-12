@@ -296,6 +296,8 @@ return view.extend({
 		var o;
 		o = s.taboption('service', form.Flag, 'enabled', t('Enable service', '启用服务'), t('Start AdGuard Home through procd when this option is enabled.', '启用后通过 procd 启动 AdGuard Home。'));
 		o = s.taboption('service', form.Flag, 'waitonboot', t('Wait for network on boot', '开机等待网络'), t('Delay service startup until the network is ready.', '开机时等待网络就绪后再启动服务。'));
+		o = s.taboption('service', form.Value, 'username', t('API login username', 'API 登录用户名'), t('Username LuCI uses when requesting the local AdGuard Home API. Keep it in sync with the AdGuard Home admin account.', 'LuCI 请求本地 AdGuard Home API 时使用的用户名，请与 AdGuard Home 管理员账号保持一致。')); o.placeholder = 'root'; o.rmempty = false;
+		o = s.taboption('service', form.Value, 'password', t('API login password', 'API 登录密码'), t('Password LuCI uses when requesting the local AdGuard Home API. Update it whenever you change the AdGuard Home web password.', 'LuCI 请求本地 AdGuard Home API 时使用的密码。修改 AdGuard Home 后台密码后，这里也要同步更新。')); o.password = true; o.rmempty = true;
 		o = s.taboption('service', form.Value, 'hashpass', t('Web password bcrypt hash', 'Web 密码 bcrypt 哈希'), t('Use the password helper above to generate a hash, then save and apply.', '可使用上方密码助手生成哈希，然后保存并应用。')); o.password = true; o.rmempty = true;
 
 		o = s.taboption('network', form.Value, 'httpport', t('Web console port', 'Web 控制台端口'), t('Port used by the AdGuard Home management UI.', 'AdGuard Home 管理界面使用的端口。')); o.datatype = 'port'; o.placeholder = '3000';
@@ -389,12 +391,12 @@ function linksCard(channelSelect, archSelect, linksBox, rpcError) {
 
 
 function passwordCard() {
-	var statusBox = createStatusBox(t('Generate a hash and it will be filled into the password field below.', '生成哈希后会自动写入下方密码字段。'));
+	var statusBox = createStatusBox(t('Generate a hash and it will be filled into the hash field below. The plain password field will also be updated for local API access.', '生成哈希后会自动写入下方哈希字段，并同步更新本地 API 使用的明文密码字段。'));
 	var input = E('input', { type: 'password', placeholder: t('New web password', '新的网页密码') });
-	var button = E('button', { 'class': softButtonClass(), 'click': function() { ensureBcrypt().then(function() { var bcrypt = window.TwinBcrypt || (window.dcodeIO && window.dcodeIO.bcrypt); var hash = bcrypt && bcrypt.hashSync ? bcrypt.hashSync(input.value || '', 10) : ''; var target = document.querySelector('[data-name="hashpass"] input'); if (target && hash) { target.value = hash; statusBox.textContent = t('Hash generated and written into the password field.', '哈希已生成，并已写入密码字段。'); } else { statusBox.textContent = t('bcrypt library unavailable or hash generation failed.', 'bcrypt 库不可用，或哈希生成失败。'); } }); } }, t('Generate hash', '生成哈希'));
+	var button = E('button', { 'class': softButtonClass(), 'click': function() { ensureBcrypt().then(function() { var bcrypt = window.TwinBcrypt || (window.dcodeIO && window.dcodeIO.bcrypt); var rawPassword = input.value || ''; var hash = bcrypt && bcrypt.hashSync ? bcrypt.hashSync(rawPassword, 10) : ''; var hashTarget = document.querySelector('[data-name="hashpass"] input'); var plainTarget = document.querySelector('[data-name="password"] input'); if (hashTarget && hash) { hashTarget.value = hash; if (plainTarget) plainTarget.value = rawPassword; statusBox.textContent = t('Hash generated and both password fields were updated.', '哈希已生成，并已同步更新两个密码字段。'); } else { statusBox.textContent = t('bcrypt library unavailable or hash generation failed.', 'bcrypt 库不可用，或哈希生成失败。'); } }); } }, t('Generate hash', '生成哈希'));
 	return E('div', { 'class': 'agh-action agh-action-password' }, [
 		actionHeader(t('Security', '安全'), t('Password Hash Helper', '密码哈希助手')),
-		E('p', {}, t('Generate a bcrypt hash for the AdGuard Home web console password and write it into the hash field automatically.', '为 AdGuard Home 后台密码生成 bcrypt 哈希，并自动写入下方的哈希字段。')),
+		E('p', {}, t('Generate a bcrypt hash for the AdGuard Home web console password, write it into the hash field, and keep the local API password field in sync.', '为 AdGuard Home 后台密码生成 bcrypt 哈希，自动写入哈希字段，并同步本地 API 密码字段。')),
 		E('div', { 'class': 'agh-row' }, [ input, button ]),
 		statusBox
 	]);
