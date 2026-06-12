@@ -207,13 +207,20 @@ _nft_add_redirect() {
 	}
 }
 
+_nft_redirect_regex() {
+	local port="$1"
+	is_valid_port "$port" || return 1
+	printf 'redirect to :%s([[:space:]]|$)\n' "$port"
+}
+
 _nft_clear_redirect() {
-	local family="$1" port="$2" handle
+	local family="$1" port="$2" handle pattern
 	[ -n "$port" ] || return 0
+	pattern=$(_nft_redirect_regex "$port") || return 0
 	# Only remove rules that redirect to our specific port, leaving
 	# other services' redirect rules intact.
 	nft --handle list chain "$family" nat PREROUTING 2>/dev/null | \
-		grep -F "redirect to :$port" | \
+		grep -E "$pattern" | \
 		sed 's/.*handle //' | \
 		while read -r handle; do
 			[ -n "$handle" ] && nft delete rule "$family" nat PREROUTING handle "$handle" 2>/dev/null || true
@@ -267,11 +274,12 @@ clear_firewall_redirect() {
 }
 
 firewall_redirect_is_active() {
-	local port="$1"
+	local port="$1" pattern
 	[ -n "$port" ] || return 1
+	pattern=$(_nft_redirect_regex "$port") || return 1
 	if _has_cmd nft; then
-		nft list chain ip nat PREROUTING 2>/dev/null | grep -Fq "redirect to :$port" && return 0
-		nft list chain ip6 nat PREROUTING 2>/dev/null | grep -Fq "redirect to :$port" && return 0
+		nft list chain ip nat PREROUTING 2>/dev/null | grep -Eq "$pattern" && return 0
+		nft list chain ip6 nat PREROUTING 2>/dev/null | grep -Eq "$pattern" && return 0
 	fi
 	if _has_cmd iptables; then
 		iptables -t nat -C PREROUTING -p udp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1 && return 0
