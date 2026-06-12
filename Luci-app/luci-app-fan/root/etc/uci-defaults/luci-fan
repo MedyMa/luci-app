@@ -30,4 +30,7 @@ uci -q commit luci-fan >/dev/null 2>&1
 uci -q delete ucitrack.@luci-fan[-1]
 uci -q commit ucitrack >/dev/null 2>&1
 
+/etc/init.d/luci-fan enable 2>/dev/null
+/etc/init.d/luci-fan start 2>/dev/null || true
+
 exit 0

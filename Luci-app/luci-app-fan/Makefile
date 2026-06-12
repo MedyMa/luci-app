@@ -7,7 +7,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-fan
 PKG_VERSION:=0.1.0
-PKG_RELEASE:=25
+PKG_RELEASE:=26
 PKG_LICENSE:=Apache-2.0
 
 LUCI_TITLE:=LuCI fan control
@@ -40,7 +40,8 @@ if [ -z "$$IPKG_INSTROOT" ]; then
 	done
 	rm -rf /tmp/luci-modulecache/ /var/luci-modulecache/
 	rm -f /tmp/luci-indexcache /tmp/luci-indexcache.* /var/luci-indexcache.* 2>/dev/null
-	[ -x /etc/init.d/luci-fan ] && /etc/init.d/luci-fan restart >/dev/null 2>&1
+	/etc/init.d/luci-fan enable 2>/dev/null
+	/etc/init.d/luci-fan start >/dev/null 2>&1 || true
 	[ -x /etc/init.d/rpcd ] && /etc/init.d/rpcd reload >/dev/null 2>&1 || true
 fi
 exit 0

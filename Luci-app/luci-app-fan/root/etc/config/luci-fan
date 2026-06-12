@@ -1,5 +1,5 @@
 config luci-fan
-    option enabled 0
+    option enabled 1
     option mode smart
     option manual_pwm 70
     option on_temp 60
