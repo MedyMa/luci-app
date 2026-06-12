@@ -1,0 +1,62 @@
+{
+	"admin/services/adguardhome": {
+		"title": "AdGuard Home",
+		"order": 40,
+		"action": { "type": "firstchild" },
+		"depends": { "acl": [ "luci-app-adguardhome" ] }
+	},
+	"admin/services/adguardhome/overview": {
+		"title": "概览",
+		"order": 10,
+		"action": { "type": "view", "path": "adguardhome/overview" },
+		"depends": { "acl": [ "luci-app-adguardhome" ] }
+	},
+	"admin/services/adguardhome/settings": {
+		"title": "设置",
+		"order": 20,
+		"action": { "type": "view", "path": "adguardhome/settings" },
+		"depends": { "acl": [ "luci-app-adguardhome" ] }
+	},
+	"admin/services/adguardhome/yaml": {
+		"title": "YAML 编辑器",
+		"order": 30,
+		"action": { "type": "view", "path": "adguardhome/yaml" },
+		"depends": { "acl": [ "luci-app-adguardhome" ] }
+	},
+	"admin/services/adguardhome/log": {
+		"title": "运行日志",
+		"order": 40,
+		"action": { "type": "view", "path": "adguardhome/log" },
+		"depends": { "acl": [ "luci-app-adguardhome" ] }
+	},
+	"admin/services/AdGuardHome": {
+		"hidden": true,
+		"order": 40,
+		"action": { "type": "firstchild" },
+		"depends": { "acl": [ "luci-app-adguardhome" ] }
+	},
+	"admin/services/AdGuardHome/base": {
+		"hidden": true,
+		"order": 20,
+		"action": { "type": "view", "path": "adguardhome/settings" },
+		"depends": { "acl": [ "luci-app-adguardhome" ] }
+	},
+	"admin/services/AdGuardHome/manual": {
+		"hidden": true,
+		"order": 30,
+		"action": { "type": "view", "path": "adguardhome/yaml" },
+		"depends": { "acl": [ "luci-app-adguardhome" ] }
+	},
+	"admin/services/AdGuardHome/log": {
+		"hidden": true,
+		"order": 40,
+		"action": { "type": "view", "path": "adguardhome/log" },
+		"depends": { "acl": [ "luci-app-adguardhome" ] }
+	},
+	"admin/services/AdGuardHome/status": {
+		"hidden": true,
+		"order": 10,
+		"action": { "type": "view", "path": "adguardhome/overview" },
+		"depends": { "acl": [ "luci-app-adguardhome" ] }
+	}
+}
