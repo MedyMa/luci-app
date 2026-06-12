@@ -181,6 +181,28 @@ dnsmasq_forward_is_active() {
 	return 1
 }
 
+_port_listen_regex() {
+	local port="$1"
+	is_valid_port "$port" || return 1
+	printf '[:.]%s([[:space:]]|$)\n' "$port"
+}
+
+port_is_listening() {
+	local port="$1" pattern checked
+	pattern=$(_port_listen_regex "$port") || return 1
+	checked=0
+	if _has_cmd ss; then
+		checked=1
+		ss -lntu 2>/dev/null | grep -Eq "$pattern" && return 0
+	fi
+	if _has_cmd netstat; then
+		checked=1
+		netstat -lntu 2>/dev/null | grep -Eq "$pattern" && return 0
+	fi
+	[ "$checked" = '1' ] || return 2
+	return 1
+}
+
 append_unique_token() {
 	local var_name="$1" token="$2" current
 	[ -n "$token" ] || return 0
@@ -511,6 +533,38 @@ auto_heal_redirect_mode() {
 	printf 'dnsmasq-upstream\n'
 }
 
+start_runtime_guard() {
+	local binpath="$1" configpath="$2" agh_port="$3" listen_state
+	(
+		sleep 10
+		[ -n "$binpath" ] || exit 0
+		pgrep -f "$binpath" >/dev/null 2>&1 || {
+			logger -t AdGuardHome "runtime guard: process not running after startup, clearing DNS redirect state"
+			config_load "$CONFIGURATION"
+			_do_redirect 0
+			exit 0
+		}
+		[ -r "$configpath" ] || exit 0
+		[ -n "$agh_port" ] || agh_port=$(yaml_get 'dns.port' "$configpath")
+		is_valid_port "$agh_port" || exit 0
+		port_is_listening "$agh_port"
+		listen_state="$?"
+		[ "$listen_state" = '0' ] && exit 0
+		[ "$listen_state" = '2' ] && exit 0
+		logger -t AdGuardHome "runtime guard: dns port ${agh_port} is not listening after startup, clearing DNS redirect state"
+		config_load "$CONFIGURATION"
+		_do_redirect 0
+	) >/dev/null 2>&1 &
+}
+
+start_watchconfig_guard() {
+	local redirect="$1"
+	[ "$redirect" = 'none' ] && return 0
+	procd_open_instance waitconfig
+	procd_set_param command /usr/share/AdGuardHome/watchconfig.sh
+	procd_close_instance
+}
+
 _do_redirect() {
 	local enabled="$1" configpath redirect effective_redirect old_redirect old_port agh_port redirect_active
 	get_opt configpath configpath "$DEFAULT_CONFIGPATH"
@@ -665,7 +719,7 @@ write_keep_file() {
 }
 
 start_service() {
-	local enabled raw_binpath raw_configpath raw_workdir binpath configpath workdir httpport logfile verbose hashpass update ipset_file skip_update redirect
+	local enabled raw_binpath raw_configpath raw_workdir binpath configpath workdir httpport logfile verbose hashpass update ipset_file skip_update redirect agh_port
 	config_load "$CONFIGURATION"
 	get_opt enabled enabled '0'
 	get_opt binpath raw_binpath "$DEFAULT_BINPATH"
@@ -721,6 +775,7 @@ start_service() {
 		return 0
 	fi
 	prepare_dns_runtime "$redirect" "$configpath"
+	agh_port=$(yaml_get 'dns.port' "$configpath")
 	if [ "$update" = '1' ] && [ "$skip_update" != '1' ] && [ ! -e /var/run/update_core ]; then
 		sh /usr/share/AdGuardHome/update_core.sh > /tmp/AdGuardHome_update.log 2>&1 &
 	fi
@@ -745,7 +800,13 @@ start_service() {
 	fi
 	procd_set_param file "$configpath" /etc/hosts /etc/config/AdGuardHome
 	procd_close_instance
-	[ -r "$configpath" ] && _do_redirect 1 || _do_redirect 0
+	if [ -r "$configpath" ]; then
+		_do_redirect 1
+		start_runtime_guard "$binpath" "$configpath" "$agh_port"
+	else
+		_do_redirect 0
+		start_watchconfig_guard "$redirect"
+	fi
 }
 
 reload_service() {
