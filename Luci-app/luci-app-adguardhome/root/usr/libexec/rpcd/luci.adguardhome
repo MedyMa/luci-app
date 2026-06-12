@@ -113,12 +113,15 @@ resolve_dns_port() {
 	# ignoring any other port: keys at different YAML levels.
 	[ -r "$1" ] || return 1
 	awk '
-	/^[[:space:]]*[a-zA-Z_-]+:/ {
-		in_dns = ($1 == "dns:")
+	BEGIN { in_dns = 0 }
+	/^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
+	/^[^[:space:]#][A-Za-z0-9_-]*:[[:space:]]*/ {
+		in_dns = ($0 ~ /^dns:[[:space:]]*($|#)/)
 		next
 	}
-	in_dns && /^[[:space:]]+port:/ {
+	in_dns && /^[[:space:]]+port:[[:space:]]*/ {
 		sub(/^[[:space:]]*port:[[:space:]]*/, "", $0)
+		sub(/[[:space:]]+#.*$/, "", $0)
 		gsub(/["\x27]/, "", $0)
 		print $0
 		exit
