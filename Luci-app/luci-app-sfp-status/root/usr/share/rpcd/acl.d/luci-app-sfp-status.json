@@ -1,0 +1,17 @@
+{
+  "luci-app-sfp-status": {
+    "description": "Grant UCI read and RPC access to LuCI app SFP status",
+    "read": {
+      "uci": [
+        "sfp-status"
+      ],
+      "ubus": {
+        "luci.sfp-status": [
+          "getInterfaces",
+          "getStatus",
+          "getStatuses"
+        ]
+      }
+    }
+  }
+}
