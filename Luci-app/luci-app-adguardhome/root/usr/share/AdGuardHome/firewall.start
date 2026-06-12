@@ -1,8 +1,8 @@
 #!/bin/sh
 
-AdGuardHome_enable=$(uci get AdGuardHome.AdGuardHome.enabled)
-redirect=$(uci get AdGuardHome.AdGuardHome.redirect)
+AdGuardHome_enable=$(uci -q get AdGuardHome.AdGuardHome.enabled 2>/dev/null)
+redirect=$(uci -q get AdGuardHome.AdGuardHome.redirect 2>/dev/null)
 
-if [ "$AdGuardHome_enable" = "1" ] && [ "$redirect" = "redirect" ]; then
+if [ "$AdGuardHome_enable" = "1" ] && [ "$redirect" = "redirect" ] && /etc/init.d/AdGuardHome isrunning >/dev/null 2>&1; then
 	/etc/init.d/AdGuardHome do_redirect 1
 fi

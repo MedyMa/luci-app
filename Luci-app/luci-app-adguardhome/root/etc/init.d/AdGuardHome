@@ -181,8 +181,64 @@ dnsmasq_forward_is_active() {
 	return 1
 }
 
+append_unique_token() {
+	local var_name="$1" token="$2" current
+	[ -n "$token" ] || return 0
+	eval "current=\${$var_name}"
+	case " $current " in
+		*" $token "*) return 0 ;;
+	esac
+	if [ -n "$current" ]; then
+		eval "$var_name=\"\$current \$token\""
+	else
+		eval "$var_name=\"\$token\""
+	fi
+}
+
+_collect_lan_zone_members() {
+	local section="$1" zone_name networks devices item
+	config_get zone_name "$section" name
+	[ "$zone_name" = 'lan' ] || return 0
+	config_get networks "$section" network
+	config_get devices "$section" device
+	for item in $networks; do
+		append_unique_token _AGH_LAN_NETWORKS "$item"
+	done
+	for item in $devices; do
+		append_unique_token _AGH_LAN_DEVICES "$item"
+	done
+}
+
+_append_network_devices() {
+	local network="$1" device
+	[ -n "$network" ] || return 0
+	if command -v ubus >/dev/null 2>&1 && command -v jsonfilter >/dev/null 2>&1; then
+		for device in $(ubus call "network.interface.$network" status 2>/dev/null | jsonfilter -e '@.device' -e '@.l3_device' 2>/dev/null); do
+			append_unique_token _AGH_LAN_DEVICES "$device"
+		done
+	fi
+	for device in $(uci -q get network."$network".device 2>/dev/null) $(uci -q get network."$network".ifname 2>/dev/null); do
+		append_unique_token _AGH_LAN_DEVICES "$device"
+	done
+}
+
+get_redirect_lan_devices() {
+	local network
+	_AGH_LAN_NETWORKS=''
+	_AGH_LAN_DEVICES=''
+	config_load firewall
+	config_foreach _collect_lan_zone_members zone
+	[ -n "$_AGH_LAN_NETWORKS" ] || append_unique_token _AGH_LAN_NETWORKS 'lan'
+	for network in $_AGH_LAN_NETWORKS; do
+		_append_network_devices "$network"
+	done
+	[ -n "$_AGH_LAN_DEVICES" ] || return 1
+	printf '%s\n' "$_AGH_LAN_DEVICES"
+}
+
 _nft_add_redirect() {
-	local port="$1" family="$2"
+	local port="$1" family="$2" device="$3"
+	[ -n "$device" ] || return 1
 	# Ensure the nat table exists
 	if ! nft list table "$family" nat >/dev/null 2>&1; then
 		nft add table "$family" nat 2>/dev/null || {
@@ -197,20 +253,29 @@ _nft_add_redirect() {
 			return 1
 		}
 	fi
-	nft add rule "$family" nat PREROUTING udp dport 53 redirect to :"$port" 2>/dev/null || {
-		logger -t AdGuardHome "nft: failed to add ${family} UDP dport 53 redirect to :${port}"
+	nft add rule "$family" nat PREROUTING iifname "$device" udp dport 53 redirect to :"$port" 2>/dev/null || {
+		logger -t AdGuardHome "nft: failed to add ${family} UDP ${device} dport 53 redirect to :${port}"
 		return 1
 	}
-	nft add rule "$family" nat PREROUTING tcp dport 53 redirect to :"$port" 2>/dev/null || {
-		logger -t AdGuardHome "nft: failed to add ${family} TCP dport 53 redirect to :${port}"
+	nft add rule "$family" nat PREROUTING iifname "$device" tcp dport 53 redirect to :"$port" 2>/dev/null || {
+		logger -t AdGuardHome "nft: failed to add ${family} TCP ${device} dport 53 redirect to :${port}"
 		return 1
 	}
 }
 
+_nft_escape_regex() {
+	printf '%s\n' "$1" | sed 's/[][(){}.^$*+?|\\/]/\\&/g'
+}
+
 _nft_redirect_regex() {
-	local port="$1"
+	local port="$1" device="$2" device_regex
 	is_valid_port "$port" || return 1
-	printf 'redirect to :%s([[:space:]]|$)\n' "$port"
+	if [ -n "$device" ]; then
+		device_regex=$(_nft_escape_regex "$device")
+		printf 'iifname "%s".*(udp|tcp).*dport 53.*redirect to :%s([[:space:]]|$)\n' "$device_regex" "$port"
+	else
+		printf 'redirect to :%s([[:space:]]|$)\n' "$port"
+	fi
 }
 
 _nft_clear_redirect() {
@@ -232,8 +297,12 @@ _has_cmd() {
 }
 
 set_firewall_redirect() {
-	local port="$1"
+	local port="$1" devices device added
 	[ -n "$port" ] || return 0
+	devices=$(get_redirect_lan_devices 2>/dev/null) || {
+		logger -t AdGuardHome "redirect mode skipped: unable to resolve LAN devices"
+		return 1
+	}
 	uci -q batch <<-EOF >/dev/null 2>&1
 		delete firewall.AdGuardHome
 		set firewall.AdGuardHome=include
@@ -242,21 +311,28 @@ set_firewall_redirect() {
 		set firewall.AdGuardHome.reload=1
 		commit firewall
 	EOF
+	added=0
 	if _has_cmd nft; then
-		_nft_add_redirect "$port" ip
-		_nft_add_redirect "$port" ip6
+		for device in $devices; do
+			_nft_add_redirect "$port" ip "$device" && added=1
+			_nft_add_redirect "$port" ip6 "$device" && added=1
+		done
 	elif _has_cmd iptables; then
-		iptables -t nat -C PREROUTING -p udp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1 || iptables -t nat -A PREROUTING -p udp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1
-		iptables -t nat -C PREROUTING -p tcp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1 || iptables -t nat -A PREROUTING -p tcp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1
-		if _has_cmd ip6tables; then
-			ip6tables -t nat -C PREROUTING -p udp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1 || ip6tables -t nat -A PREROUTING -p udp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1
-			ip6tables -t nat -C PREROUTING -p tcp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1 || ip6tables -t nat -A PREROUTING -p tcp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1
-		fi
+		for device in $devices; do
+			iptables -t nat -C PREROUTING -i "$device" -p udp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1 || iptables -t nat -A PREROUTING -i "$device" -p udp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1
+			iptables -t nat -C PREROUTING -i "$device" -p tcp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1 || iptables -t nat -A PREROUTING -i "$device" -p tcp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1
+			added=1
+			if _has_cmd ip6tables; then
+				ip6tables -t nat -C PREROUTING -i "$device" -p udp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1 || ip6tables -t nat -A PREROUTING -i "$device" -p udp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1
+				ip6tables -t nat -C PREROUTING -i "$device" -p tcp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1 || ip6tables -t nat -A PREROUTING -i "$device" -p tcp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1
+			fi
+		done
 	fi
+	[ "$added" = '1' ]
 }
 
 clear_firewall_redirect() {
-	local port="$1"
+	local port="$1" devices device
 	uci -q delete firewall.AdGuardHome
 	uci -q commit firewall
 	if _has_cmd nft; then
@@ -264,31 +340,37 @@ clear_firewall_redirect() {
 		_nft_clear_redirect ip6 "$port"
 	elif _has_cmd iptables; then
 		[ -n "$port" ] || return 0
-		while iptables -t nat -D PREROUTING -p udp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1; do :; done
-		while iptables -t nat -D PREROUTING -p tcp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1; do :; done
-		if _has_cmd ip6tables; then
-			while ip6tables -t nat -D PREROUTING -p udp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1; do :; done
-			while ip6tables -t nat -D PREROUTING -p tcp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1; do :; done
-		fi
+		devices=$(get_redirect_lan_devices 2>/dev/null)
+		for device in $devices; do
+			while iptables -t nat -D PREROUTING -i "$device" -p udp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1; do :; done
+			while iptables -t nat -D PREROUTING -i "$device" -p tcp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1; do :; done
+			if _has_cmd ip6tables; then
+				while ip6tables -t nat -D PREROUTING -i "$device" -p udp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1; do :; done
+				while ip6tables -t nat -D PREROUTING -i "$device" -p tcp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1; do :; done
+			fi
+		done
 	fi
 }
 
 firewall_redirect_is_active() {
-	local port="$1" pattern
+	local port="$1" devices device pattern
 	[ -n "$port" ] || return 1
-	pattern=$(_nft_redirect_regex "$port") || return 1
-	if _has_cmd nft; then
-		nft list chain ip nat PREROUTING 2>/dev/null | grep -Eq "$pattern" && return 0
-		nft list chain ip6 nat PREROUTING 2>/dev/null | grep -Eq "$pattern" && return 0
-	fi
-	if _has_cmd iptables; then
-		iptables -t nat -C PREROUTING -p udp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1 && return 0
-		iptables -t nat -C PREROUTING -p tcp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1 && return 0
-	fi
-	if _has_cmd ip6tables; then
-		ip6tables -t nat -C PREROUTING -p udp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1 && return 0
-		ip6tables -t nat -C PREROUTING -p tcp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1 && return 0
-	fi
+	devices=$(get_redirect_lan_devices 2>/dev/null) || return 1
+	for device in $devices; do
+		pattern=$(_nft_redirect_regex "$port" "$device") || continue
+		if _has_cmd nft; then
+			nft list chain ip nat PREROUTING 2>/dev/null | grep -Eq "$pattern" && return 0
+			nft list chain ip6 nat PREROUTING 2>/dev/null | grep -Eq "$pattern" && return 0
+		fi
+		if _has_cmd iptables; then
+			iptables -t nat -C PREROUTING -i "$device" -p udp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1 && return 0
+			iptables -t nat -C PREROUTING -i "$device" -p tcp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1 && return 0
+		fi
+		if _has_cmd ip6tables; then
+			ip6tables -t nat -C PREROUTING -i "$device" -p udp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1 && return 0
+			ip6tables -t nat -C PREROUTING -i "$device" -p tcp --dport 53 -j REDIRECT --to-ports "$port" >/dev/null 2>&1 && return 0
+		fi
+	done
 	return 1
 }
 
