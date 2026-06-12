@@ -6,6 +6,7 @@
                 "luci.adguardhome": [
                     "getStatus",
                     "getMeta",
+                    "getStats",
                     "getYaml",
                     "getCurrentYaml",
                     "getTemplateConfig",
