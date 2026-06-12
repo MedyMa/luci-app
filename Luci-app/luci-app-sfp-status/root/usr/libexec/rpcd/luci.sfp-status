@@ -296,10 +296,10 @@ module_slot_for_interface() {
 
 	# BPI-R4 / MT7988 SFP cages with wan/lan suffixes
 	case "$lower" in
-		sfppan|sfp-wan|sfp_wan|sfpwan)
+		sfppan|sfp-pan|sfp-wan|sfp_wan|sfpwan)
 			printf 'SFP-WAN\n'
 			;;
-		sfpuan|sfp-lan|sfp_lan|sfplan)
+		sfpuan|sfp-uan|sfp-lan|sfp_lan|sfplan)
 			printf 'SFP-LAN\n'
 			;;
 		sfp*wan*)

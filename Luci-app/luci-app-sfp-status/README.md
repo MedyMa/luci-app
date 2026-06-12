@@ -82,14 +82,20 @@ git push origin v0.1.0
 
 ## 运行验证
 
-安装生成的 ipk 后，执行：
+安装生成的 apk 后，执行：
 
 ```sh
-opkg update
-opkg install luci-app-sfp-status_0.1.0-r29_all.ipk
+apk add --allow-untrusted luci-app-sfp-status_0.1.0-r29_all.apk
 ubus -v list luci.sfp-status
 ubus call luci.sfp-status getStatuses '{}'
 ```
+
+> **注意**：OpenWrt 25.12+ / ImmortalWrt 25.12+ 使用 APK 格式。自定义构建的 `.apk` 未签名，安装时需加 `--allow-untrusted`。
+> 若希望永久允许未签名包，在路由器上执行：
+>
+> ```sh
+> echo 'allow_untrusted = yes' > /etc/apk/keys/policy.conf
+> ```
 
 随后打开 LuCI：
 
