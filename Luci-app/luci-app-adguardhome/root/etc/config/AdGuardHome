@@ -17,4 +17,6 @@ config AdGuardHome 'AdGuardHome'
 	option gfwipset '0'
 	option gfwupstream 'tcp://208.67.220.220:5353'
 	option backup '0'
+	option username 'root'
+	option password 'admin'
 

@@ -453,12 +453,34 @@ set_links() {
 }
 
 _http_get() {
-	local url="$1" timeout="${2:-5}"
+	local url="$1" timeout="${2:-5}" user="${3:-}" pass="${4:-}"
 	if command -v curl >/dev/null 2>&1; then
-		curl -fsSL --connect-timeout "$timeout" --max-time "$((timeout + 2))" "$url" 2>/dev/null
+		if [ -n "$user" ] && [ -n "$pass" ]; then
+			curl -fsSL --connect-timeout "$timeout" --max-time "$((timeout + 2))" --user "$user:$pass" "$url" 2>/dev/null
+		else
+			curl -fsSL --connect-timeout "$timeout" --max-time "$((timeout + 2))" "$url" 2>/dev/null
+		fi
 	elif command -v wget >/dev/null 2>&1; then
-		wget -qO- -T "$timeout" "$url" 2>/dev/null
+		if [ -n "$user" ] && [ -n "$pass" ]; then
+			wget -qO- -T "$timeout" --http-user="$user" --http-pass="$pass" "$url" 2>/dev/null
+		else
+			wget -qO- -T "$timeout" "$url" 2>/dev/null
+		fi
 	fi
+}
+
+_auth_get() {
+	local url="$1" timeout="${2:-5}"
+	local user pass data
+	user=$(get_option username root)
+	pass=$(get_option password admin)
+	# Try with Basic auth first (YAML template includes users)
+	data=$(_http_get "$url" "$timeout" "$user" "$pass")
+	if [ -z "$data" ]; then
+		# Fall back to no auth (e.g. YAML without users section)
+		data=$(_http_get "$url" "$timeout")
+	fi
+	printf '%s\n' "$data"
 }
 
 _json_extract_int() {
@@ -495,7 +517,7 @@ json_stats() {
 		return
 	fi
 
-	data=$(_http_get "http://127.0.0.1:$httpport/control/stats" 5)
+	data=$(_auth_get "http://127.0.0.1:$httpport/control/stats" 5)
 	if [ -z "$data" ]; then
 		json_init
 		json_add_boolean ok 0

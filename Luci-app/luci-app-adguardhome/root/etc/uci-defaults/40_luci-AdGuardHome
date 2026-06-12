@@ -63,6 +63,11 @@ uci -q batch <<-EOF >/dev/null 2>&1
 	commit AdGuardHome
 EOF
 
+# Set default API credentials matching the template (root / admin)
+uci -q get AdGuardHome.AdGuardHome.username >/dev/null 2>&1 || uci -q set AdGuardHome.AdGuardHome.username='root'
+uci -q get AdGuardHome.AdGuardHome.password >/dev/null 2>&1 || uci -q set AdGuardHome.AdGuardHome.password='admin'
+uci -q commit AdGuardHome >/dev/null 2>&1
+
 mkdir -p /etc/config/adGuardConfig/workspace 2>/dev/null
 rm -rf /tmp/luci-modulecache/ /var/luci-modulecache/
 rm -f /tmp/luci-indexcache /tmp/luci-indexcache.* /var/luci-indexcache.* 2>/dev/null

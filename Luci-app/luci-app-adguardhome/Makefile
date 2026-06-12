@@ -7,7 +7,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-adguardhome
 PKG_VERSION:=1.8
-PKG_RELEASE:=27
+PKG_RELEASE:=28
 
 LUCI_TITLE:=LuCI app for AdGuard Home
 LUCI_DESCRIPTION:=Modern LuCI dashboard for AdGuard Home
@@ -101,6 +101,8 @@ if [ -z "$$IPKG_INSTROOT" ]; then
 	uci -q set AdGuardHome.AdGuardHome.binpath="$$binpath"
 	uci -q get AdGuardHome.AdGuardHome.downloadarch >/dev/null 2>&1 || uci set AdGuardHome.AdGuardHome.downloadarch='auto'
 	uci -q get AdGuardHome.AdGuardHome.release_channel >/dev/null 2>&1 || uci set AdGuardHome.AdGuardHome.release_channel='release'
+	uci -q get AdGuardHome.AdGuardHome.username >/dev/null 2>&1 || uci set AdGuardHome.AdGuardHome.username='root'
+	uci -q get AdGuardHome.AdGuardHome.password >/dev/null 2>&1 || uci set AdGuardHome.AdGuardHome.password='admin'
 	uci -q commit AdGuardHome
 	[ -x /etc/init.d/AdGuardHome ] && /etc/init.d/AdGuardHome enable >/dev/null 2>&1
 	rm -rf /tmp/luci-modulecache/ /var/luci-modulecache/
