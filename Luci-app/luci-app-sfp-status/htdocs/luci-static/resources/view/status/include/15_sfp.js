@@ -49,6 +49,30 @@ function valueOrDash(value) {
 	return stringValue !== '' ? stringValue : '-';
 }
 
+function normalizeModuleLabel(value) {
+	const label = valueOrDash(value);
+	const lower = label.toLowerCase();
+
+	switch (lower) {
+	case 'sfppan':
+	case 'sfp-pan':
+	case 'sfp_wan':
+	case 'sfp-wan':
+	case 'sfpwan':
+		return 'SFP-WAN';
+
+	case 'sfpuan':
+	case 'sfp-uan':
+	case 'sfp_lan':
+	case 'sfp-lan':
+	case 'sfplan':
+		return 'SFP-LAN';
+
+	default:
+		return label;
+	}
+}
+
 function normalizeContent(content) {
 	return Array.isArray(content) ? content : [ content ];
 }
@@ -105,7 +129,7 @@ function buildMergedOverview(modules) {
 	];
 
 	for (let index = 0; index < modules.length; index++)
-		headerCells.push(E('th', { 'class': 'th left' }, [ valueOrDash(modules[index]?.module_slot || modules[index]?.interface) ]));
+		headerCells.push(E('th', { 'class': 'th left' }, [ normalizeModuleLabel(modules[index]?.module_slot || modules[index]?.interface) ]));
 
 	table.appendChild(E('tr', { 'class': 'tr table-titles' }, headerCells));
 
@@ -129,7 +153,7 @@ function normalizeModules(modules) {
 	return (Array.isArray(modules) ? modules : []).filter(function(module) {
 		return module && module.supported !== false;
 	}).sort(function(left, right) {
-		return valueOrDash(left.module_slot || left.interface).localeCompare(valueOrDash(right.module_slot || right.interface), undefined, {
+		return normalizeModuleLabel(left.module_slot || left.interface).localeCompare(normalizeModuleLabel(right.module_slot || right.interface), undefined, {
 			numeric: true,
 			sensitivity: 'base'
 		});
@@ -157,7 +181,7 @@ function buildModuleFields(status, options) {
 	const sectionTitle = options && options.sectionTitle;
 
 	if (options && options.showModuleRow)
-		fields.push({ label: _('Module'), render: function() { return valueOrDash(status?.module_slot || status?.interface); } });
+		fields.push({ label: _('Module'), render: function() { return normalizeModuleLabel(status?.module_slot || status?.interface); } });
 
 	if (status?.interface && String(status.interface) !== String(sectionTitle))
 		fields.push({ label: _('Interface'), render: function() { return valueOrDash(status.interface); } });
