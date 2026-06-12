@@ -6,15 +6,23 @@ on:
       sdk_distribution:
         description: SDK distribution
         required: false
-        default: 'openwrt'
+        default: 'immortalwrt'
         type: choice
         options:
           - openwrt
           - immortalwrt
       openwrt_version:
-        description: OpenWrt release version
+        description: OpenWrt / ImmortalWrt release version
         required: false
-        default: '24.10.0'
+        default: '25.12-SNAPSHOT'
+      pkg_format:
+        description: Package output format
+        required: false
+        default: 'apk'
+        type: choice
+        options:
+          - apk
+          - ipk
       openwrt_target:
         description: OpenWrt target
         required: false
@@ -53,10 +61,11 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      SDK_DISTRIBUTION: ${{ inputs.sdk_distribution || 'openwrt' }}
-      OPENWRT_VERSION: ${{ inputs.openwrt_version || '24.10.0' }}
+      SDK_DISTRIBUTION: ${{ inputs.sdk_distribution || 'immortalwrt' }}
+      OPENWRT_VERSION: ${{ inputs.openwrt_version || '25.12-SNAPSHOT' }}
       OPENWRT_TARGET: ${{ inputs.openwrt_target || 'mediatek' }}
       OPENWRT_SUBTARGET: ${{ inputs.openwrt_subtarget || 'filogic' }}
+      PKG_FORMAT: ${{ inputs.pkg_format || 'apk' }}
 
     steps:
       - name: Checkout repository
@@ -97,10 +106,16 @@ jobs:
             openwrt)
               sdk_base_url="https://downloads.openwrt.org/releases/${OPENWRT_VERSION}/targets/${OPENWRT_TARGET}/${OPENWRT_SUBTARGET}"
               sdk_prefix='openwrt-sdk'
+              sdk_ext='.tar.zst'
               ;;
             immortalwrt)
-              sdk_base_url="https://downloads.immortalwrt.org/releases/${OPENWRT_VERSION}/targets/${OPENWRT_TARGET}/${OPENWRT_SUBTARGET}"
+              if echo "$OPENWRT_VERSION" | grep -q 'SNAPSHOT'; then
+                sdk_base_url="https://downloads.immortalwrt.org/snapshots/targets/${OPENWRT_TARGET}/${OPENWRT_SUBTARGET}"
+              else
+                sdk_base_url="https://downloads.immortalwrt.org/releases/${OPENWRT_VERSION}/targets/${OPENWRT_TARGET}/${OPENWRT_SUBTARGET}"
+              fi
               sdk_prefix='immortalwrt-sdk'
+              sdk_ext='.tar.zst'
               ;;
             *)
               echo "Unsupported SDK distribution: $SDK_DISTRIBUTION" >&2
@@ -109,7 +124,10 @@ jobs:
           esac
 
           sdk_target_id="${OPENWRT_TARGET}-${OPENWRT_SUBTARGET}"
-          sdk_file="$(curl -fsSL "$sdk_base_url/" | grep -oE "${sdk_prefix}-${OPENWRT_VERSION}-${sdk_target_id}_[^\"[:space:]]+\.tar\.zst" | head -n1)"
+          sdk_file="$(curl -fsSL "$sdk_base_url/" | grep -oE "${sdk_prefix}-${OPENWRT_VERSION}-${sdk_target_id}_[^\"[:space:]]+${sdk_ext}" | head -n1)"
+          if [ -z "$sdk_file" ]; then
+            sdk_file="$(curl -fsSL "$sdk_base_url/" | grep -oE "${sdk_prefix}-${sdk_target_id}_[^\"[:space:]]+${sdk_ext}" | head -n1)"
+          fi
           test -n "$sdk_file"
           wget -q "$sdk_base_url/$sdk_file" -O sdk.tar.zst
           tar --zstd -xf sdk.tar.zst
@@ -224,18 +242,23 @@ jobs:
           rm -rf "$artifact_dir"
           mkdir -p "$artifact_dir"
 
-          find "$SDK_DIR/bin/packages" -type f \( -name 'luci-app-fan*.ipk' -o -name 'luci-i18n-fan*.ipk' -o -path '*/luci/Packages*' \) -exec cp -f {} "$artifact_dir/" \;
+          pkg_ext=".${PKG_FORMAT:-apk}"
+          find "$SDK_DIR/bin/packages" -type f \( \
+            -name "luci-app-fan*${pkg_ext}" \
+            -o -name "luci-i18n-fan*${pkg_ext}" \
+            -o -path '*/luci/Packages*' \
+          \) -exec cp -f {} "$artifact_dir/" \;
 
-          if ! find "$artifact_dir" -maxdepth 1 -type f -name 'luci-app-fan*.ipk' | grep -q .; then
-            echo 'No luci-app-fan ipk was produced by the build.' >&2
+          if ! find "$artifact_dir" -maxdepth 1 -type f -name "luci-app-fan*${pkg_ext}" | grep -q .; then
+            echo "No luci-app-fan ${pkg_ext} was produced by the build." >&2
             find "$SDK_DIR/bin/packages" -maxdepth 4 -type f | sort >&2
             exit 1
           fi
 
           if [ -n "${FAN_I18N_LANGS:-}" ]; then
             for lang in $FAN_I18N_LANGS; do
-              if ! find "$artifact_dir" -maxdepth 1 -type f -name "luci-i18n-fan-${lang}_*.ipk" | grep -q .; then
-                echo "No luci-i18n-fan-${lang} ipk was produced by the build." >&2
+              if ! find "$artifact_dir" -maxdepth 1 -type f -name "luci-i18n-fan-${lang}_*.${pkg_ext}" | grep -q .; then
+                echo "No luci-i18n-fan-${lang} ${pkg_ext} was produced by the build." >&2
                 find "$SDK_DIR/bin/packages" -maxdepth 4 -type f | sort >&2
                 exit 1
               fi
@@ -247,7 +270,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: luci-app-fan-${{ env.SDK_DISTRIBUTION }}-${{ env.OPENWRT_TARGET }}-${{ env.OPENWRT_SUBTARGET }}-ipk
+          name: luci-app-fan-${{ env.SDK_DISTRIBUTION }}-${{ env.OPENWRT_TARGET }}-${{ env.OPENWRT_SUBTARGET }}-${{ env.PKG_FORMAT }}
           path: ${{ env.ARTIFACT_DIR }}/
           if-no-files-found: error
 
@@ -257,10 +280,11 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/fan-v') || (github.event_name == 'workflow_dispatch' && inputs.publish_release)
 
     env:
-      SDK_DISTRIBUTION: ${{ inputs.sdk_distribution || 'openwrt' }}
-      OPENWRT_VERSION: ${{ inputs.openwrt_version || '24.10.0' }}
+      SDK_DISTRIBUTION: ${{ inputs.sdk_distribution || 'immortalwrt' }}
+      OPENWRT_VERSION: ${{ inputs.openwrt_version || '25.12-SNAPSHOT' }}
       OPENWRT_TARGET: ${{ inputs.openwrt_target || 'mediatek' }}
       OPENWRT_SUBTARGET: ${{ inputs.openwrt_subtarget || 'filogic' }}
+      PKG_FORMAT: ${{ inputs.pkg_format || 'apk' }}
 
     steps:
       - name: Determine release metadata
@@ -291,7 +315,7 @@ jobs:
       - name: Download build artifact
         uses: actions/download-artifact@v4
         with:
-          name: luci-app-fan-${{ env.SDK_DISTRIBUTION }}-${{ env.OPENWRT_TARGET }}-${{ env.OPENWRT_SUBTARGET }}-ipk
+          name: luci-app-fan-${{ env.SDK_DISTRIBUTION }}-${{ env.OPENWRT_TARGET }}-${{ env.OPENWRT_SUBTARGET }}-${{ env.PKG_FORMAT }}
           path: release-assets
 
       - name: Publish GitHub Release
@@ -301,10 +325,11 @@ jobs:
           name: ${{ steps.meta.outputs.name }}
           target_commitish: ${{ github.sha }}
           generate_release_notes: true
-          files: release-assets/**/*.ipk
+          files: release-assets/**/*
           fail_on_unmatched_files: true
           body: |
             SDK distribution: ${{ env.SDK_DISTRIBUTION }}
             SDK release: ${{ env.OPENWRT_VERSION }}
             Target: ${{ env.OPENWRT_TARGET }}/${{ env.OPENWRT_SUBTARGET }}
+            Package format: ${{ env.PKG_FORMAT }}
             Package architecture: all
