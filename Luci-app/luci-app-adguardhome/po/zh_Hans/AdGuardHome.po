@@ -20,7 +20,7 @@ msgstr "AdGuard Home"
 
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/model/cbi/AdGuardHome/base.lua:67
 msgid "AdGuardHome Bin path if no bin will auto download"
-msgstr "AdGuardHome 执行文件路径 如果没有执行文件将自动下载"
+msgstr "AdGuardHome 执行文件路径，如不存在将自动下载"
 
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/model/cbi/AdGuardHome/base.lua:99
 msgid "AdGuardHome config path"
@@ -34,11 +34,11 @@ msgstr "AdGuardHome 重定向模式"
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/model/cbi/AdGuardHome/base.lua:142
 msgid ""
 "AdGuardHome runtime Log file if 'syslog': write to system log;if empty no log"
-msgstr "AdGuardHome 运行日志。填入 syslog 则写入系统日志，留空则不记录"
+msgstr "AdGuardHome 运行日志；填入 syslog 则写入系统日志，留空则不记录"
 
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/model/cbi/AdGuardHome/base.lua:120
 msgid "AdGuardHome work dir include rules,audit log and database"
-msgstr "AdGuardHome 工作目录包含规则，审计日志和数据库"
+msgstr "AdGuardHome 工作目录，包含规则、审计日志和数据库"
 
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/model/cbi/AdGuardHome/base.lua:179
 msgid "Add"
@@ -80,7 +80,7 @@ msgstr "工作目录备份路径"
 # /cgi-bin/luci/admin/services/AdGuardHome
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/controller/AdGuardHome.lua:7
 msgid "Base Setting"
-msgstr "基础设置"
+msgstr "基本设置"
 
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/model/cbi/AdGuardHome/base.lua:67
 msgid "Bin Path"
@@ -93,7 +93,7 @@ msgstr "网页管理端口"
 # hide div
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/model/cbi/AdGuardHome/base.lua:189
 msgid "Change browser management password"
-msgstr "改变网页登录密码"
+msgstr "修改网页登录密码"
 
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/view/AdGuardHome/AdGuardHome_check.htm:37
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/view/AdGuardHome/AdGuardHome_check.htm:70
@@ -102,7 +102,7 @@ msgstr "检查中..."
 
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/view/AdGuardHome/AdGuardHome_status.htm:25
 msgid "Collecting data..."
-msgstr "获取数据中..."
+msgstr "正在获取数据..."
 
 #
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/model/cbi/AdGuardHome/base.lua:99
@@ -147,16 +147,16 @@ msgstr "强制更新"
 msgid ""
 "Free and open source, powerful network-wide ads & trackers blocking DNS "
 "server."
-msgstr "免费开源，全网络广告与跟踪拦截 DNS 服务器"
+msgstr "免费开源、功能强大的全网络广告与跟踪拦截 DNS 服务器。"
 
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/model/cbi/AdGuardHome/base.lua:184
 msgid "Gfwlist domain upstream dns service"
-msgstr "gfw列表域名上游服务器"
+msgstr "GFW 列表域名上游 DNS 服务"
 
 # hide div
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/model/cbi/AdGuardHome/base.lua:184
 msgid "Gfwlist upstream dns server"
-msgstr "gfw列表上游服务器"
+msgstr "GFW 列表上游 DNS 服务器"
 
 #
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/model/cbi/AdGuardHome/base.lua:195
@@ -174,7 +174,7 @@ msgstr "日志"
 
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/controller/AdGuardHome.lua:9
 msgid "Manual Config"
-msgstr "手动设置"
+msgstr "手动配置"
 
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/view/AdGuardHome/AdGuardHome_status.htm:9
 msgid "NOT RUNNING"
@@ -199,7 +199,7 @@ msgstr "请在计划任务中修改时间和参数"
 
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/view/AdGuardHome/AdGuardHome_chpass.htm:24
 msgid "Please save/apply"
-msgstr "保存并应用"
+msgstr "请先保存并应用更改"
 
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/model/cbi/AdGuardHome/base.lua:189
 msgid "Press load culculate model and culculate finally save/apply"
@@ -225,7 +225,7 @@ msgstr "已重定向"
 # hide button
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/view/AdGuardHome/yamleditor.htm:36
 msgid "Reload Config"
-msgstr "重新载入配置"
+msgstr "重新加载配置"
 
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/view/AdGuardHome/AdGuardHome_chpass.htm:47
 msgid "Reveal/hide password"
@@ -233,7 +233,7 @@ msgstr "显示/隐藏密码"
 
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/model/cbi/AdGuardHome/base.lua:61
 msgid "Run as dnsmasq upstream server"
-msgstr "作为dnsmasq的上游服务器"
+msgstr "作为 dnsmasq 的上游 DNS 服务器"
 
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/model/cbi/AdGuardHome/base.lua:142
 msgid "Runtime log file"
@@ -255,7 +255,7 @@ msgstr "已更新"
 
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/model/cbi/AdGuardHome/base.lua:63
 msgid "Use port 53 replace dnsmasq"
-msgstr "使用 53 端口替换 dnsmasq"
+msgstr "使用 53 端口替代 dnsmasq 提供 DNS"
 
 # /cgi-bin/luci//admin/services/AdGuardHome/manual/
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/view/AdGuardHome/yamleditor.htm:38
@@ -268,11 +268,11 @@ msgstr "详细日志"
 
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/model/cbi/AdGuardHome/manual.lua:71
 msgid "WARNING!!! no bin found apply config will not be test"
-msgstr "警告！！！未找到执行文件，提交配置将不会进行校验"
+msgstr "警告：未找到执行文件，提交配置时将不会进行校验"
 
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/model/cbi/AdGuardHome/base.lua:234
 msgid "Will be restore when workdir/data is empty"
-msgstr "当工作目录 /data 为空时自动恢复"
+msgstr "当工作目录 /data 为空时将自动恢复"
 
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/model/cbi/AdGuardHome/base.lua:120
 msgid "Work dir"
@@ -288,12 +288,12 @@ msgstr "最佳压缩（大文件可能较慢）"
 
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/model/cbi/AdGuardHome/base.lua:91
 msgid "compress better"
-msgstr "更好的压缩"
+msgstr "优先压缩率"
 
 # inlist
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/model/cbi/AdGuardHome/base.lua:90
 msgid "compress faster"
-msgstr "快速压缩"
+msgstr "优先速度"
 
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/model/cbi/AdGuardHome/base.lua:197
 msgid "config file"
@@ -307,7 +307,7 @@ msgstr "核心执行文件"
 #
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/model/cbi/AdGuardHome/base.lua:53
 msgid "core version:"
-msgstr "核心版本:"
+msgstr "核心版本："
 
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/view/AdGuardHome/log.htm:7
 msgid "dellog"
@@ -340,11 +340,11 @@ msgstr "日志文件"
 # description change
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/model/cbi/AdGuardHome/base.lua:32
 msgid "no config"
-msgstr "没有配置文件"
+msgstr "未找到配置文件"
 
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/model/cbi/AdGuardHome/base.lua:35
 msgid "no core"
-msgstr "没有核心"
+msgstr "未找到核心程序"
 
 # inlist
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/model/cbi/AdGuardHome/base.lua:60
@@ -354,7 +354,7 @@ msgstr "无"
 
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/model/cbi/AdGuardHome/base.lua:201
 msgid "querylog.json"
-msgstr "查询日志.json"
+msgstr "querylog.json"
 
 # /cgi-bin/luci/admin/services/AdGuardHome/log/
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/view/AdGuardHome/AdGuardHome_check.htm:9
@@ -372,11 +372,11 @@ msgstr "stats.db"
 
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/model/cbi/AdGuardHome/base.lua:93
 msgid "try all available compression methods & filters [slow]"
-msgstr "尝试所有压缩方式与过滤方法 [慢]"
+msgstr "尝试所有可用压缩方式与过滤器（较慢）"
 
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/model/cbi/AdGuardHome/base.lua:94
 msgid "try even more compression variants [very slow]"
-msgstr "尝试更多变体压缩方式 [很慢]"
+msgstr "尝试更多压缩变体（很慢）"
 
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/model/cbi/AdGuardHome/base.lua:88
 msgid "use upx to compress bin after download"
@@ -453,11 +453,11 @@ msgstr "PassWall 兼容模式"
 
 #: htdocs/luci-static/resources/view/adguardhome/overview.js
 msgid "AdGuard Home keeps handling LAN DNS on port 53 and forwards unmatched queries to the PassWall2 DNS frontend."
-msgstr "AdGuard Home 持续接管局域网 53 端口 DNS，未命中的查询会转发到 PassWall2 的 DNS 前端。"
+msgstr "AdGuard Home 持续接管局域网 53 端口 DNS，未命中规则的查询会转发到 PassWall2 的 DNS 前端。"
 
 #: htdocs/luci-static/resources/view/adguardhome/overview.js
 msgid "AdGuard Home keeps handling LAN DNS on port 53 and forwards unmatched queries to the PassWall DNS frontend."
-msgstr "AdGuard Home 持续接管局域网 53 端口 DNS，未命中的查询会转发到 PassWall 的 DNS 前端。"
+msgstr "AdGuard Home 持续接管局域网 53 端口 DNS，未命中规则的查询会转发到 PassWall 的 DNS 前端。"
 
 #: htdocs/luci-static/resources/view/adguardhome/overview.js
 msgid "DNS Frontend"
@@ -477,7 +477,7 @@ msgstr "已停止"
 
 #: htdocs/luci-static/resources/view/adguardhome/overview.js
 msgid "Overview data unavailable"
-msgstr "概览信息不可用"
+msgstr "概览数据不可用"
 
 #: htdocs/luci-static/resources/view/adguardhome/overview.js
 msgid "Network DNS Guard"
@@ -485,7 +485,7 @@ msgstr "网络 DNS 防护"
 
 #: htdocs/luci-static/resources/view/adguardhome/overview.js
 msgid "Control Panel"
-msgstr "进入面板"
+msgstr "打开面板"
 
 #: htdocs/luci-static/resources/view/adguardhome/overview.js
 msgid "Open Settings"
@@ -501,7 +501,7 @@ msgstr "服务"
 
 #: htdocs/luci-static/resources/view/adguardhome/overview.js
 msgid "Backend missing"
-msgstr "后端缺失"
+msgstr "后端不可用"
 
 #: htdocs/luci-static/resources/view/adguardhome/overview.js
 msgid "Core"
