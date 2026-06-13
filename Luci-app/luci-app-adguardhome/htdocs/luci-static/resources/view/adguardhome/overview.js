@@ -190,6 +190,19 @@ function redirectConflictMessage(status) {
 	return t('PassWall DNS redirect is enabled. AdGuard Home automatically uses dnsmasq upstream mode to avoid port 53 redirect conflicts.', 'PassWall 已启用 DNS 重定向。AdGuard Home 已自动切换为 dnsmasq 上游模式，以避免 53 端口重定向冲突。');
 }
 
+function redirectCompatMessage(status) {
+	if (!yes(status && status.redirect_compat))
+		return '';
+
+	var upstream = text(status.redirect_compat_upstream, '');
+	var upstreamText = upstream ? (' ' + t('PassWall DNS frontend port', 'PassWall DNS 前端端口') + ': ' + upstream + '.') : '';
+
+	if (status.redirect_compat_reason === 'passwall2-dns-redirect')
+		return t('PassWall2 DNS redirect compatibility is active. AdGuard Home keeps LAN port 53 interception and forwards allowed queries to the PassWall2 DNS frontend.', '已启用 PassWall2 DNS 重定向兼容模式。AdGuard Home 将继续接管局域网 53 端口，并把放行查询转发到 PassWall2 的 DNS 前端。') + upstreamText;
+
+	return t('PassWall DNS redirect compatibility is active. AdGuard Home keeps LAN port 53 interception and forwards allowed queries to the PassWall DNS frontend.', '已启用 PassWall DNS 重定向兼容模式。AdGuard Home 将继续接管局域网 53 端口，并把放行查询转发到 PassWall 的 DNS 前端。') + upstreamText;
+}
+
 function formatHost(hostname) {
 	hostname = hostname == null ? '' : String(hostname);
 	return hostname.indexOf(':') >= 0 && hostname.charAt(0) !== '[' ? '[' + hostname + ']' : hostname;
@@ -244,6 +257,8 @@ return view.extend({
 			root.appendChild(E('section', { 'class': 'agh-alert' }, actionError(rpcError, t('Overview data unavailable', '概览数据不可用'))));
 		if (!rpcError && yes(status.redirect_conflict))
 			root.appendChild(E('section', { 'class': 'agh-alert' }, redirectConflictMessage(status)));
+		if (!rpcError && yes(status.redirect_compat))
+			root.appendChild(E('section', { 'class': 'agh-alert' }, redirectCompatMessage(status)));
 		root.appendChild(E('section', { 'class': 'agh-shell' }, E('div', { 'class': 'agh-hero' }, [
 			E('div', { 'class': 'agh-hero-main' }, [
 				E('span', { 'class': 'agh-eyebrow' }, t('Network DNS Guard', '网络 DNS 防护')),
