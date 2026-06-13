@@ -7,7 +7,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-adguardhome
 PKG_VERSION:=2.0
-PKG_RELEASE:=3
+PKG_RELEASE:=2
 
 LUCI_TITLE:=LuCI app for AdGuard Home
 LUCI_DESCRIPTION:=Modern LuCI dashboard for AdGuard Home
@@ -34,6 +34,7 @@ define Build/Prepare/$(PKG_NAME)
 	chmod 0755 $(PKG_BUILD_DIR)/root/usr/share/AdGuardHome/update_core.sh
 	chmod 0755 $(PKG_BUILD_DIR)/root/usr/share/AdGuardHome/waitnet.sh
 	chmod 0755 $(PKG_BUILD_DIR)/root/usr/share/AdGuardHome/watchconfig.sh
+	chmod 0755 $(PKG_BUILD_DIR)/root/usr/share/AdGuardHome/passwall_watch.sh
 endef
 
 define Package/luci-app-adguardhome/postinst
@@ -51,7 +52,8 @@ if [ -z "$$IPKG_INSTROOT" ]; then
 		/usr/share/AdGuardHome/tailto.sh \
 		/usr/share/AdGuardHome/update_core.sh \
 		/usr/share/AdGuardHome/waitnet.sh \
-		/usr/share/AdGuardHome/watchconfig.sh
+		/usr/share/AdGuardHome/watchconfig.sh \
+		/usr/share/AdGuardHome/passwall_watch.sh
 	do
 		[ -f "$$runtime_file" ] && chmod 0755 "$$runtime_file"
 	done
