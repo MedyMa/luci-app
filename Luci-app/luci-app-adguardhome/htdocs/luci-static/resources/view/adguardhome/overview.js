@@ -142,6 +142,15 @@ var style = [
 	'.agh-label{font-size:12px;line-height:1.5;color:var(--agh-text-muted)}.agh-value{margin-top:10px;font-size:24px;line-height:1.15;font-weight:700;color:var(--agh-text-high);word-break:break-word}',
 	'.agh-ok{color:#1c8b58}.agh-warn{color:#b27716}.agh-bad{color:#c94d5c}',
 	'.agh-alert{padding:16px 18px;border-radius:18px;background:var(--agh-alert-bg);border:1px solid rgba(178,119,22,.2);color:var(--agh-alert-fg);box-shadow:0 10px 26px rgba(178,119,22,.08);line-height:1.7}',
+	'.agh-alert-compat{display:grid;gap:10px;padding:14px 16px;background:linear-gradient(180deg,rgba(255,248,231,.96) 0%,rgba(255,243,216,.9) 100%);border-color:rgba(196,145,49,.24);box-shadow:0 8px 22px rgba(178,119,22,.06)}',
+	'.agh-alert-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}',
+	'.agh-alert-kicker{display:inline-flex;align-items:center;min-height:26px;padding:0 10px;border-radius:999px;background:rgba(180,124,28,.12);border:1px solid rgba(180,124,28,.18);font-size:12px;font-weight:700;letter-spacing:.04em;color:#8a5d16}',
+	'.agh-alert-title{font-size:15px;font-weight:700;line-height:1.4;color:var(--agh-text-high)}',
+	'.agh-alert-copy{margin:0;font-size:13px;line-height:1.7;color:var(--agh-text-muted)}',
+	'.agh-alert-meta{display:flex;gap:10px;flex-wrap:wrap}',
+	'.agh-alert-pill{display:inline-flex;align-items:center;gap:8px;min-height:30px;padding:0 12px;border-radius:999px;background:rgba(255,255,255,.6);border:1px solid rgba(196,145,49,.18);color:var(--agh-text-high)}',
+	'.agh-alert-pill span{font-size:12px;color:var(--agh-text-muted)}',
+	'.agh-alert-pill strong{font-size:13px;font-weight:700;color:#8a5d16}',
 	'.agh-paths{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.agh-path{padding:14px;border-radius:16px;background:var(--agh-path-bg);border:1px solid var(--agh-border);min-width:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}.agh-path span{display:block;font-size:12px;color:var(--agh-text-muted)!important}.agh-path code{display:block;margin-top:8px;padding:0;background:transparent!important;border:0!important;border-radius:0!important;white-space:normal;word-break:break-all;color:var(--agh-path-code)!important;-webkit-text-fill-color:var(--agh-path-code)!important;box-shadow:none!important;text-shadow:none!important}',
 	'@media(max-width:1080px){.agh-hero,.agh-grid,.agh-paths{grid-template-columns:1fr 1fr}.agh-quick{grid-column:1/-1}}',
 	'@media(max-width:720px){.agh-hero,.agh-grid,.agh-paths{grid-template-columns:1fr}.agh-hero{padding:20px}.agh-title{font-size:24px!important}}'
@@ -203,6 +212,34 @@ function redirectCompatMessage(status) {
 	return t('PassWall DNS redirect compatibility is active. AdGuard Home keeps LAN port 53 interception and forwards allowed queries to the PassWall DNS frontend.', '已启用 PassWall DNS 重定向兼容模式。AdGuard Home 将继续接管局域网 53 端口，并把放行查询转发到 PassWall 的 DNS 前端。') + upstreamText;
 }
 
+function renderRedirectCompatAlert(status) {
+	if (!yes(status && status.redirect_compat))
+		return null;
+
+	var upstream = text(status.redirect_compat_upstream, '');
+	var vendor = status.redirect_compat_reason === 'passwall2-dns-redirect' ? 'PassWall2' : 'PassWall';
+	var title = vendor + ' ' + t('DNS Redirect Compatibility', 'DNS 重定向兼容模式');
+	var summary = t('AdGuard Home keeps LAN port 53 interception and forwards unmatched queries to the PassWall DNS frontend.', 'AdGuard Home 继续接管局域网 53 端口，未命中的查询会转发到 PassWall DNS 前端。');
+
+	return E('section', { 'class': 'agh-alert agh-alert-compat' }, [
+		E('div', { 'class': 'agh-alert-head' }, [
+			E('span', { 'class': 'agh-alert-kicker' }, t('Compatibility Active', '兼容模式已启用')),
+			E('strong', { 'class': 'agh-alert-title' }, title)
+		]),
+		E('p', { 'class': 'agh-alert-copy' }, summary),
+		E('div', { 'class': 'agh-alert-meta' }, [
+			E('div', { 'class': 'agh-alert-pill' }, [
+				E('span', {}, t('DNS Frontend', 'DNS 前端')),
+				E('strong', {}, vendor)
+			]),
+			upstream ? E('div', { 'class': 'agh-alert-pill' }, [
+				E('span', {}, t('Frontend Port', '前端端口')),
+				E('strong', {}, upstream)
+			]) : ''
+		])
+	]);
+}
+
 function formatHost(hostname) {
 	hostname = hostname == null ? '' : String(hostname);
 	return hostname.indexOf(':') >= 0 && hostname.charAt(0) !== '[' ? '[' + hostname + ']' : hostname;
@@ -258,7 +295,7 @@ return view.extend({
 		if (!rpcError && yes(status.redirect_conflict))
 			root.appendChild(E('section', { 'class': 'agh-alert' }, redirectConflictMessage(status)));
 		if (!rpcError && yes(status.redirect_compat))
-			root.appendChild(E('section', { 'class': 'agh-alert' }, redirectCompatMessage(status)));
+			root.appendChild(renderRedirectCompatAlert(status));
 		root.appendChild(E('section', { 'class': 'agh-shell' }, E('div', { 'class': 'agh-hero' }, [
 			E('div', { 'class': 'agh-hero-main' }, [
 				E('span', { 'class': 'agh-eyebrow' }, t('Network DNS Guard', '网络 DNS 防护')),
