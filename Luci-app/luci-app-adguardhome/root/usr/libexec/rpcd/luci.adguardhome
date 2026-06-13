@@ -215,7 +215,7 @@ build_template() {
 }
 
 json_status() {
-	local raw_binpath raw_configpath raw_workdir binpath configpath workdir logfile httpport redirect version dns_port arch channel gfw_rules_present
+	local raw_binpath raw_configpath raw_workdir binpath configpath workdir logfile httpport redirect effective_redirect redirect_conflict version dns_port arch channel gfw_rules_present
 	raw_binpath=$(get_option binpath "$DEFAULT_BINPATH")
 	binpath=$(resolve_binpath "$raw_binpath")
 	raw_configpath=$(get_option configpath "$DEFAULT_CONFIGPATH")
@@ -225,6 +225,9 @@ json_status() {
 	logfile=$(get_option logfile '')
 	httpport=$(get_option httpport 3000)
 	redirect=$(normalize_redirect "$(get_option redirect "$DEFAULT_REDIRECT")")
+	effective_redirect=$(safe_cat /var/run/AdGeffective 2>/dev/null | head -n 1)
+	[ -n "$effective_redirect" ] && effective_redirect=$(normalize_redirect "$effective_redirect") || effective_redirect="$redirect"
+	redirect_conflict=$(safe_cat /var/run/AdGredirect_conflict 2>/dev/null | head -n 1)
 	arch=$(normalize_arch "$(get_option downloadarch "$(get_option arch auto)")")
 	channel=$(normalize_channel "$(get_option release_channel "$(get_option tagname release)")")
 	version=$(resolve_core_version "$binpath" 2>/dev/null)
@@ -239,6 +242,8 @@ json_status() {
 	json_add_string logfile "$logfile"
 	json_add_string httpport "$httpport"
 	json_add_string redirect "$redirect"
+	json_add_string effective_redirect "$effective_redirect"
+	json_add_string redirect_conflict_reason "$redirect_conflict"
 	json_add_string version "${version:-unknown}"
 	json_add_string dns_port "${dns_port:-unknown}"
 	json_add_string downloadarch "$arch"
@@ -246,6 +251,7 @@ json_status() {
 	json_bool enabled "$(get_option enabled 0)"
 	json_bool running "$(pgrep -f "$binpath" >/dev/null 2>&1 && echo 1 || echo 0)"
 	json_bool redirected "$([ "$(cat /var/run/AdGredir 2>/dev/null)" = 1 ] && echo 1 || echo 0)"
+	json_bool redirect_conflict "$([ -n "$redirect_conflict" ] && echo 1 || echo 0)"
 	json_bool core_ready "$([ -x "$binpath" ] && echo 1 || echo 0)"
 	json_bool config_ready "$([ -r "$configpath" ] && echo 1 || echo 0)"
 	json_bool workdir_ready "$([ -d "$workdir" ] && echo 1 || echo 0)"

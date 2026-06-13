@@ -10,6 +10,8 @@ DEFAULT_BINPATH='/etc/config/adGuardConfig/AdGuardHome'
 DEFAULT_CONFIGPATH='/etc/config/adGuardConfig/AdGuardHome.yaml'
 DEFAULT_WORKDIR='/etc/config/adGuardConfig/workspace'
 DEFAULT_REDIRECT='dnsmasq-upstream'
+REDIRECT_EFFECTIVE_FILE='/var/run/AdGeffective'
+REDIRECT_CONFLICT_FILE='/var/run/AdGredirect_conflict'
 GFWSET='gfwlist'
 
 EXTRA_COMMANDS='do_redirect testbackup test_crontab force_reload isrunning'
@@ -86,6 +88,71 @@ normalize_redirect_mode() {
 	esac
 }
 
+_uci_bool_enabled() {
+	case "$1" in
+		1|on|true|yes|enabled) return 0 ;;
+	esac
+	return 1
+}
+
+passwall_dns_redirect_enabled() {
+	local enabled dns_redirect
+	enabled=$(uci -q get passwall.@global[0].enabled 2>/dev/null)
+	_uci_bool_enabled "$enabled" || return 1
+	dns_redirect=$(uci -q get passwall.@global[0].dns_redirect 2>/dev/null)
+	[ "$dns_redirect" = '0' ] && return 1
+	return 0
+}
+
+passwall2_dns_redirect_enabled() {
+	local enabled dns_redirect
+	enabled=$(uci -q get passwall2.@global[0].enabled 2>/dev/null)
+	_uci_bool_enabled "$enabled" || return 1
+	dns_redirect=$(uci -q get passwall2.@global[0].dns_redirect 2>/dev/null)
+	[ "$dns_redirect" = '0' ] && return 1
+	return 0
+}
+
+resolve_redirect_conflict_reason() {
+	local redirect="$1"
+	redirect=$(normalize_redirect_mode "$redirect")
+	[ "$redirect" = 'redirect' ] || return 1
+	if passwall_dns_redirect_enabled; then
+		printf 'passwall-dns-redirect\n'
+		return 0
+	fi
+	if passwall2_dns_redirect_enabled; then
+		printf 'passwall2-dns-redirect\n'
+		return 0
+	fi
+	return 1
+}
+
+resolve_effective_redirect_mode() {
+	local redirect="$1"
+	redirect=$(normalize_redirect_mode "$redirect")
+	resolve_redirect_conflict_reason "$redirect" >/dev/null 2>&1 && {
+		printf 'dnsmasq-upstream\n'
+		return 0
+	}
+	printf '%s\n' "$redirect"
+}
+
+update_redirect_runtime_state() {
+	local active="$1" effective="$2" conflict_reason="$3"
+	[ "$active" = '1' ] && printf 1 > /var/run/AdGredir || printf 0 > /var/run/AdGredir
+	if [ -n "$effective" ]; then
+		printf '%s\n' "$effective" > "$REDIRECT_EFFECTIVE_FILE"
+	else
+		rm -f "$REDIRECT_EFFECTIVE_FILE"
+	fi
+	if [ -n "$conflict_reason" ]; then
+		printf '%s\n' "$conflict_reason" > "$REDIRECT_CONFLICT_FILE"
+	else
+		rm -f "$REDIRECT_CONFLICT_FILE"
+	fi
+}
+
 resolve_configpath() {
 	normalize_runtime_path "$1" "$DEFAULT_CONFIGPATH" "$2" file
 }
@@ -139,18 +206,34 @@ yaml_set() {
 }
 
 set_forward_dnsmasq() {
-	local port="$1" addr old_server server found
+	local port="$1" addr old_server server found first changed
 	[ -n "$port" ] || return 0
 	addr="127.0.0.1#$port"
+	changed=0
+	# Check current server list order — our entry must be FIRST.
 	old_server=$(uci -q get dhcp.@dnsmasq[0].server 2>/dev/null)
 	found=0
-	for server in $old_server; do [ "$server" = "$addr" ] && found=1; done
-	[ "$found" = 1 ] && return 0
-	uci -q delete dhcp.@dnsmasq[0].server
-	uci -q add_list dhcp.@dnsmasq[0].server="$addr"
-	for server in $old_server; do [ "$server" = "$addr" ] || uci -q add_list dhcp.@dnsmasq[0].server="$server"; done
+	first=''
+	for server in $old_server; do
+		[ "$server" = "$addr" ] && found=1
+		[ -n "$first" ] || first="$server"
+	done
+	# Rebuild list: our entry first, then all others (dedup our own).
+	if [ "$found" = 0 ] || [ "$first" != "$addr" ]; then
+		uci -q delete dhcp.@dnsmasq[0].server
+		uci -q add_list dhcp.@dnsmasq[0].server="$addr"
+		for server in $old_server; do
+			[ "$server" = "$addr" ] || uci -q add_list dhcp.@dnsmasq[0].server="$server"
+		done
+		changed=1
+	fi
 	uci -q delete dhcp.@dnsmasq[0].resolvfile
 	uci -q set dhcp.@dnsmasq[0].noresolv='1'
+	if [ "$(uci -q get dhcp.@dnsmasq[0].strictorder 2>/dev/null)" != '1' ]; then
+		uci -q set dhcp.@dnsmasq[0].strictorder='1'
+		changed=1
+	fi
+	[ "$changed" = '1' ] || return 0
 	uci -q commit dhcp
 	/etc/init.d/dnsmasq restart >/dev/null 2>&1
 }
@@ -566,17 +649,19 @@ start_watchconfig_guard() {
 }
 
 _do_redirect() {
-	local enabled="$1" configpath redirect effective_redirect old_redirect old_port agh_port redirect_active
+	local enabled="$1" configpath redirect effective_redirect old_redirect old_port agh_port redirect_active conflict_reason
 	get_opt configpath configpath "$DEFAULT_CONFIGPATH"
 	get_opt redirect redirect "$DEFAULT_REDIRECT"
 	redirect=$(normalize_redirect_mode "$redirect")
 	redirect=$(auto_heal_redirect_mode "$redirect" "$configpath")
-	effective_redirect="$redirect"
+	effective_redirect=$(resolve_effective_redirect_mode "$redirect")
+	conflict_reason=$(resolve_redirect_conflict_reason "$redirect" 2>/dev/null)
 	old_redirect=$(uci -q get AdGuardHome.AdGuardHome.old_redirect 2>/dev/null)
 	old_port=$(uci -q get AdGuardHome.AdGuardHome.old_port 2>/dev/null)
 	agh_port=$(yaml_get 'dns.port' "$configpath")
 	[ -n "$agh_port" ] || agh_port='0'
 	redirect_active=0
+	[ -n "$conflict_reason" ] && logger -t AdGuardHome "redirect mode conflicts with ${conflict_reason}; using ${effective_redirect} instead"
 	case "$old_redirect" in
 		redirect)
 			clear_firewall_redirect "$old_port"
@@ -612,7 +697,7 @@ _do_redirect() {
 		[ "$effective_redirect" = 'none' ] || [ "$redirect_active" = '1' ] || logger -t AdGuardHome "redirect mode ${effective_redirect} is not active on port ${agh_port}"
 	fi
 	# Write status AFTER redirect setup, so the flag reflects actual state
-	[ "$redirect_active" = '1' ] && printf 1 > /var/run/AdGredir || printf 0 > /var/run/AdGredir
+	update_redirect_runtime_state "$redirect_active" "$effective_redirect" "$conflict_reason"
 	uci -q set AdGuardHome.AdGuardHome.old_redirect="$effective_redirect"
 	uci -q set AdGuardHome.AdGuardHome.old_port="$agh_port"
 	uci -q set AdGuardHome.AdGuardHome.old_enabled="$enabled"
@@ -625,7 +710,7 @@ do_redirect() {
 }
 
 service_triggers() {
-	procd_add_reload_trigger "$CONFIGURATION"
+	procd_add_reload_trigger "$CONFIGURATION" passwall passwall2
 	if [ "$(uci -q get AdGuardHome.AdGuardHome.redirect 2>/dev/null)" = 'redirect' ]; then
 		procd_add_reload_trigger firewall
 	fi
@@ -736,6 +821,7 @@ start_service() {
 	get_opt redirect redirect "$DEFAULT_REDIRECT"
 	redirect=$(normalize_redirect_mode "$redirect")
 	redirect=$(auto_heal_redirect_mode "$redirect" "$configpath")
+	redirect=$(resolve_effective_redirect_mode "$redirect")
 	skip_update="${AGH_SKIP_UPDATE:-0}"
 	if [ "$raw_binpath" != "$binpath" ] || [ "$raw_configpath" != "$configpath" ] || [ "$raw_workdir" != "$workdir" ]; then
 		uci -q set AdGuardHome.AdGuardHome.binpath="$binpath"

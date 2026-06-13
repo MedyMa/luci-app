@@ -173,6 +173,23 @@ function redirectModeLabel(value) {
 	}
 }
 
+function effectiveRedirectMode(status) {
+	if (status && status.effective_redirect)
+		return status.effective_redirect;
+
+	return status ? status.redirect : '';
+}
+
+function redirectConflictMessage(status) {
+	if (!yes(status && status.redirect_conflict))
+		return '';
+
+	if (status.redirect_conflict_reason === 'passwall2-dns-redirect')
+		return t('PassWall2 DNS redirect is enabled. AdGuard Home automatically uses dnsmasq upstream mode to avoid port 53 redirect conflicts.', 'PassWall2 已启用 DNS 重定向。AdGuard Home 已自动切换为 dnsmasq 上游模式，以避免 53 端口重定向冲突。');
+
+	return t('PassWall DNS redirect is enabled. AdGuard Home automatically uses dnsmasq upstream mode to avoid port 53 redirect conflicts.', 'PassWall 已启用 DNS 重定向。AdGuard Home 已自动切换为 dnsmasq 上游模式，以避免 53 端口重定向冲突。');
+}
+
 function formatHost(hostname) {
 	hostname = hostname == null ? '' : String(hostname);
 	return hostname.indexOf(':') >= 0 && hostname.charAt(0) !== '[' ? '[' + hostname + ']' : hostname;
@@ -225,6 +242,8 @@ return view.extend({
 		root.appendChild(E('style', {}, style));
 		if (rpcError)
 			root.appendChild(E('section', { 'class': 'agh-alert' }, actionError(rpcError, t('Overview data unavailable', '概览数据不可用'))));
+		if (!rpcError && yes(status.redirect_conflict))
+			root.appendChild(E('section', { 'class': 'agh-alert' }, redirectConflictMessage(status)));
 		root.appendChild(E('section', { 'class': 'agh-shell' }, E('div', { 'class': 'agh-hero' }, [
 			E('div', { 'class': 'agh-hero-main' }, [
 				E('span', { 'class': 'agh-eyebrow' }, t('Network DNS Guard', '网络 DNS 防护')),
@@ -239,7 +258,7 @@ return view.extend({
 				E('div', { 'class': 'agh-chip agh-service-chip' }, [ E('span', {}, t('Service', '服务')), E('strong', { 'class': rpcError ? 'agh-bad' : stateClass }, rpcError ? t('Backend missing', '后端缺失') : state) ]),
 				E('div', { 'class': 'agh-chip' }, [ E('span', {}, t('Core', '核心')), E('strong', { 'class': yes(status.core_ready) ? 'agh-ok' : 'agh-warn' }, yes(status.core_ready) ? text(status.version) : t('Missing', '缺失')) ]),
 				E('div', { 'class': 'agh-chip' }, [ E('span', {}, t('DNS Port', 'DNS 端口')), E('strong', {}, text(status.dns_port, rpcError ? '?' : '-')) ]),
-				E('div', { 'class': 'agh-chip agh-redirect-chip' }, [ E('span', {}, t('Redirect', '重定向')), E('strong', { 'class': yes(status.redirected) ? 'agh-ok' : '' }, yes(status.redirected) ? t('Active', '已启用') : redirectModeLabel(status.redirect)) ])
+				E('div', { 'class': 'agh-chip agh-redirect-chip' }, [ E('span', {}, t('Redirect', '重定向')), E('strong', { 'class': yes(status.redirected) ? 'agh-ok' : '' }, redirectModeLabel(effectiveRedirectMode(status))) ])
 			])
 		])));
 
@@ -306,7 +325,7 @@ return view.extend({
 			}
 			if (redirectChip) {
 				var isRedir = yes(s.redirected);
-				redirectChip.textContent = isRedir ? t('Active', '已启用') : redirectModeLabel(s.redirect);
+				redirectChip.textContent = redirectModeLabel(effectiveRedirectMode(s));
 				redirectChip.className = isRedir ? 'agh-ok' : '';
 			}
 		}
