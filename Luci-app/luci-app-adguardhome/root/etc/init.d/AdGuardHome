@@ -1005,6 +1005,26 @@ start_runtime_guard() {
 	) >/dev/null 2>&1 &
 }
 
+start_passwall_compat_guard() {
+	local redirect="$1" max_wait="${2:-70}"
+	[ "$(normalize_redirect_mode "$redirect")" = 'redirect' ] || return 0
+	resolve_redirect_compat_state "$redirect" >/dev/null 2>&1 && return 0
+	passwall_dns_redirect_enabled || passwall2_dns_redirect_enabled || return 0
+	(
+		local waited=0
+		while [ "$waited" -lt "$max_wait" ]; do
+			sleep 1
+			waited=$((waited + 1))
+			resolve_redirect_compat_state "$redirect" >/dev/null 2>&1 || continue
+			logger -t AdGuardHome "compat guard: detected PassWall DNS frontend after ${waited}s, reapplying redirect compatibility"
+			config_load "$CONFIGURATION"
+			_do_redirect 1
+			exit 0
+		done
+		logger -t AdGuardHome "compat guard: PassWall DNS frontend not ready within ${max_wait}s"
+	) >/dev/null 2>&1 &
+}
+
 start_watchconfig_guard() {
 	local redirect="$1"
 	[ "$redirect" = 'none' ] && return 0
@@ -1277,6 +1297,7 @@ start_service() {
 	if [ -r "$configpath" ]; then
 		_do_redirect 1
 		start_runtime_guard "$binpath" "$configpath" "$agh_port"
+		start_passwall_compat_guard "$redirect" 70
 	else
 		_do_redirect 0
 		start_watchconfig_guard "$redirect"
