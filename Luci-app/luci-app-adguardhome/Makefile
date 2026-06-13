@@ -41,7 +41,7 @@ define Package/luci-app-adguardhome/postinst
 if [ -z "$$IPKG_INSTROOT" ]; then
 	for runtime_file in \
 		/etc/init.d/AdGuardHome \
-		/etc/uci-defaults/40_luci-AdGuardHome \ 
+		/etc/uci-defaults/40_luci-AdGuardHome \
 		/usr/libexec/rpcd/luci.adguardhome \
 		/usr/share/AdGuardHome/addhost.sh \
 		/usr/share/AdGuardHome/firewall.start \
