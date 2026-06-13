@@ -7,7 +7,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-adguardhome
 PKG_VERSION:=2.0
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 
 LUCI_TITLE:=LuCI app for AdGuard Home
 LUCI_DESCRIPTION:=Modern LuCI dashboard for AdGuard Home
@@ -41,7 +41,7 @@ define Package/luci-app-adguardhome/postinst
 if [ -z "$$IPKG_INSTROOT" ]; then
 	for runtime_file in \
 		/etc/init.d/AdGuardHome \
-		/etc/uci-defaults/40_luci-AdGuardHome \
+		/etc/uci-defaults/40_luci-AdGuardHome \ 
 		/usr/libexec/rpcd/luci.adguardhome \
 		/usr/share/AdGuardHome/addhost.sh \
 		/usr/share/AdGuardHome/firewall.start \
