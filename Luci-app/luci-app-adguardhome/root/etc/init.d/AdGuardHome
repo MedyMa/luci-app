@@ -1287,7 +1287,15 @@ start_service() {
 	procd_set_param file "$configpath" /etc/hosts /etc/config/AdGuardHome
 	procd_close_instance
 	if [ -r "$configpath" ]; then
-		_do_redirect 1
+		if [ "$(normalize_redirect_mode "$redirect")" != 'none' ] && \
+		   { passwall_dns_redirect_enabled || passwall2_dns_redirect_enabled; } && \
+		   ! resolve_redirect_compat_state "$redirect" >/dev/null 2>&1; then
+			logger -t AdGuardHome "PassWall DNS redirect enabled but not ready; clearing redirect until watcher detects readiness"
+			_do_redirect 0
+			update_redirect_runtime_state 0 'none' '' '' ''
+		else
+			_do_redirect 1
+		fi
 		start_runtime_guard "$binpath" "$configpath" "$agh_port"
 		start_passwall_compat_guard "$redirect"
 	else
