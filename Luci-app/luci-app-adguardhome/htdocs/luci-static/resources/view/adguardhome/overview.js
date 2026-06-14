@@ -104,6 +104,24 @@ function applyThemeClass(node, darkClass) {
 		window.addEventListener('focus', syncThemeClass);
 	}
 
+	node._aghTeardown = function() {
+		if (themeObserver) {
+			themeObserver.disconnect();
+			themeObserver = null;
+		}
+		if (mediaQuery) {
+			if (mediaQuery.removeEventListener)
+				mediaQuery.removeEventListener('change', syncThemeClass);
+			else if (mediaQuery.removeListener)
+				mediaQuery.removeListener(syncThemeClass);
+			mediaQuery = null;
+		}
+		if (typeof window !== 'undefined') {
+			window.removeEventListener('pageshow', syncThemeClass);
+			window.removeEventListener('focus', syncThemeClass);
+		}
+	};
+
 	return node;
 }
 
@@ -260,6 +278,55 @@ function heroLink(label, href, extraClass, newTab) {
 }
 
 return view.extend({
+	// Module-level lifecycle state — survives across render() calls
+	_aghPollHandles: [],
+	_aghThemeRoot: null,
+	_aghCleanupRegistered: false,
+	_aghOnPageHide: function() { this._aghStopAll(); },
+	_aghOnBeforeUnload: function() { this._aghStopAll(); },
+	_aghBoundPageHide: null,
+	_aghBoundBeforeUnload: null,
+
+	_aghStopPoll: function() {
+		var h;
+		while (this._aghPollHandles.length) {
+			h = this._aghPollHandles.pop();
+			if (typeof poll !== 'undefined' && poll.remove)
+				poll.remove(h);
+		}
+	},
+	_aghStopTheme: function() {
+		if (this._aghThemeRoot && this._aghThemeRoot._aghTeardown) {
+			this._aghThemeRoot._aghTeardown();
+			this._aghThemeRoot = null;
+		}
+	},
+	_aghStopAll: function() {
+		this._aghStopPoll();
+		this._aghStopTheme();
+		if (typeof window !== 'undefined') {
+			if (this._aghBoundPageHide) {
+				window.removeEventListener('pagehide', this._aghBoundPageHide);
+				this._aghBoundPageHide = null;
+			}
+			if (this._aghBoundBeforeUnload) {
+				window.removeEventListener('beforeunload', this._aghBoundBeforeUnload);
+				this._aghBoundBeforeUnload = null;
+			}
+		}
+		this._aghCleanupRegistered = false;
+	},
+	_aghEnsureCleanup: function() {
+		if (this._aghCleanupRegistered) return;
+		this._aghCleanupRegistered = true;
+		if (typeof window !== 'undefined') {
+			this._aghBoundPageHide = this._aghOnPageHide.bind(this);
+			this._aghBoundBeforeUnload = this._aghOnBeforeUnload.bind(this);
+			window.addEventListener('pagehide', this._aghBoundPageHide);
+			window.addEventListener('beforeunload', this._aghBoundBeforeUnload);
+		}
+	},
+
 	load: function() {
 		return Promise.all([
 			safeCall(callGetStatus(), {}),
@@ -269,7 +336,10 @@ return view.extend({
 	render: function(data) {
 		var status = data[0] || {};
 		var stats = data[1] || {};
+		this._aghStopAll();
 		var root = applyThemeClass(E('div', { 'class': 'agh-page' }), 'agh-dark');
+		this._aghThemeRoot = root;
+		this._aghEnsureCleanup();
 		var rpcError = status._rpc_error;
 		var statsOk = stats.ok === true || stats.ok === 1 || stats.ok === '1';
 		var state = yes(status.running) ? t('Running') : t('Stopped');
@@ -398,17 +468,24 @@ return view.extend({
 			if (avgTimeEl) avgTimeEl.textContent = at + ' ms';
 		}
 
+		var _pollHandles = this._aghPollHandles;
+		var _view = this;
+
 		function startPoll() {
-			poll.add(function() {
-				return safeCall(callGetStatus(), {}).then(function(s) {
-					refreshStatusChips(s);
-				});
-			}, 5);
-			poll.add(function() {
-				return safeCall(callGetStats(), { ok: false }).then(function(s) {
-					updateStatsCards(s);
-				});
-			}, 10);
+			_view._aghStopPoll();
+			_pollHandles.length = 0;
+			if (typeof poll !== 'undefined' && poll.add) {
+				_pollHandles.push(poll.add(function() {
+					return safeCall(callGetStatus(), {}).then(function(s) {
+						refreshStatusChips(s);
+					});
+				}, 5));
+				_pollHandles.push(poll.add(function() {
+					return safeCall(callGetStats(), { ok: false }).then(function(s) {
+						updateStatsCards(s);
+					});
+				}, 10));
+			}
 		}
 
 		if (typeof poll !== 'undefined' && poll.add)
