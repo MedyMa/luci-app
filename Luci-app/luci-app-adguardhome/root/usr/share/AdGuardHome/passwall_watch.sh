@@ -12,6 +12,32 @@ is_valid_port() {
 	[ "$1" -ge 1 ] 2>/dev/null && [ "$1" -le 65535 ] 2>/dev/null
 }
 
+_has_cmd() {
+	command -v "$1" >/dev/null 2>&1
+}
+
+_port_listen_regex() {
+	local port="$1"
+	is_valid_port "$port" || return 1
+	printf '[:.]%s([[:space:]]|$)\n' "$port"
+}
+
+port_is_listening() {
+	local port="$1" pattern checked
+	pattern=$(_port_listen_regex "$port") || return 1
+	checked=0
+	if _has_cmd ss; then
+		checked=1
+		ss -lntu 2>/dev/null | grep -Eq "$pattern" && return 0
+	fi
+	if _has_cmd netstat; then
+		checked=1
+		netstat -lntu 2>/dev/null | grep -Eq "$pattern" && return 0
+	fi
+	[ "$checked" = '1' ] || return 2
+	return 1
+}
+
 _uci_bool_enabled() {
 	case "$1" in
 		1|on|true|yes|enabled) return 0 ;;
@@ -62,31 +88,27 @@ save_state() {
 reapply() {
 	logger -t AdGuardHome "passwall watch: state changed, reapplying redirect configuration"
 	if /etc/init.d/AdGuardHome isrunning >/dev/null 2>&1; then
-		# Verify AGH DNS port is actually listening before redirecting.
-		# Fall back to trust-the-process when no port-check tool is available.
-		local configpath agh_port port_ok
+		# Verify AGH DNS port before redirecting.
+		# If the router lacks ss/netstat, trust the running process instead of deadlocking.
+		local configpath agh_port listen_state
 		configpath="$(uci -q get AdGuardHome.AdGuardHome.configpath 2>/dev/null || echo '/etc/config/adGuardConfig/AdGuardHome.yaml')"
 		if [ -r "$configpath" ]; then
 			agh_port=$(grep -A5 '^dns:' "$configpath" | grep '^  port:' | sed 's/.*: *//' 2>/dev/null)
 		fi
-		port_ok=0
 		if [ -n "$agh_port" ] && is_valid_port "$agh_port"; then
-			if command -v ss >/dev/null 2>&1; then
-				ss -lntu 2>/dev/null | grep -q ":$agh_port " && port_ok=1
-			elif command -v netstat >/dev/null 2>&1; then
-				netstat -lntu 2>/dev/null | grep -q ":$agh_port " && port_ok=1
-			else
-				port_ok=1
-			fi
-		else
-			port_ok=1
-		fi
-		if [ "$port_ok" = '1' ]; then
-			/etc/init.d/AdGuardHome do_redirect 1
-			return 0
-		else
+			port_is_listening "$agh_port"
+			listen_state="$?"
+			case "$listen_state" in
+				0|2)
+					/etc/init.d/AdGuardHome do_redirect 1
+					return 0
+					;;
+			esac
 			logger -t AdGuardHome "passwall watch: AGH DNS port ${agh_port} not listening yet, deferring redirect"
 			return 1
+		else
+			/etc/init.d/AdGuardHome do_redirect 1
+			return 0
 		fi
 	fi
 	return 0
