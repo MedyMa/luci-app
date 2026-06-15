@@ -1062,6 +1062,7 @@ _do_redirect() {
 	get_opt redirect redirect "$DEFAULT_REDIRECT"
 	redirect=$(normalize_redirect_mode "$redirect")
 	redirect=$(auto_heal_redirect_mode "$redirect" "$configpath")
+	effective_redirect=$(resolve_effective_redirect_mode "$redirect")
 	compat_reason=$(resolve_redirect_compat_reason "$redirect" 2>/dev/null)
 	compat_upstream=$(resolve_redirect_compat_upstream_port "$redirect" 2>/dev/null)
 	conflict_reason=$(resolve_redirect_conflict_reason "$redirect" 2>/dev/null)
@@ -1122,6 +1123,7 @@ _do_redirect() {
 		if [ "$effective_redirect" = 'redirect' ] && ! firewall_redirect_is_active "$agh_port"; then
 			logger -t AdGuardHome "redirect mode failed on port ${agh_port}, falling back to dnsmasq-upstream"
 			if dnsmasq_forward_is_active "$agh_port"; then
+				effective_redirect='dnsmasq-upstream'
 				redirect_active=1
 				uci -q set AdGuardHome.AdGuardHome.redirect="$effective_redirect"
 			fi
