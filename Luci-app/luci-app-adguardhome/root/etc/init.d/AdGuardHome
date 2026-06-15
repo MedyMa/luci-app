@@ -416,19 +416,39 @@ backup_compat_upstream_dns() {
 }
 
 apply_compat_upstream_dns() {
-	local configpath="$1" port="$2" value
+	local configpath="$1" port="$2" value entry first
 	is_valid_port "$port" || return 1
 	[ -r "$configpath" ] || return 1
 	value="127.0.0.1:$port"
-	yaml_dns_block_contains upstream_dns "$value" "$configpath" && return 0
+	first=$(yaml_extract_dns_block upstream_dns "$configpath" 2>/dev/null | grep '^    - ' | head -1 | sed 's/^    - //')
+	[ "$first" = "$value" ] && return 0
 	backup_compat_upstream_dns "$configpath" || {
 		logger -t AdGuardHome "failed to backup upstream_dns before enabling PassWall compatibility"
 		return 1
 	}
-	yaml_set_dns_single_value upstream_dns "$value" "$configpath" || {
-		logger -t AdGuardHome "failed to rewrite upstream_dns to ${value}"
+	# Build new block: compat entry first, then all existing entries (dedup)
+	# yaml_extract_dns_block output includes the "  upstream_dns:" header line;
+	# skip it with tail -n +2 since we emit our own header below.
+	{
+		echo "  upstream_dns:"
+		echo "    - $value"
+		yaml_extract_dns_block upstream_dns "$configpath" 2>/dev/null | tail -n +2 | while read -r line; do
+			case "$line" in
+				"    - "*)
+					entry="${line#    - }"
+					[ "$entry" = "$value" ] && continue
+					echo "$line"
+					;;
+				*)	echo "$line" ;;
+			esac
+		done
+	} > /tmp/_agh_ups.$$.tmp
+	yaml_replace_dns_block_from_file upstream_dns /tmp/_agh_ups.$$.tmp "$configpath" || {
+		logger -t AdGuardHome "failed to rewrite upstream_dns with compat entry"
+		rm -f /tmp/_agh_ups.$$.tmp
 		return 1
 	}
+	rm -f /tmp/_agh_ups.$$.tmp
 	return 0
 }
 
@@ -1044,7 +1064,6 @@ _do_redirect() {
 	redirect=$(auto_heal_redirect_mode "$redirect" "$configpath")
 	compat_reason=$(resolve_redirect_compat_reason "$redirect" 2>/dev/null)
 	compat_upstream=$(resolve_redirect_compat_upstream_port "$redirect" 2>/dev/null)
-	effective_redirect=$(resolve_effective_redirect_mode "$redirect")
 	conflict_reason=$(resolve_redirect_conflict_reason "$redirect" 2>/dev/null)
 	old_redirect=$(uci -q get AdGuardHome.AdGuardHome.old_redirect 2>/dev/null)
 	old_port=$(uci -q get AdGuardHome.AdGuardHome.old_port 2>/dev/null)
@@ -1073,9 +1092,12 @@ _do_redirect() {
 					if apply_compat_upstream_dns "$configpath" "$compat_upstream"; then
 						apply_passwall_dns_bypass "$compat_reason" >/dev/null 2>&1 || logger -t AdGuardHome "failed to add ${compat_reason} bypass rules"
 					else
-						logger -t AdGuardHome "PassWall compatibility setup failed, keeping redirect mode without dnsmasq upstream injection"
+						logger -t AdGuardHome "PassWall compatibility setup failed, falling back to dnsmasq-upstream"
+						effective_redirect='dnsmasq-upstream'
 						compat_reason=''
 						compat_upstream=''
+						clear_firewall_redirect "$agh_port"
+						set_forward_dnsmasq "$agh_port"
 					fi
 				else
 					set_forward_dnsmasq "$agh_port"
@@ -1100,7 +1122,6 @@ _do_redirect() {
 		if [ "$effective_redirect" = 'redirect' ] && ! firewall_redirect_is_active "$agh_port"; then
 			logger -t AdGuardHome "redirect mode failed on port ${agh_port}, falling back to dnsmasq-upstream"
 			if dnsmasq_forward_is_active "$agh_port"; then
-				effective_redirect='dnsmasq-upstream'
 				redirect_active=1
 				uci -q set AdGuardHome.AdGuardHome.redirect="$effective_redirect"
 			fi
@@ -1328,7 +1349,11 @@ start_service() {
 
 reload_service() {
 	stop
-	sleep 1
+	local _rl_wait=0
+	while _isrunning && [ "$_rl_wait" -lt 10 ]; do
+		sleep 1
+		_rl_wait=$((_rl_wait + 1))
+	done
 	start
 }
 
