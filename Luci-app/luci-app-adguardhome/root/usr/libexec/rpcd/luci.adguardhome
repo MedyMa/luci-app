@@ -426,7 +426,7 @@ start_update() {
 	fi
 	: >> "$UPDATE_LOG"
 	sh "$UPDATE_SCRIPT" $arg >> "$UPDATE_LOG" 2>&1 &
-	json_init; json_add_boolean ok 1; json_dump
+	json_init; json_add_boolean ok 1; json_add_string message 'Update task submitted.'; json_dump
 }
 
 run_script_action() {

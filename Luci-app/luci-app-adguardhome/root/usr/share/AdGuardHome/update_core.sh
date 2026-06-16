@@ -71,6 +71,26 @@ resolve_workdir() {
 	normalize_runtime_path "$1" "$DEFAULT_WORKDIR" "$2" dir
 }
 
+resolve_dns_port() {
+	# Section-aware resolver: only returns port under the dns: block,
+	# ignoring any other port: keys at different YAML levels.
+	[ -r "$1" ] || return 1
+	awk '
+	BEGIN { in_dns = 0 }
+	/^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
+	/^[^[:space:]#][A-Za-z0-9_-]*:[[:space:]]*/ {
+		in_dns = ($0 ~ /^dns:[[:space:]]*($|#)/)
+		next
+	}
+	in_dns && /^[[:space:]]+port:[[:space:]]*/ {
+		sub(/^[[:space:]]*port:[[:space:]]*/, "", $0)
+		sub(/[[:space:]]+#.*$/, "", $0)
+		gsub(/["\x27]/, "", $0)
+		print $0
+		exit
+	}' "$1" 2>/dev/null
+}
+
 sync_runtime_paths() {
 	local raw_binpath="$1" binpath="$2" raw_configpath="$3" configpath="$4" raw_workdir="$5" workdir="$6"
 	if [ "$raw_binpath" != "$binpath" ] || [ "$raw_configpath" != "$configpath" ] || [ "$raw_workdir" != "$workdir" ]; then
@@ -239,7 +259,7 @@ wait_core_running() {
 	[ -n "$configpath" ] || configpath="$DEFAULT_CONFIGPATH"
 	for retry in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
 		pgrep -f "$binpath" >/dev/null 2>&1 || { sleep 1; continue; }
-		agh_port=$(grep -A5 '^dns:' "$configpath" 2>/dev/null | grep '^  port:' | sed 's/.*: *//')
+		agh_port=$(resolve_dns_port "$configpath")
 		[ -z "$agh_port" ] && return 0
 		port_is_listening "$agh_port"; port_ret=$?
 		case "$port_ret" in
