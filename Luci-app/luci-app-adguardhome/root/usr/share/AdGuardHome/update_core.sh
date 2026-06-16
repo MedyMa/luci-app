@@ -227,6 +227,18 @@ wait_core_running() {
 	return 1
 }
 
+_restore_backup_and_exit() {
+	if [ -x "$backupbin" ]; then
+		echo "Restoring previous core."
+		cp -fp "$backupbin" "$binpath" >/dev/null 2>&1 || true
+		chmod 0755 "$binpath" >/dev/null 2>&1 || true
+		if [ "$enabled" = '1' ]; then
+			AGH_SKIP_UPDATE=1 /etc/init.d/AdGuardHome start >/dev/null 2>&1 || true
+		fi
+	fi
+	exit_update 1
+}
+
 wait_core_stopped() {
 	local binpath="$1" retry pid
 	[ -n "$binpath" ] || return 0
@@ -293,9 +305,11 @@ run_update() {
 		archive="$WORK_DIR/$basename"
 		echo "Downloading $url"
 		if download_to "$archive" "$url"; then
+			echo ''
 			success=1
 			break
 		fi
+		echo ''
 		rm -f "$archive"
 		echo 'Download failed, trying next source.'
 	done < /tmp/run/AdHlinks.txt
@@ -322,21 +336,24 @@ run_update() {
 		cp -fp "$binpath" "$backupbin" || { echo 'Failed to back up current binary.'; exit_update 1; }
 	fi
 	/etc/init.d/AdGuardHome stop nobackup >/dev/null 2>&1 || true
-	wait_core_stopped "$binpath" || { echo 'Timed out while stopping the current AdGuard Home process.'; exit_update 1; }
-	mv -f "$downloadbin" "$binpath" || { echo 'Failed to install binary.'; exit_update 1; }
+	wait_core_stopped "$binpath" || {
+		echo 'Timed out while stopping the current AdGuard Home process.'
+		_restore_backup_and_exit
+	}
+	mv -f "$downloadbin" "$binpath" || {
+		echo 'Failed to install binary.'
+		_restore_backup_and_exit
+	}
 	chmod 0755 "$binpath"
-	prepare_runtime_layout "$binpath" "$configpath" "$workdir" || { echo 'Failed to prepare runtime directories.'; exit_update 1; }
+	prepare_runtime_layout "$binpath" "$configpath" "$workdir" || {
+		echo 'Failed to prepare runtime directories.'
+		_restore_backup_and_exit
+	}
 	if [ "$enabled" = '1' ]; then
 		AGH_SKIP_UPDATE=1 /etc/init.d/AdGuardHome start >/dev/null 2>&1 || true
 		if ! wait_core_running "$binpath" "$configpath"; then
 			echo 'Core updated, but failed to start service.'
-			if [ -x "$backupbin" ]; then
-				echo 'Restoring previous core.'
-				cp -fp "$backupbin" "$binpath" >/dev/null 2>&1 || true
-				chmod 0755 "$binpath" >/dev/null 2>&1 || true
-				AGH_SKIP_UPDATE=1 /etc/init.d/AdGuardHome start >/dev/null 2>&1 || true
-			fi
-			exit_update 1
+			_restore_backup_and_exit
 		fi
 	fi
 	rm -rf "$WORK_DIR"

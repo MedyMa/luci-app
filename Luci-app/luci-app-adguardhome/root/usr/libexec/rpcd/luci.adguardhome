@@ -420,9 +420,9 @@ start_update() {
 	json_load "$input" >/dev/null 2>&1
 	json_get_var force force
 	[ "$force" = 1 ] || [ "$force" = true ] && arg=force || arg=''
-	if [ -n "$arg" ]; then
-		pkill -f '/usr/share/AdGuardHome/update_core.sh' >/dev/null 2>&1 || true
-		rm -f /var/run/update_core
+	if [ -e /var/run/update_core ] && pgrep -f '/usr/share/AdGuardHome/update_core.sh' >/dev/null 2>&1; then
+		json_init; json_add_boolean ok 0; json_add_string message 'An update task is already running.'; json_dump
+		return 0
 	fi
 	: > "$UPDATE_LOG"
 	sh "$UPDATE_SCRIPT" $arg > "$UPDATE_LOG" 2>&1 &
