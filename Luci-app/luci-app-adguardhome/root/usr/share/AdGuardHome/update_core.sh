@@ -5,13 +5,16 @@ CONFIGURATION='AdGuardHome'
 LINKS_FILE='/usr/share/AdGuardHome/links.txt'
 RUN_FILE='/var/run/update_core'
 ERROR_FILE='/var/run/update_core_error'
+UPDATE_LOG='/tmp/AdGuardHome_update.log'
 WORK_DIR='/tmp/AdGuardHomeupdate'
 DEFAULT_BINPATH='/etc/config/adGuardConfig/AdGuardHome'
 DEFAULT_CONFIGPATH='/etc/config/adGuardConfig/AdGuardHome.yaml'
 DEFAULT_WORKDIR='/etc/config/adGuardConfig/workspace'
 
 exit_update() {
-	rm -f "$RUN_FILE"
+	if [ -f "$RUN_FILE" ] && [ "$(cat "$RUN_FILE" 2>/dev/null)" = "$$" ]; then
+		rm -f "$RUN_FILE"
+	fi
 	[ "${1:-0}" = '0' ] || touch "$ERROR_FILE"
 	exit "${1:-0}"
 }
@@ -108,19 +111,40 @@ classify_download_error() {
 }
 
 download_to() {
-	local output="$1" url="$2" errfile rc
+	local output="$1" url="$2" errfile errfull rc download_pid
 	errfile="$WORK_DIR/download.stderr"
-	rm -f "$errfile"
+	errfull="$WORK_DIR/download.stderr.all"
+	rm -f "$errfile" "$errfull"
 	case "$DOWNLOADER" in
-		curl) curl -L -k --retry 2 --connect-timeout 20 -o "$output" "$url" 2>"$errfile"; rc=$? ;;
-		wget|wget-ssl) "$DOWNLOADER" --no-check-certificate -t 2 -T 20 -O "$output" "$url" 2>"$errfile"; rc=$? ;;
+		curl)
+			curl -L -k --retry 2 --connect-timeout 20 -o "$output" "$url" 2>"$errfile" &
+			download_pid=$!
+			;;
+		wget|wget-ssl)
+			"$DOWNLOADER" --no-check-certificate -t 2 -T 20 -O "$output" "$url" 2>"$errfile" &
+			download_pid=$!
+			;;
 		*) return 1 ;;
 	esac
+	# Poll errfile in real-time so log viewer sees progress line by line
+	while kill -0 "$download_pid" 2>/dev/null; do
+		if [ -s "$errfile" ]; then
+			< "$errfile" tee -a "$errfull" | tr '\r' '\n' | grep -v '^[[:space:]]*$' >&2
+			: > "$errfile"
+		fi
+		sleep 1
+	done
+	wait "$download_pid"; rc=$?
+	# Flush any remaining content
 	if [ -s "$errfile" ]; then
-		classify_download_error "$(head -1 "$errfile" 2>/dev/null)"
-		< "$errfile" tr '\r' '\n' | grep -v '^[[:space:]]*$' | awk 'NR<=2{print;next} {last=$0} END{if(last!="") print last}' >&2
+		< "$errfile" tee -a "$errfull" | tr '\r' '\n' | grep -v '^[[:space:]]*$' >&2
 	fi
-	rm -f "$errfile"
+	if [ -s "$errfull" ] || [ -s "$errfile" ]; then
+		classify_download_error "$({
+			cat "$errfull" "$errfile" 2>/dev/null
+		} | grep -E '(Could not resolve host|bad address|Failed to connect|Connection refused|Network is unreachable|Operation timed out|Connection timed out)' | head -1)"
+	fi
+	rm -f "$errfile" "$errfull"
 	return "${rc:-1}"
 }
 
@@ -360,11 +384,20 @@ run_update() {
 	exit_update 0
 }
 
-if [ -e "$RUN_FILE" ] && pgrep -f '/usr/share/AdGuardHome/update_core.sh' >/dev/null 2>&1; then
+if [ -f "$RUN_FILE" ]; then
+	lock_pid=$(cat "$RUN_FILE" 2>/dev/null)
+	case "$lock_pid" in
+		''|*[!0-9]*) rm -f "$RUN_FILE" ;;
+		*)
+			kill -0 "$lock_pid" 2>/dev/null || rm -f "$RUN_FILE"
+			;;
+	esac
+fi
+(set -C; echo "$$" > "$RUN_FILE") 2>/dev/null || {
 	echo 'A task is already running.'
 	exit 2
-fi
+}
 trap 'exit_update 1' INT TERM
-touch "$RUN_FILE"
+: > "$UPDATE_LOG"
 rm -f "$ERROR_FILE"
 run_update "$1"
