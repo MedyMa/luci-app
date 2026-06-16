@@ -152,6 +152,19 @@ current_version() {
 	"$binpath" --version 2>/dev/null | grep -m 1 -oE 'v?[0-9]+[.][A-Za-z0-9._-]+'
 }
 
+validate_binary() {
+	local binary="$1"
+	[ -x "$binary" ] || return 1
+	"$binary" --version >/dev/null 2>&1
+}
+
+is_valid_port() {
+	case "$1" in
+		''|*[!0-9]*) return 1 ;;
+	esac
+	[ "$1" -ge 1 ] 2>/dev/null && [ "$1" -le 65535 ] 2>/dev/null
+}
+
 apply_upx() {
 	local binary="$1" flag="$2"
 	[ -n "$flag" ] || return 0
@@ -176,8 +189,69 @@ prepare_runtime_layout() {
 	[ -d "$workdir" ] && [ -d "$workdir/data" ]
 }
 
+wait_core_running() {
+	local binpath="$1" configpath="$2" retry agh_port redirect_mode effective redir_active port_ret
+	[ -x "$binpath" ] || return 1
+	[ -n "$configpath" ] || configpath="$DEFAULT_CONFIGPATH"
+	for retry in 1 2 3 4 5; do
+		pgrep -f "$binpath" >/dev/null 2>&1 || { sleep 1; continue; }
+		agh_port=$(grep -A5 '^dns:' "$configpath" 2>/dev/null | grep '^  port:' | sed 's/.*: *//')
+		[ -z "$agh_port" ] && return 0
+		port_is_listening "$agh_port"; port_ret=$?
+		[ "$port_ret" = '1' ] && { sleep 1; continue; }
+		redirect_mode=$(uci -q get "$CONFIGURATION.$CONFIGURATION.redirect" 2>/dev/null || echo 'dnsmasq-upstream')
+		[ "$redirect_mode" = 'none' ] && return 0
+		effective=$(cat /var/run/AdGeffective 2>/dev/null)
+		redir_active=$(cat /var/run/AdGredir 2>/dev/null)
+		# PassWall defer: DNS redirect expected but no service is ready yet
+		if [ "$redir_active" != '1' ] || [ -z "$effective" ] || [ "$effective" = 'none' ]; then
+			local _pw_enabled _pw_dns _pw_port _pw2_enabled _pw2_dns _pw2_port _any_dns=0 _any_ready=0
+			_pw_enabled=$(uci -q get passwall.@global[0].enabled 2>/dev/null)
+			case "$_pw_enabled" in 1|on|true|yes|enabled)
+				_pw_dns=$(uci -q get passwall.@global[0].dns_redirect 2>/dev/null)
+				if [ "$_pw_dns" != '0' ]; then
+					_any_dns=1
+					_pw_port=$(awk -F '=' '$1=="ACL_default_dns_port"{gsub(/^"|"$/,"",$2);print $2}' /tmp/etc/passwall/var 2>/dev/null | tail -1)
+					_pw_port=$(printf '%s\n' "$_pw_port" | tr -d ' ')
+					is_valid_port "$_pw_port" && _any_ready=1
+				fi
+				;;
+			esac
+			_pw2_enabled=$(uci -q get passwall2.@global[0].enabled 2>/dev/null)
+			case "$_pw2_enabled" in 1|on|true|yes|enabled)
+				_pw2_dns=$(uci -q get passwall2.@global[0].dns_redirect 2>/dev/null)
+				if [ "$_pw2_dns" != '0' ]; then
+					_any_dns=1
+					_pw2_port=$(awk -F '=' '$1=="ACL_default_dns_port"{gsub(/^"|"$/,"",$2);print $2}' /tmp/etc/passwall2/var 2>/dev/null | tail -1)
+					_pw2_port=$(printf '%s\n' "$_pw2_port" | tr -d ' ')
+					is_valid_port "$_pw2_port" && _any_ready=1
+				fi
+				;;
+			esac
+			[ "$_any_dns" = '1' ] && [ "$_any_ready" = '0' ] && return 0
+		fi
+		[ "$redir_active" = '1' ] && [ -n "$effective" ] && return 0
+		sleep 1
+	done
+	return 1
+}
+
+port_is_listening() {
+	local port="$1"
+	[ -z "$port" ] && return 1
+	if command -v ss >/dev/null 2>&1; then
+		ss -lntu 2>/dev/null | grep -q ":$port " && return 0
+		return 1
+	fi
+	if command -v netstat >/dev/null 2>&1; then
+		netstat -lntu 2>/dev/null | grep -q ":$port " && return 0
+		return 1
+	fi
+	return 2
+}
+
 run_update() {
-	local force="$1" raw_binpath raw_configpath raw_workdir binpath configpath workdir upxflag channel arch latest_ver now_ver url archive downloadbin success basename enabled
+	local force="$1" raw_binpath raw_configpath raw_workdir binpath configpath workdir upxflag channel arch latest_ver now_ver url archive downloadbin success basename enabled backupbin
 	raw_binpath=$(get_uci binpath "$DEFAULT_BINPATH")
 	binpath=$(resolve_binpath "$raw_binpath")
 	raw_configpath=$(get_uci configpath "$DEFAULT_CONFIGPATH")
@@ -228,15 +302,31 @@ run_update() {
 	[ -f "$downloadbin" ] || { echo 'AdGuardHome binary missing from downloaded package.'; exit_update 1; }
 	chmod 0755 "$downloadbin"
 	apply_upx "$downloadbin" "$upxflag"
+	validate_binary "$downloadbin" || { echo 'Downloaded AdGuardHome binary failed validation.'; exit_update 1; }
+	backupbin="$WORK_DIR/AdGuardHome.backup"
+	rm -f "$backupbin"
+	if [ -e "$binpath" ]; then
+		cp -fp "$binpath" "$backupbin" || { echo 'Failed to back up current binary.'; exit_update 1; }
+	fi
 	/etc/init.d/AdGuardHome stop nobackup >/dev/null 2>&1 || true
 	mv -f "$downloadbin" "$binpath" || { echo 'Failed to install binary.'; exit_update 1; }
 	chmod 0755 "$binpath"
-	rm -rf "$WORK_DIR"
 	rm -f "$RUN_FILE"
 	prepare_runtime_layout "$binpath" "$configpath" "$workdir" || { echo 'Failed to prepare runtime directories.'; exit_update 1; }
 	if [ "$enabled" = '1' ]; then
-		AGH_SKIP_UPDATE=1 /etc/init.d/AdGuardHome start >/dev/null 2>&1 || { echo 'Core updated, but failed to start service.'; exit_update 1; }
+		AGH_SKIP_UPDATE=1 /etc/init.d/AdGuardHome start >/dev/null 2>&1 || true
+		if ! wait_core_running "$binpath" "$configpath"; then
+			echo 'Core updated, but failed to start service.'
+			if [ -x "$backupbin" ]; then
+				echo 'Restoring previous core.'
+				cp -fp "$backupbin" "$binpath" >/dev/null 2>&1 || true
+				chmod 0755 "$binpath" >/dev/null 2>&1 || true
+				AGH_SKIP_UPDATE=1 /etc/init.d/AdGuardHome start >/dev/null 2>&1 || true
+			fi
+			exit_update 1
+		fi
 	fi
+	rm -rf "$WORK_DIR"
 	echo 'Succeeded in updating core.'
 	exit_update 0
 }
