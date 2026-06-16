@@ -190,47 +190,17 @@ prepare_runtime_layout() {
 }
 
 wait_core_running() {
-	local binpath="$1" configpath="$2" retry agh_port redirect_mode effective redir_active port_ret
+	local binpath="$1" configpath="$2" retry agh_port port_ret
 	[ -x "$binpath" ] || return 1
 	[ -n "$configpath" ] || configpath="$DEFAULT_CONFIGPATH"
-	for retry in 1 2 3 4 5; do
+	for retry in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
 		pgrep -f "$binpath" >/dev/null 2>&1 || { sleep 1; continue; }
 		agh_port=$(grep -A5 '^dns:' "$configpath" 2>/dev/null | grep '^  port:' | sed 's/.*: *//')
 		[ -z "$agh_port" ] && return 0
 		port_is_listening "$agh_port"; port_ret=$?
-		[ "$port_ret" = '1' ] && { sleep 1; continue; }
-		redirect_mode=$(uci -q get "$CONFIGURATION.$CONFIGURATION.redirect" 2>/dev/null || echo 'dnsmasq-upstream')
-		[ "$redirect_mode" = 'none' ] && return 0
-		effective=$(cat /var/run/AdGeffective 2>/dev/null)
-		redir_active=$(cat /var/run/AdGredir 2>/dev/null)
-		# PassWall defer: DNS redirect expected but no service is ready yet
-		if [ "$redir_active" != '1' ] || [ -z "$effective" ] || [ "$effective" = 'none' ]; then
-			local _pw_enabled _pw_dns _pw_port _pw2_enabled _pw2_dns _pw2_port _any_dns=0 _any_ready=0
-			_pw_enabled=$(uci -q get passwall.@global[0].enabled 2>/dev/null)
-			case "$_pw_enabled" in 1|on|true|yes|enabled)
-				_pw_dns=$(uci -q get passwall.@global[0].dns_redirect 2>/dev/null)
-				if [ "$_pw_dns" != '0' ]; then
-					_any_dns=1
-					_pw_port=$(awk -F '=' '$1=="ACL_default_dns_port"{gsub(/^"|"$/,"",$2);print $2}' /tmp/etc/passwall/var 2>/dev/null | tail -1)
-					_pw_port=$(printf '%s\n' "$_pw_port" | tr -d ' ')
-					is_valid_port "$_pw_port" && _any_ready=1
-				fi
-				;;
-			esac
-			_pw2_enabled=$(uci -q get passwall2.@global[0].enabled 2>/dev/null)
-			case "$_pw2_enabled" in 1|on|true|yes|enabled)
-				_pw2_dns=$(uci -q get passwall2.@global[0].dns_redirect 2>/dev/null)
-				if [ "$_pw2_dns" != '0' ]; then
-					_any_dns=1
-					_pw2_port=$(awk -F '=' '$1=="ACL_default_dns_port"{gsub(/^"|"$/,"",$2);print $2}' /tmp/etc/passwall2/var 2>/dev/null | tail -1)
-					_pw2_port=$(printf '%s\n' "$_pw2_port" | tr -d ' ')
-					is_valid_port "$_pw2_port" && _any_ready=1
-				fi
-				;;
-			esac
-			[ "$_any_dns" = '1' ] && [ "$_any_ready" = '0' ] && return 0
-		fi
-		[ "$redir_active" = '1' ] && [ -n "$effective" ] && return 0
+		case "$port_ret" in
+			0|2) return 0 ;;
+		esac
 		sleep 1
 	done
 	return 1
@@ -311,7 +281,6 @@ run_update() {
 	/etc/init.d/AdGuardHome stop nobackup >/dev/null 2>&1 || true
 	mv -f "$downloadbin" "$binpath" || { echo 'Failed to install binary.'; exit_update 1; }
 	chmod 0755 "$binpath"
-	rm -f "$RUN_FILE"
 	prepare_runtime_layout "$binpath" "$configpath" "$workdir" || { echo 'Failed to prepare runtime directories.'; exit_update 1; }
 	if [ "$enabled" = '1' ]; then
 		AGH_SKIP_UPDATE=1 /etc/init.d/AdGuardHome start >/dev/null 2>&1 || true
