@@ -95,13 +95,34 @@ setup_downloader() {
 	return 1
 }
 
+classify_download_error() {
+	local text="$1"
+	case "$text" in
+		*"Could not resolve host"*|*"bad address"*)
+			DOWNLOAD_ERROR_HINT='DNS resolution failed while downloading the core. Keep AdGuard Home running during update, or make sure the router still has a working upstream DNS after stopping it.'
+			;;
+		*"Failed to connect"*|*"Connection refused"*|*"Network is unreachable"*|*"Operation timed out"*|*"Connection timed out"*)
+			DOWNLOAD_ERROR_HINT='Network connection failed while downloading the core. Check WAN connectivity and upstream DNS reachability.'
+			;;
+	esac
+}
+
 download_to() {
-	local output="$1" url="$2"
+	local output="$1" url="$2" errfile rc errtext
+	errfile="$WORK_DIR/download.stderr"
+	rm -f "$errfile"
 	case "$DOWNLOADER" in
-		curl) curl -L -k --retry 2 --connect-timeout 20 -o "$output" "$url" ;;
-		wget|wget-ssl) "$DOWNLOADER" --no-check-certificate -t 2 -T 20 -O "$output" "$url" ;;
+		curl) curl -L -k --retry 2 --connect-timeout 20 -o "$output" "$url" 2>"$errfile"; rc=$? ;;
+		wget|wget-ssl) "$DOWNLOADER" --no-check-certificate -t 2 -T 20 -O "$output" "$url" 2>"$errfile"; rc=$? ;;
 		*) return 1 ;;
 	esac
+	if [ -s "$errfile" ]; then
+		errtext=$(cat "$errfile" 2>/dev/null)
+		printf '%s\n' "$errtext" >&2
+		[ "$rc" -ne 0 ] && classify_download_error "$errtext"
+	fi
+	rm -f "$errfile"
+	return "${rc:-1}"
 }
 
 download_stdout() {
@@ -206,6 +227,23 @@ wait_core_running() {
 	return 1
 }
 
+wait_core_stopped() {
+	local binpath="$1" retry pid
+	[ -n "$binpath" ] || return 0
+	for retry in 1 2 3 4 5 6 7 8 9 10; do
+		pgrep -f "$binpath" >/dev/null 2>&1 || return 0
+		sleep 1
+	done
+	pgrep -f "$binpath" 2>/dev/null | while read -r pid; do
+		[ -n "$pid" ] && kill "$pid" 2>/dev/null || true
+	done
+	for retry in 1 2 3 4 5; do
+		pgrep -f "$binpath" >/dev/null 2>&1 || return 0
+		sleep 1
+	done
+	return 1
+}
+
 port_is_listening() {
 	local port="$1"
 	[ -z "$port" ] && return 1
@@ -222,6 +260,7 @@ port_is_listening() {
 
 run_update() {
 	local force="$1" raw_binpath raw_configpath raw_workdir binpath configpath workdir upxflag channel arch latest_ver now_ver url archive downloadbin success basename enabled backupbin
+	DOWNLOAD_ERROR_HINT=''
 	raw_binpath=$(get_uci binpath "$DEFAULT_BINPATH")
 	binpath=$(resolve_binpath "$raw_binpath")
 	raw_configpath=$(get_uci configpath "$DEFAULT_CONFIGPATH")
@@ -261,7 +300,11 @@ run_update() {
 		echo 'Download failed, trying next source.'
 	done < /tmp/run/AdHlinks.txt
 	rm -f /tmp/run/AdHlinks.txt
-	[ "$success" = 1 ] || { echo 'No download source succeeded.'; exit_update 1; }
+	[ "$success" = 1 ] || {
+		echo 'No download source succeeded.'
+		[ -n "$DOWNLOAD_ERROR_HINT" ] && echo "$DOWNLOAD_ERROR_HINT"
+		exit_update 1
+	}
 	case "$archive" in
 		*.tar.gz|*.tgz)
 			tar -zxf "$archive" -C "$WORK_DIR" >/dev/null 2>&1 || { echo 'Failed to extract archive.'; exit_update 1; }
@@ -279,6 +322,7 @@ run_update() {
 		cp -fp "$binpath" "$backupbin" || { echo 'Failed to back up current binary.'; exit_update 1; }
 	fi
 	/etc/init.d/AdGuardHome stop nobackup >/dev/null 2>&1 || true
+	wait_core_stopped "$binpath" || { echo 'Timed out while stopping the current AdGuard Home process.'; exit_update 1; }
 	mv -f "$downloadbin" "$binpath" || { echo 'Failed to install binary.'; exit_update 1; }
 	chmod 0755 "$binpath"
 	prepare_runtime_layout "$binpath" "$configpath" "$workdir" || { echo 'Failed to prepare runtime directories.'; exit_update 1; }
