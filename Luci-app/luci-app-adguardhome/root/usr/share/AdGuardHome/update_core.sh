@@ -112,13 +112,13 @@ download_to() {
 	errfile="$WORK_DIR/download.stderr"
 	rm -f "$errfile"
 	case "$DOWNLOADER" in
-		curl) curl -L -k -sS --retry 2 --connect-timeout 20 -o "$output" "$url" 2>"$errfile"; rc=$? ;;
+		curl) curl -L -k --retry 2 --connect-timeout 20 -o "$output" "$url" 2>"$errfile"; rc=$? ;;
 		wget|wget-ssl) "$DOWNLOADER" --no-check-certificate -t 2 -T 20 -O "$output" "$url" 2>"$errfile"; rc=$? ;;
 		*) return 1 ;;
 	esac
 	if [ -s "$errfile" ]; then
 		classify_download_error "$(head -1 "$errfile" 2>/dev/null)"
-		cat "$errfile" >&2
+		< "$errfile" tr '\r' '\n' | grep -v '^[[:space:]]*$' | awk 'NR<=2{print;next} {last=$0} END{if(last!="") print last}' >&2
 	fi
 	rm -f "$errfile"
 	return "${rc:-1}"
@@ -355,6 +355,7 @@ run_update() {
 		fi
 	fi
 	rm -rf "$WORK_DIR"
+	echo ''
 	echo 'Succeeded in updating core.'
 	exit_update 0
 }
