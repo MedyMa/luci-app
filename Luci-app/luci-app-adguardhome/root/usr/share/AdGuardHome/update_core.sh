@@ -108,18 +108,17 @@ classify_download_error() {
 }
 
 download_to() {
-	local output="$1" url="$2" errfile rc errtext
+	local output="$1" url="$2" errfile rc
 	errfile="$WORK_DIR/download.stderr"
 	rm -f "$errfile"
 	case "$DOWNLOADER" in
-		curl) curl -L -k --retry 2 --connect-timeout 20 -o "$output" "$url" 2>"$errfile"; rc=$? ;;
+		curl) curl -L -k -sS --retry 2 --connect-timeout 20 -o "$output" "$url" 2>"$errfile"; rc=$? ;;
 		wget|wget-ssl) "$DOWNLOADER" --no-check-certificate -t 2 -T 20 -O "$output" "$url" 2>"$errfile"; rc=$? ;;
 		*) return 1 ;;
 	esac
 	if [ -s "$errfile" ]; then
-		errtext=$(cat "$errfile" 2>/dev/null)
-		printf '%s\n' "$errtext" >&2
-		[ "$rc" -ne 0 ] && classify_download_error "$errtext"
+		classify_download_error "$(head -1 "$errfile" 2>/dev/null)"
+		cat "$errfile" >&2
 	fi
 	rm -f "$errfile"
 	return "${rc:-1}"
@@ -296,7 +295,8 @@ run_update() {
 		echo "Already latest: $now_ver"
 		exit_update 0
 	fi
-	echo "Local version: ${now_ver:-missing}. Cloud version: $latest_ver."
+	echo "Local version: ${now_ver:-missing}."
+	echo "Cloud version: $latest_ver."
 	success=0
 	prepare_links "$latest_ver" "$arch" > /tmp/run/AdHlinks.txt
 	while IFS= read -r url; do
@@ -305,11 +305,9 @@ run_update() {
 		archive="$WORK_DIR/$basename"
 		echo "Downloading $url"
 		if download_to "$archive" "$url"; then
-			echo ''
 			success=1
 			break
 		fi
-		echo ''
 		rm -f "$archive"
 		echo 'Download failed, trying next source.'
 	done < /tmp/run/AdHlinks.txt
