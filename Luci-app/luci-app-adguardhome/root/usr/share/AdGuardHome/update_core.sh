@@ -130,47 +130,107 @@ classify_download_error() {
 	esac
 }
 
-print_download_progress_chunk() {
-	local chunk="$1" full_log="$2" first_poll="$3" progress_text
-	[ -s "$chunk" ] || return 0
-	if [ "$first_poll" = '1' ]; then
-		progress_text=$(< "$chunk" tee -a "$full_log" | tr '\r' '\n' | grep -v '^[[:space:]]*$' | awk 'NR<=2{print;next} {last=$0} END{if(last!="") print last}')
+format_bytes() {
+	local bytes="$1"
+	awk -v bytes="${bytes:-0}" '
+	BEGIN {
+		split("B KiB MiB GiB TiB", unit, " ")
+		value = bytes + 0
+		index = 1
+		while (value >= 1024 && index < 5) {
+			value /= 1024
+			index++
+		}
+		if (index == 1) {
+			printf "%d %s\n", value, unit[index]
+		} else {
+			printf "%.1f %s\n", value, unit[index]
+		}
+	}'
+}
+
+get_remote_size() {
+	local url="$1" size
+	case "$DOWNLOADER" in
+		curl)
+			size=$(curl -L -k --retry 2 --connect-timeout 20 --silent --show-error -I "$url" 2>/dev/null | awk 'tolower($1) == "content-length:" {gsub("\r","",$2); print $2}' | tail -1)
+			;;
+		wget|wget-ssl)
+			size=$("$DOWNLOADER" --server-response --spider --no-check-certificate -t 1 -T 20 "$url" 2>&1 | awk 'tolower($1) == "content-length:" {gsub("\r","",$2); print $2}' | tail -1)
+			;;
+		*) size='' ;;
+	esac
+	case "$size" in
+		''|*[!0-9]*) return 1 ;;
+	esac
+	printf '%s\n' "$size"
+}
+
+print_download_progress() {
+	local output="$1" total_size="$2" size percent human_size human_total
+	[ -f "$output" ] || return 0
+	size=$(wc -c < "$output" 2>/dev/null)
+	case "$size" in
+		''|*[!0-9]*) return 0 ;;
+	esac
+	human_size=$(format_bytes "$size")
+	if [ -n "$total_size" ] && [ "$total_size" -gt 0 ] 2>/dev/null; then
+		if [ "$size" -gt "$total_size" ]; then
+			size="$total_size"
+			human_size=$(format_bytes "$size")
+		fi
+		percent=$((size * 100 / total_size))
+		human_total=$(format_bytes "$total_size")
+		printf 'Download progress: %s%% (%s / %s)\n' "$percent" "$human_size" "$human_total" >&2
 	else
-		progress_text=$(< "$chunk" tee -a "$full_log" | tr '\r' '\n' | grep -v '^[[:space:]]*$' | tail -1)
+		printf 'Download progress: %s\n' "$human_size" >&2
 	fi
-	[ -n "$progress_text" ] && printf '%s\n' "$progress_text" >&2
 }
 
 download_to() {
-	local output="$1" url="$2" errfile errfull rc download_pid first_poll
+	local output="$1" url="$2" errfile errfull rc download_pid last_size total_size current_size
 	errfile="$WORK_DIR/download.stderr"
 	errfull="$WORK_DIR/download.stderr.all"
 	rm -f "$errfile" "$errfull"
+	total_size=$(get_remote_size "$url" 2>/dev/null || true)
 	case "$DOWNLOADER" in
 		curl)
-			curl -L -k --retry 2 --connect-timeout 20 -o "$output" "$url" 2>"$errfile" &
+			curl -L -k --retry 2 --connect-timeout 20 --silent --show-error -o "$output" "$url" 2>"$errfile" &
 			download_pid=$!
 			;;
 		wget|wget-ssl)
-			"$DOWNLOADER" --no-check-certificate -t 2 -T 20 -O "$output" "$url" 2>"$errfile" &
+			"$DOWNLOADER" --no-check-certificate -t 2 -T 20 -nv -O "$output" "$url" 2>"$errfile" &
 			download_pid=$!
 			;;
 		*) return 1 ;;
 	esac
-	# Poll errfile in real-time: first poll shows header, subsequent polls show last line only
-	first_poll=1
+	last_size='-1'
 	while kill -0 "$download_pid" 2>/dev/null; do
 		if [ -s "$errfile" ]; then
-			print_download_progress_chunk "$errfile" "$errfull" "$first_poll"
-			first_poll=0
+			cat "$errfile" >> "$errfull"
 			: > "$errfile"
+		fi
+		current_size=$(wc -c < "$output" 2>/dev/null)
+		case "$current_size" in
+			''|*[!0-9]*) current_size='' ;;
+		esac
+		if [ -n "$current_size" ] && [ "$current_size" != "$last_size" ]; then
+			print_download_progress "$output" "$total_size"
+			last_size="$current_size"
 		fi
 		sleep 1
 	done
 	wait "$download_pid"; rc=$?
-	# Flush any remaining content
 	if [ -s "$errfile" ]; then
-		print_download_progress_chunk "$errfile" "$errfull" "$first_poll"
+		cat "$errfile" >> "$errfull"
+		: > "$errfile"
+	fi
+	current_size=$(wc -c < "$output" 2>/dev/null)
+	case "$current_size" in
+		''|*[!0-9]*) current_size='' ;;
+	esac
+	if [ -n "$current_size" ] && [ "$current_size" != "$last_size" ]; then
+		print_download_progress "$output" "$total_size"
 	fi
 	if [ -s "$errfull" ] || [ -s "$errfile" ]; then
 		classify_download_error "$({
