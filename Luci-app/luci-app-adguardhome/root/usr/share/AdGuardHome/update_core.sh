@@ -131,13 +131,14 @@ classify_download_error() {
 }
 
 print_download_progress_chunk() {
-	local chunk="$1" full_log="$2" first_poll="$3"
+	local chunk="$1" full_log="$2" first_poll="$3" progress_text
 	[ -s "$chunk" ] || return 0
 	if [ "$first_poll" = '1' ]; then
-		< "$chunk" tee -a "$full_log" | tr '\r' '\n' | grep -v '^[[:space:]]*$' | awk 'NR<=2{print;next} {last=$0} END{if(last!="") print last}' >&2
+		progress_text=$(< "$chunk" tee -a "$full_log" | tr '\r' '\n' | grep -v '^[[:space:]]*$' | awk 'NR<=2{print;next} {last=$0} END{if(last!="") print last}')
 	else
-		< "$chunk" tee -a "$full_log" | tr '\r' '\n' | grep -v '^[[:space:]]*$' | tail -1 >&2
+		progress_text=$(< "$chunk" tee -a "$full_log" | tr '\r' '\n' | grep -v '^[[:space:]]*$' | tail -1)
 	fi
+	[ -n "$progress_text" ] && printf '%s\n' "$progress_text" >&2
 }
 
 download_to() {
