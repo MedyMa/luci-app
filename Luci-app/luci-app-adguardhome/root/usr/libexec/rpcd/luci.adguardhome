@@ -424,7 +424,7 @@ start_update() {
 		json_init; json_add_boolean ok 0; json_add_string message 'An update task is already running.'; json_dump
 		return 0
 	fi
-	: >> "$UPDATE_LOG"
+	: > "$UPDATE_LOG"
 	sh "$UPDATE_SCRIPT" $arg >> "$UPDATE_LOG" 2>&1 &
 	json_init; json_add_boolean ok 1; json_add_string message 'Update task submitted.'; json_dump
 }

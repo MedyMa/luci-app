@@ -19,8 +19,42 @@ exit_update() {
 	exit "${1:-0}"
 }
 
+log_timestamp() {
+	date '+%Y-%m-%d %H:%M:%S' 2>/dev/null || printf '%s' '0000-00-00 00:00:00'
+}
+
+log_msg() {
+	local level="$1"
+	shift
+	if [ "$#" -eq 0 ] || [ -z "$*" ]; then
+		printf '\n'
+		return 0
+	fi
+	printf '[%s] [%s] %s\n' "$(log_timestamp)" "$level" "$*"
+}
+
 log_line() {
-	printf '%s\r\n' "$*"
+	log_msg INFO "$@"
+}
+
+log_info() {
+	log_msg INFO "$@"
+}
+
+log_warn() {
+	log_msg WARN "$@"
+}
+
+log_error() {
+	log_msg ERROR "$@"
+}
+
+log_success() {
+	log_msg OK "$@"
+}
+
+log_section() {
+	log_msg INFO "========== $* =========="
 }
 
 get_uci() {
@@ -118,7 +152,7 @@ setup_downloader() {
 		DOWNLOADER='wget-ssl'
 		return 0
 	fi
-	log_line 'curl or wget is required.'
+	log_error 'curl or wget is required.'
 	return 1
 }
 
@@ -218,7 +252,7 @@ get_remote_size() {
 
 print_download_progress() {
 	local output="$1" total_size="$2" size percent human_size human_total bar
-	size=$(get_file_size "$output") || return 0
+	size=$(get_file_size "$output" 2>/dev/null || printf '%s\n' 0)
 	human_size=$(format_bytes "$size")
 	if [ -n "$total_size" ] && [ "$total_size" -gt 0 ] 2>/dev/null; then
 		if [ "$size" -gt "$total_size" ]; then
@@ -229,31 +263,39 @@ print_download_progress() {
 		[ "$percent" -gt 100 ] 2>/dev/null && percent=100
 		human_total=$(format_bytes "$total_size")
 		bar=$(make_progress_bar "$percent" 24)
-		log_line "Download progress: $bar $percent% ($human_size / $human_total)"
+		log_info "Download progress: $bar $percent% ($human_size / $human_total)"
 	else
 		bar=$(make_progress_bar 0 24)
-		log_line "Download progress: $bar -- ($human_size)"
+		log_info "Download progress: $bar -- ($human_size downloaded)"
 	fi
 }
 
 download_to() {
-	local output="$1" url="$2" errfile errfull rc download_pid last_size total_size current_size
+	local output="$1" url="$2" errfile errfull rc download_pid last_size total_size current_size final_size
 	errfile="$WORK_DIR/download.stderr"
 	errfull="$WORK_DIR/download.stderr.all"
 	rm -f "$errfile" "$errfull"
 	total_size=$(get_remote_size "$url" 2>/dev/null || true)
+	if [ -n "$total_size" ] && [ "$total_size" -gt 0 ] 2>/dev/null; then
+		log_info "Remote size: $(format_bytes "$total_size")."
+	else
+		log_warn 'Remote size is unavailable; progress will show downloaded bytes only.'
+	fi
 	case "$DOWNLOADER" in
 		curl)
+			log_info 'Downloader: curl.'
 			curl -L -k --retry 2 --connect-timeout 20 --silent --show-error -o "$output" "$url" 2>"$errfile" &
 			download_pid=$!
 			;;
 		wget|wget-ssl)
+			log_info "Downloader: $DOWNLOADER."
 			"$DOWNLOADER" --no-check-certificate -t 2 -T 20 -nv -O "$output" "$url" 2>"$errfile" &
 			download_pid=$!
 			;;
 		*) return 1 ;;
 	esac
 	last_size='-1'
+	print_download_progress "$output" "$total_size"
 	while kill -0 "$download_pid" 2>/dev/null; do
 		if [ -s "$errfile" ]; then
 			cat "$errfile" >> "$errfull"
@@ -279,6 +321,17 @@ download_to() {
 		classify_download_error "$({
 			cat "$errfull" "$errfile" 2>/dev/null
 		} | grep -E '(Could not resolve host|bad address|Failed to connect|Connection refused|Network is unreachable|Operation timed out|Connection timed out)' | head -1)"
+	fi
+	final_size=$(get_file_size "$output" 2>/dev/null || true)
+	if [ "${rc:-1}" = 0 ] && [ -n "$final_size" ]; then
+		log_success "Download completed: $(format_bytes "$final_size")."
+	else
+		log_error "Download command failed with exit code ${rc:-1}."
+		if [ -s "$errfull" ]; then
+			while IFS= read -r line; do
+				[ -n "$line" ] && log_warn "Downloader output: $line"
+			done < "$errfull"
+		fi
 	fi
 	rm -f "$errfile" "$errfull"
 	return "${rc:-1}"
@@ -349,9 +402,10 @@ apply_upx() {
 	local binary="$1" flag="$2"
 	[ -n "$flag" ] || return 0
 	if ! command -v upx >/dev/null 2>&1; then
-		echo 'UPX flag set, but upx is not installed. Skipping compression.'
+		log_warn 'UPX flag set, but upx is not installed. Skipping compression.'
 		return 0
 	fi
+	log_info "Running UPX compression with flag: $flag."
 	upx "$flag" "$binary" 2>&1 || true
 }
 
@@ -388,7 +442,7 @@ wait_core_running() {
 
 _restore_backup_and_exit() {
 	if [ -x "$backupbin" ]; then
-		echo "Restoring previous core."
+		log_warn 'Restoring previous core.'
 		cp -fp "$backupbin" "$binpath" >/dev/null 2>&1 || true
 		chmod 0755 "$binpath" >/dev/null 2>&1 || true
 		if [ "$enabled" = '1' ]; then
@@ -432,6 +486,12 @@ port_is_listening() {
 run_update() {
 	local force="$1" raw_binpath raw_configpath raw_workdir binpath configpath workdir upxflag channel arch latest_ver now_ver url archive downloadbin success basename enabled backupbin
 	DOWNLOAD_ERROR_HINT=''
+	log_section 'AdGuard Home core update started'
+	if [ "$force" = 'force' ]; then
+		log_info 'Update mode: forced core reinstall.'
+	else
+		log_info 'Update mode: normal core update.'
+	fi
 	raw_binpath=$(get_uci binpath "$DEFAULT_BINPATH")
 	binpath=$(resolve_binpath "$raw_binpath")
 	raw_configpath=$(get_uci configpath "$DEFAULT_CONFIGPATH")
@@ -443,82 +503,102 @@ run_update() {
 	enabled=$(get_uci enabled '0')
 	arch=$(normalize_arch "$(get_uci downloadarch "$(get_uci arch auto)")") || exit_update 1
 	sync_runtime_paths "$raw_binpath" "$binpath" "$raw_configpath" "$configpath" "$raw_workdir" "$workdir"
-	mkdir -p "${binpath%/*}" "$WORK_DIR" /tmp/run || { echo 'Failed to prepare binary directory.'; exit_update 1; }
-	prepare_runtime_layout "$binpath" "$configpath" "$workdir" || { echo 'Failed to prepare runtime directories.'; exit_update 1; }
+	log_info "Binary path: $binpath"
+	log_info "Config path: $configpath"
+	log_info "Work directory: $workdir"
+	log_info "Release channel: $channel"
+	log_info "Download architecture: $arch"
+	mkdir -p "${binpath%/*}" "$WORK_DIR" /tmp/run || { log_error 'Failed to prepare binary directory.'; exit_update 1; }
+	prepare_runtime_layout "$binpath" "$configpath" "$workdir" || { log_error 'Failed to prepare runtime directories.'; exit_update 1; }
 	rm -rf "$WORK_DIR"/*
 	setup_downloader || exit_update 1
-	log_line 'Checking latest version...'
+	log_info "Selected downloader: $DOWNLOADER"
+	log_section 'Version check'
+	log_info 'Checking latest version...'
 	latest_ver=$(latest_version "$channel")
-	[ -n "$latest_ver" ] || { log_line 'Failed to check latest version.'; exit_update 1; }
+	[ -n "$latest_ver" ] || { log_error 'Failed to check latest version.'; exit_update 1; }
 	now_ver=$(current_version "$binpath")
 	if [ "$force" != 'force' ] && [ -n "$now_ver" ] && [ "$now_ver" = "$latest_ver" ]; then
-		log_line ''
-		log_line "Already latest: $now_ver"
+		log_success "Already latest: $now_ver"
 		exit_update 0
 	fi
-	log_line ''
-	log_line "Local version: ${now_ver:-missing}."
-	log_line "Cloud version: $latest_ver."
+	log_info "Local version: ${now_ver:-missing}."
+	log_info "Cloud version: $latest_ver."
+	[ "$force" = 'force' ] && log_warn 'Force update requested; the latest core will be downloaded and reinstalled.'
 	success=0
 	prepare_links "$latest_ver" "$arch" > /tmp/run/AdHlinks.txt
+	log_section 'Download'
 	while IFS= read -r url; do
 		[ -n "$url" ] || continue
 		basename=${url##*/}
 		archive="$WORK_DIR/$basename"
-		log_line "Downloading $url"
+		log_info "Download source: $url"
 		if download_to "$archive" "$url"; then
 			success=1
 			break
 		fi
 		rm -f "$archive"
-		log_line 'Download failed, trying next source.'
+		log_warn 'Download failed, trying next source.'
 	done < /tmp/run/AdHlinks.txt
 	rm -f /tmp/run/AdHlinks.txt
 	[ "$success" = 1 ] || {
-		log_line 'No download source succeeded.'
-		[ -n "$DOWNLOAD_ERROR_HINT" ] && log_line "$DOWNLOAD_ERROR_HINT"
+		log_error 'No download source succeeded.'
+		[ -n "$DOWNLOAD_ERROR_HINT" ] && log_error "$DOWNLOAD_ERROR_HINT"
 		exit_update 1
 	}
+	log_section 'Install'
 	case "$archive" in
 		*.tar.gz|*.tgz)
-			tar -zxf "$archive" -C "$WORK_DIR" >/dev/null 2>&1 || { log_line 'Failed to extract archive.'; exit_update 1; }
+			log_info "Extracting archive: $basename"
+			tar -zxf "$archive" -C "$WORK_DIR" >/dev/null 2>&1 || { log_error 'Failed to extract archive.'; exit_update 1; }
 			downloadbin="$WORK_DIR/AdGuardHome/AdGuardHome"
 			;;
-		*) downloadbin="$archive" ;;
+		*)
+			log_info 'Downloaded file is treated as executable binary.'
+			downloadbin="$archive"
+			;;
 	esac
-	[ -f "$downloadbin" ] || { log_line 'AdGuardHome binary missing from downloaded package.'; exit_update 1; }
+	[ -f "$downloadbin" ] || { log_error 'AdGuardHome binary missing from downloaded package.'; exit_update 1; }
 	chmod 0755 "$downloadbin"
 	apply_upx "$downloadbin" "$upxflag"
-	validate_binary "$downloadbin" || { log_line 'Downloaded AdGuardHome binary failed validation.'; exit_update 1; }
+	log_info 'Validating downloaded core binary.'
+	validate_binary "$downloadbin" || { log_error 'Downloaded AdGuardHome binary failed validation.'; exit_update 1; }
 	backupbin="$WORK_DIR/AdGuardHome.backup"
 	rm -f "$backupbin"
 	if [ -e "$binpath" ]; then
-		cp -fp "$binpath" "$backupbin" || { log_line 'Failed to back up current binary.'; exit_update 1; }
+		log_info 'Backing up current core binary.'
+		cp -fp "$binpath" "$backupbin" || { log_error 'Failed to back up current binary.'; exit_update 1; }
 	fi
+	log_info 'Stopping AdGuard Home service before replacing the core.'
 	/etc/init.d/AdGuardHome stop nobackup >/dev/null 2>&1 || true
 	wait_core_stopped "$binpath" || {
-		log_line 'Timed out while stopping the current AdGuard Home process.'
+		log_error 'Timed out while stopping the current AdGuard Home process.'
 		_restore_backup_and_exit
 	}
+	log_info 'Installing new core binary.'
 	mv -f "$downloadbin" "$binpath" || {
-		log_line 'Failed to install binary.'
+		log_error 'Failed to install binary.'
 		_restore_backup_and_exit
 	}
 	chmod 0755 "$binpath"
 	prepare_runtime_layout "$binpath" "$configpath" "$workdir" || {
-		log_line 'Failed to prepare runtime directories.'
+		log_error 'Failed to prepare runtime directories.'
 		_restore_backup_and_exit
 	}
 	if [ "$enabled" = '1' ]; then
+		log_info 'Starting AdGuard Home service after core replacement.'
 		AGH_SKIP_UPDATE=1 /etc/init.d/AdGuardHome start >/dev/null 2>&1 || true
 		if ! wait_core_running "$binpath" "$configpath"; then
-			log_line 'Core updated, but failed to start service.'
+			log_error 'Core updated, but failed to start service.'
 			_restore_backup_and_exit
 		fi
+		log_success 'AdGuard Home service is running.'
+	else
+		log_info 'Service is disabled in UCI; core was installed without starting the service.'
 	fi
 	rm -rf "$WORK_DIR"
-	log_line ''
-	log_line 'Succeeded in updating core.'
+	log_section 'Finished'
+	log_success 'Succeeded in updating core.'
 	exit_update 0
 }
 
