@@ -131,32 +131,78 @@ classify_download_error() {
 }
 
 format_bytes() {
-	local bytes="$1"
-	awk -v bytes="${bytes:-0}" '
-	BEGIN {
-		split("B KiB MiB GiB TiB", unit, " ")
-		value = bytes + 0
-		index = 1
-		while (value >= 1024 && index < 5) {
-			value /= 1024
-			index++
-		}
-		if (index == 1) {
-			printf "%d %s\n", value, unit[index]
-		} else {
-			printf "%.1f %s\n", value, unit[index]
-		}
-	}'
+	local bytes scaled whole frac unit
+	bytes="${1:-0}"
+	case "$bytes" in
+		''|*[!0-9]*) bytes=0 ;;
+	esac
+	if [ "$bytes" -lt 1024 ] 2>/dev/null; then
+		printf '%s B\n' "$bytes"
+		return 0
+	fi
+	scaled=$((bytes * 10 / 1024))
+	unit='KiB'
+	if [ "$scaled" -ge 10240 ] 2>/dev/null; then
+		scaled=$((scaled * 10 / 1024))
+		unit='MiB'
+	fi
+	if [ "$scaled" -ge 10240 ] 2>/dev/null; then
+		scaled=$((scaled * 10 / 1024))
+		unit='GiB'
+	fi
+	if [ "$scaled" -ge 10240 ] 2>/dev/null; then
+		scaled=$((scaled * 10 / 1024))
+		unit='TiB'
+	fi
+	whole=$((scaled / 10))
+	frac=$((scaled % 10))
+	printf '%s.%s %s\n' "$whole" "$frac" "$unit"
+}
+
+get_file_size() {
+	local file="$1"
+	[ -e "$file" ] || return 1
+	set -- $(wc -c "$file" 2>/dev/null)
+	case "$1" in
+		''|*[!0-9]*) return 1 ;;
+	esac
+	printf '%s\n' "$1"
+}
+
+make_progress_bar() {
+	local percent="$1" width="$2" filled empty bar i
+	case "$percent" in
+		''|*[!0-9]*) percent=0 ;;
+	esac
+	case "$width" in
+		''|*[!0-9]*) width=20 ;;
+	esac
+	[ "$percent" -gt 100 ] 2>/dev/null && percent=100
+	[ "$percent" -lt 0 ] 2>/dev/null && percent=0
+	filled=$((percent * width / 100))
+	empty=$((width - filled))
+	bar=''
+	i=0
+	while [ "$i" -lt "$filled" ]; do
+		bar="${bar}#"
+		i=$((i + 1))
+	done
+	i=0
+	while [ "$i" -lt "$empty" ]; do
+		bar="${bar}-"
+		i=$((i + 1))
+	done
+	printf '[%s]\n' "$bar"
 }
 
 get_remote_size() {
 	local url="$1" size
 	case "$DOWNLOADER" in
 		curl)
-			size=$(curl -L -k --retry 2 --connect-timeout 20 --silent --show-error -I "$url" 2>/dev/null | awk 'tolower($1) == "content-length:" {gsub("\r","",$2); print $2}' | tail -1)
+			size=$(curl -L -k --retry 2 --connect-timeout 20 --silent --show-error -I "$url" 2>/dev/null | tr -d '\r' | grep -i '^Content-Length:' | tail -1 | sed 's/^[^:]*:[[:space:]]*//')
 			;;
 		wget|wget-ssl)
-			size=$("$DOWNLOADER" --server-response --spider --no-check-certificate -t 1 -T 20 "$url" 2>&1 | awk 'tolower($1) == "content-length:" {gsub("\r","",$2); print $2}' | tail -1)
+			size=$("$DOWNLOADER" --server-response --spider --no-check-certificate -t 1 -T 20 "$url" 2>&1 | tr -d '\r' | grep -i '^[[:space:]]*Content-Length:' | tail -1 | sed 's/^[^:]*:[[:space:]]*//')
 			;;
 		*) size='' ;;
 	esac
@@ -167,12 +213,8 @@ get_remote_size() {
 }
 
 print_download_progress() {
-	local output="$1" total_size="$2" size percent human_size human_total
-	[ -f "$output" ] || return 0
-	size=$(wc -c < "$output" 2>/dev/null)
-	case "$size" in
-		''|*[!0-9]*) return 0 ;;
-	esac
+	local output="$1" total_size="$2" size percent human_size human_total bar
+	size=$(get_file_size "$output") || return 0
 	human_size=$(format_bytes "$size")
 	if [ -n "$total_size" ] && [ "$total_size" -gt 0 ] 2>/dev/null; then
 		if [ "$size" -gt "$total_size" ]; then
@@ -180,10 +222,13 @@ print_download_progress() {
 			human_size=$(format_bytes "$size")
 		fi
 		percent=$((size * 100 / total_size))
+		[ "$percent" -gt 100 ] 2>/dev/null && percent=100
 		human_total=$(format_bytes "$total_size")
-		printf 'Download progress: %s%% (%s / %s)\n' "$percent" "$human_size" "$human_total" >&2
+		bar=$(make_progress_bar "$percent" 24)
+		printf 'Download progress: %s %s%% (%s / %s)\n' "$bar" "$percent" "$human_size" "$human_total"
 	else
-		printf 'Download progress: %s\n' "$human_size" >&2
+		bar=$(make_progress_bar 0 24)
+		printf 'Download progress: %s -- (%s)\n' "$bar" "$human_size"
 	fi
 }
 
@@ -210,10 +255,7 @@ download_to() {
 			cat "$errfile" >> "$errfull"
 			: > "$errfile"
 		fi
-		current_size=$(wc -c < "$output" 2>/dev/null)
-		case "$current_size" in
-			''|*[!0-9]*) current_size='' ;;
-		esac
+		current_size=$(get_file_size "$output" 2>/dev/null || true)
 		if [ -n "$current_size" ] && [ "$current_size" != "$last_size" ]; then
 			print_download_progress "$output" "$total_size"
 			last_size="$current_size"
@@ -225,10 +267,7 @@ download_to() {
 		cat "$errfile" >> "$errfull"
 		: > "$errfile"
 	fi
-	current_size=$(wc -c < "$output" 2>/dev/null)
-	case "$current_size" in
-		''|*[!0-9]*) current_size='' ;;
-	esac
+	current_size=$(get_file_size "$output" 2>/dev/null || true)
 	if [ -n "$current_size" ] && [ "$current_size" != "$last_size" ]; then
 		print_download_progress "$output" "$total_size"
 	fi
