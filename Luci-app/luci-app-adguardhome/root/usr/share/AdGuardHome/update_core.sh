@@ -130,8 +130,18 @@ classify_download_error() {
 	esac
 }
 
+print_download_progress_chunk() {
+	local chunk="$1" full_log="$2" first_poll="$3"
+	[ -s "$chunk" ] || return 0
+	if [ "$first_poll" = '1' ]; then
+		< "$chunk" tee -a "$full_log" | tr '\r' '\n' | grep -v '^[[:space:]]*$' | awk 'NR<=2{print;next} {last=$0} END{if(last!="") print last}' >&2
+	else
+		< "$chunk" tee -a "$full_log" | tr '\r' '\n' | grep -v '^[[:space:]]*$' | tail -1 >&2
+	fi
+}
+
 download_to() {
-	local output="$1" url="$2" errfile errfull rc download_pid
+	local output="$1" url="$2" errfile errfull rc download_pid first_poll
 	errfile="$WORK_DIR/download.stderr"
 	errfull="$WORK_DIR/download.stderr.all"
 	rm -f "$errfile" "$errfull"
@@ -146,10 +156,12 @@ download_to() {
 			;;
 		*) return 1 ;;
 	esac
-	# Poll errfile in real-time so log viewer sees progress line by line
+	# Poll errfile in real-time: first poll shows header, subsequent polls show last line only
+	first_poll=1
 	while kill -0 "$download_pid" 2>/dev/null; do
 		if [ -s "$errfile" ]; then
-			< "$errfile" tee -a "$errfull" | tr '\r' '\n' | grep -v '^[[:space:]]*$' >&2
+			print_download_progress_chunk "$errfile" "$errfull" "$first_poll"
+			first_poll=0
 			: > "$errfile"
 		fi
 		sleep 1
@@ -157,7 +169,7 @@ download_to() {
 	wait "$download_pid"; rc=$?
 	# Flush any remaining content
 	if [ -s "$errfile" ]; then
-		< "$errfile" tee -a "$errfull" | tr '\r' '\n' | grep -v '^[[:space:]]*$' >&2
+		print_download_progress_chunk "$errfile" "$errfull" "$first_poll"
 	fi
 	if [ -s "$errfull" ] || [ -s "$errfile" ]; then
 		classify_download_error "$({
@@ -336,9 +348,11 @@ run_update() {
 	[ -n "$latest_ver" ] || { echo 'Failed to check latest version.'; exit_update 1; }
 	now_ver=$(current_version "$binpath")
 	if [ "$force" != 'force' ] && [ -n "$now_ver" ] && [ "$now_ver" = "$latest_ver" ]; then
+		echo ''
 		echo "Already latest: $now_ver"
 		exit_update 0
 	fi
+	echo ''
 	echo "Local version: ${now_ver:-missing}."
 	echo "Cloud version: $latest_ver."
 	success=0
