@@ -19,6 +19,10 @@ exit_update() {
 	exit "${1:-0}"
 }
 
+log_line() {
+	printf '%s\r\n' "$*"
+}
+
 get_uci() {
 	local option="$1" fallback="$2" value
 	value=$(uci -q get "$CONFIGURATION.$CONFIGURATION.$option" 2>/dev/null)
@@ -114,7 +118,7 @@ setup_downloader() {
 		DOWNLOADER='wget-ssl'
 		return 0
 	fi
-	echo 'curl or wget is required.'
+	log_line 'curl or wget is required.'
 	return 1
 }
 
@@ -137,7 +141,7 @@ format_bytes() {
 		''|*[!0-9]*) bytes=0 ;;
 	esac
 	if [ "$bytes" -lt 1024 ] 2>/dev/null; then
-		printf '%s B\n' "$bytes"
+		printf '%s B' "$bytes"
 		return 0
 	fi
 	scaled=$((bytes * 10 / 1024))
@@ -156,7 +160,7 @@ format_bytes() {
 	fi
 	whole=$((scaled / 10))
 	frac=$((scaled % 10))
-	printf '%s.%s %s\n' "$whole" "$frac" "$unit"
+	printf '%s.%s %s' "$whole" "$frac" "$unit"
 }
 
 get_file_size() {
@@ -192,7 +196,7 @@ make_progress_bar() {
 		bar="${bar}-"
 		i=$((i + 1))
 	done
-	printf '[%s]\n' "$bar"
+	printf '[%s]' "$bar"
 }
 
 get_remote_size() {
@@ -225,10 +229,10 @@ print_download_progress() {
 		[ "$percent" -gt 100 ] 2>/dev/null && percent=100
 		human_total=$(format_bytes "$total_size")
 		bar=$(make_progress_bar "$percent" 24)
-		printf 'Download progress: %s %s%% (%s / %s)\n' "$bar" "$percent" "$human_size" "$human_total"
+		log_line "Download progress: $bar $percent% ($human_size / $human_total)"
 	else
 		bar=$(make_progress_bar 0 24)
-		printf 'Download progress: %s -- (%s)\n' "$bar" "$human_size"
+		log_line "Download progress: $bar -- ($human_size)"
 	fi
 }
 
@@ -443,78 +447,78 @@ run_update() {
 	prepare_runtime_layout "$binpath" "$configpath" "$workdir" || { echo 'Failed to prepare runtime directories.'; exit_update 1; }
 	rm -rf "$WORK_DIR"/*
 	setup_downloader || exit_update 1
-	echo 'Checking latest version...'
+	log_line 'Checking latest version...'
 	latest_ver=$(latest_version "$channel")
-	[ -n "$latest_ver" ] || { echo 'Failed to check latest version.'; exit_update 1; }
+	[ -n "$latest_ver" ] || { log_line 'Failed to check latest version.'; exit_update 1; }
 	now_ver=$(current_version "$binpath")
 	if [ "$force" != 'force' ] && [ -n "$now_ver" ] && [ "$now_ver" = "$latest_ver" ]; then
-		echo ''
-		echo "Already latest: $now_ver"
+		log_line ''
+		log_line "Already latest: $now_ver"
 		exit_update 0
 	fi
-	echo ''
-	echo "Local version: ${now_ver:-missing}."
-	echo "Cloud version: $latest_ver."
+	log_line ''
+	log_line "Local version: ${now_ver:-missing}."
+	log_line "Cloud version: $latest_ver."
 	success=0
 	prepare_links "$latest_ver" "$arch" > /tmp/run/AdHlinks.txt
 	while IFS= read -r url; do
 		[ -n "$url" ] || continue
 		basename=${url##*/}
 		archive="$WORK_DIR/$basename"
-		echo "Downloading $url"
+		log_line "Downloading $url"
 		if download_to "$archive" "$url"; then
 			success=1
 			break
 		fi
 		rm -f "$archive"
-		echo 'Download failed, trying next source.'
+		log_line 'Download failed, trying next source.'
 	done < /tmp/run/AdHlinks.txt
 	rm -f /tmp/run/AdHlinks.txt
 	[ "$success" = 1 ] || {
-		echo 'No download source succeeded.'
-		[ -n "$DOWNLOAD_ERROR_HINT" ] && echo "$DOWNLOAD_ERROR_HINT"
+		log_line 'No download source succeeded.'
+		[ -n "$DOWNLOAD_ERROR_HINT" ] && log_line "$DOWNLOAD_ERROR_HINT"
 		exit_update 1
 	}
 	case "$archive" in
 		*.tar.gz|*.tgz)
-			tar -zxf "$archive" -C "$WORK_DIR" >/dev/null 2>&1 || { echo 'Failed to extract archive.'; exit_update 1; }
+			tar -zxf "$archive" -C "$WORK_DIR" >/dev/null 2>&1 || { log_line 'Failed to extract archive.'; exit_update 1; }
 			downloadbin="$WORK_DIR/AdGuardHome/AdGuardHome"
 			;;
 		*) downloadbin="$archive" ;;
 	esac
-	[ -f "$downloadbin" ] || { echo 'AdGuardHome binary missing from downloaded package.'; exit_update 1; }
+	[ -f "$downloadbin" ] || { log_line 'AdGuardHome binary missing from downloaded package.'; exit_update 1; }
 	chmod 0755 "$downloadbin"
 	apply_upx "$downloadbin" "$upxflag"
-	validate_binary "$downloadbin" || { echo 'Downloaded AdGuardHome binary failed validation.'; exit_update 1; }
+	validate_binary "$downloadbin" || { log_line 'Downloaded AdGuardHome binary failed validation.'; exit_update 1; }
 	backupbin="$WORK_DIR/AdGuardHome.backup"
 	rm -f "$backupbin"
 	if [ -e "$binpath" ]; then
-		cp -fp "$binpath" "$backupbin" || { echo 'Failed to back up current binary.'; exit_update 1; }
+		cp -fp "$binpath" "$backupbin" || { log_line 'Failed to back up current binary.'; exit_update 1; }
 	fi
 	/etc/init.d/AdGuardHome stop nobackup >/dev/null 2>&1 || true
 	wait_core_stopped "$binpath" || {
-		echo 'Timed out while stopping the current AdGuard Home process.'
+		log_line 'Timed out while stopping the current AdGuard Home process.'
 		_restore_backup_and_exit
 	}
 	mv -f "$downloadbin" "$binpath" || {
-		echo 'Failed to install binary.'
+		log_line 'Failed to install binary.'
 		_restore_backup_and_exit
 	}
 	chmod 0755 "$binpath"
 	prepare_runtime_layout "$binpath" "$configpath" "$workdir" || {
-		echo 'Failed to prepare runtime directories.'
+		log_line 'Failed to prepare runtime directories.'
 		_restore_backup_and_exit
 	}
 	if [ "$enabled" = '1' ]; then
 		AGH_SKIP_UPDATE=1 /etc/init.d/AdGuardHome start >/dev/null 2>&1 || true
 		if ! wait_core_running "$binpath" "$configpath"; then
-			echo 'Core updated, but failed to start service.'
+			log_line 'Core updated, but failed to start service.'
 			_restore_backup_and_exit
 		fi
 	fi
 	rm -rf "$WORK_DIR"
-	echo ''
-	echo 'Succeeded in updating core.'
+	log_line ''
+	log_line 'Succeeded in updating core.'
 	exit_update 0
 }
 
@@ -528,7 +532,7 @@ if [ -f "$RUN_FILE" ]; then
 	esac
 fi
 (set -C; echo "$$" > "$RUN_FILE") 2>/dev/null || {
-	echo 'A task is already running.'
+	log_line 'A task is already running.'
 	exit 2
 }
 trap 'exit_update 1' INT TERM
