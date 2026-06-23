@@ -40,6 +40,7 @@ if [ -z "$$IPKG_INSTROOT" ]; then
 	done
 	rm -rf /tmp/luci-modulecache/ /var/luci-modulecache/
 	rm -f /tmp/luci-indexcache /tmp/luci-indexcache.* /var/luci-indexcache.* 2>/dev/null
+	[ -x /etc/init.d/turboacc ] && /etc/init.d/turboacc enable >/dev/null 2>&1 || true
 	[ -x /etc/init.d/turboacc ] && /etc/init.d/turboacc restart >/dev/null 2>&1 || true
 	[ -x /etc/init.d/rpcd ] && /etc/init.d/rpcd reload >/dev/null 2>&1 || true
 fi
