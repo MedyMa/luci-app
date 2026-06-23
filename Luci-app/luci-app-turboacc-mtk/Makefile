@@ -6,6 +6,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-turboacc-mtk
+PKG_RELEASE:=3
 PKG_LICENSE:=GPL-3.0-only
 
 LUCI_TITLE:=LuCI support for MTK HNAT
@@ -13,6 +14,7 @@ LUCI_DEPENDS:= \
 	+luci-base \
 	+rpcd \
 	+luci-lua-runtime \
+	+kmod-mediatek_hnat \
 	@!PACKAGE_luci-app-turboacc
 LUCI_PKGARCH:=all
 
@@ -34,6 +36,7 @@ if [ -z "$$IPKG_INSTROOT" ]; then
 	done
 	rm -rf /tmp/luci-modulecache/ /var/luci-modulecache/
 	rm -f /tmp/luci-indexcache /tmp/luci-indexcache.* /var/luci-indexcache.* 2>/dev/null
+	[ -x /etc/init.d/turboacc ] && /etc/init.d/turboacc enable >/dev/null 2>&1 || true
 	[ -x /etc/init.d/turboacc ] && /etc/init.d/turboacc restart >/dev/null 2>&1 || true
 	[ -x /etc/init.d/rpcd ] && /etc/init.d/rpcd reload >/dev/null 2>&1 || true
 fi

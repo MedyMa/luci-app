@@ -1036,12 +1036,19 @@ function buildForm(features, config) {
 		o.value('shortcut_fe_cm', _('SFE 连接管理器'));
 	o.value('mediatek_hnat', features.hasMEDIATEKHNAT ? _('MediaTek HNAT') : _('MediaTek HNAT（尝试加载）'));
 	o.default = config.fastpath || 'disabled';
+	o.widget = 'select';
 	o.rmempty = false;
 	o.cfgvalue = function(section_id) {
 		return normalizeFastpathValue(uci.get('turboacc', section_id, 'fastpath'));
 	};
 	o.write = function(section_id, value) {
 		return uci.set('turboacc', section_id, 'fastpath', value === 'disabled' ? 'none' : value);
+	};
+	o.validate = function(section_id, value) {
+		return value === 'disabled' || value === 'flow_offloading' || value === 'fast_classifier' ||
+			value === 'shortcut_fe_cm' || value === 'mediatek_hnat'
+				? true
+				: _('无效的主加速引擎');
 	};
 
 	if (showFlowOffloading) {
@@ -1075,6 +1082,7 @@ function buildForm(features, config) {
 		o.value('1', _('XT_FULLCONE_NAT'));
 	o.value('2', _('Boardcom_FULLCONE_NAT'));
 	o.default = config.fullcone || getDefaultFullcone(features);
+	o.widget = 'select';
 	o.rmempty = false;
 
 	if (tcpccaOptions.indexOf(config.tcpcca) < 0)
@@ -1086,6 +1094,7 @@ function buildForm(features, config) {
 		o.value(item, String(item).toUpperCase());
 	});
 	o.default = config.tcpcca || 'cubic';
+	o.widget = 'select';
 	o.rmempty = false;
 
 	if (showMediatekHnat) {
@@ -1447,6 +1456,113 @@ function renderStyle() {
 		'.ta-compact-summary-grid .ta-stat-card{min-height:0;padding:16px}',
 
 		'.ta-compact-detail-panel .ta-info-grid{height:100%}',
+
+		/* ===== Screenshot-matched Argon compact skin ===== */
+		'.ta-page{gap:14px;padding:12px 0 0;--ta-shadow:0 6px 16px rgba(73,99,135,.08);--ta-panel-border:#dfe7f1;--ta-panel-border-soft:#edf2f7;--ta-panel-bg:linear-gradient(180deg,rgba(255,255,255,.98),rgba(249,252,255,.99));--ta-text:#263b58;--ta-text-strong:#0b1830;--ta-text-muted:#6b809c;--ta-button-bg:linear-gradient(180deg,#fbfdff,#f5f8fc)}',
+
+		'.ta-page:before{top:-10px;height:8px;background:#5b6fee;border-radius:0 0 999px 999px}',
+
+		'.ta-hero,.ta-panel,.ta-config-shell{border-radius:18px;border-color:var(--ta-panel-border);box-shadow:var(--ta-shadow);background:var(--ta-panel-bg)}',
+
+		'.ta-hero{min-height:142px;padding:22px 24px;grid-template-columns:minmax(0,1.45fr) minmax(300px,.95fr);gap:26px;background:linear-gradient(100deg,#e9f1ff 0%,#f8fbff 52%,#eefbff 100%);border-color:#bfe8e8}',
+
+		'.ta-dark .ta-hero{background:linear-gradient(100deg,rgba(22,34,58,.98),rgba(17,27,48,.98) 52%,rgba(14,34,45,.98));border-color:rgba(115,151,190,.34)}',
+
+		'.ta-hero-main{gap:18px;align-items:flex-start}',
+
+		'.ta-hero-badge{width:74px;height:74px;border-radius:20px;background:linear-gradient(145deg,#2563eb,#62a5ff)}',
+
+		'.ta-hero-badge-code{font-size:1rem}',
+
+		'.ta-hero-badge-dot{right:9px;bottom:9px;width:11px;height:11px;box-shadow:0 0 0 5px rgba(255,255,255,.42)}',
+
+		'.ta-hero-copy{gap:10px;padding-top:0}',
+
+		'.ta-hero-kicker{font-size:.72rem;letter-spacing:.02em;color:#6a7d98}',
+
+		'.ta-hero-title{min-height:34px;padding:7px 18px;border-radius:999px;font-size:.95rem;background:linear-gradient(180deg,#eefaf4,#dbefe5);border-color:#bde5d2;color:#177a69}',
+
+		'.ta-hero-summary{font-size:.88rem;line-height:1.5;color:#16304c}',
+
+		'.ta-hero-side{gap:10px}',
+
+		'.ta-section-pill{min-height:58px;padding:13px 18px;border-radius:16px;background:rgba(255,255,255,.72);border-color:#e0eaf5}',
+
+		'.ta-section-pill-label{font-size:.78rem;font-weight:700;color:#6b7f9b}',
+
+		'.ta-section-pill-value{font-size:.98rem;color:#0b1830}',
+
+		'.ta-status-strip{gap:10px;grid-template-columns:repeat(4,minmax(0,1fr))}',
+
+		'.ta-status-item{min-height:58px;padding:13px 16px;border-radius:14px;border-color:#dee7f1;background:#fff}',
+
+		'.ta-status-item span{font-size:.78rem;color:#6a7f9d}',
+
+		'.ta-status-item strong{font-size:.92rem;text-align:right;color:#0b1830}',
+
+		'.ta-panel{padding:18px 22px}',
+
+		'.ta-panel-head{gap:4px;margin-bottom:14px}',
+
+		'.ta-panel-title{font-size:1rem}',
+
+		'.ta-panel-subtitle{font-size:.84rem;line-height:1.45;color:#7387a2}',
+
+		'.ta-progress-list{gap:13px}',
+
+		'.ta-progress-row{gap:6px}',
+
+		'.ta-progress-label{font-size:.9rem}',
+
+		'.ta-progress-value{font-size:.78rem}',
+
+		'.ta-progress-track{height:8px;border:none;background:#e8edf4}',
+
+		'.ta-progress-fill.is-active:before{width:9px;height:9px;box-shadow:0 0 0 2px rgba(68,193,91,.18)}',
+
+		'.ta-config-shell{padding:14px}',
+
+		'.ta-config-shell h2{margin:0 0 16px;padding:15px 16px;border-radius:4px;border:none;background:#fff;font-size:1.12rem;color:#0b1830}',
+
+		'.ta-config-shell .cbi-map-descr{margin:0 0 18px;padding:0 12px;font-size:.82rem;color:#7187a3}',
+
+		'.ta-config-shell .cbi-section{padding:0}',
+
+		'.ta-config-shell .cbi-section-node{border-radius:0;border:none;background:#fff;box-shadow:0 1px 8px rgba(54,76,108,.04)}',
+
+		'.ta-config-shell .cbi-tabmenu{padding:0 14px 12px;gap:8px;background:#fff}',
+
+		'.ta-config-shell .cbi-tabmenu li{min-height:42px;border-radius:8px!important;border-color:#dfe7f1;background:#fff!important}',
+
+		'.ta-config-shell .cbi-tabmenu li a{min-height:42px;padding:10px 16px;font-size:.86rem}',
+
+		'.ta-config-shell .cbi-tabmenu li.cbi-tab,.ta-config-shell .cbi-tabmenu li.active{background:linear-gradient(90deg,#168f8f,#3d70f0)!important}',
+
+		'.ta-config-shell .cbi-tab-descr,.ta-config-shell .cbi-section-descr,.ta-config-shell .cbi-value-description{font-size:.78rem;line-height:1.45;color:#7187a3!important;-webkit-text-fill-color:#7187a3}',
+
+		'.ta-config-shell .cbi-value{padding:18px 20px;border-top:1px solid #f0f4f8}',
+
+		'.ta-config-shell .cbi-value-title{font-size:.84rem;color:#314865}',
+
+		'.ta-config-shell select,.ta-config-shell input[type="text"],.ta-config-shell input[type="number"],.ta-config-shell input:not([type]){min-height:34px;min-width:220px;max-width:100%;padding:6px 12px;border-radius:10px!important;border:1px solid #dce6f1!important;background:linear-gradient(180deg,#fbfdff,#f4f8fd)!important;color:#263b58!important;-webkit-text-fill-color:#263b58;font-size:.84rem;box-shadow:none!important}',
+
+		'.ta-config-shell select:focus,.ta-config-shell input:focus{border-color:#7aa8ff!important;box-shadow:0 0 0 3px rgba(91,111,238,.12)!important;outline:none}',
+
+		'.ta-config-shell select option{color:#1f3150;background:#fff}',
+
+		'.ta-config-shell .cbi-page-actions{margin:16px 0 0;gap:8px}',
+
+		'.ta-config-shell .cbi-page-actions .cbi-button{min-height:38px;padding:0 18px;border-radius:6px!important;font-size:.86rem}',
+
+		'.ta-config-shell .cbi-page-actions .cbi-button-apply,.ta-config-shell .cbi-page-actions .cbi-button-save{background:#5b6fee!important}',
+
+		'.ta-config-shell .cbi-page-actions .cbi-button-reset{background:#ef4565!important}',
+
+		'.ta-dark .ta-status-item,.ta-dark .ta-config-shell h2,.ta-dark .ta-config-shell .cbi-section-node,.ta-dark .ta-config-shell .cbi-tabmenu{background:rgba(255,255,255,.04)}',
+
+		'.ta-dark .ta-section-pill{background:rgba(255,255,255,.04)}',
+
+		'.ta-dark .ta-config-shell select,.ta-dark .ta-config-shell input[type="text"],.ta-dark .ta-config-shell input[type="number"],.ta-dark .ta-config-shell input:not([type]){background:rgba(255,255,255,.06)!important;color:var(--ta-text-strong)!important;-webkit-text-fill-color:var(--ta-text-strong);border-color:rgba(148,163,184,.24)!important}',
 
 		/* ===== Responsive ===== */
 		'@media (max-width:1040px){.ta-hero{grid-template-columns:1fr}.ta-telemetry-grid{grid-template-columns:1fr}.ta-status-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.ta-compact-grid{grid-template-columns:1fr}}',
