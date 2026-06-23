@@ -3,20 +3,25 @@ name: Build luci-app-turboacc-mtk
 on:
   workflow_dispatch:
     inputs:
-      sdk_distribution:
-        description: SDK distribution
+      sdk_source:
+        description: SDK 来源
         required: false
-        default: 'immortalwrt'
+        default: 'padavanonly'
         type: choice
         options:
+          - padavanonly
           - openwrt
           - immortalwrt
       openwrt_version:
-        description: OpenWrt / ImmortalWrt release version
+        description: 版本号（openwrt/immortalwrt 用）
         required: false
         default: '24.10'
+      padavanonly_tag:
+        description: padavanonly 的 release tag（如 v6.6-2025-01-15）
+        required: false
+        default: ''
       pkg_format:
-        description: Package output format
+        description: 输出包格式
         required: false
         default: 'ipk'
         type: choice
@@ -32,12 +37,12 @@ on:
         required: false
         default: 'filogic'
       publish_release:
-        description: Publish the built packages to GitHub Releases
+        description: 发布到 GitHub Releases
         required: false
         default: false
         type: boolean
       release_tag:
-        description: 'Release tag (auto-populated from git tag or manual override)'
+        description: Release tag（留空则用 git tag）
         required: false
         default: ''
   push:
@@ -59,8 +64,9 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      SDK_DISTRIBUTION: ${{ inputs.sdk_distribution || 'immortalwrt' }}
+      SDK_SOURCE: ${{ inputs.sdk_source || 'padavanonly' }}
       OPENWRT_VERSION: ${{ inputs.openwrt_version || '24.10' }}
+      PADAVANONLY_TAG: ${{ inputs.padavanonly_tag }}
       OPENWRT_TARGET: ${{ inputs.openwrt_target || 'mediatek' }}
       OPENWRT_SUBTARGET: ${{ inputs.openwrt_subtarget || 'filogic' }}
       PKG_FORMAT: ${{ inputs.pkg_format || 'ipk' }}
@@ -101,12 +107,47 @@ jobs:
       - name: Download SDK
         run: |
           set -eux
-          case "$SDK_DISTRIBUTION" in
+          sdk_target_id="${OPENWRT_TARGET}-${OPENWRT_SUBTARGET}"
+
+          case "$SDK_SOURCE" in
+            padavanonly)
+              # --- padavanonly GitHub Releases ---
+              padavanonly_repo="padavanonly/immortalwrt-mt798x-6.6"
+              sdk_prefix='immortalwrt-sdk'
+
+              if [ -n "$PADAVANONLY_TAG" ]; then
+                tag="$PADAVANONLY_TAG"
+              else
+                # auto-resolve latest release tag
+                tag="$(curl -fsSL "https://api.github.com/repos/${padavanonly_repo}/releases/latest" \
+                  | python3 -c "import sys,json; print(json.load(sys.stdin).get('tag_name',''))")"
+                test -n "$tag"
+              fi
+              echo "Using padavanonly tag=$tag"
+
+              # list release assets, find the SDK matching our target
+              sdk_file="$(curl -fsSL "https://api.github.com/repos/${padavanonly_repo}/releases/tags/${tag}" \
+                | python3 -c "
+import sys,json
+assets=json.load(sys.stdin).get('assets',[])
+for a in assets:
+  n=a['name']
+  if '${sdk_prefix}' in n and '${sdk_target_id}' in n and n.endswith('.tar.zst'):
+    print(n)
+    break
+")"
+              test -n "$sdk_file"
+              download_url="https://github.com/${padavanonly_repo}/releases/download/${tag}/${sdk_file}"
+              ;;
+
             openwrt)
               sdk_base_url="https://downloads.openwrt.org/releases/${OPENWRT_VERSION}/targets/${OPENWRT_TARGET}/${OPENWRT_SUBTARGET}"
               sdk_prefix='openwrt-sdk'
-              sdk_ext='.tar.zst'
+              sdk_file="$(curl -fsSL "$sdk_base_url/" | grep -oE "${sdk_prefix}-${OPENWRT_VERSION}-${sdk_target_id}_[^\"[:space:]]+\.tar\.zst" | head -n1)"
+              test -n "$sdk_file"
+              download_url="$sdk_base_url/$sdk_file"
               ;;
+
             immortalwrt)
               if echo "$OPENWRT_VERSION" | grep -q 'SNAPSHOT'; then
                 sdk_base_url="https://downloads.immortalwrt.org/snapshots/targets/${OPENWRT_TARGET}/${OPENWRT_SUBTARGET}"
@@ -115,20 +156,22 @@ jobs:
               fi
               sdk_prefix='immortalwrt-sdk'
               sdk_ext='.tar.zst'
+              sdk_file="$(curl -fsSL "$sdk_base_url/" | grep -oE "${sdk_prefix}-${OPENWRT_VERSION}-${sdk_target_id}_[^\"[:space:]]+${sdk_ext}" | head -n1)"
+              if [ -z "$sdk_file" ]; then
+                sdk_file="$(curl -fsSL "$sdk_base_url/" | grep -oE "${sdk_prefix}-${sdk_target_id}_[^\"[:space:]]+${sdk_ext}" | head -n1)"
+              fi
+              test -n "$sdk_file"
+              download_url="$sdk_base_url/$sdk_file"
               ;;
+
             *)
-              echo "Unsupported SDK distribution: $SDK_DISTRIBUTION" >&2
+              echo "Unsupported SDK source: $SDK_SOURCE" >&2
               exit 1
               ;;
           esac
 
-          sdk_target_id="${OPENWRT_TARGET}-${OPENWRT_SUBTARGET}"
-          sdk_file="$(curl -fsSL "$sdk_base_url/" | grep -oE "${sdk_prefix}-${OPENWRT_VERSION}-${sdk_target_id}_[^\"[:space:]]+${sdk_ext}" | head -n1)"
-          if [ -z "$sdk_file" ]; then
-            sdk_file="$(curl -fsSL "$sdk_base_url/" | grep -oE "${sdk_prefix}-${sdk_target_id}_[^\"[:space:]]+${sdk_ext}" | head -n1)"
-          fi
-          test -n "$sdk_file"
-          wget -q "$sdk_base_url/$sdk_file" -O sdk.tar.zst
+          echo "Downloading $download_url"
+          wget -q "$download_url" -O sdk.tar.zst
           tar --zstd -xf sdk.tar.zst
           sdk_dir="$(find . -maxdepth 1 -type d -name "${sdk_prefix}-*" | head -n1)"
           test -n "$sdk_dir"
@@ -238,7 +281,7 @@ jobs:
           rm -rf "$artifact_dir"
           mkdir -p "$artifact_dir"
 
-          pkg_ext=".${PKG_FORMAT:-apk}"
+          pkg_ext=".${PKG_FORMAT:-ipk}"
           find "$SDK_DIR/bin/packages" -type f \( \
             -name "${PKG_NAME}*${pkg_ext}" \
             -o -name "luci-i18n-turboacc-mtk*${pkg_ext}" \
