@@ -48,6 +48,13 @@ local function is_hnat_enabled(value)
 		value == "on" or value == "true" or value == "y" or value == "yes"
 end
 
+-- same normalisation as init.d _uci_bool_enabled
+local function _uci_bool(value)
+	value = (value or ""):lower()
+	return value == "1" or value == "on" or value == "true" or
+		value == "yes" or value == "enabled"
+end
+
 local function has_mediatek_wireless_dat()
 	return fs.stat("/etc/wireless/mediatek", "type") == "dir" and
 		sys.call("set -- /etc/wireless/mediatek/*.dat; [ -e \"$1\" ]") == 0
@@ -127,8 +134,31 @@ local methods = {
 		call = function()
 			local ppe_stat = {}
 			local ppe_path = "/sys/kernel/debug/hnat/hnat_stats"
+
+			if not fs.access(ppe_path) then
+				-- try alternate locations
+				local alts = {
+					"/sys/kernel/debug/hnat/hnat_stats",
+					"/sys/kernel/debug/mtk_hnat/hnat_stats",
+					"/sys/kernel/debug/ppe0/bind"
+				}
+				local found = false
+				for _, alt in ipairs(alts) do
+					if fs.access(alt) then
+						ppe_path = alt
+						found = true
+						break
+					end
+				end
+				if not found then
+					ppe_stat.PPE_NUM = "0"
+					print(json.stringify(ppe_stat))
+					return
+				end
+			end
+
 			local fd = io.open(ppe_path, 'r')
-		
+
 			if fd then
 				for line in fd:lines() do
 					local i = string.find(line, "=")
