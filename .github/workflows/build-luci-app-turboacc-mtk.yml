@@ -125,15 +125,7 @@ jobs:
               echo "Using padavanonly tag=$tag"
 
               # list release assets, find the SDK matching our target
-              sdk_file="$(curl -fsSL "https://api.github.com/repos/${padavanonly_repo}/releases/tags/${tag}" | python3 -c "
-import sys,json
-assets=json.load(sys.stdin).get('assets',[])
-for a in assets:
-  n=a['name']
-  if 'immortalwrt-sdk' in n and '${sdk_target_id}' in n and n.endswith('.tar.zst'):
-    print(n)
-    break
-")"
+              sdk_file="$(curl -fsSL "https://api.github.com/repos/${padavanonly_repo}/releases/tags/${tag}" | python3 -c "import sys,json;a=json.load(sys.stdin).get('assets',[]);[print(x['name']) for x in a if 'immortalwrt-sdk' in x['name'] and '${sdk_target_id}' in x['name'] and x['name'].endswith('.tar.zst')]" | head -n1)"
               test -n "$sdk_file"
               download_url="https://github.com/${padavanonly_repo}/releases/download/${tag}/${sdk_file}"
               ;;
