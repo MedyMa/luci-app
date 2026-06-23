@@ -10,11 +10,11 @@ on:
       sdk_source:
         description: SDK 来源（sdk_url 为空时生效）
         required: false
-        default: 'openwrt'
+        default: 'immortalwrt'
         type: choice
         options:
-          - openwrt
           - immortalwrt
+          - openwrt
       openwrt_version:
         description: 版本号
         required: false
@@ -64,7 +64,7 @@ jobs:
 
     env:
       SDK_URL: ${{ inputs.sdk_url }}
-      SDK_SOURCE: ${{ inputs.sdk_source || 'openwrt' }}
+      SDK_SOURCE: ${{ inputs.sdk_source || 'immortalwrt' }}
       OPENWRT_VERSION: ${{ inputs.openwrt_version || '24.10.0' }}
       OPENWRT_TARGET: ${{ inputs.openwrt_target || 'mediatek' }}
       OPENWRT_SUBTARGET: ${{ inputs.openwrt_subtarget || 'filogic' }}
