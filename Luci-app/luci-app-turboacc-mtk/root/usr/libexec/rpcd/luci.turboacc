@@ -21,7 +21,11 @@ local function module_file_exists(kernel, names)
 	end
 
 	for _, name in ipairs(names) do
-		if fs.access("/lib/modules/" .. kernel .. "/" .. name .. ".ko") then
+		if fs.access("/lib/modules/" .. kernel .. "/" .. name .. ".ko") or
+			fs.access("/lib/modules/" .. kernel .. "/" .. name .. ".ko.gz") or
+			fs.access("/lib/modules/" .. kernel .. "/" .. name .. ".ko.xz") or
+			fs.access("/lib/modules/" .. kernel .. "/" .. name .. ".ko.zst")
+		then
 			return true
 		end
 	end
@@ -103,9 +107,7 @@ local methods = {
 					wireless_hnat = " / Wireless HNAT Disabled"
 				end
 
-				if (ethernet_hnat == "") or (wireless_hnat == "") or not hook_toggle then
-					fptype = "MediaTek HNAT" .. ethernet_hnat .. wireless_hnat
-				end
+				fptype = "MediaTek HNAT" .. ethernet_hnat .. wireless_hnat
 			end
 			print(json.stringify({ type = fptype }))
 		end
@@ -151,9 +153,31 @@ local methods = {
 					end
 				end
 				if not found then
-					ppe_stat.PPE_NUM = "0"
+					ppe_stat.PPE_NUM = fs.stat("/sys/kernel/debug/hnat", "type") == "dir" and "3" or "0"
 					print(json.stringify(ppe_stat))
 					return
+				end
+			end
+
+			local function ensure_ppe(index)
+				index = tonumber(index or "")
+				if not index then
+					return nil
+				end
+
+				local current = tonumber(ppe_stat.PPE_NUM or "0") or 0
+				if index + 1 > current then
+					ppe_stat.PPE_NUM = tostring(index + 1)
+				end
+
+				return tostring(index)
+			end
+
+			local function set_ppe_value(kind, index, value)
+				index = ensure_ppe(index)
+				value = tonumber(value or "")
+				if index and value then
+					ppe_stat[kind .. "_PPE" .. index] = tostring(value)
 				end
 			end
 
@@ -163,10 +187,35 @@ local methods = {
 				for line in fd:lines() do
 					local i = string.find(line, "=")
 					if i then
-						ppe_stat[string.sub(line,1,i-1)] = string.sub(line,i+1)
+						local key = (string.sub(line, 1, i - 1):gsub("^%s+", ""):gsub("%s+$", ""))
+						local value = (string.sub(line, i + 1):gsub("^%s+", ""):gsub("%s+$", ""))
+						ppe_stat[key] = value
+					else
+						local ppe, value
+
+						ppe, value = line:match("[Pp][Pp][Ee]%s*(%d+).-[Bb][Ii][Nn][Dd].-(%d+)")
+						set_ppe_value("BIND", ppe, value)
+
+						ppe, value = line:match("[Pp][Pp][Ee]%s*(%d+).-[Aa][Ll][Ll].-(%d+)")
+						set_ppe_value("ALL", ppe, value)
+
+						ppe, value = line:match("[Pp][Pp][Ee]%s*(%d+).-[Ee][Nn][Tt][Rr][Yy].-(%d+)")
+						set_ppe_value("ALL", ppe, value)
 					end
 				end
 				fd:close()
+			end
+
+			if not ppe_stat.PPE_NUM and fs.stat("/sys/kernel/debug/hnat", "type") == "dir" then
+				ppe_stat.PPE_NUM = "3"
+			end
+
+			if ppe_stat.PPE_NUM then
+				local count = tonumber(ppe_stat.PPE_NUM) or 0
+				for index = 0, count - 1 do
+					ppe_stat["BIND_PPE" .. index] = ppe_stat["BIND_PPE" .. index] or "0"
+					ppe_stat["ALL_PPE" .. index] = ppe_stat["ALL_PPE" .. index] or "0"
+				end
 			end
 
 			print(json.stringify(ppe_stat))

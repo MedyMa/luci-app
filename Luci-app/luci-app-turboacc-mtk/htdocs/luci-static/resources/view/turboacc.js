@@ -1017,7 +1017,7 @@ function buildForm(features, config) {
 	var showFlowOffloading = isEngineAvailable(features.hasFLOWOFFLOADING, config, 'flow_offloading');
 	var showFastClassifier = isEngineAvailable(features.hasFASTCLASSIFIER, config, 'fast_classifier');
 	var showShortcutFeCm = isEngineAvailable(features.hasSHORTCUTFECM, config, 'shortcut_fe_cm');
-	var showMediatekHnat = isEngineAvailable(features.hasMEDIATEKHNAT, config, 'mediatek_hnat');
+	var showMediatekHnat = true;
 
 	s.tab('engine', _('主通路'), _('选择主加速引擎。'));
 	s.tab('experience', _('体验优化'), _('NAT 与 TCP 设置。'));
@@ -1034,8 +1034,7 @@ function buildForm(features, config) {
 		o.value('fast_classifier', _('快速分类器'));
 	if (showShortcutFeCm)
 		o.value('shortcut_fe_cm', _('SFE 连接管理器'));
-	if (showMediatekHnat)
-		o.value('mediatek_hnat', _('MediaTek HNAT'));
+	o.value('mediatek_hnat', features.hasMEDIATEKHNAT ? _('MediaTek HNAT') : _('MediaTek HNAT（尝试加载）'));
 	o.default = config.fastpath || 'disabled';
 	o.rmempty = false;
 	o.cfgvalue = function(section_id) {
@@ -1091,7 +1090,7 @@ function buildForm(features, config) {
 
 	if (showMediatekHnat) {
 		o = s.taboption('hnat', form.Flag, 'fastpath_mh_eth_hnat', _('启用有线 HNAT'),
-			_('启用有线硬件加速。'));
+			_('启用 MediaTek HNAT hook_toggle；保存并应用后由 turboacc 服务写入内核开关。'));
 		o.default = o.enabled;
 		o.rmempty = false;
 		o.depends('fastpath', 'mediatek_hnat');
@@ -1372,7 +1371,7 @@ function renderStyle() {
 
 		'.ta-config-shell .cbi-section{margin-top:0;padding:0 8px}',
 
-		'.ta-config-shell .cbi-section-node{border:1px solid #edf2f8;border-radius:16px;background:rgba(255,255,255,.98);padding:0;overflow:hidden}',
+		'.ta-config-shell .cbi-section-node{border:1px solid #edf2f8;border-radius:16px;background:rgba(255,255,255,.98);padding:0;overflow:visible}',
 
 		'.ta-dark .ta-config-shell .cbi-section-node{border-color:var(--ta-panel-border-soft);background:rgba(255,255,255,.02)}',
 
@@ -1397,6 +1396,8 @@ function renderStyle() {
 		'.ta-config-shell input[type="text"],.ta-config-shell input:not([type]),.ta-config-shell select,.ta-config-shell textarea,.ta-config-shell .cbi-dropdown{min-height:46px;box-sizing:border-box;border-radius:14px!important;background:var(--ta-button-bg)!important;border:1px solid var(--ta-panel-border)!important;color:var(--ta-text)!important;-webkit-text-fill-color:var(--ta-text);box-shadow:0 0 0 1px rgba(255,255,255,.02) inset!important}',
 
 		'.ta-config-shell .cbi-dropdown>ul:not(.dropdown),.ta-config-shell .cbi-dropdown ul.preview{background:var(--ta-button-bg)!important;border-radius:14px!important}',
+
+		'.ta-config-shell .cbi-dropdown ul.dropdown{z-index:10000!important;background:var(--ta-button-bg)!important;border:1px solid var(--ta-panel-border)!important;color:var(--ta-text)!important}',
 
 		'.ta-config-shell .cbi-value{padding:20px 24px;border-top:1px solid #eff4f9}',
 

@@ -10,13 +10,9 @@ PKG_LICENSE:=GPL-3.0-only
 
 LUCI_TITLE:=LuCI support for MTK HNAT
 LUCI_DEPENDS:= \
-	+kmod-mediatek_hnat \
+	+luci-base \
+	+rpcd \
 	+luci-lua-runtime \
-	+kmod-tcp-bbr \
-	+kmod-nft-socket +kmod-nft-tproxy +kmod-nft-nat +kmod-inet-diag \
-	+kmod-ipt-nat6 +kmod-ipt-nat +kmod-netlink-diag \
-	+kmod-ipt-physdev +kmod-nf-ipvs +kmod-veth +kmod-wireguard \
-	+kmod-ipt-fullconenat +kmod-fs-btrfs +luci-app-ttyd +kmod-bonding \
 	@!PACKAGE_luci-app-turboacc
 LUCI_PKGARCH:=all
 

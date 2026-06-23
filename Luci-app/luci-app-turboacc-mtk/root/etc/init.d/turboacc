@@ -34,6 +34,18 @@ load_hnat_module() {
 	try_modprobe "mtkhnat" "mediatek_hnat"
 }
 
+wait_hnat_debugfs() {
+	local hnat_path="${1:-/sys/kernel/debug/hnat}"
+	local i
+
+	for i in 1 2 3 4 5 6 7 8 9 10; do
+		[ -d "$hnat_path" ] && return 0
+		sleep 0.2
+	done
+
+	return 1
+}
+
 # busybox-safe debugfs mount check — avoids `mountpoint -q` which may be absent
 ensure_debugfs() {
 	grep -q ' /sys/kernel/debug debugfs ' /proc/mounts 2>/dev/null && return 0
@@ -141,6 +153,10 @@ start_service() {
 		if ! load_hnat_module; then
 			logger -t turboacc "ERROR: cannot load mtkhnat/mediatek_hnat module"
 		fi
+
+		ensure_debugfs
+		wait_hnat_debugfs "$hnat_path" || \
+			logger -t turboacc "WARNING: $hnat_path not present after loading HNAT module"
 
 		# hook_toggle: 1=enable HNAT for Ethernet, 0=disable
 		if [ -w "$hnat_path/hook_toggle" ]; then
