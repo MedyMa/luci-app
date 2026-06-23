@@ -429,6 +429,10 @@ function renderSectionPill(label, value, tone) {
 	]);
 }
 
+function renderStatusStrong(value, enabled) {
+	return E('strong', { 'class': 'ta-status-value ' + (enabled ? 'is-enabled' : 'is-disabled') }, displayValue(value));
+}
+
 function renderStatCard(title, value, detail, tone, chips) {
 	chips = compactChildren(chips);
 
@@ -677,23 +681,26 @@ function renderHero(state, health) {
 function renderStatusStrip(state, health) {
 	var features = state.features || {};
 	var config = state.config || {};
+	var ipv6Text = getIPv6ModeText(config, features);
+	var fullconeEnabled = trimValue(config.fullcone) !== '0';
+	var ipv6Enabled = ipv6Text !== _('已禁用') && ipv6Text !== _('不可用');
 
 	return E('div', { 'class': 'ta-status-strip' }, [
 		E('div', { 'class': 'ta-status-item' }, [
 			E('span', {}, _('配置')),
-			E('strong', {}, getEngineLabel(config.fastpath))
+			renderStatusStrong(getEngineLabel(config.fastpath), normalizeFastpathValue(config.fastpath) !== 'disabled')
 		]),
 		E('div', { 'class': 'ta-status-item' }, [
 			E('span', {}, _('NAT')),
-			E('strong', {}, getFullconeConfigLabel(config.fullcone))
+			renderStatusStrong(getFullconeConfigLabel(config.fullcone), fullconeEnabled)
 		]),
 		E('div', { 'class': 'ta-status-item' }, [
 			E('span', {}, _('IPv6')),
-			E('strong', {}, getIPv6ModeText(config, features))
+			renderStatusStrong(ipv6Text, ipv6Enabled)
 		]),
 		E('div', { 'class': 'ta-status-item' }, [
 			E('span', {}, _('TCP')),
-			E('strong', {}, health.tcpccaLabel)
+			renderStatusStrong(health.tcpccaLabel, health.tcpccaLabel !== '--')
 		])
 	]);
 }
@@ -1561,6 +1568,13 @@ function renderStyle() {
 		'.ta-dark .ta-section-pill{background:rgba(255,255,255,.04)}',
 
 		'.ta-dark .ta-config-shell select,.ta-dark .ta-config-shell input[type="text"],.ta-dark .ta-config-shell input[type="number"],.ta-dark .ta-config-shell input:not([type]){background:rgba(255,255,255,.06)!important;color:var(--ta-text-strong)!important;-webkit-text-fill-color:var(--ta-text-strong);border-color:rgba(148,163,184,.24)!important}',
+
+		/* ===== State text colors ===== */
+		'.ta-hero-title.is-enabled,.ta-compact-state.is-enabled,.ta-status-value.is-enabled,.ta-section-pill.is-good .ta-section-pill-value,.ta-chip.is-ok{color:var(--ta-good)!important;-webkit-text-fill-color:var(--ta-good)}',
+
+		'.ta-hero-title.is-disabled,.ta-compact-state.is-disabled,.ta-status-value.is-disabled,.ta-section-pill.is-muted .ta-section-pill-value,.ta-chip.is-muted{color:var(--ta-text-muted)!important;-webkit-text-fill-color:var(--ta-text-muted)}',
+
+		'.ta-hero-title.is-disabled,.ta-compact-state.is-disabled{border-color:rgba(148,163,184,.30);background:rgba(148,163,184,.12)}',
 
 		/* ===== Responsive ===== */
 		'@media (max-width:1040px){.ta-hero{grid-template-columns:1fr}.ta-telemetry-grid{grid-template-columns:1fr}.ta-status-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.ta-compact-grid{grid-template-columns:1fr}}',
