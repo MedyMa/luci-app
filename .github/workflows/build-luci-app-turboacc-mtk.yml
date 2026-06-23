@@ -202,7 +202,7 @@ jobs:
         working-directory: ${{ env.SDK_DIR }}
         run: |
           set -eux
-          ./scripts/feeds install -a
+          ./scripts/feeds install -p luci luci-base luci-lua-runtime
 
       - name: Configure SDK
         working-directory: ${{ env.SDK_DIR }}
@@ -215,7 +215,7 @@ jobs:
             turboacc_i18n_langs="$(find "$package_po_dir" -mindepth 2 -maxdepth 2 -type f -name '*.po' -printf '%h\n' | sed 's#^.*/##' | sort -u | tr '\n' ' ' | sed 's/[[:space:]]\+$//')"
           fi
 
-          echo "CONFIG_PACKAGE_${PKG_NAME}=y" | sed 's/-/_/g' >> .config
+          echo "CONFIG_PACKAGE_${PKG_NAME}=y" >> .config
 
           for lang in $turboacc_i18n_langs; do
             echo "CONFIG_PACKAGE_luci-i18n-turboacc-mtk-${lang}=y" >> .config
@@ -236,7 +236,8 @@ jobs:
         working-directory: ${{ env.SDK_DIR }}
         run: |
           set -eux
-          make package/feeds/luci/${PKG_NAME}/compile -j"$(nproc)" V=s
+          make package/feeds/luci/${PKG_NAME}/compile -j"$(nproc)" V=s || \
+            make package/feeds/luci/${PKG_NAME}/compile -j1 V=sc
 
       - name: Collect build artifacts
         run: |
