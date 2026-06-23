@@ -34,6 +34,11 @@ load_hnat_module() {
 	try_modprobe "mtkhnat" "mediatek_hnat"
 }
 
+unload_hnat_module() {
+	rmmod "mtkhnat" 2>/dev/null || true
+	rmmod "mediatek_hnat" 2>/dev/null || true
+}
+
 wait_hnat_debugfs() {
 	local hnat_path="${1:-/sys/kernel/debug/hnat}"
 	local i
@@ -86,8 +91,12 @@ default_fullcone_mode() {
 stop_service() {
 	local hnat_path="/sys/kernel/debug/hnat"
 
+	ensure_debugfs
+
 	# disable HNAT hook if still accessible
 	[ -w "$hnat_path/hook_toggle" ] && echo "0" >"$hnat_path/hook_toggle" 2>/dev/null
+	[ -w "$hnat_path/hnat_setting" ] && echo "8 0" >"$hnat_path/hnat_setting" 2>/dev/null
+	unload_hnat_module
 
 	# restore fullcone to a safe default
 	if [ -w "/proc/sys/net/netfilter/nf_conntrack_nat_mode" ]; then
@@ -125,6 +134,8 @@ start_service() {
 
 	if [ "$fastpath" != "mediatek_hnat" ] && hnat_module_loaded && [ -w "$hnat_path/hook_toggle" ]; then
 		echo "0" >"$hnat_path/hook_toggle" 2>/dev/null
+		[ -w "$hnat_path/hnat_setting" ] && echo "8 0" >"$hnat_path/hnat_setting" 2>/dev/null
+		unload_hnat_module
 	fi
 
 	# ---------- engine activation ----------

@@ -52,11 +52,8 @@ local function is_hnat_enabled(value)
 		value == "on" or value == "true" or value == "y" or value == "yes"
 end
 
--- same normalisation as init.d _uci_bool_enabled
-local function _uci_bool(value)
-	value = (value or ""):lower()
-	return value == "1" or value == "on" or value == "true" or
-		value == "yes" or value == "enabled"
+local function hnat_hook_enabled()
+	return is_hnat_enabled(readfile("/sys/kernel/debug/hnat/hook_toggle"))
 end
 
 local function has_mediatek_wireless_dat()
@@ -94,12 +91,10 @@ local methods = {
 				fptype = "Fast classifier"
 			elseif fs.stat("/sys/module/shortcut_fe_cm", "type") == "dir" then
 				fptype = "Shortcut-FE CM"
-			elseif fs.stat("/sys/kernel/debug/hnat", "type") == "dir" or module_loaded({ "mtkhnat", "mediatek_hnat" }) then
-				local hook_toggle = readfile("/sys/kernel/debug/hnat/hook_toggle")
-				local ethernet_hnat = hook_toggle
+			elseif (fs.stat("/sys/kernel/debug/hnat", "type") == "dir" or module_loaded({ "mtkhnat", "mediatek_hnat" })) and
+				hnat_hook_enabled()
+			then
 				local wireless_hnat = ""
-
-				ethernet_hnat = (ethernet_hnat and not is_hnat_enabled(ethernet_hnat)) and " / Ethernet HNAT Disabled" or ""
 
 				if has_mediatek_wireless_dat() and
 					sys.call("grep -q 'WHNAT=1' /etc/wireless/mediatek/*.dat") ~= 0
@@ -107,7 +102,7 @@ local methods = {
 					wireless_hnat = " / Wireless HNAT Disabled"
 				end
 
-				fptype = "MediaTek HNAT" .. ethernet_hnat .. wireless_hnat
+				fptype = "MediaTek HNAT" .. wireless_hnat
 			end
 			print(json.stringify({ type = fptype }))
 		end
@@ -137,6 +132,12 @@ local methods = {
 			local ppe_stat = {}
 			local ppe_path = "/sys/kernel/debug/hnat/hnat_stats"
 
+			if not hnat_hook_enabled() then
+				ppe_stat.PPE_NUM = "0"
+				print(json.stringify(ppe_stat))
+				return
+			end
+
 			if not fs.access(ppe_path) then
 				-- try alternate locations
 				local alts = {
@@ -153,7 +154,7 @@ local methods = {
 					end
 				end
 				if not found then
-					ppe_stat.PPE_NUM = fs.stat("/sys/kernel/debug/hnat", "type") == "dir" and "3" or "0"
+					ppe_stat.PPE_NUM = "0"
 					print(json.stringify(ppe_stat))
 					return
 				end
@@ -181,6 +182,31 @@ local methods = {
 				end
 			end
 
+			local function parse_compact_ppe_line(line)
+				local ppe = line:match("[Pp][Pp][Ee]%s*(%d+)")
+				local value
+
+				if not ppe then
+					return
+				end
+
+				value = line:match("[Bb][Ii][Nn][Dd]%w*%s*[:=]%s*(%d+)") or
+					line:match("[Bb][Oo][Uu][Nn][Dd]%w*%s*[:=]%s*(%d+)") or
+					line:match("[Bb][Ii][Nn][Dd]%w*%s+(%d+)") or
+					line:match("[Bb][Oo][Uu][Nn][Dd]%w*%s+(%d+)")
+				set_ppe_value("BIND", ppe, value)
+
+				value = line:match("[Aa][Ll][Ll]%w*%s*[:=]%s*(%d+)") or
+					line:match("[Ee][Nn][Tt][Rr][Yy]%w*%s*[:=]%s*(%d+)") or
+					line:match("[Ee][Nn][Tt][Rr][Ii][Ee][Ss]%w*%s*[:=]%s*(%d+)") or
+					line:match("[Tt][Oo][Tt][Aa][Ll]%w*%s*[:=]%s*(%d+)") or
+					line:match("[Aa][Ll][Ll]%w*%s+(%d+)") or
+					line:match("[Ee][Nn][Tt][Rr][Yy]%w*%s+(%d+)") or
+					line:match("[Ee][Nn][Tt][Rr][Ii][Ee][Ss]%w*%s+(%d+)") or
+					line:match("[Tt][Oo][Tt][Aa][Ll]%w*%s+(%d+)")
+				set_ppe_value("ALL", ppe, value)
+			end
+
 			local fd = io.open(ppe_path, 'r')
 
 			if fd then
@@ -189,25 +215,37 @@ local methods = {
 					if i then
 						local key = (string.sub(line, 1, i - 1):gsub("^%s+", ""):gsub("%s+$", ""))
 						local value = (string.sub(line, i + 1):gsub("^%s+", ""):gsub("%s+$", ""))
-						ppe_stat[key] = value
+						local ppe, kind = key:match("^[Pp][Pp][Ee]%s*(%d+)%s*[_%-%s%.]*(.+)$")
+						local reverse_kind, reverse_ppe = key:match("^(.+)%s*[_%-%s%.]*[Pp][Pp][Ee]%s*(%d+)$")
+
+						if ppe and kind then
+							kind = kind:lower()
+
+							if kind:match("bind") or kind:match("bound") then
+								set_ppe_value("BIND", ppe, value)
+							elseif kind:match("all") or kind:match("entry") or kind:match("entries") or kind:match("total") then
+								set_ppe_value("ALL", ppe, value)
+							else
+								ppe_stat[key] = value
+							end
+						elseif reverse_kind and reverse_ppe then
+							reverse_kind = reverse_kind:lower()
+
+							if reverse_kind:match("bind") or reverse_kind:match("bound") then
+								set_ppe_value("BIND", reverse_ppe, value)
+							elseif reverse_kind:match("all") or reverse_kind:match("entry") or reverse_kind:match("entries") or reverse_kind:match("total") then
+								set_ppe_value("ALL", reverse_ppe, value)
+							else
+								ppe_stat[key] = value
+							end
+						else
+							ppe_stat[key] = value
+						end
 					else
-						local ppe, value
-
-						ppe, value = line:match("[Pp][Pp][Ee]%s*(%d+).-[Bb][Ii][Nn][Dd].-(%d+)")
-						set_ppe_value("BIND", ppe, value)
-
-						ppe, value = line:match("[Pp][Pp][Ee]%s*(%d+).-[Aa][Ll][Ll].-(%d+)")
-						set_ppe_value("ALL", ppe, value)
-
-						ppe, value = line:match("[Pp][Pp][Ee]%s*(%d+).-[Ee][Nn][Tt][Rr][Yy].-(%d+)")
-						set_ppe_value("ALL", ppe, value)
+						parse_compact_ppe_line(line)
 					end
 				end
 				fd:close()
-			end
-
-			if not ppe_stat.PPE_NUM and fs.stat("/sys/kernel/debug/hnat", "type") == "dir" then
-				ppe_stat.PPE_NUM = "3"
 			end
 
 			if ppe_stat.PPE_NUM then

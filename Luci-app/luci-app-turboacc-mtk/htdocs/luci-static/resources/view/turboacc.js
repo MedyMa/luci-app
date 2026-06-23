@@ -102,14 +102,18 @@ function getDefaultFullcone(features) {
 }
 
 function getConfigState(features) {
+	var fastpath = normalizeFastpathValue(uci.get('turboacc', 'config', 'fastpath'));
+
+	if (fastpath === 'flow_offloading' && !(features && features.hasFLOWOFFLOADING))
+		fastpath = 'disabled';
+
 	return {
-		fastpath: normalizeFastpathValue(uci.get('turboacc', 'config', 'fastpath')),
+		fastpath: fastpath,
 		fastpath_fo_hw: boolValue(uci.get('turboacc', 'config', 'fastpath_fo_hw')),
 		fastpath_fc_br: boolValue(uci.get('turboacc', 'config', 'fastpath_fc_br')),
 		fastpath_fc_ipv6: boolValue(uci.get('turboacc', 'config', 'fastpath_fc_ipv6')),
 		fastpath_mh_eth_hnat: boolValue(uci.get('turboacc', 'config', 'fastpath_mh_eth_hnat')),
 		fastpath_mh_eth_hnat_v6: boolValue(uci.get('turboacc', 'config', 'fastpath_mh_eth_hnat_v6')),
-		fastpath_mh_eth_hnat_ap: trimValue(uci.get('turboacc', 'config', 'fastpath_mh_eth_hnat_ap')),
 		fastpath_mh_eth_hnat_bind_rate: trimValue(uci.get('turboacc', 'config', 'fastpath_mh_eth_hnat_bind_rate')) || '30',
 		fullcone: trimValue(uci.get('turboacc', 'config', 'fullcone')) || getDefaultFullcone(features),
 		tcpcca: trimValue(uci.get('turboacc', 'config', 'tcpcca')) || 'cubic'
@@ -294,6 +298,15 @@ function getPPESummary(ppeStats) {
 	if (count == null) {
 		return {
 			count: null,
+			cards: [],
+			totalBound: null,
+			totalAll: null
+		};
+	}
+
+	if (count <= 0) {
+		return {
+			count: 0,
 			cards: [],
 			totalBound: null,
 			totalAll: null
@@ -512,19 +525,12 @@ function renderPPEPanel(ppe) {
 	if (!ppe || !ppe.cards || !ppe.cards.length)
 		return null;
 
-	var rows = [0, 1, 2].map(function(index) {
-		return ppe.cards[index] || {
-			index: index,
-			bound: null,
-			all: null,
-			percent: 0
-		};
-	});
+	var rows = ppe.cards;
 
 	return E('div', { 'class': 'ta-panel ta-ppe-panel' }, [
 		E('div', { 'class': 'ta-panel-head' }, [
 			E('div', { 'class': 'ta-panel-title' }, _('PPE 明细')), 
-			E('div', { 'class': 'ta-panel-subtitle' }, _('三条 PPE 通道的已绑定连接数。'))
+			E('div', { 'class': 'ta-panel-subtitle' }, _('PPE 通道的已绑定连接数。'))
 		]),
 		E('div', { 'class': 'ta-progress-list' }, rows.map(function(card) {
 			var width = card.bound > 0 && card.all > 0 ? Math.max(card.percent, 1) : 0;
@@ -619,9 +625,6 @@ function getHealthState(state) {
 
 	if (configuredKey === 'fast_classifier' && config.fastpath_fc_br)
 		notes.push(_('桥接加速已打开，若桥接模式 VPN 出现异常，应优先回看这一项。'));
-
-	if (config.fastpath_mh_eth_hnat_ap)
-		notes.push(_('已填写 AP 模式地址，保存后切换拓扑需要重启才能完全生效。'));
 
 	if (configuredKey === 'mediatek_hnat' && ppe.totalAll != null)
 		notes.push(_('当前 PPE 总容量：') + formatSessions(ppe.totalBound, ppe.totalAll));
@@ -766,7 +769,6 @@ function renderFocusGrid(state, health) {
 			'is-accent',
 			[
 				[ _('绑定阈值'), hnatEnabled && config.fastpath_mh_eth_hnat ? (config.fastpath_mh_eth_hnat_bind_rate + ' pps') : null ],
-				[ _('AP 模式地址'), config.fastpath_mh_eth_hnat_ap || null ],
 				[ _('PPE 总览'), hnatEnabled ? formatSessions(ppe.totalBound, ppe.totalAll) : null ]
 			],
 			[
@@ -1014,7 +1016,7 @@ function buildForm(features, config) {
 	var s = m.section(form.NamedSection, 'config', 'turboacc');
 	var o;
 	var tcpccaOptions = parseTokenList(features.hasTCPCCA);
-	var showFlowOffloading = isEngineAvailable(features.hasFLOWOFFLOADING, config, 'flow_offloading');
+	var showFlowOffloading = !!features.hasFLOWOFFLOADING;
 	var showFastClassifier = isEngineAvailable(features.hasFASTCLASSIFIER, config, 'fast_classifier');
 	var showShortcutFeCm = isEngineAvailable(features.hasSHORTCUTFECM, config, 'shortcut_fe_cm');
 	var showMediatekHnat = true;
@@ -1039,13 +1041,15 @@ function buildForm(features, config) {
 	o.widget = 'select';
 	o.rmempty = false;
 	o.cfgvalue = function(section_id) {
-		return normalizeFastpathValue(uci.get('turboacc', section_id, 'fastpath'));
+		var value = normalizeFastpathValue(uci.get('turboacc', section_id, 'fastpath'));
+
+		return value === 'flow_offloading' && !showFlowOffloading ? 'disabled' : value;
 	};
 	o.write = function(section_id, value) {
 		return uci.set('turboacc', section_id, 'fastpath', value === 'disabled' ? 'none' : value);
 	};
 	o.validate = function(section_id, value) {
-		return value === 'disabled' || value === 'flow_offloading' || value === 'fast_classifier' ||
+		return value === 'disabled' || (showFlowOffloading && value === 'flow_offloading') || value === 'fast_classifier' ||
 			value === 'shortcut_fe_cm' || value === 'mediatek_hnat'
 				? true
 				: _('无效的主加速引擎');
@@ -1108,12 +1112,6 @@ function buildForm(features, config) {
 			_('启用 IPv6 HNAT。'));
 		o.default = o.enabled;
 		o.rmempty = false;
-		o.depends({ fastpath: 'mediatek_hnat', fastpath_mh_eth_hnat: '1' });
-
-		o = s.taboption('hnat', form.Value, 'fastpath_mh_eth_hnat_ap', _('AP 模式地址'),
-			_('需要 AP 模式时填写。'));
-		o.optional = true;
-		o.datatype = 'ip4addr';
 		o.depends({ fastpath: 'mediatek_hnat', fastpath_mh_eth_hnat: '1' });
 
 		o = s.taboption('hnat', form.Value, 'fastpath_mh_eth_hnat_bind_rate', _('HNAT 绑定速率阈值（pps）'),
