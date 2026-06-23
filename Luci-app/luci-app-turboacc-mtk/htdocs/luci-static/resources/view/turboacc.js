@@ -1100,9 +1100,23 @@ function buildForm(features, config) {
 		tcpccaOptions.push(config.tcpcca);
 
 	o = s.taboption('experience', form.ListValue, 'tcpcca', _('TCP 拥塞控制算法'),
-		_('选择 TCP 拥塞控制。'));
+		_('选择 TCP 拥塞控制算法。BBR 适合高带宽链路，CUBIC 为内核默认，Reno 兼容性最佳。'));
 	tcpccaOptions.forEach(function(item) {
-		o.value(item, String(item).toUpperCase());
+		var label;
+		switch (String(item).toLowerCase()) {
+		case 'bbr':
+			label = 'BBR';
+			break;
+		case 'cubic':
+			label = 'CUBIC';
+			break;
+		case 'reno':
+			label = 'Reno';
+			break;
+		default:
+			label = String(item).toUpperCase();
+		}
+		o.value(item, label);
 	});
 	o.default = config.tcpcca || 'cubic';
 	o.widget = 'select';
