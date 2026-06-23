@@ -1,0 +1,272 @@
+name: Build luci-app-turboacc-mtk
+
+on:
+  workflow_dispatch:
+    inputs:
+      sdk_distribution:
+        description: SDK distribution
+        required: false
+        default: 'immortalwrt'
+        type: choice
+        options:
+          - openwrt
+          - immortalwrt
+      openwrt_version:
+        description: OpenWrt / ImmortalWrt release version
+        required: false
+        default: '24.10'
+      pkg_format:
+        description: Package output format
+        required: false
+        default: 'ipk'
+        type: choice
+        options:
+          - ipk
+          - apk
+      openwrt_target:
+        description: OpenWrt target
+        required: false
+        default: 'mediatek'
+      openwrt_subtarget:
+        description: OpenWrt subtarget
+        required: false
+        default: 'filogic'
+      publish_release:
+        description: Publish the built packages to GitHub Releases
+        required: false
+        default: false
+        type: boolean
+      release_tag:
+        description: 'Release tag (auto-populated from git tag or manual override)'
+        required: false
+        default: ''
+  push:
+    tags:
+      - 'turboacc-v*'
+    paths:
+      - '.github/workflows/build-luci-app-turboacc-mtk.yml'
+      - 'luci-app-turboacc-mtk/**'
+  pull_request:
+    paths:
+      - '.github/workflows/build-luci-app-turboacc-mtk.yml'
+      - 'luci-app-turboacc-mtk/**'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      SDK_DISTRIBUTION: ${{ inputs.sdk_distribution || 'immortalwrt' }}
+      OPENWRT_VERSION: ${{ inputs.openwrt_version || '24.10' }}
+      OPENWRT_TARGET: ${{ inputs.openwrt_target || 'mediatek' }}
+      OPENWRT_SUBTARGET: ${{ inputs.openwrt_subtarget || 'filogic' }}
+      PKG_FORMAT: ${{ inputs.pkg_format || 'ipk' }}
+      PKG_NAME: luci-app-turboacc-mtk
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            clang \
+            curl \
+            file \
+            flex \
+            bison \
+            g++ \
+            gawk \
+            gcc-multilib \
+            gettext \
+            git \
+            libncurses5-dev \
+            libssl-dev \
+            python3 \
+            python3-pyelftools \
+            python3-setuptools \
+            rsync \
+            subversion \
+            swig \
+            unzip \
+            wget \
+            zlib1g-dev \
+            zstd
+
+      - name: Download SDK
+        run: |
+          set -eux
+          case "$SDK_DISTRIBUTION" in
+            openwrt)
+              sdk_base_url="https://downloads.openwrt.org/releases/${OPENWRT_VERSION}/targets/${OPENWRT_TARGET}/${OPENWRT_SUBTARGET}"
+              sdk_prefix='openwrt-sdk'
+              sdk_ext='.tar.zst'
+              ;;
+            immortalwrt)
+              if echo "$OPENWRT_VERSION" | grep -q 'SNAPSHOT'; then
+                sdk_base_url="https://downloads.immortalwrt.org/snapshots/targets/${OPENWRT_TARGET}/${OPENWRT_SUBTARGET}"
+              else
+                sdk_base_url="https://downloads.immortalwrt.org/releases/${OPENWRT_VERSION}/targets/${OPENWRT_TARGET}/${OPENWRT_SUBTARGET}"
+              fi
+              sdk_prefix='immortalwrt-sdk'
+              sdk_ext='.tar.zst'
+              ;;
+            *)
+              echo "Unsupported SDK distribution: $SDK_DISTRIBUTION" >&2
+              exit 1
+              ;;
+          esac
+
+          sdk_target_id="${OPENWRT_TARGET}-${OPENWRT_SUBTARGET}"
+          sdk_file="$(curl -fsSL "$sdk_base_url/" | grep -oE "${sdk_prefix}-${OPENWRT_VERSION}-${sdk_target_id}_[^\"[:space:]]+${sdk_ext}" | head -n1)"
+          if [ -z "$sdk_file" ]; then
+            sdk_file="$(curl -fsSL "$sdk_base_url/" | grep -oE "${sdk_prefix}-${sdk_target_id}_[^\"[:space:]]+${sdk_ext}" | head -n1)"
+          fi
+          test -n "$sdk_file"
+          wget -q "$sdk_base_url/$sdk_file" -O sdk.tar.zst
+          tar --zstd -xf sdk.tar.zst
+          sdk_dir="$(find . -maxdepth 1 -type d -name "${sdk_prefix}-*" | head -n1)"
+          test -n "$sdk_dir"
+          echo "SDK_DIR=$sdk_dir" >> "$GITHUB_ENV"
+
+      - name: Update feeds
+        working-directory: ${{ env.SDK_DIR }}
+        run: |
+          set -eux
+          ./scripts/feeds update -a
+
+      - name: Inject package into LuCI feed
+        run: |
+          set -eux
+          package_makefile="$(find "$GITHUB_WORKSPACE" -type f -name Makefile \
+            -not -path "$GITHUB_WORKSPACE/.git/*" \
+            -not -path "$GITHUB_WORKSPACE/openwrt-sdk-*/*" \
+            -not -path "$GITHUB_WORKSPACE/immortalwrt-sdk-*/*" \
+            -print | while IFS= read -r candidate; do
+              if sed 's/\r$//' "$candidate" | grep -q "^PKG_NAME:=${PKG_NAME}$"; then
+                printf '%s\n' "$candidate"
+                break
+              fi
+            done | head -n1)"
+          package_src="${package_makefile%/Makefile}"
+
+          if [ -z "$package_makefile" ] || [ ! -f "$package_makefile" ]; then
+            echo "Unable to locate ${PKG_NAME} Makefile in workspace" >&2
+            echo "Searched under $GITHUB_WORKSPACE for PKG_NAME:=${PKG_NAME}" >&2
+            exit 1
+          fi
+
+          sed 's/\r$//' "$package_makefile" | grep -q "^PKG_NAME:=${PKG_NAME}$"
+
+          sdk_feed_dir="$SDK_DIR/feeds/luci/applications/${PKG_NAME}"
+          sdk_pkg_dir="$SDK_DIR/package/feeds/luci/${PKG_NAME}"
+
+          mkdir -p "$SDK_DIR/feeds/luci/applications"
+          mkdir -p "$SDK_DIR/package/feeds/luci"
+          rm -rf "$sdk_feed_dir" "$sdk_pkg_dir"
+
+          rsync -a \
+            --exclude '.git/' \
+            --exclude '.github/' \
+            --exclude 'openwrt-sdk-*' \
+            --exclude 'immortalwrt-sdk-*' \
+            "$package_src/" "$sdk_feed_dir/"
+
+          # Normalize line endings for shell scripts and Makefile
+          find "$sdk_feed_dir" -type f \( \
+            -name Makefile -o \
+            -name '*.sh' -o \
+            -path '*/root/etc/init.d/*' -o \
+            -path '*/root/etc/uci-defaults/*' -o \
+            -path '*/root/usr/libexec/*' \
+          \) -exec sed -i 's/\r$//' {} +
+
+          ln -sfn "../../../feeds/luci/applications/${PKG_NAME}" "$sdk_pkg_dir"
+          test -f "$sdk_feed_dir/Makefile"
+          test -f "$sdk_pkg_dir/Makefile"
+          sed 's/\r$//' "$sdk_feed_dir/Makefile" | grep -q "^PKG_NAME:=${PKG_NAME}$"
+
+      - name: Install package definitions
+        working-directory: ${{ env.SDK_DIR }}
+        run: |
+          set -eux
+          ./scripts/feeds install -a
+
+      - name: Configure SDK
+        working-directory: ${{ env.SDK_DIR }}
+        run: |
+          set -eux
+          package_po_dir="$SDK_DIR/feeds/luci/applications/${PKG_NAME}/po"
+          turboacc_i18n_langs=''
+
+          if [ -d "$package_po_dir" ]; then
+            turboacc_i18n_langs="$(find "$package_po_dir" -mindepth 2 -maxdepth 2 -type f -name '*.po' -printf '%h\n' | sed 's#^.*/##' | sort -u | tr '\n' ' ' | sed 's/[[:space:]]\+$//')"
+          fi
+
+          echo "CONFIG_PACKAGE_${PKG_NAME}=y" | sed 's/-/_/g' >> .config
+
+          for lang in $turboacc_i18n_langs; do
+            echo "CONFIG_PACKAGE_luci-i18n-turboacc-mtk-${lang}=y" >> .config
+          done
+
+          make defconfig
+
+          {
+            echo 'TURBOACC_I18N_LANGS<<EOF'
+            printf '%s\n' "$turboacc_i18n_langs"
+            echo 'EOF'
+          } >> "$GITHUB_ENV"
+
+          grep "^CONFIG_PACKAGE_luci-app-turboacc-mtk=" .config
+          grep '^CONFIG_PACKAGE_luci-i18n-turboacc-mtk-' .config || true
+
+      - name: Compile package
+        working-directory: ${{ env.SDK_DIR }}
+        run: |
+          set -eux
+          make package/feeds/luci/${PKG_NAME}/compile -j"$(nproc)" V=s
+
+      - name: Collect build artifacts
+        run: |
+          set -eux
+          artifact_dir="$RUNNER_TEMP/${PKG_NAME}-artifacts"
+          rm -rf "$artifact_dir"
+          mkdir -p "$artifact_dir"
+
+          pkg_ext=".${PKG_FORMAT:-apk}"
+          find "$SDK_DIR/bin/packages" -type f \( \
+            -name "${PKG_NAME}*${pkg_ext}" \
+            -o -name "luci-i18n-turboacc-mtk*${pkg_ext}" \
+            -o -path '*/luci/Packages*' \
+          \) -exec cp -f {} "$artifact_dir/" \;
+
+          if ! find "$artifact_dir" -maxdepth 1 -type f -name "${PKG_NAME}*${pkg_ext}" | grep -q .; then
+            echo "No ${PKG_NAME} ${pkg_ext} was produced by the build." >&2
+            find "$SDK_DIR/bin/packages" -maxdepth 4 -type f | sort >&2
+            exit 1
+          fi
+
+          find "$artifact_dir" -type f | sort
+          echo "ARTIFACT_DIR=$artifact_dir" >> "$GITHUB_ENV"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PKG_NAME }}-${{ env.OPENWRT_TARGET }}-${{ env.OPENWRT_SUBTARGET }}
+          path: ${{ env.ARTIFACT_DIR }}
+
+      - name: Publish to GitHub Releases
+        if: |
+          (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/turboacc-v')) ||
+          (github.event_name == 'workflow_dispatch' && inputs.publish_release)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.release_tag || github.ref_name }}
+          files: ${{ env.ARTIFACT_DIR }}/*
+          fail_on_unmatched_files: true
+          generate_release_notes: true
