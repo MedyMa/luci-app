@@ -3,12 +3,8 @@ name: Build luci-app-turboacc-mtk
 on:
   workflow_dispatch:
     inputs:
-      sdk_url:
-        description: SDK 直链（留空则从官方源自动查找）
-        required: false
-        default: ''
       sdk_source:
-        description: SDK 来源（sdk_url 为空时生效）
+        description: SDK 来源
         required: false
         default: 'immortalwrt'
         type: choice
@@ -63,7 +59,6 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      SDK_URL: ${{ inputs.sdk_url }}
       SDK_SOURCE: ${{ inputs.sdk_source || 'immortalwrt' }}
       OPENWRT_VERSION: ${{ inputs.openwrt_version || '24.10.0' }}
       OPENWRT_TARGET: ${{ inputs.openwrt_target || 'mediatek' }}
@@ -108,48 +103,36 @@ jobs:
           set -eux
           sdk_target_id="${OPENWRT_TARGET}-${OPENWRT_SUBTARGET}"
 
-          # --- sdk_url 优先：用户提供直链则直接下载 ---
-          if [ -n "$SDK_URL" ]; then
-            download_url="$SDK_URL"
-            echo "Using user-provided SDK URL: $download_url"
-            # infer sdk_prefix from URL
-            case "$download_url" in
-              *openwrt-sdk*) sdk_prefix='openwrt-sdk' ;;
-              *immortalwrt-sdk*) sdk_prefix='immortalwrt-sdk' ;;
-              *) sdk_prefix='openwrt-sdk' ;;
-            esac
-          else
-            # --- auto-detect from official sources ---
-            case "$SDK_SOURCE" in
-              openwrt)
-                sdk_base_url="https://downloads.openwrt.org/releases/${OPENWRT_VERSION}/targets/${OPENWRT_TARGET}/${OPENWRT_SUBTARGET}"
-                sdk_prefix='openwrt-sdk'
-                sdk_file="$(curl -fsSL "$sdk_base_url/" | grep -oE "${sdk_prefix}-${OPENWRT_VERSION}-${sdk_target_id}_[^\"[:space:]]+\.tar\.zst" | head -n1)"
-                test -n "$sdk_file"
-                download_url="$sdk_base_url/$sdk_file"
-                ;;
+          # --- auto-detect from official sources ---
+          case "$SDK_SOURCE" in
+            openwrt)
+              sdk_base_url="https://downloads.openwrt.org/releases/${OPENWRT_VERSION}/targets/${OPENWRT_TARGET}/${OPENWRT_SUBTARGET}"
+              sdk_prefix='openwrt-sdk'
+              sdk_file="$(curl -fsSL "$sdk_base_url/" | grep -oE "${sdk_prefix}-${OPENWRT_VERSION}-${sdk_target_id}_[^\"[:space:]]+\.tar\.zst" | head -n1)"
+              test -n "$sdk_file"
+              download_url="$sdk_base_url/$sdk_file"
+              ;;
 
-              immortalwrt)
-                if echo "$OPENWRT_VERSION" | grep -q 'SNAPSHOT'; then
-                  sdk_base_url="https://downloads.immortalwrt.org/snapshots/targets/${OPENWRT_TARGET}/${OPENWRT_SUBTARGET}"
-                else
-                  sdk_base_url="https://downloads.immortalwrt.org/releases/${OPENWRT_VERSION}/targets/${OPENWRT_TARGET}/${OPENWRT_SUBTARGET}"
-                fi
-                sdk_prefix='immortalwrt-sdk'
-                sdk_file="$(curl -fsSL "$sdk_base_url/" | grep -oE "${sdk_prefix}-${OPENWRT_VERSION}-${sdk_target_id}_[^\"[:space:]]+\.tar\.zst" | head -n1)"
-                if [ -z "$sdk_file" ]; then
-                  sdk_file="$(curl -fsSL "$sdk_base_url/" | grep -oE "${sdk_prefix}-${sdk_target_id}_[^\"[:space:]]+\.tar\.zst" | head -n1)"
-                fi
-                test -n "$sdk_file"
-                download_url="$sdk_base_url/$sdk_file"
-                ;;
+            immortalwrt)
+              if echo "$OPENWRT_VERSION" | grep -q 'SNAPSHOT'; then
+                sdk_base_url="https://downloads.immortalwrt.org/snapshots/targets/${OPENWRT_TARGET}/${OPENWRT_SUBTARGET}"
+              else
+                sdk_base_url="https://downloads.immortalwrt.org/releases/${OPENWRT_VERSION}/targets/${OPENWRT_TARGET}/${OPENWRT_SUBTARGET}"
+              fi
+              sdk_prefix='immortalwrt-sdk'
+              sdk_file="$(curl -fsSL "$sdk_base_url/" | grep -oE "${sdk_prefix}-${OPENWRT_VERSION}-${sdk_target_id}_[^\"[:space:]]+\.tar\.zst" | head -n1)"
+              if [ -z "$sdk_file" ]; then
+                sdk_file="$(curl -fsSL "$sdk_base_url/" | grep -oE "${sdk_prefix}-${sdk_target_id}_[^\"[:space:]]+\.tar\.zst" | head -n1)"
+              fi
+              test -n "$sdk_file"
+              download_url="$sdk_base_url/$sdk_file"
+              ;;
 
-              *)
-                echo "Unsupported SDK source: $SDK_SOURCE" >&2
-                exit 1
-                ;;
-            esac
-          fi
+            *)
+              echo "Unsupported SDK source: $SDK_SOURCE" >&2
+              exit 1
+              ;;
+          esac
 
           echo "Downloading $download_url"
           wget -q "$download_url" -O sdk.tar.zst
