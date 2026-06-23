@@ -3,23 +3,22 @@ name: Build luci-app-turboacc-mtk
 on:
   workflow_dispatch:
     inputs:
-      sdk_source:
-        description: SDK 来源
+      sdk_url:
+        description: SDK 直链（留空则从官方源自动查找）
         required: false
-        default: 'padavanonly'
+        default: ''
+      sdk_source:
+        description: SDK 来源（sdk_url 为空时生效）
+        required: false
+        default: 'openwrt'
         type: choice
         options:
-          - padavanonly
           - openwrt
           - immortalwrt
       openwrt_version:
-        description: 版本号（openwrt/immortalwrt 用）
+        description: 版本号
         required: false
-        default: '24.10'
-      padavanonly_tag:
-        description: padavanonly 的 release tag（如 v6.6-2025-01-15）
-        required: false
-        default: ''
+        default: '24.10.0'
       pkg_format:
         description: 输出包格式
         required: false
@@ -64,9 +63,9 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      SDK_SOURCE: ${{ inputs.sdk_source || 'padavanonly' }}
-      OPENWRT_VERSION: ${{ inputs.openwrt_version || '24.10' }}
-      PADAVANONLY_TAG: ${{ inputs.padavanonly_tag }}
+      SDK_URL: ${{ inputs.sdk_url }}
+      SDK_SOURCE: ${{ inputs.sdk_source || 'openwrt' }}
+      OPENWRT_VERSION: ${{ inputs.openwrt_version || '24.10.0' }}
       OPENWRT_TARGET: ${{ inputs.openwrt_target || 'mediatek' }}
       OPENWRT_SUBTARGET: ${{ inputs.openwrt_subtarget || 'filogic' }}
       PKG_FORMAT: ${{ inputs.pkg_format || 'ipk' }}
@@ -109,56 +108,48 @@ jobs:
           set -eux
           sdk_target_id="${OPENWRT_TARGET}-${OPENWRT_SUBTARGET}"
 
-          case "$SDK_SOURCE" in
-            padavanonly)
-              # --- padavanonly GitHub Releases ---
-              padavanonly_repo="padavanonly/immortalwrt-mt798x-6.6"
-              sdk_prefix='immortalwrt-sdk'
+          # --- sdk_url 优先：用户提供直链则直接下载 ---
+          if [ -n "$SDK_URL" ]; then
+            download_url="$SDK_URL"
+            echo "Using user-provided SDK URL: $download_url"
+            # infer sdk_prefix from URL
+            case "$download_url" in
+              *openwrt-sdk*) sdk_prefix='openwrt-sdk' ;;
+              *immortalwrt-sdk*) sdk_prefix='immortalwrt-sdk' ;;
+              *) sdk_prefix='openwrt-sdk' ;;
+            esac
+          else
+            # --- auto-detect from official sources ---
+            case "$SDK_SOURCE" in
+              openwrt)
+                sdk_base_url="https://downloads.openwrt.org/releases/${OPENWRT_VERSION}/targets/${OPENWRT_TARGET}/${OPENWRT_SUBTARGET}"
+                sdk_prefix='openwrt-sdk'
+                sdk_file="$(curl -fsSL "$sdk_base_url/" | grep -oE "${sdk_prefix}-${OPENWRT_VERSION}-${sdk_target_id}_[^\"[:space:]]+\.tar\.zst" | head -n1)"
+                test -n "$sdk_file"
+                download_url="$sdk_base_url/$sdk_file"
+                ;;
 
-              if [ -n "$PADAVANONLY_TAG" ]; then
-                tag="$PADAVANONLY_TAG"
-              else
-                # auto-resolve latest release tag
-                tag="$(curl -fsSL "https://api.github.com/repos/${padavanonly_repo}/releases/latest" | python3 -c "import sys,json; print(json.load(sys.stdin).get('tag_name',''))")"
-                test -n "$tag"
-              fi
-              echo "Using padavanonly tag=$tag"
+              immortalwrt)
+                if echo "$OPENWRT_VERSION" | grep -q 'SNAPSHOT'; then
+                  sdk_base_url="https://downloads.immortalwrt.org/snapshots/targets/${OPENWRT_TARGET}/${OPENWRT_SUBTARGET}"
+                else
+                  sdk_base_url="https://downloads.immortalwrt.org/releases/${OPENWRT_VERSION}/targets/${OPENWRT_TARGET}/${OPENWRT_SUBTARGET}"
+                fi
+                sdk_prefix='immortalwrt-sdk'
+                sdk_file="$(curl -fsSL "$sdk_base_url/" | grep -oE "${sdk_prefix}-${OPENWRT_VERSION}-${sdk_target_id}_[^\"[:space:]]+\.tar\.zst" | head -n1)"
+                if [ -z "$sdk_file" ]; then
+                  sdk_file="$(curl -fsSL "$sdk_base_url/" | grep -oE "${sdk_prefix}-${sdk_target_id}_[^\"[:space:]]+\.tar\.zst" | head -n1)"
+                fi
+                test -n "$sdk_file"
+                download_url="$sdk_base_url/$sdk_file"
+                ;;
 
-              # list release assets, find the SDK matching our target
-              sdk_file="$(curl -fsSL "https://api.github.com/repos/${padavanonly_repo}/releases/tags/${tag}" | python3 -c "import sys,json;a=json.load(sys.stdin).get('assets',[]);[print(x['name']) for x in a if 'immortalwrt-sdk' in x['name'] and '${sdk_target_id}' in x['name'] and x['name'].endswith('.tar.zst')]" | head -n1)"
-              test -n "$sdk_file"
-              download_url="https://github.com/${padavanonly_repo}/releases/download/${tag}/${sdk_file}"
-              ;;
-
-            openwrt)
-              sdk_base_url="https://downloads.openwrt.org/releases/${OPENWRT_VERSION}/targets/${OPENWRT_TARGET}/${OPENWRT_SUBTARGET}"
-              sdk_prefix='openwrt-sdk'
-              sdk_file="$(curl -fsSL "$sdk_base_url/" | grep -oE "${sdk_prefix}-${OPENWRT_VERSION}-${sdk_target_id}_[^\"[:space:]]+\.tar\.zst" | head -n1)"
-              test -n "$sdk_file"
-              download_url="$sdk_base_url/$sdk_file"
-              ;;
-
-            immortalwrt)
-              if echo "$OPENWRT_VERSION" | grep -q 'SNAPSHOT'; then
-                sdk_base_url="https://downloads.immortalwrt.org/snapshots/targets/${OPENWRT_TARGET}/${OPENWRT_SUBTARGET}"
-              else
-                sdk_base_url="https://downloads.immortalwrt.org/releases/${OPENWRT_VERSION}/targets/${OPENWRT_TARGET}/${OPENWRT_SUBTARGET}"
-              fi
-              sdk_prefix='immortalwrt-sdk'
-              sdk_ext='.tar.zst'
-              sdk_file="$(curl -fsSL "$sdk_base_url/" | grep -oE "${sdk_prefix}-${OPENWRT_VERSION}-${sdk_target_id}_[^\"[:space:]]+${sdk_ext}" | head -n1)"
-              if [ -z "$sdk_file" ]; then
-                sdk_file="$(curl -fsSL "$sdk_base_url/" | grep -oE "${sdk_prefix}-${sdk_target_id}_[^\"[:space:]]+${sdk_ext}" | head -n1)"
-              fi
-              test -n "$sdk_file"
-              download_url="$sdk_base_url/$sdk_file"
-              ;;
-
-            *)
-              echo "Unsupported SDK source: $SDK_SOURCE" >&2
-              exit 1
-              ;;
-          esac
+              *)
+                echo "Unsupported SDK source: $SDK_SOURCE" >&2
+                exit 1
+                ;;
+            esac
+          fi
 
           echo "Downloading $download_url"
           wget -q "$download_url" -O sdk.tar.zst
