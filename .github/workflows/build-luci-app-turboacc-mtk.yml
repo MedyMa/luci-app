@@ -119,20 +119,18 @@ jobs:
                 tag="$PADAVANONLY_TAG"
               else
                 # auto-resolve latest release tag
-                tag="$(curl -fsSL "https://api.github.com/repos/${padavanonly_repo}/releases/latest" \
-                  | python3 -c "import sys,json; print(json.load(sys.stdin).get('tag_name',''))")"
+                tag="$(curl -fsSL "https://api.github.com/repos/${padavanonly_repo}/releases/latest" | python3 -c "import sys,json; print(json.load(sys.stdin).get('tag_name',''))")"
                 test -n "$tag"
               fi
               echo "Using padavanonly tag=$tag"
 
               # list release assets, find the SDK matching our target
-              sdk_file="$(curl -fsSL "https://api.github.com/repos/${padavanonly_repo}/releases/tags/${tag}" \
-                | python3 -c "
+              sdk_file="$(curl -fsSL "https://api.github.com/repos/${padavanonly_repo}/releases/tags/${tag}" | python3 -c "
 import sys,json
 assets=json.load(sys.stdin).get('assets',[])
 for a in assets:
   n=a['name']
-  if '${sdk_prefix}' in n and '${sdk_target_id}' in n and n.endswith('.tar.zst'):
+  if 'immortalwrt-sdk' in n and '${sdk_target_id}' in n and n.endswith('.tar.zst'):
     print(n)
     break
 ")"
