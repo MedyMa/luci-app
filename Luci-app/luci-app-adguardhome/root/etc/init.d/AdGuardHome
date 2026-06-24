@@ -402,7 +402,92 @@ yaml_set_dns_single_value() {
 yaml_dns_block_contains() {
 	local key="$1" value="$2" file="$3"
 	[ -n "$value" ] || return 1
-	yaml_extract_dns_block "$key" "$file" 2>/dev/null | grep -Fqx "    - $value"
+	yaml_extract_dns_block "$key" "$file" 2>/dev/null | grep -Fqx "    - $value" && return 0
+	yaml_extract_dns_block "$key" "$file" 2>/dev/null | grep -Fqx "    - '$value'"
+}
+
+local_ipv4_addrs() {
+	ip -o -4 addr show scope global 2>/dev/null | awk '{ sub(/\/.*/, "", $4); print $4 }'
+}
+
+sanitize_dns_yaml_file() {
+	local file="$1" local_addrs
+	[ -r "$file" ] || return 0
+	local_addrs=$(local_ipv4_addrs | tr '\n' ' ')
+	awk -v local_addrs="$local_addrs" '
+	function trim(s) { sub(/^[[:space:]]+/, "", s); sub(/[[:space:]]+$/, "", s); return s }
+	function unquote(s) {
+		s = trim(s)
+		if ((substr(s, 1, 1) == "\"" && substr(s, length(s), 1) == "\"") ||
+		    (substr(s, 1, 1) == "\047" && substr(s, length(s), 1) == "\047"))
+			s = substr(s, 2, length(s) - 2)
+		gsub(/\047\047/, "\047", s)
+		return s
+	}
+	function quote(s) { gsub(/\047/, "\047\047", s); return "\047" s "\047" }
+	function is_local_host(host,    n, a, i) {
+		host = tolower(host)
+		if (host == "localhost" || host == "0.0.0.0" || host ~ /^127\./)
+			return 1
+		n = split(local_addrs, a, /[[:space:]]+/)
+		for (i = 1; i <= n; i++)
+			if (a[i] != "" && host == a[i])
+				return 1
+		return 0
+	}
+	function is_self_dns(value,    s, host, port) {
+		s = unquote(value)
+		if (s ~ /^[A-Za-z][A-Za-z0-9+.-]*:\/\//)
+			return 0
+		host = s
+		port = ""
+		if (s ~ /#[0-9]+$/) {
+			port = s
+			sub(/^.*#/, "", port)
+			sub(/#[0-9]+$/, "", host)
+		}
+		else if (s ~ /^[0-9.]+:[0-9]+$/) {
+			port = s
+			sub(/^.*:/, "", port)
+			sub(/:[0-9]+$/, "", host)
+		}
+		return (port == "53" && is_local_host(host))
+	}
+	function emit_item(value, key) {
+		value = unquote(value)
+		if (is_self_dns(value))
+			value = (key == "bootstrap_dns") ? "223.5.5.5" : "tls://dns.alidns.com"
+		print "    - " quote(value)
+	}
+	BEGIN { in_dns = 0; in_list = "" }
+	/^[^[:space:]#][A-Za-z0-9_-]*:[[:space:]]*($|#)/ {
+		in_dns = ($0 ~ /^dns:[[:space:]]*($|#)/)
+		in_list = ""
+		print
+		next
+	}
+	in_dns && /^  (bootstrap_dns|upstream_dns):[[:space:]]*($|#)/ {
+		in_list = $1
+		sub(/:$/, "", in_list)
+		print
+		next
+	}
+	in_dns && in_list != "" && /^    -[[:space:]]*/ {
+		line = $0
+		sub(/^    -[[:space:]]*/, "", line)
+		sub(/[[:space:]]+#.*$/, "", line)
+		if (trim(line) != "")
+			emit_item(line, in_list)
+		next
+	}
+	in_dns && in_list != "" && /^  [A-Za-z0-9_-]+:[[:space:]]*/ {
+		in_list = ""
+		print
+		next
+	}
+	{ print }
+	' "$file" > "$file.tmp" && mv "$file.tmp" "$file"
+	rm -f "$file.tmp"
 }
 
 backup_compat_upstream_dns() {
@@ -421,7 +506,9 @@ apply_compat_upstream_dns() {
 	[ -r "$configpath" ] || return 1
 	value="127.0.0.1:$port"
 	first=$(yaml_extract_dns_block upstream_dns "$configpath" 2>/dev/null | grep '^    - ' | head -1 | sed 's/^    - //')
-	[ "$first" = "$value" ] && return 0
+	case "$first" in
+		"$value"|"'$value'"|"\"$value\"") return 0 ;;
+	esac
 	backup_compat_upstream_dns "$configpath" || {
 		logger -t AdGuardHome "failed to backup upstream_dns before enabling PassWall compatibility"
 		return 1
@@ -431,12 +518,14 @@ apply_compat_upstream_dns() {
 	# skip it with tail -n +2 since we emit our own header below.
 	{
 		echo "  upstream_dns:"
-		echo "    - $value"
+		echo "    - '$value'"
 		yaml_extract_dns_block upstream_dns "$configpath" 2>/dev/null | tail -n +2 | while read -r line; do
 			case "$line" in
 				"    - "*)
 					entry="${line#    - }"
-					[ "$entry" = "$value" ] && continue
+					case "$entry" in
+						"$value"|"'$value'"|"\"$value\"") continue ;;
+					esac
 					echo "$line"
 					;;
 				*)	echo "$line" ;;
@@ -1267,6 +1356,7 @@ start_service() {
 		echo 'Failed to prepare runtime directories.' >&2
 		return 1
 	fi
+	sanitize_dns_yaml_file "$configpath"
 	do_crontab
 	if [ "$enabled" != '1' ]; then
 		_do_redirect 0
