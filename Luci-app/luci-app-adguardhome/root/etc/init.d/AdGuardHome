@@ -451,7 +451,7 @@ sanitize_dns_yaml_file() {
 			sub(/^.*:/, "", port)
 			sub(/:[0-9]+$/, "", host)
 		}
-		return (port == "53" && is_local_host(host))
+		return ((port == "" || port == "53") && is_local_host(host))
 	}
 	function emit_item(value, key) {
 		value = unquote(value)
