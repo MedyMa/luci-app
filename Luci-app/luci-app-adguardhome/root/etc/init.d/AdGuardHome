@@ -303,15 +303,18 @@ restore_compat_upstream_dns() {
 }
 
 strip_managed_passwall_upstream_dns() {
-	local file="$1"
+	local file="$1" status
 	[ -f "$file" ] || return 0
+	grep -qF "$PASSWALL_UPSTREAM_BEGIN" "$file" || return 0
 	awk -v begin="$PASSWALL_UPSTREAM_BEGIN" -v end="$PASSWALL_UPSTREAM_END" '
 		index($0, begin) { skip = 1; next }
 		skip && index($0, end) { skip = 0; next }
 		!skip { print }
 		END { if (skip) exit 2 }' "$file" > "$file.tmp" && mv "$file.tmp" "$file"
+	status=$?
 	rm -f "$file.tmp"
-	return 0
+	[ "$status" = 0 ] && return 10
+	return "$status"
 }
 
 upstream_dns_has_endpoint() {
@@ -348,8 +351,27 @@ upstream_dns_has_endpoint() {
 		END { exit(found ? 0 : 1) }' "$file"
 }
 
-add_managed_passwall_upstream_dns() {
+managed_passwall_upstream_has_endpoint() {
 	local file="$1" endpoint="$2"
+	[ -f "$file" ] || return 1
+	[ -n "$endpoint" ] || return 1
+	awk -v begin="$PASSWALL_UPSTREAM_BEGIN" -v end="$PASSWALL_UPSTREAM_END" -v endpoint="$endpoint" '
+		function trim_scalar(s) {
+			sub(/^[[:space:]]*-[[:space:]]*/, "", s)
+			sub(/[[:space:]]+#.*$/, "", s)
+			sub(/^[[:space:]]+/, "", s)
+			sub(/[[:space:]]+$/, "", s)
+			gsub(/^["\047]|["\047]$/, "", s)
+			return s
+		}
+		index($0, begin) { in_block = 1; next }
+		in_block && index($0, end) { in_block = 0; next }
+		in_block && $0 ~ /^[[:space:]]*-/ && trim_scalar($0) == endpoint { found = 1 }
+		END { exit(found ? 0 : 1) }' "$file"
+}
+
+add_managed_passwall_upstream_dns() {
+	local file="$1" endpoint="$2" status
 	[ -f "$file" ] || return 0
 	[ -n "$endpoint" ] || return 0
 	upstream_dns_has_endpoint "$file" "$endpoint" && return 0
@@ -378,21 +400,38 @@ add_managed_passwall_upstream_dns() {
 			}
 		}
 		END { if (!inserted) exit 2 }' "$file" > "$file.tmp" && mv "$file.tmp" "$file"
+	status=$?
 	rm -f "$file.tmp"
+	[ "$status" = 0 ] && return 10
 	return 0
 }
 
 sync_passwall_upstream_dns() {
-	local configpath="$1" port="$2" enabled endpoint
+	local configpath="$1" port="$2" keep_missing="$3" enabled endpoint changed status
 	[ -f "$configpath" ] || return 0
+	changed=0
 	get_opt enabled passwall_upstream_auto '0'
-	if [ "$enabled" != '1' ] || ! is_valid_port "$port"; then
+	if [ "$enabled" != '1' ]; then
 		strip_managed_passwall_upstream_dns "$configpath"
+		[ "$?" = 10 ] && return 10
+		return 0
+	fi
+	if ! is_valid_port "$port"; then
+		[ "$keep_missing" = '1' ] && return 0
+		strip_managed_passwall_upstream_dns "$configpath"
+		[ "$?" = 10 ] && return 10
 		return 0
 	fi
 	endpoint="127.0.0.1:${port}"
+	managed_passwall_upstream_has_endpoint "$configpath" "$endpoint" && return 0
 	strip_managed_passwall_upstream_dns "$configpath"
+	status=$?
+	[ "$status" = 10 ] && changed=1
 	add_managed_passwall_upstream_dns "$configpath" "$endpoint"
+	status=$?
+	[ "$status" = 10 ] && changed=1
+	[ "$changed" = 1 ] && return 10
+	return 0
 }
 
 _nft_chain_exists() {
@@ -1052,7 +1091,7 @@ start_watchconfig_guard() {
 }
 
 _do_redirect() {
-	local enabled="$1" configpath redirect effective_redirect old_redirect old_port old_compat_reason agh_port redirect_active conflict_reason compat_reason compat_upstream
+	local enabled="$1" configpath redirect effective_redirect old_redirect old_port old_compat_reason agh_port redirect_active conflict_reason compat_reason compat_upstream keep_compat_upstream upstream_sync_status
 	get_opt configpath configpath "$DEFAULT_CONFIGPATH"
 	get_opt redirect redirect "$DEFAULT_REDIRECT"
 	redirect=$(normalize_redirect_mode "$redirect")
@@ -1065,7 +1104,16 @@ _do_redirect() {
 		compat_reason=''
 		compat_upstream=''
 	fi
-	sync_passwall_upstream_dns "$configpath" "$compat_upstream"
+	keep_compat_upstream=0
+	if [ "$effective_redirect" = 'redirect' ] && { passwall_dns_redirect_enabled || passwall2_dns_redirect_enabled; }; then
+		keep_compat_upstream=1
+	fi
+	sync_passwall_upstream_dns "$configpath" "$compat_upstream" "$keep_compat_upstream"
+	upstream_sync_status=$?
+	if [ "$upstream_sync_status" = 10 ] && [ "$enabled" = '1' ] && _isrunning && [ "${AGH_SKIP_UPSTREAM_RELOAD:-0}" != '1' ]; then
+		logger -t AdGuardHome "managed PassWall upstream changed, reloading AdGuard Home to apply DNS upstream"
+		AGH_SKIP_UPSTREAM_RELOAD=1 reload_service >/dev/null 2>&1 &
+	fi
 	old_redirect=$(uci -q get AdGuardHome.AdGuardHome.old_redirect 2>/dev/null)
 	old_port=$(uci -q get AdGuardHome.AdGuardHome.old_port 2>/dev/null)
 	old_compat_reason=$(cat "$REDIRECT_COMPAT_FILE" 2>/dev/null)
@@ -1301,7 +1349,11 @@ start_service() {
 			;;
 	esac
 	prepare_dns_runtime "$redirect" "$configpath"
-	sync_passwall_upstream_dns "$configpath" "$(resolve_redirect_compat_upstream_port "$redirect" 2>/dev/null)"
+	if [ "$(normalize_redirect_mode "$redirect")" = 'redirect' ] && { passwall_dns_redirect_enabled || passwall2_dns_redirect_enabled; }; then
+		sync_passwall_upstream_dns "$configpath" "$(resolve_redirect_compat_upstream_port "$redirect" 2>/dev/null)" 1
+	else
+		sync_passwall_upstream_dns "$configpath" '' 0
+	fi
 	agh_port=$(yaml_get 'dns.port' "$configpath")
 	if [ "$update" = '1' ] && [ "$skip_update" != '1' ] && [ ! -e /var/run/update_core ]; then
 		sh /usr/share/AdGuardHome/update_core.sh > /tmp/AdGuardHome_update.log 2>&1 &
