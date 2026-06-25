@@ -436,12 +436,12 @@ msgid "Swap with dnsmasq port"
 msgstr "与 dnsmasq 互换端口"
 
 #: htdocs/luci-static/resources/view/adguardhome/overview.js
-msgid "PassWall2 DNS redirect is active. AdGuard Home switched to dnsmasq upstream mode to avoid conflicts on port 53."
-msgstr "检测到 PassWall2 已开启 DNS 重定向，AdGuard Home 已自动切换为 dnsmasq 上游模式，以避免 53 端口冲突。"
+msgid "PassWall2 DNS redirect is active. AdGuard Home keeps DNS interception enabled and uses compatibility bypass rules."
+msgstr "检测到 PassWall2 已开启 DNS 重定向，AdGuard Home 会保持 DNS 拦截，并使用兼容旁路规则。"
 
 #: htdocs/luci-static/resources/view/adguardhome/overview.js
-msgid "PassWall DNS redirect is active. AdGuard Home switched to dnsmasq upstream mode to avoid conflicts on port 53."
-msgstr "检测到 PassWall 已开启 DNS 重定向，AdGuard Home 已自动切换为 dnsmasq 上游模式，以避免 53 端口冲突。"
+msgid "PassWall DNS redirect is active. AdGuard Home keeps DNS interception enabled and uses compatibility bypass rules."
+msgstr "检测到 PassWall 已开启 DNS 重定向，AdGuard Home 会保持 DNS 拦截，并使用兼容旁路规则。"
 
 #: htdocs/luci-static/resources/view/adguardhome/overview.js
 msgid "PassWall2 Compatibility Mode"
@@ -452,12 +452,12 @@ msgid "PassWall Compatibility Mode"
 msgstr "PassWall 兼容模式"
 
 #: htdocs/luci-static/resources/view/adguardhome/overview.js
-msgid "AdGuard Home keeps handling LAN DNS on port 53 and forwards unmatched queries to the PassWall2 DNS frontend."
-msgstr "AdGuard Home 持续接管局域网 53 端口 DNS，未命中规则的查询会转发到 PassWall2 的 DNS 前端。"
+msgid "AdGuard Home intercepts LAN DNS while bypassing the PassWall2 DNS redirect chain. Upstream DNS is not changed automatically."
+msgstr "AdGuard Home 会拦截局域网 DNS，并绕过 PassWall2 的 DNS 重定向链。上游 DNS 不会被自动修改。"
 
 #: htdocs/luci-static/resources/view/adguardhome/overview.js
-msgid "AdGuard Home keeps handling LAN DNS on port 53 and forwards unmatched queries to the PassWall DNS frontend."
-msgstr "AdGuard Home 持续接管局域网 53 端口 DNS，未命中规则的查询会转发到 PassWall 的 DNS 前端。"
+msgid "AdGuard Home intercepts LAN DNS while bypassing the PassWall DNS redirect chain. Upstream DNS is not changed automatically."
+msgstr "AdGuard Home 会拦截局域网 DNS，并绕过 PassWall 的 DNS 重定向链。上游 DNS 不会被自动修改。"
 
 #: htdocs/luci-static/resources/view/adguardhome/overview.js
 msgid "DNS Frontend"

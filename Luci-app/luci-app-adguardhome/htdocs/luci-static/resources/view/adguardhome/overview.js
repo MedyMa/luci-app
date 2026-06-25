@@ -208,9 +208,9 @@ function redirectConflictMessage(status) {
 		return '';
 
 	if (status.redirect_conflict_reason === 'passwall2-dns-redirect')
-		return t('PassWall2 DNS redirect is active. AdGuard Home switched to dnsmasq upstream mode to avoid conflicts on port 53.');
+		return t('PassWall2 DNS redirect is active. AdGuard Home keeps DNS interception enabled and uses compatibility bypass rules.');
 
-	return t('PassWall DNS redirect is active. AdGuard Home switched to dnsmasq upstream mode to avoid conflicts on port 53.');
+	return t('PassWall DNS redirect is active. AdGuard Home keeps DNS interception enabled and uses compatibility bypass rules.');
 }
 
 function renderRedirectCompatAlert(status) {
@@ -222,9 +222,14 @@ function renderRedirectCompatAlert(status) {
 	var title = vendor === 'PassWall2'
 		? t('PassWall2 Compatibility Mode')
 		: t('PassWall Compatibility Mode');
+	var autoUpstream = yes(status.passwall_upstream_auto);
 	var summary = vendor === 'PassWall2'
-		? t('AdGuard Home keeps handling LAN DNS on port 53 and forwards unmatched queries to the PassWall2 DNS frontend.')
-		: t('AdGuard Home keeps handling LAN DNS on port 53 and forwards unmatched queries to the PassWall DNS frontend.');
+		? (autoUpstream
+			? t('AdGuard Home intercepts LAN DNS while bypassing the PassWall2 DNS redirect chain. One managed PassWall2 upstream entry is maintained when the frontend port is known.')
+			: t('AdGuard Home intercepts LAN DNS while bypassing the PassWall2 DNS redirect chain. Upstream DNS is not changed automatically.'))
+		: (autoUpstream
+			? t('AdGuard Home intercepts LAN DNS while bypassing the PassWall DNS redirect chain. One managed PassWall upstream entry is maintained when the frontend port is known.')
+			: t('AdGuard Home intercepts LAN DNS while bypassing the PassWall DNS redirect chain. Upstream DNS is not changed automatically.'));
 
 	return E('div', { 'class': 'agh-alert-compat' }, [
 		E('div', { 'class': 'agh-alert-head', 'tabindex': '0', 'title': summary }, [
@@ -240,6 +245,10 @@ function renderRedirectCompatAlert(status) {
 				upstream ? E('div', { 'class': 'agh-alert-pill' }, [
 					E('span', {}, t('Frontend Port')),
 					E('strong', {}, upstream)
+				]) : '',
+				autoUpstream && upstream ? E('div', { 'class': 'agh-alert-pill' }, [
+					E('span', {}, t('Managed Upstream')),
+					E('strong', {}, '127.0.0.1:' + upstream)
 				]) : ''
 			])
 		])

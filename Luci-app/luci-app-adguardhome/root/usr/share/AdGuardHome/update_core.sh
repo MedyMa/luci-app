@@ -483,6 +483,35 @@ port_is_listening() {
 	return 2
 }
 
+dnsmasq_forwards_to_adguard() {
+	local port="$1" server
+	[ -n "$port" ] || return 1
+	for server in $(uci -q get dhcp.@dnsmasq[0].server 2>/dev/null); do
+		[ "$server" = "127.0.0.1#$port" ] && return 0
+	done
+	return 1
+}
+
+ensure_dns_before_network_update() {
+	local binpath="$1" configpath="$2" agh_port listen_state
+	[ -r "$configpath" ] || return 0
+	agh_port=$(resolve_dns_port "$configpath")
+	is_valid_port "$agh_port" || return 0
+	dnsmasq_forwards_to_adguard "$agh_port" || return 0
+
+	if pgrep -f "$binpath" >/dev/null 2>&1; then
+		port_is_listening "$agh_port"
+		listen_state="$?"
+		case "$listen_state" in
+			0|2) return 0 ;;
+		esac
+	fi
+
+	log_warn "dnsmasq is forwarding to AdGuard Home on port ${agh_port}, but the DNS listener is not ready."
+	log_warn 'Restoring dnsmasq DNS before checking/downloading the core.'
+	/etc/init.d/AdGuardHome do_redirect 0 >/dev/null 2>&1 || true
+}
+
 run_update() {
 	local force="$1" raw_binpath raw_configpath raw_workdir binpath configpath workdir upxflag channel arch latest_ver now_ver url archive downloadbin success basename enabled backupbin
 	DOWNLOAD_ERROR_HINT=''
@@ -512,6 +541,7 @@ run_update() {
 	prepare_runtime_layout "$binpath" "$configpath" "$workdir" || { log_error 'Failed to prepare runtime directories.'; exit_update 1; }
 	rm -rf "$WORK_DIR"/*
 	setup_downloader || exit_update 1
+	ensure_dns_before_network_update "$binpath" "$configpath"
 	log_info "Selected downloader: $DOWNLOADER"
 	log_section 'Version check'
 	log_info 'Checking latest version...'

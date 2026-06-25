@@ -15,6 +15,8 @@ REDIRECT_CONFLICT_FILE='/var/run/AdGredirect_conflict'
 REDIRECT_COMPAT_FILE='/var/run/AdGredirect_compat'
 REDIRECT_COMPAT_UPSTREAM_FILE='/var/run/AdGredirect_compat_upstream'
 UPSTREAM_DNS_BACKUP_FILE='/var/run/AdGupstream_dns_backup'
+PASSWALL_UPSTREAM_BEGIN='# agh-managed-passwall-upstream-begin'
+PASSWALL_UPSTREAM_END='# agh-managed-passwall-upstream-end'
 PASSWALL_DNS_BYPASS_COMMENT='AGH_COMPAT_BYPASS'
 GFWSET='gfwlist'
 
@@ -145,23 +147,35 @@ resolve_passwall2_dns_front_port() {
 	printf '%s\n' "$port"
 }
 
+passwall_dns_chain_ready() {
+	if command -v nft >/dev/null 2>&1 && nft list chain inet passwall PSW_DNS >/dev/null 2>&1; then
+		return 0
+	fi
+	command -v iptables >/dev/null 2>&1 && iptables -t nat -L PSW_DNS >/dev/null 2>&1
+}
+
+passwall2_dns_chain_ready() {
+	if command -v nft >/dev/null 2>&1 && nft list chain inet passwall2 PSW2_DNS >/dev/null 2>&1; then
+		return 0
+	fi
+	command -v iptables >/dev/null 2>&1 && iptables -t nat -L PSW2_DNS >/dev/null 2>&1
+}
+
 resolve_redirect_compat_state() {
 	local redirect="$1" port
 	redirect=$(normalize_redirect_mode "$redirect")
-	[ "$redirect" != 'none' ] || return 1
-	if passwall_dns_redirect_enabled; then
+	[ "$redirect" = 'redirect' ] || return 1
+	if passwall_dns_redirect_enabled && passwall_dns_chain_ready; then
 		port=$(resolve_passwall_dns_front_port 2>/dev/null)
-		if is_valid_port "$port"; then
-			printf 'passwall-dns-redirect:%s\n' "$port"
-			return 0
-		fi
+		is_valid_port "$port" || port=''
+		printf 'passwall-dns-redirect:%s\n' "$port"
+		return 0
 	fi
-	if passwall2_dns_redirect_enabled; then
+	if passwall2_dns_redirect_enabled && passwall2_dns_chain_ready; then
 		port=$(resolve_passwall2_dns_front_port 2>/dev/null)
-		if is_valid_port "$port"; then
-			printf 'passwall2-dns-redirect:%s\n' "$port"
-			return 0
-		fi
+		is_valid_port "$port" || port=''
+		printf 'passwall2-dns-redirect:%s\n' "$port"
+		return 0
 	fi
 	return 1
 }
@@ -175,22 +189,14 @@ resolve_redirect_compat_reason() {
 resolve_redirect_compat_upstream_port() {
 	local state
 	state=$(resolve_redirect_compat_state "$1" 2>/dev/null) || return 1
-	printf '%s\n' "${state#*:}"
+	state="${state#*:}"
+	is_valid_port "$state" || return 1
+	printf '%s\n' "$state"
 }
 
 resolve_redirect_conflict_reason() {
-	local redirect="$1"
-	redirect=$(normalize_redirect_mode "$redirect")
-	[ "$redirect" = 'redirect' ] || return 1
-	resolve_redirect_compat_state "$redirect" >/dev/null 2>&1 && return 1
-	if passwall_dns_redirect_enabled; then
-		printf 'passwall-dns-redirect\n'
-		return 0
-	fi
-	if passwall2_dns_redirect_enabled; then
-		printf 'passwall2-dns-redirect\n'
-		return 0
-	fi
+	# PassWall/PassWall2 DNS redirect is handled as redirect compatibility:
+	# keep AdGuard Home interception active and bypass the PassWall DNS chain.
 	return 1
 }
 
@@ -281,279 +287,112 @@ yaml_set() {
 	rm -f "$file.tmp"
 }
 
-yaml_extract_dns_block() {
-	local key="$1" file="$2"
-	[ -r "$file" ] || return 1
-	awk -v key="$key" '
-	BEGIN { in_dns = 0; capture = 0 }
-	/^[[:space:]]*#/ || /^[[:space:]]*$/ {
-		if (capture)
-			print
-		next
-	}
-	/^[^[:space:]#][A-Za-z0-9_-]*:[[:space:]]*($|#)/ {
-		if (capture)
-			exit
-		in_dns = ($0 ~ /^dns:[[:space:]]*($|#)/)
-	}
-	{
-		if (in_dns && $0 ~ ("^  " key ":[[:space:]]*($|#)")) {
-			capture = 1
-		}
-		if (capture) {
-			if ($0 ~ /^  [A-Za-z0-9_-]+:[[:space:]]*/ && $0 !~ ("^  " key ":[[:space:]]*($|#)"))
-				exit
-			print
-		}
-	}' "$file"
-}
-
-yaml_replace_dns_block_from_file() {
-	local key="$1" blockfile="$2" file="$3"
-	[ -r "$file" ] || return 1
-	[ -r "$blockfile" ] || return 1
-	awk -v key="$key" -v blockfile="$blockfile" '
-	function print_block(  line) {
-		while ((getline line < blockfile) > 0)
-			print line
-		close(blockfile)
-	}
-	BEGIN { in_dns = 0; replaced = 0; skipping = 0 }
-	{
-		if ($0 ~ /^[^[:space:]#][A-Za-z0-9_-]*:[[:space:]]*($|#)/) {
-			if (skipping) {
-				print_block()
-				skipping = 0
-				replaced = 1
-			}
-			in_dns = ($0 ~ /^dns:[[:space:]]*($|#)/)
-		}
-		if (in_dns && $0 ~ ("^  " key ":[[:space:]]*($|#)")) {
-			skipping = 1
-			next
-		}
-		if (skipping) {
-			if ($0 ~ /^  [A-Za-z0-9_-]+:[[:space:]]*/) {
-				print_block()
-				skipping = 0
-				replaced = 1
-				print
-			}
-			next
-		}
-		print
-	}
-	END {
-		if (skipping) {
-			print_block()
-			replaced = 1
-		}
-		if (!replaced)
-			exit 2
-	}' "$file" > "$file.tmp" && mv "$file.tmp" "$file"
-	rm -f "$file.tmp"
-}
-
-yaml_set_dns_single_value() {
-	local key="$1" value="$2" file="$3"
-	[ -r "$file" ] || return 1
-	[ -n "$value" ] || return 1
-	awk -v key="$key" -v value="$value" '
-	function print_block() {
-		print "  " key ":"
-		print "    - " value
-	}
-	BEGIN { in_dns = 0; replaced = 0; skipping = 0 }
-	{
-		if ($0 ~ /^[^[:space:]#][A-Za-z0-9_-]*:[[:space:]]*($|#)/) {
-			if (skipping) {
-				print_block()
-				skipping = 0
-				replaced = 1
-			}
-			in_dns = ($0 ~ /^dns:[[:space:]]*($|#)/)
-		}
-		if (in_dns && $0 ~ ("^  " key ":[[:space:]]*($|#)")) {
-			skipping = 1
-			next
-		}
-		if (skipping) {
-			if ($0 ~ /^  [A-Za-z0-9_-]+:[[:space:]]*/) {
-				print_block()
-				skipping = 0
-				replaced = 1
-				print
-			}
-			next
-		}
-		print
-	}
-	END {
-		if (skipping) {
-			print_block()
-			replaced = 1
-		}
-		if (!replaced)
-			exit 2
-	}' "$file" > "$file.tmp" && mv "$file.tmp" "$file"
-	rm -f "$file.tmp"
-}
-
-yaml_dns_block_contains() {
-	local key="$1" value="$2" file="$3"
-	[ -n "$value" ] || return 1
-	yaml_extract_dns_block "$key" "$file" 2>/dev/null | grep -Fqx "    - $value" && return 0
-	yaml_extract_dns_block "$key" "$file" 2>/dev/null | grep -Fqx "    - '$value'"
-}
-
-local_ipv4_addrs() {
-	ip -o -4 addr show scope global 2>/dev/null | awk '{ sub(/\/.*/, "", $4); print $4 }'
-}
-
-sanitize_dns_yaml_file() {
-	local file="$1" local_addrs
-	[ -r "$file" ] || return 0
-	local_addrs=$(local_ipv4_addrs | tr '\n' ' ')
-	awk -v local_addrs="$local_addrs" '
-	function trim(s) { sub(/^[[:space:]]+/, "", s); sub(/[[:space:]]+$/, "", s); return s }
-	function unquote(s) {
-		s = trim(s)
-		if ((substr(s, 1, 1) == "\"" && substr(s, length(s), 1) == "\"") ||
-		    (substr(s, 1, 1) == "\047" && substr(s, length(s), 1) == "\047"))
-			s = substr(s, 2, length(s) - 2)
-		gsub(/\047\047/, "\047", s)
-		return s
-	}
-	function quote(s) { gsub(/\047/, "\047\047", s); return "\047" s "\047" }
-	function is_local_host(host,    n, a, i) {
-		host = tolower(host)
-		if (host == "localhost" || host == "0.0.0.0" || host ~ /^127\./)
-			return 1
-		n = split(local_addrs, a, /[[:space:]]+/)
-		for (i = 1; i <= n; i++)
-			if (a[i] != "" && host == a[i])
-				return 1
-		return 0
-	}
-	function is_self_dns(value,    s, host, port) {
-		s = unquote(value)
-		if (s ~ /^[A-Za-z][A-Za-z0-9+.-]*:\/\//)
-			return 0
-		host = s
-		port = ""
-		if (s ~ /#[0-9]+$/) {
-			port = s
-			sub(/^.*#/, "", port)
-			sub(/#[0-9]+$/, "", host)
-		}
-		else if (s ~ /^[0-9.]+:[0-9]+$/) {
-			port = s
-			sub(/^.*:/, "", port)
-			sub(/:[0-9]+$/, "", host)
-		}
-		return ((port == "" || port == "53") && is_local_host(host))
-	}
-	function emit_item(value, key) {
-		value = unquote(value)
-		if (is_self_dns(value))
-			value = (key == "bootstrap_dns") ? "223.5.5.5" : "tls://dns.alidns.com"
-		print "    - " quote(value)
-	}
-	BEGIN { in_dns = 0; in_list = "" }
-	/^[^[:space:]#][A-Za-z0-9_-]*:[[:space:]]*($|#)/ {
-		in_dns = ($0 ~ /^dns:[[:space:]]*($|#)/)
-		in_list = ""
-		print
-		next
-	}
-	in_dns && /^  (bootstrap_dns|upstream_dns):[[:space:]]*($|#)/ {
-		in_list = $1
-		sub(/:$/, "", in_list)
-		print
-		next
-	}
-	in_dns && in_list != "" && /^    -[[:space:]]*/ {
-		line = $0
-		sub(/^    -[[:space:]]*/, "", line)
-		sub(/[[:space:]]+#.*$/, "", line)
-		if (trim(line) != "")
-			emit_item(line, in_list)
-		next
-	}
-	in_dns && in_list != "" && /^  [A-Za-z0-9_-]+:[[:space:]]*/ {
-		in_list = ""
-		print
-		next
-	}
-	{ print }
-	' "$file" > "$file.tmp" && mv "$file.tmp" "$file"
-	rm -f "$file.tmp"
-}
-
 backup_compat_upstream_dns() {
-	local configpath="$1"
-	[ -s "$UPSTREAM_DNS_BACKUP_FILE" ] && return 0
-	yaml_extract_dns_block upstream_dns "$configpath" > "$UPSTREAM_DNS_BACKUP_FILE" 2>/dev/null || {
-		rm -f "$UPSTREAM_DNS_BACKUP_FILE"
-		return 1
-	}
-	[ -s "$UPSTREAM_DNS_BACKUP_FILE" ]
+	rm -f "$UPSTREAM_DNS_BACKUP_FILE"
+	return 0
 }
 
 apply_compat_upstream_dns() {
-	local configpath="$1" port="$2" value entry first
-	is_valid_port "$port" || return 1
-	[ -r "$configpath" ] || return 1
-	value="127.0.0.1:$port"
-	first=$(yaml_extract_dns_block upstream_dns "$configpath" 2>/dev/null | grep '^    - ' | head -1 | sed 's/^    - //')
-	case "$first" in
-		"$value"|"'$value'"|"\"$value\"") return 0 ;;
-	esac
-	backup_compat_upstream_dns "$configpath" || {
-		logger -t AdGuardHome "failed to backup upstream_dns before enabling PassWall compatibility"
-		return 1
-	}
-	# Build new block: compat entry first, then all existing entries (dedup)
-	# yaml_extract_dns_block output includes the "  upstream_dns:" header line;
-	# skip it with tail -n +2 since we emit our own header below.
-	{
-		echo "  upstream_dns:"
-		echo "    - '$value'"
-		yaml_extract_dns_block upstream_dns "$configpath" 2>/dev/null | tail -n +2 | while read -r line; do
-			case "$line" in
-				"    - "*)
-					entry="${line#    - }"
-					case "$entry" in
-						"$value"|"'$value'"|"\"$value\"") continue ;;
-					esac
-					echo "$line"
-					;;
-				*)	echo "$line" ;;
-			esac
-		done
-	} > /tmp/_agh_ups.$$.tmp
-	yaml_replace_dns_block_from_file upstream_dns /tmp/_agh_ups.$$.tmp "$configpath" || {
-		logger -t AdGuardHome "failed to rewrite upstream_dns with compat entry"
-		rm -f /tmp/_agh_ups.$$.tmp
-		return 1
-	}
-	rm -f /tmp/_agh_ups.$$.tmp
+	rm -f "$UPSTREAM_DNS_BACKUP_FILE"
 	return 0
 }
 
 restore_compat_upstream_dns() {
-	local configpath="$1"
-	[ -r "$configpath" ] || {
-		rm -f "$UPSTREAM_DNS_BACKUP_FILE"
-		return 0
-	}
-	[ -s "$UPSTREAM_DNS_BACKUP_FILE" ] || return 0
-	yaml_replace_dns_block_from_file upstream_dns "$UPSTREAM_DNS_BACKUP_FILE" "$configpath" || {
-		logger -t AdGuardHome "failed to restore upstream_dns after disabling PassWall compatibility"
-		return 1
-	}
 	rm -f "$UPSTREAM_DNS_BACKUP_FILE"
 	return 0
+}
+
+strip_managed_passwall_upstream_dns() {
+	local file="$1"
+	[ -f "$file" ] || return 0
+	awk -v begin="$PASSWALL_UPSTREAM_BEGIN" -v end="$PASSWALL_UPSTREAM_END" '
+		index($0, begin) { skip = 1; next }
+		skip && index($0, end) { skip = 0; next }
+		!skip { print }
+		END { if (skip) exit 2 }' "$file" > "$file.tmp" && mv "$file.tmp" "$file"
+	rm -f "$file.tmp"
+	return 0
+}
+
+upstream_dns_has_endpoint() {
+	local file="$1" endpoint="$2"
+	[ -f "$file" ] || return 1
+	[ -n "$endpoint" ] || return 1
+	awk -v endpoint="$endpoint" '
+		function indent_len(s, n) {
+			n = match(s, /[^ ]/)
+			return n ? n - 1 : length(s)
+		}
+		function trim_scalar(s) {
+			sub(/^[[:space:]]*-[[:space:]]*/, "", s)
+			sub(/[[:space:]]+#.*$/, "", s)
+			sub(/^[[:space:]]+/, "", s)
+			sub(/[[:space:]]+$/, "", s)
+			gsub(/^["\047]|["\047]$/, "", s)
+			return s
+		}
+		/^[[:space:]]*upstream_dns:[[:space:]]*/ {
+			in_upstream = 1
+			base_indent = indent_len($0)
+			next
+		}
+		in_upstream {
+			if ($0 ~ /^[[:space:]]*($|#)/) next
+			current_indent = indent_len($0)
+			if (current_indent <= base_indent) {
+				in_upstream = 0
+				next
+			}
+			if ($0 ~ /^[[:space:]]*-/ && trim_scalar($0) == endpoint) found = 1
+		}
+		END { exit(found ? 0 : 1) }' "$file"
+}
+
+add_managed_passwall_upstream_dns() {
+	local file="$1" endpoint="$2"
+	[ -f "$file" ] || return 0
+	[ -n "$endpoint" ] || return 0
+	upstream_dns_has_endpoint "$file" "$endpoint" && return 0
+	awk -v endpoint="$endpoint" -v begin="$PASSWALL_UPSTREAM_BEGIN" -v end="$PASSWALL_UPSTREAM_END" '
+		function leading_ws(s) {
+			match(s, /^[ ]*/)
+			return substr(s, RSTART, RLENGTH)
+		}
+		!inserted && /^[[:space:]]*upstream_dns:[[:space:]]*\[\][[:space:]]*($|#)/ {
+			indent = leading_ws($0)
+			print indent "upstream_dns:"
+			print indent "  " begin
+			print indent "  - " endpoint
+			print indent "  " end
+			inserted = 1
+			next
+		}
+		{
+			print
+			if (!inserted && $0 ~ /^[[:space:]]*upstream_dns:[[:space:]]*($|#)/) {
+				indent = leading_ws($0)
+				print indent "  " begin
+				print indent "  - " endpoint
+				print indent "  " end
+				inserted = 1
+			}
+		}
+		END { if (!inserted) exit 2 }' "$file" > "$file.tmp" && mv "$file.tmp" "$file"
+	rm -f "$file.tmp"
+	return 0
+}
+
+sync_passwall_upstream_dns() {
+	local configpath="$1" port="$2" enabled endpoint
+	[ -f "$configpath" ] || return 0
+	get_opt enabled passwall_upstream_auto '0'
+	if [ "$enabled" != '1' ] || ! is_valid_port "$port"; then
+		strip_managed_passwall_upstream_dns "$configpath"
+		return 0
+	fi
+	endpoint="127.0.0.1:${port}"
+	strip_managed_passwall_upstream_dns "$configpath"
+	add_managed_passwall_upstream_dns "$configpath" "$endpoint"
 }
 
 _nft_chain_exists() {
@@ -572,12 +411,17 @@ _nft_delete_rules_by_comment() {
 }
 
 add_nft_dns_bypass() {
-	local family="$1" table="$2" chain="$3"
+	local family="$1" table="$2" chain="$3" devices device added
 	_nft_chain_exists "$family" "$table" "$chain" || return 1
 	_nft_delete_rules_by_comment "$family" "$table" "$chain" "$PASSWALL_DNS_BYPASS_COMMENT"
-	nft insert rule "$family" "$table" "$chain" meta l4proto udp udp dport 53 counter return comment "$PASSWALL_DNS_BYPASS_COMMENT" >/dev/null 2>&1 || return 1
-	nft insert rule "$family" "$table" "$chain" meta l4proto tcp tcp dport 53 counter return comment "$PASSWALL_DNS_BYPASS_COMMENT" >/dev/null 2>&1 || return 1
-	return 0
+	devices=$(get_redirect_lan_devices 2>/dev/null) || return 1
+	added=0
+	for device in $devices; do
+		nft insert rule "$family" "$table" "$chain" iifname "$device" meta l4proto udp udp dport 53 counter return comment "$PASSWALL_DNS_BYPASS_COMMENT" >/dev/null 2>&1 || continue
+		nft insert rule "$family" "$table" "$chain" iifname "$device" meta l4proto tcp tcp dport 53 counter return comment "$PASSWALL_DNS_BYPASS_COMMENT" >/dev/null 2>&1 || continue
+		added=1
+	done
+	[ "$added" = '1' ]
 }
 
 clear_nft_dns_bypass() {
@@ -587,49 +431,88 @@ clear_nft_dns_bypass() {
 }
 
 add_iptables_dns_bypass() {
-	local chain="$1"
+	local chain="$1" devices device added
+	devices=$(get_redirect_lan_devices 2>/dev/null) || return 1
+	added=0
 	if _has_cmd iptables; then
-		iptables -t nat -C "$chain" -m comment --comment "$PASSWALL_DNS_BYPASS_COMMENT" -p udp --dport 53 -j RETURN >/dev/null 2>&1 || \
-			iptables -t nat -I "$chain" 1 -m comment --comment "$PASSWALL_DNS_BYPASS_COMMENT" -p udp --dport 53 -j RETURN >/dev/null 2>&1 || return 1
-		iptables -t nat -C "$chain" -m comment --comment "$PASSWALL_DNS_BYPASS_COMMENT" -p tcp --dport 53 -j RETURN >/dev/null 2>&1 || \
-			iptables -t nat -I "$chain" 1 -m comment --comment "$PASSWALL_DNS_BYPASS_COMMENT" -p tcp --dport 53 -j RETURN >/dev/null 2>&1 || return 1
+		for device in $devices; do
+			iptables -t nat -C "$chain" -i "$device" -m comment --comment "$PASSWALL_DNS_BYPASS_COMMENT" -p udp --dport 53 -j RETURN >/dev/null 2>&1 || \
+				iptables -t nat -I "$chain" 1 -i "$device" -m comment --comment "$PASSWALL_DNS_BYPASS_COMMENT" -p udp --dport 53 -j RETURN >/dev/null 2>&1 || continue
+			iptables -t nat -C "$chain" -i "$device" -m comment --comment "$PASSWALL_DNS_BYPASS_COMMENT" -p tcp --dport 53 -j RETURN >/dev/null 2>&1 || \
+				iptables -t nat -I "$chain" 1 -i "$device" -m comment --comment "$PASSWALL_DNS_BYPASS_COMMENT" -p tcp --dport 53 -j RETURN >/dev/null 2>&1 || continue
+			added=1
+		done
 	fi
 	if _has_cmd ip6tables; then
-		ip6tables -t nat -C "$chain" -m comment --comment "$PASSWALL_DNS_BYPASS_COMMENT" -p udp --dport 53 -j RETURN >/dev/null 2>&1 || \
-			ip6tables -t nat -I "$chain" 1 -m comment --comment "$PASSWALL_DNS_BYPASS_COMMENT" -p udp --dport 53 -j RETURN >/dev/null 2>&1 || true
-		ip6tables -t nat -C "$chain" -m comment --comment "$PASSWALL_DNS_BYPASS_COMMENT" -p tcp --dport 53 -j RETURN >/dev/null 2>&1 || \
-			ip6tables -t nat -I "$chain" 1 -m comment --comment "$PASSWALL_DNS_BYPASS_COMMENT" -p tcp --dport 53 -j RETURN >/dev/null 2>&1 || true
+		for device in $devices; do
+			ip6tables -t nat -C "$chain" -i "$device" -m comment --comment "$PASSWALL_DNS_BYPASS_COMMENT" -p udp --dport 53 -j RETURN >/dev/null 2>&1 || \
+				ip6tables -t nat -I "$chain" 1 -i "$device" -m comment --comment "$PASSWALL_DNS_BYPASS_COMMENT" -p udp --dport 53 -j RETURN >/dev/null 2>&1 || continue
+			ip6tables -t nat -C "$chain" -i "$device" -m comment --comment "$PASSWALL_DNS_BYPASS_COMMENT" -p tcp --dport 53 -j RETURN >/dev/null 2>&1 || \
+				ip6tables -t nat -I "$chain" 1 -i "$device" -m comment --comment "$PASSWALL_DNS_BYPASS_COMMENT" -p tcp --dport 53 -j RETURN >/dev/null 2>&1 || continue
+			added=1
+		done
 	fi
-	return 0
+	[ "$added" = '1' ]
 }
 
 clear_iptables_dns_bypass() {
-	local chain="$1"
+	local chain="$1" line
 	if _has_cmd iptables; then
-		while iptables -t nat -D "$chain" -m comment --comment "$PASSWALL_DNS_BYPASS_COMMENT" -p udp --dport 53 -j RETURN >/dev/null 2>&1; do :; done
-		while iptables -t nat -D "$chain" -m comment --comment "$PASSWALL_DNS_BYPASS_COMMENT" -p tcp --dport 53 -j RETURN >/dev/null 2>&1; do :; done
+		while :; do
+			line=$(iptables -t nat -L "$chain" --line-numbers 2>/dev/null | awk -v c="$PASSWALL_DNS_BYPASS_COMMENT" '$0 ~ c { print $1; exit }')
+			[ -n "$line" ] || break
+			iptables -t nat -D "$chain" "$line" >/dev/null 2>&1 || break
+		done
 	fi
 	if _has_cmd ip6tables; then
-		while ip6tables -t nat -D "$chain" -m comment --comment "$PASSWALL_DNS_BYPASS_COMMENT" -p udp --dport 53 -j RETURN >/dev/null 2>&1; do :; done
-		while ip6tables -t nat -D "$chain" -m comment --comment "$PASSWALL_DNS_BYPASS_COMMENT" -p tcp --dport 53 -j RETURN >/dev/null 2>&1; do :; done
+		while :; do
+			line=$(ip6tables -t nat -L "$chain" --line-numbers 2>/dev/null | awk -v c="$PASSWALL_DNS_BYPASS_COMMENT" '$0 ~ c { print $1; exit }')
+			[ -n "$line" ] || break
+			ip6tables -t nat -D "$chain" "$line" >/dev/null 2>&1 || break
+		done
 	fi
 }
 
 passwall_dns_bypass_is_active() {
-	local reason="$1"
+	local reason="$1" devices device rules found
+	devices=$(get_redirect_lan_devices 2>/dev/null) || return 1
 	case "$reason" in
 		passwall-dns-redirect)
 			if _has_cmd nft && _nft_chain_exists inet passwall PSW_DNS; then
-				nft list chain inet passwall PSW_DNS 2>/dev/null | grep -Fq "$PASSWALL_DNS_BYPASS_COMMENT"
+				rules=$(nft list chain inet passwall PSW_DNS 2>/dev/null)
+				for device in $devices; do
+					printf '%s\n' "$rules" | grep -F "$PASSWALL_DNS_BYPASS_COMMENT" | grep -F "iifname \"$device\"" | grep -Fq 'udp dport 53' || continue
+					printf '%s\n' "$rules" | grep -F "$PASSWALL_DNS_BYPASS_COMMENT" | grep -F "iifname \"$device\"" | grep -Fq 'tcp dport 53' || continue
+					return 0
+				done
+				return 1
 			else
-				iptables -t nat -C PSW_DNS -m comment --comment "$PASSWALL_DNS_BYPASS_COMMENT" -p udp --dport 53 -j RETURN >/dev/null 2>&1
+				found=0
+				for device in $devices; do
+					iptables -t nat -C PSW_DNS -i "$device" -m comment --comment "$PASSWALL_DNS_BYPASS_COMMENT" -p udp --dport 53 -j RETURN >/dev/null 2>&1 || continue
+					iptables -t nat -C PSW_DNS -i "$device" -m comment --comment "$PASSWALL_DNS_BYPASS_COMMENT" -p tcp --dport 53 -j RETURN >/dev/null 2>&1 || continue
+					found=1
+				done
+				[ "$found" = '1' ]
 			fi
 			;;
 		passwall2-dns-redirect)
 			if _has_cmd nft && _nft_chain_exists inet passwall2 PSW2_DNS; then
-				nft list chain inet passwall2 PSW2_DNS 2>/dev/null | grep -Fq "$PASSWALL_DNS_BYPASS_COMMENT"
+				rules=$(nft list chain inet passwall2 PSW2_DNS 2>/dev/null)
+				for device in $devices; do
+					printf '%s\n' "$rules" | grep -F "$PASSWALL_DNS_BYPASS_COMMENT" | grep -F "iifname \"$device\"" | grep -Fq 'udp dport 53' || continue
+					printf '%s\n' "$rules" | grep -F "$PASSWALL_DNS_BYPASS_COMMENT" | grep -F "iifname \"$device\"" | grep -Fq 'tcp dport 53' || continue
+					return 0
+				done
+				return 1
 			else
-				iptables -t nat -C PSW2_DNS -m comment --comment "$PASSWALL_DNS_BYPASS_COMMENT" -p udp --dport 53 -j RETURN >/dev/null 2>&1
+				found=0
+				for device in $devices; do
+					iptables -t nat -C PSW2_DNS -i "$device" -m comment --comment "$PASSWALL_DNS_BYPASS_COMMENT" -p udp --dport 53 -j RETURN >/dev/null 2>&1 || continue
+					iptables -t nat -C PSW2_DNS -i "$device" -m comment --comment "$PASSWALL_DNS_BYPASS_COMMENT" -p tcp --dport 53 -j RETURN >/dev/null 2>&1 || continue
+					found=1
+				done
+				[ "$found" = '1' ]
 			fi
 			;;
 		*) return 1 ;;
@@ -680,7 +563,7 @@ clear_passwall_dns_bypass() {
 }
 
 set_forward_dnsmasq() {
-	local port="$1" addr old_server server found first changed
+	local port="$1" addr old_server server found first changed current_resolv current_noresolv current_strict
 	[ -n "$port" ] || return 0
 	addr="127.0.0.1#$port"
 	changed=0
@@ -701,9 +584,18 @@ set_forward_dnsmasq() {
 		done
 		changed=1
 	fi
-	uci -q delete dhcp.@dnsmasq[0].resolvfile
-	uci -q set dhcp.@dnsmasq[0].noresolv='1'
-	if [ "$(uci -q get dhcp.@dnsmasq[0].strictorder 2>/dev/null)" != '1' ]; then
+	current_resolv=$(uci -q get dhcp.@dnsmasq[0].resolvfile 2>/dev/null)
+	if [ -n "$current_resolv" ]; then
+		uci -q delete dhcp.@dnsmasq[0].resolvfile
+		changed=1
+	fi
+	current_noresolv=$(uci -q get dhcp.@dnsmasq[0].noresolv 2>/dev/null)
+	if [ "$current_noresolv" != '1' ]; then
+		uci -q set dhcp.@dnsmasq[0].noresolv='1'
+		changed=1
+	fi
+	current_strict=$(uci -q get dhcp.@dnsmasq[0].strictorder 2>/dev/null)
+	if [ "$current_strict" != '1' ]; then
 		uci -q set dhcp.@dnsmasq[0].strictorder='1'
 		changed=1
 	fi
@@ -757,6 +649,20 @@ port_is_listening() {
 		netstat -lntu 2>/dev/null | grep -Eq "$pattern" && return 0
 	fi
 	[ "$checked" = '1' ] || return 2
+	return 1
+}
+
+wait_for_port_listening() {
+	local port="$1" timeout="${2:-10}" waited=0 state
+	is_valid_port "$port" || return 1
+	while [ "$waited" -lt "$timeout" ]; do
+		port_is_listening "$port"
+		state="$?"
+		[ "$state" = '0' ] && return 0
+		[ "$state" = '2' ] && return 0
+		sleep 1
+		waited=$((waited + 1))
+	done
 	return 1
 }
 
@@ -1121,7 +1027,7 @@ start_passwall_compat_guard() {
 	local redirect="$1"
 	local mode
 	mode=$(normalize_redirect_mode "$redirect")
-	[ "$mode" = 'none' ] && return 0
+	[ "$mode" = 'redirect' ] || return 0
 	passwall_dns_redirect_enabled || passwall2_dns_redirect_enabled || return 0
 	# Explicitly stop old watcher before creating new procd instance
 	# This ensures convergence in pure shell without relying on procd's instance-override behavior
@@ -1155,6 +1061,11 @@ _do_redirect() {
 	compat_reason=$(resolve_redirect_compat_reason "$redirect" 2>/dev/null)
 	compat_upstream=$(resolve_redirect_compat_upstream_port "$redirect" 2>/dev/null)
 	conflict_reason=$(resolve_redirect_conflict_reason "$redirect" 2>/dev/null)
+	if [ "$effective_redirect" != 'redirect' ]; then
+		compat_reason=''
+		compat_upstream=''
+	fi
+	sync_passwall_upstream_dns "$configpath" "$compat_upstream"
 	old_redirect=$(uci -q get AdGuardHome.AdGuardHome.old_redirect 2>/dev/null)
 	old_port=$(uci -q get AdGuardHome.AdGuardHome.old_port 2>/dev/null)
 	old_compat_reason=$(cat "$REDIRECT_COMPAT_FILE" 2>/dev/null)
@@ -1164,7 +1075,7 @@ _do_redirect() {
 	[ -n "$conflict_reason" ] && logger -t AdGuardHome "redirect mode conflicts with ${conflict_reason}; using ${effective_redirect} instead"
 	[ -n "$old_compat_reason" ] && {
 		clear_passwall_dns_bypass "$old_compat_reason"
-		restore_compat_upstream_dns "$configpath" || true
+		rm -f "$UPSTREAM_DNS_BACKUP_FILE"
 	}
 	case "$old_redirect" in
 		redirect)
@@ -1175,22 +1086,17 @@ _do_redirect() {
 		exchange) restore_port53 "$configpath" ;;
 	esac
 	if [ "$enabled" = '1' ] && [ "$agh_port" != '0' ]; then
+		if ! wait_for_port_listening "$agh_port" 3; then
+			logger -t AdGuardHome "dns port ${agh_port} is not listening, leaving DNS redirect disabled"
+			effective_redirect='none'
+			compat_reason=''
+			compat_upstream=''
+		fi
 		case "$effective_redirect" in
 			redirect)
 				set_firewall_redirect "$agh_port"
-				if [ -n "$compat_reason" ] && is_valid_port "$compat_upstream"; then
-					if apply_compat_upstream_dns "$configpath" "$compat_upstream"; then
-						apply_passwall_dns_bypass "$compat_reason" >/dev/null 2>&1 || logger -t AdGuardHome "failed to add ${compat_reason} bypass rules"
-					else
-						logger -t AdGuardHome "PassWall compatibility setup failed, falling back to dnsmasq-upstream"
-						effective_redirect='dnsmasq-upstream'
-						compat_reason=''
-						compat_upstream=''
-						clear_firewall_redirect "$agh_port"
-						set_forward_dnsmasq "$agh_port"
-					fi
-				else
-					set_forward_dnsmasq "$agh_port"
+				if [ -n "$compat_reason" ]; then
+					apply_passwall_dns_bypass "$compat_reason" >/dev/null 2>&1 || logger -t AdGuardHome "failed to add ${compat_reason} bypass rules"
 				fi
 				;;
 			dnsmasq-upstream) set_forward_dnsmasq "$agh_port" ;;
@@ -1198,12 +1104,11 @@ _do_redirect() {
 		esac
 		case "$effective_redirect" in
 			redirect)
-				if [ -n "$compat_reason" ] && is_valid_port "$compat_upstream"; then
+				if [ -n "$compat_reason" ]; then
 					firewall_redirect_is_active "$agh_port" && \
-						yaml_dns_block_contains upstream_dns "127.0.0.1:$compat_upstream" "$configpath" && \
 						passwall_dns_bypass_is_active "$compat_reason" && redirect_active=1
 				else
-					(firewall_redirect_is_active "$agh_port" || dnsmasq_forward_is_active "$agh_port") && redirect_active=1
+					firewall_redirect_is_active "$agh_port" && redirect_active=1
 				fi
 				;;
 			dnsmasq-upstream) dnsmasq_forward_is_active "$agh_port" && redirect_active=1 ;;
@@ -1211,6 +1116,7 @@ _do_redirect() {
 		esac
 		if [ "$effective_redirect" = 'redirect' ] && ! firewall_redirect_is_active "$agh_port"; then
 			logger -t AdGuardHome "redirect mode failed on port ${agh_port}, falling back to dnsmasq-upstream"
+			set_forward_dnsmasq "$agh_port"
 			if dnsmasq_forward_is_active "$agh_port"; then
 				effective_redirect='dnsmasq-upstream'
 				redirect_active=1
@@ -1356,7 +1262,6 @@ start_service() {
 		echo 'Failed to prepare runtime directories.' >&2
 		return 1
 	fi
-	sanitize_dns_yaml_file "$configpath"
 	do_crontab
 	if [ "$enabled" != '1' ]; then
 		_do_redirect 0
@@ -1367,6 +1272,19 @@ start_service() {
 		return 0
 	fi
 	[ -n "$hashpass" ] && yaml_set 'users.password' "$hashpass" "$configpath" && uci -q set AdGuardHome.AdGuardHome.hashpass='' && uci -q commit AdGuardHome
+	write_keep_file
+	if [ ! -x "$binpath" ]; then
+		_do_redirect 0
+		sh /usr/share/AdGuardHome/update_core.sh > /tmp/AdGuardHome_update.log 2>&1 &
+		return 0
+	fi
+	if _isrunning; then
+		agh_port=$(yaml_get 'dns.port' "$configpath")
+		_do_redirect 1
+		start_runtime_guard "$binpath" "$configpath" "$agh_port"
+		start_passwall_compat_guard "$redirect"
+		return 0
+	fi
 	auto_apply_gfw
 	[ -n "$(uci -q get AdGuardHome.AdGuardHome.backupfile 2>/dev/null)" ] && restore
 	ipset_file=$(sed -n 's/^[[:space:]]*ipset_file:[[:space:]]*//p' "$configpath" 2>/dev/null | head -n 1)
@@ -1382,20 +1300,8 @@ start_service() {
 			ipset list "$GFWSET" >/dev/null 2>&1 || ipset create "$GFWSET" hash:ip 2>/dev/null
 			;;
 	esac
-	write_keep_file
-	if [ ! -x "$binpath" ]; then
-		_do_redirect 0
-		sh /usr/share/AdGuardHome/update_core.sh > /tmp/AdGuardHome_update.log 2>&1 &
-		return 0
-	fi
-	if _isrunning; then
-		agh_port=$(yaml_get 'dns.port' "$configpath")
-		_do_redirect 1
-		start_runtime_guard "$binpath" "$configpath" "$agh_port"
-		start_passwall_compat_guard "$redirect"
-		return 0
-	fi
 	prepare_dns_runtime "$redirect" "$configpath"
+	sync_passwall_upstream_dns "$configpath" "$(resolve_redirect_compat_upstream_port "$redirect" 2>/dev/null)"
 	agh_port=$(yaml_get 'dns.port' "$configpath")
 	if [ "$update" = '1' ] && [ "$skip_update" != '1' ] && [ ! -e /var/run/update_core ]; then
 		sh /usr/share/AdGuardHome/update_core.sh > /tmp/AdGuardHome_update.log 2>&1 &
@@ -1422,13 +1328,14 @@ start_service() {
 	procd_set_param file "$configpath" /etc/hosts /etc/config/AdGuardHome
 	procd_close_instance
 	if [ -r "$configpath" ]; then
-		if [ "$(normalize_redirect_mode "$redirect")" != 'none' ] && \
+		if [ "$(normalize_redirect_mode "$redirect")" = 'redirect' ] && \
 		   { passwall_dns_redirect_enabled || passwall2_dns_redirect_enabled; } && \
 		   ! resolve_redirect_compat_state "$redirect" >/dev/null 2>&1; then
 			logger -t AdGuardHome "PassWall DNS redirect enabled but not ready; clearing redirect until watcher detects readiness"
 			_do_redirect 0
 			update_redirect_runtime_state 0 'none' '' '' ''
 		else
+			wait_for_port_listening "$agh_port" 10 || logger -t AdGuardHome "dns port ${agh_port} did not become ready before redirect setup"
 			_do_redirect 1
 		fi
 		start_runtime_guard "$binpath" "$configpath" "$agh_port"

@@ -11,8 +11,6 @@ var callStartUpdate = rpc.declare({ object: 'luci.adguardhome', method: 'startUp
 var callGfwAction = rpc.declare({ object: 'luci.adguardhome', method: 'gfwAction', params: [ 'action' ], expect: { '': {} } });
 
 var ACTION_MUTATES_GFW_YAML = {
-	import: true,
-	remove_import: true,
 	ipset_add: true,
 	ipset_del: true
 };
@@ -130,12 +128,8 @@ function actionError(err, fallback) {
 	var knownErrors = [
 		[/Failed to download a non-empty GFW list from all known mirrors\./i, t('Unable to download a usable GFW list from any known mirror. Check the router network or DNS connectivity to jsDelivr and GitHub Raw, then try again.', '无法从已知镜像下载可用的 GFW 列表。请检查路由器到 jsDelivr 和 GitHub Raw 的联网或 DNS 连通性后重试。')],
 		[/Failed to generate a non-empty GFW rule file\./i, t('The downloaded GFW list did not produce any usable upstream DNS rules. Try generating the rule file again later or check the source content.', '下载到的 GFW 列表没有生成任何可用的上游 DNS 规则。请稍后重试生成，或检查上游列表内容。')],
-		[/Please generate the GFW rule file first\./i, t('Generate the GFW rule file first, then import it into upstream DNS.', '请先生成 GFW 规则文件，再导入上游DNS。')],
-		[/The GFW rule file is empty\./i, t('The current GFW rule file only contains headers and no usable DNS rules. Regenerate the rule file before importing.', '当前 GFW 规则文件只有表头，没有可用的 DNS 规则。请先重新生成规则文件，再执行导入。')],
-		[/Please create the YAML configuration first\./i, t('Create the YAML configuration first before importing or removing upstream DNS rules.', '请先创建 YAML 配置文件，再导入或移除上游DNS规则。')],
-		[/AdGuard Home is running\. Stop the service before modifying upstream DNS\./i, t('Stop AdGuard Home before importing or removing upstream DNS rules.', '导入或移除上游DNS规则前，请先停止 AdGuard Home 服务。')],
-		[/The upstream_dns section was not found in YAML\./i, t('The YAML file does not contain an upstream_dns section. Fix the YAML structure first, then import again.', '当前 YAML 中没有找到 upstream_dns 段。请先修正 YAML 结构，再重新导入。')],
-		[/Failed to insert imported rules into upstream_dns\./i, t('Failed to insert the imported rules into upstream_dns. Check whether the YAML indentation or structure is valid.', '写入 upstream_dns 失败。请检查当前 YAML 的缩进和结构是否有效。')]
+		[/Please generate the GFW rule file first\./i, t('Generate the GFW rule file first, then copy entries manually in the AdGuard Home console if needed.', '请先生成 GFW 规则文件；如有需要，请在 AdGuard Home 控制台手动复制条目。')],
+		[/The GFW rule file is empty\./i, t('The current GFW rule file only contains headers and no usable DNS rules. Regenerate the rule file before copying entries manually.', '当前 GFW 规则文件只有表头，没有可用的 DNS 规则。请先重新生成规则文件，再手动复制条目。')]
 	];
 	var i;
 	if (/Object not found/i.test(message))
@@ -302,6 +296,9 @@ return view.extend({
 
 		o = s.taboption('network', form.Value, 'httpport', t('Web console port', 'Web 控制台端口'), t('Port used by the AdGuard Home management UI.', 'AdGuard Home 管理界面使用的端口。')); o.datatype = 'port'; o.placeholder = '3000';
 		o = s.taboption('network', form.ListValue, 'redirect', t('DNS redirect mode', 'DNS 重定向模式'), t('Choose how LAN DNS traffic is handed to AdGuard Home.', '选择局域网 DNS 流量交给 AdGuard Home 的方式。')); o.default = 'dnsmasq-upstream'; o.value('none', t('None', '无')); o.value('dnsmasq-upstream', t('Use as dnsmasq upstream', '作为 dnsmasq 上游')); o.value('redirect', t('Redirect port 53', '重定向 53 端口')); o.value('exchange', t('Swap with dnsmasq port', '与 dnsmasq 交换端口'));
+		o = s.taboption('network', form.Flag, 'passwall_upstream_auto', t('Managed PassWall upstream', '托管 PassWall 上游'), t('When redirect mode is compatible with PassWall or PassWall2, maintain only one AdGuard Home upstream entry pointing to the detected DNS frontend port. Other upstream DNS entries stay untouched.', '当重定向模式兼容 PassWall 或 PassWall2 时，只维护一条指向检测到的 DNS 前端端口的 AdGuard Home 上游记录，其它上游 DNS 不会被改动。'));
+		o.default = '0';
+		o.rmempty = false;
 
 		o = s.taboption('files', form.Value, 'binpath', t('Core binary path', '核心文件路径'), t('Executable path for the AdGuard Home binary.', 'AdGuard Home 核心可执行文件路径。')); o.placeholder = '/etc/config/adGuardConfig/AdGuardHome'; o.rmempty = false;
 		o = s.taboption('files', form.Value, 'configpath', t('YAML config path', 'YAML 配置路径'), t('Main YAML configuration file edited by the YAML editor.', 'YAML 编辑器操作的主配置文件。')); o.placeholder = '/etc/config/adGuardConfig/AdGuardHome.yaml'; o.rmempty = false;
@@ -415,16 +412,16 @@ function gfwCard(rpcError, running) {
 	}
 	return E('div', { 'class': 'agh-action agh-action-gfw' }, [
 		actionHeader(t('Rules', '规则'), t('GFW Rule Tools', 'GFW 规则工具')),
-		E('p', {}, t('Generate or clean the external GFW rule file at /etc/AdGuardHome/gfw_upstream.txt, then import or remove it from dns.upstream_dns only when you explicitly ask for it.', '生成或清理 /etc/AdGuardHome/gfw_upstream.txt 外部规则文件；只有在你明确点击导入或移除时，才会修改 dns.upstream_dns。')),
+		E('p', {}, t('Generate or clean the external GFW rule file at /etc/AdGuardHome/gfw_upstream.txt. Upstream DNS is never written by this page; edit it in the AdGuard Home console.', '生成或清理 /etc/AdGuardHome/gfw_upstream.txt 外部规则文件。本页面不会写入上游 DNS；需要时请到 AdGuard Home 控制台手动填写。')),
 		E('div', { 'class': 'agh-button-row' }, [
 			button('add', t('Generate rule file', '生成规则文件'), t('GFW rule file generated. Import it manually into YAML if needed.', 'GFW 规则文件已生成；如有需要，请手动导入 YAML。')),
 			button('del', t('Delete rule file', '删除规则文件'), t('GFW rule file deleted and legacy injected YAML rules were cleaned if present.', 'GFW 规则文件已删除；若存在旧版自动注入的 YAML 规则，也已一并清理。')),
-			button('import', t('Import DNS', '导入DNS'), t('GFW rule file imported into upstream DNS.', 'GFW 规则文件已导入上游DNS。')),
-			button('remove_import', t('Remove DNS', '移除DNS'), t('Imported GFW upstream DNS rules removed from YAML.', '已从 YAML 中移除导入的 GFW 上游DNS规则。')),
+			button('import', t('Manual DNS note', '手动DNS提示'), t('Automatic upstream DNS import is disabled. Copy entries from /etc/AdGuardHome/gfw_upstream.txt in the AdGuard Home console if needed.', '已禁用自动导入上游 DNS。如有需要，请在 AdGuard Home 控制台手动复制 /etc/AdGuardHome/gfw_upstream.txt 中的条目。')),
+			button('remove_import', t('Manual cleanup note', '手动清理提示'), t('Automatic upstream DNS removal is disabled. Edit upstream DNS in the AdGuard Home console if needed.', '已禁用自动移除上游 DNS。如有需要，请在 AdGuard Home 控制台手动编辑上游 DNS。')),
 			button('ipset_add', t('Add ipset', '添加 ipset'), t('GFW ipset task started.', 'GFW ipset 任务已启动。')),
 			button('ipset_del', t('Delete ipset', '删除 ipset'), t('GFW ipset delete task started.', 'GFW ipset 删除任务已启动。'))
 		]),
-		running ? E('div', { 'class': 'agh-status' }, t('Importing or removing upstream DNS and changing ipset references is disabled while AdGuard Home is running.', 'AdGuard Home 运行中时，不允许导入或移除上游DNS，也不允许修改 ipset 引用。')) : '',
+		running ? E('div', { 'class': 'agh-status' }, t('Changing ipset references is disabled while AdGuard Home is running. Upstream DNS is only edited in the AdGuard Home console.', 'AdGuard Home 运行中时不允许修改 ipset 引用。上游 DNS 只在 AdGuard Home 控制台中编辑。')) : '',
 		statusBox
 	]);
 }

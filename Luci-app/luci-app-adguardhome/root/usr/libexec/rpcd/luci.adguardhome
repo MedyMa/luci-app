@@ -82,97 +82,6 @@ safe_cat() {
 	cat "$1" 2>/dev/null
 }
 
-yaml_quote_scalar() {
-	local value="$1"
-	value=${value#\"}; value=${value%\"}
-	value=${value#\'}; value=${value%\'}
-	printf "'%s'\n" "$(printf '%s' "$value" | sed "s/'/''/g")"
-}
-
-local_ipv4_addrs() {
-	ip -o -4 addr show scope global 2>/dev/null | awk '{ sub(/\/.*/, "", $4); print $4 }'
-}
-
-sanitize_dns_yaml_file() {
-	local file="$1" local_addrs
-	[ -r "$file" ] || return 0
-	local_addrs=$(local_ipv4_addrs | tr '\n' ' ')
-	awk -v local_addrs="$local_addrs" '
-	function trim(s) { sub(/^[[:space:]]+/, "", s); sub(/[[:space:]]+$/, "", s); return s }
-	function unquote(s) {
-		s = trim(s)
-		if ((substr(s, 1, 1) == "\"" && substr(s, length(s), 1) == "\"") ||
-		    (substr(s, 1, 1) == "\047" && substr(s, length(s), 1) == "\047"))
-			s = substr(s, 2, length(s) - 2)
-		gsub(/\047\047/, "\047", s)
-		return s
-	}
-	function quote(s) { gsub(/\047/, "\047\047", s); return "\047" s "\047" }
-	function is_local_host(host,    n, a, i) {
-		host = tolower(host)
-		if (host == "localhost" || host == "0.0.0.0" || host ~ /^127\./)
-			return 1
-		n = split(local_addrs, a, /[[:space:]]+/)
-		for (i = 1; i <= n; i++)
-			if (a[i] != "" && host == a[i])
-				return 1
-		return 0
-	}
-	function is_self_dns(value,    s, host, port) {
-		s = unquote(value)
-		if (s ~ /^[A-Za-z][A-Za-z0-9+.-]*:\/\//)
-			return 0
-		host = s
-		port = ""
-		if (s ~ /#[0-9]+$/) {
-			port = s
-			sub(/^.*#/, "", port)
-			sub(/#[0-9]+$/, "", host)
-		}
-		else if (s ~ /^[0-9.]+:[0-9]+$/) {
-			port = s
-			sub(/^.*:/, "", port)
-			sub(/:[0-9]+$/, "", host)
-		}
-		return ((port == "" || port == "53") && is_local_host(host))
-	}
-	function emit_item(value, key) {
-		value = unquote(value)
-		if (is_self_dns(value))
-			value = (key == "bootstrap_dns") ? "223.5.5.5" : "tls://dns.alidns.com"
-		print "    - " quote(value)
-	}
-	BEGIN { in_dns = 0; in_list = "" }
-	/^[^[:space:]#][A-Za-z0-9_-]*:[[:space:]]*($|#)/ {
-		in_dns = ($0 ~ /^dns:[[:space:]]*($|#)/)
-		in_list = ""
-		print
-		next
-	}
-	in_dns && /^  (bootstrap_dns|upstream_dns):[[:space:]]*($|#)/ {
-		in_list = $1
-		sub(/:$/, "", in_list)
-		print
-		next
-	}
-	in_dns && in_list != "" && /^    -[[:space:]]*/ {
-		line = $0
-		sub(/^    -[[:space:]]*/, "", line)
-		sub(/[[:space:]]+#.*$/, "", line)
-		if (trim(line) != "")
-			emit_item(line, in_list)
-		next
-	}
-	in_dns && in_list != "" && /^  [A-Za-z0-9_-]+:[[:space:]]*/ {
-		in_list = ""
-		print
-		next
-	}
-	{ print }
-	' "$file" > "$file.tmp" && mv "$file.tmp" "$file"
-	rm -f "$file.tmp"
-}
-
 normalize_arch() {
 	case "$1" in
 		auto|'') printf '%s\n' auto ;;
@@ -278,35 +187,15 @@ backup_choices() {
 }
 
 build_template() {
-	local dns_values='' cnt nameserver line trimmed indent resolv
-	resolv=$(uci -q get dhcp.@dnsmasq[0].resolvfile 2>/dev/null)
-	[ -n "$resolv" ] || resolv='/tmp/resolv.conf.d/resolv.conf.auto'
-	[ -r "$resolv" ] || resolv='/tmp/resolv.conf.auto'
-	if [ -r "$resolv" ]; then
-		while IFS= read -r cnt; do
-			nameserver=$(printf '%s\n' "$cnt" | sed -n 's/^[^#]*nameserver[[:space:]]\+\([^[:space:]]\+\).*$/\1/p')
-			[ -n "$nameserver" ] && dns_values="$dns_values$nameserver\n"
-		done < "$resolv"
-	fi
+	local line
 	[ -r "$TEMPLATE_FILE" ] || return 1
 	while IFS= read -r line || [ -n "$line" ]; do
-		trimmed=${line#"${line%%[![:space:]]*}"}
-		indent=${line%"$trimmed"}
-		case "$trimmed" in
-			'#bootstrap_dns'|'#upstream_dns')
-				printf '%b' "$dns_values" | while IFS= read -r nameserver; do
-					[ -n "$nameserver" ] && printf '%s- %s\n' "$indent" "$(yaml_quote_scalar "$nameserver")"
-				done
-				;;
-			*)
-				printf '%s\n' "$line"
-				;;
-		esac
+		printf '%s\n' "$line"
 	done < "$TEMPLATE_FILE"
 }
 
 json_status() {
-	local raw_binpath raw_configpath raw_workdir binpath configpath workdir logfile httpport redirect effective_redirect redirect_conflict redirect_compat redirect_compat_upstream version dns_port arch channel gfw_rules_present
+	local raw_binpath raw_configpath raw_workdir binpath configpath workdir logfile httpport redirect effective_redirect redirect_conflict redirect_compat redirect_compat_upstream passwall_upstream_auto version dns_port arch channel gfw_rules_present
 	raw_binpath=$(get_option binpath "$DEFAULT_BINPATH")
 	binpath=$(resolve_binpath "$raw_binpath")
 	raw_configpath=$(get_option configpath "$DEFAULT_CONFIGPATH")
@@ -321,6 +210,11 @@ json_status() {
 	redirect_conflict=$(safe_cat /var/run/AdGredirect_conflict 2>/dev/null | head -n 1)
 	redirect_compat=$(safe_cat /var/run/AdGredirect_compat 2>/dev/null | head -n 1)
 	redirect_compat_upstream=$(safe_cat /var/run/AdGredirect_compat_upstream 2>/dev/null | head -n 1)
+	passwall_upstream_auto=$(get_option passwall_upstream_auto 0)
+	if [ "$effective_redirect" != 'redirect' ]; then
+		redirect_compat=''
+		redirect_compat_upstream=''
+	fi
 	arch=$(normalize_arch "$(get_option downloadarch "$(get_option arch auto)")")
 	channel=$(normalize_channel "$(get_option release_channel "$(get_option tagname release)")")
 	version=$(resolve_core_version "$binpath" 2>/dev/null)
@@ -348,6 +242,7 @@ json_status() {
 	json_bool redirected "$([ "$(cat /var/run/AdGredir 2>/dev/null)" = 1 ] && echo 1 || echo 0)"
 	json_bool redirect_conflict "$([ -n "$redirect_conflict" ] && echo 1 || echo 0)"
 	json_bool redirect_compat "$([ -n "$redirect_compat" ] && echo 1 || echo 0)"
+	json_bool passwall_upstream_auto "$passwall_upstream_auto"
 	json_bool core_ready "$([ -x "$binpath" ] && echo 1 || echo 0)"
 	json_bool config_ready "$([ -r "$configpath" ] && echo 1 || echo 0)"
 	json_bool workdir_ready "$([ -d "$workdir" ] && echo 1 || echo 0)"
@@ -438,7 +333,6 @@ save_yaml() {
 	rm -rf "$TEMP_CONFIG"
 	rm -f "$TEMP_TEST_LOG"
 	printf '%s' "$content" > "$TEMP_CONFIG"
-	sanitize_dns_yaml_file "$TEMP_CONFIG"
 	if [ -x "$binpath" ]; then
 		if ! "$binpath" -c "$TEMP_CONFIG" --check-config > "$TEMP_TEST_LOG" 2>&1; then
 			json_init; json_add_boolean ok 0; json_add_string error "$(safe_cat "$TEMP_TEST_LOG")"; json_dump; return

@@ -7,9 +7,6 @@ TMP_ADG='/tmp/adguard.list'
 TMP_FETCH='/tmp/gfwlist.base64'
 GFW_DIR='/etc/AdGuardHome'
 GFW_RULE_FILE="$GFW_DIR/gfw_upstream.txt"
-TMP_IMPORT='/tmp/AdGuardHome_gfw_import.list'
-TMP_CONFIG='/tmp/AdGuardHome_gfw_import.yaml'
-TMP_CHECK='/tmp/AdGuardHome_gfw_import.log'
 DEFAULT_BINPATH='/etc/config/adGuardConfig/AdGuardHome'
 
 mkdir -p "$GFW_DIR"
@@ -28,112 +25,21 @@ resolve_binpath() {
 	fi
 }
 
-json_ok() {
-	printf '{"ok":true}\n'
-}
-
-json_error() {
-	local escaped
-	escaped=$(printf '%s' "$1" | sed ':a;N;$!ba;s/\\/\\\\/g;s/"/\\"/g;s/\r//g;s/\n/\\n/g')
-	printf '{"ok":false,"error":"%s"}\n' "$escaped"
-}
-
-prepare_yaml_mutation() {
-	local raw_binpath
+agh_is_running() {
+	local raw_binpath binpath
 	raw_binpath=$(uci -q get "$CONFIG.$CONFIG.binpath" 2>/dev/null)
-	MUTATION_BINPATH=$(resolve_binpath "$raw_binpath")
-
-	if [ ! -r "$configpath" ]; then
-		json_error 'Please create the YAML configuration first.'
-		return 1
-	fi
-
-	if pgrep -f "$MUTATION_BINPATH" >/dev/null 2>&1; then
-		json_error 'AdGuard Home is running. Stop the service before modifying upstream DNS.'
-		return 1
-	fi
-
-	return 0
-}
-
-validate_and_commit_yaml() {
-	if [ -x "$MUTATION_BINPATH" ]; then
-		if ! "$MUTATION_BINPATH" -c "$TMP_CONFIG" --check-config > "$TMP_CHECK" 2>&1; then
-			rm -f "$TMP_IMPORT" "$TMP_CONFIG" "$TMP_CHECK"
-			json_error "$(cat "$TMP_CHECK" 2>/dev/null)"
-			return 1
-		fi
-	fi
-
-	mv -f "$TMP_CONFIG" "$configpath"
-	rm -f "$TMP_IMPORT" "$TMP_CONFIG" "$TMP_CHECK"
-	json_ok
-	return 0
+	binpath=$(resolve_binpath "$raw_binpath")
+	pgrep -f "$binpath" >/dev/null 2>&1
 }
 
 import_upstream_dns() {
-	local cleaned_lines
-
-	if [ ! -s "$GFW_RULE_FILE" ]; then
-		json_error 'Please generate the GFW rule file first.'
-		return 1
-	fi
-
-	if ! prepare_yaml_mutation; then
-		return 1
-	fi
-
-	cleaned_lines=$(sed -e '/^[[:space:]]*# Generated GFW upstream rules/d' -e '/^[[:space:]]*# Paste these entries into dns\.upstream_dns when needed\./d' -e '/^[[:space:]]*$/d' "$GFW_RULE_FILE")
-	if [ -z "$cleaned_lines" ]; then
-		json_error 'The GFW rule file is empty.'
-		return 1
-	fi
-
-	if ! grep -q '^[[:space:]]*upstream_dns:[[:space:]]*$' "$configpath"; then
-		json_error 'The upstream_dns section was not found in YAML.'
-		return 1
-	fi
-
-	{
-		printf '    # gfwimportstart\n'
-		printf '%s\n' "$cleaned_lines"
-		printf '    # gfwimportend\n'
-	} > "$TMP_IMPORT"
-
-	sed '/gfwimportstart/,/gfwimportend/d' "$configpath" > "$TMP_CONFIG"
-	if ! awk -v import_file="$TMP_IMPORT" '
-		BEGIN { inserted = 0 }
-		/^[[:space:]]*upstream_dns:[[:space:]]*$/ && !inserted {
-			print
-			while ((getline line < import_file) > 0)
-				print line
-			close(import_file)
-			inserted = 1
-			next
-		}
-		{ print }
-		END { if (!inserted) exit 2 }
-	' "$TMP_CONFIG" > "$TMP_CONFIG.new"; then
-		rm -f "$TMP_IMPORT" "$TMP_CONFIG" "$TMP_CONFIG.new"
-		json_error 'Failed to insert imported rules into upstream_dns.'
-		return 1
-	fi
-	mv -f "$TMP_CONFIG.new" "$TMP_CONFIG"
-	validate_and_commit_yaml
+	printf '{"ok":true,"message":"Automatic upstream_dns import is disabled. Copy entries from /etc/AdGuardHome/gfw_upstream.txt in the AdGuard Home console if needed."}\n'
+	return 0
 }
 
 remove_imported_upstream_dns() {
-	if ! prepare_yaml_mutation; then
-		return 1
-	fi
-
-	if ! grep -q 'gfwimportstart' "$configpath" 2>/dev/null; then
-		json_ok
-		return 0
-	fi
-
-	sed '/gfwimportstart/,/gfwimportend/d' "$configpath" > "$TMP_CONFIG"
-	validate_and_commit_yaml
+	printf '{"ok":true,"message":"Automatic upstream_dns removal is disabled. Edit upstream DNS in the AdGuard Home console if needed."}\n'
+	return 0
 }
 
 fetch_gfwlist() {
@@ -171,7 +77,12 @@ update_md5() {
 }
 
 cleanup_legacy_yaml() {
-	[ -f "$configpath" ] && sed -i '/programaddstart/,/programaddend/d' "$configpath"
+	[ -f "$configpath" ] || return 0
+	agh_is_running && return 0
+	sed -i \
+		-e '/programaddstart/,/programaddend/d' \
+		-e '/gfwimportstart/,/gfwimportend/d' \
+		"$configpath"
 }
 
 configpath=$(uci -q get "$CONFIG.$CONFIG.configpath" 2>/dev/null)

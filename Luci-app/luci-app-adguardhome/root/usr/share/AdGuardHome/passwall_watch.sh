@@ -1,8 +1,6 @@
 #!/bin/sh
 PATH="/usr/sbin:/usr/bin:/sbin:/bin"
 
-PASSWALL_CACHE='/tmp/etc/passwall/var'
-PASSWALL2_CACHE='/tmp/etc/passwall2/var'
 LAST_STATE_FILE='/var/run/AdGpasswall_state'
 
 is_valid_port() {
@@ -45,32 +43,40 @@ _uci_bool_enabled() {
 	return 1
 }
 
+passwall_chain_ready() {
+	if command -v nft >/dev/null 2>&1 && nft list chain inet passwall PSW_DNS >/dev/null 2>&1; then
+		return 0
+	fi
+	command -v iptables >/dev/null 2>&1 && iptables -t nat -L PSW_DNS >/dev/null 2>&1
+}
+
+passwall2_chain_ready() {
+	if command -v nft >/dev/null 2>&1 && nft list chain inet passwall2 PSW2_DNS >/dev/null 2>&1; then
+		return 0
+	fi
+	command -v iptables >/dev/null 2>&1 && iptables -t nat -L PSW2_DNS >/dev/null 2>&1
+}
+
 # Replicates resolve_redirect_compat_state logic from init.d/AdGuardHome
-# Checks UCI switch + cache file + port validity to avoid false positives
+# Checks UCI switch + DNS chain readiness to avoid false positives
 passwall_state() {
-	local enabled dns_redirect port
+	local enabled dns_redirect
 
 	enabled=$(uci -q get passwall.@global[0].enabled 2>/dev/null)
 	if _uci_bool_enabled "$enabled"; then
 		dns_redirect=$(uci -q get passwall.@global[0].dns_redirect 2>/dev/null)
-		if [ "$dns_redirect" != '0' ] && [ -s "$PASSWALL_CACHE" ]; then
-			port=$(awk -F '=' '$1 == "ACL_default_dns_port" { value = $2; gsub(/^"|"$/, "", value); print value }' "$PASSWALL_CACHE" 2>/dev/null | tail -n 1)
-			if is_valid_port "$port"; then
-				printf 'passwall'
-				return 0
-			fi
+		if [ "$dns_redirect" != '0' ] && passwall_chain_ready; then
+			printf 'passwall'
+			return 0
 		fi
 	fi
 
 	enabled=$(uci -q get passwall2.@global[0].enabled 2>/dev/null)
 	if _uci_bool_enabled "$enabled"; then
 		dns_redirect=$(uci -q get passwall2.@global[0].dns_redirect 2>/dev/null)
-		if [ "$dns_redirect" != '0' ] && [ -s "$PASSWALL2_CACHE" ]; then
-			port=$(awk -F '=' '$1 == "ACL_default_dns_port" { value = $2; gsub(/^"|"$/, "", value); print value }' "$PASSWALL2_CACHE" 2>/dev/null | tail -n 1)
-			if is_valid_port "$port"; then
-				printf 'passwall2'
-				return 0
-			fi
+		if [ "$dns_redirect" != '0' ] && passwall2_chain_ready; then
+			printf 'passwall2'
+			return 0
 		fi
 	fi
 
