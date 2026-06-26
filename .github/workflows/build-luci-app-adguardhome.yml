@@ -3,26 +3,6 @@ name: Build luci-app-adguardhome
 on:
   workflow_dispatch:
     inputs:
-      sdk_distribution:
-        description: SDK distribution
-        required: false
-        default: 'immortalwrt'
-        type: choice
-        options:
-          - openwrt
-          - immortalwrt
-      openwrt_version:
-        description: OpenWrt / ImmortalWrt release version
-        required: false
-        default: '25.12-SNAPSHOT'
-      pkg_format:
-        description: Package output format
-        required: false
-        default: 'apk'
-        type: choice
-        options:
-          - apk
-          - ipk
       openwrt_target:
         description: OpenWrt target
         required: false
@@ -32,7 +12,7 @@ on:
         required: false
         default: 'filogic'
       publish_release:
-        description: Publish the built ipk to GitHub Releases
+        description: Publish built packages to GitHub Releases
         required: false
         default: false
         type: boolean
@@ -59,13 +39,26 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - build_profile: 24.10-ipk
+            sdk_distribution: immortalwrt
+            openwrt_version: 24.10.2
+            pkg_format: ipk
+          - build_profile: 25.12-apk
+            sdk_distribution: immortalwrt
+            openwrt_version: 25.12-SNAPSHOT
+            pkg_format: apk
 
     env:
-      SDK_DISTRIBUTION: ${{ inputs.sdk_distribution || 'immortalwrt' }}
-      OPENWRT_VERSION: ${{ inputs.openwrt_version || '25.12-SNAPSHOT' }}
+      BUILD_PROFILE: ${{ matrix.build_profile }}
+      SDK_DISTRIBUTION: ${{ matrix.sdk_distribution }}
+      OPENWRT_VERSION: ${{ matrix.openwrt_version }}
       OPENWRT_TARGET: ${{ inputs.openwrt_target || 'mediatek' }}
       OPENWRT_SUBTARGET: ${{ inputs.openwrt_subtarget || 'filogic' }}
-      PKG_FORMAT: ${{ inputs.pkg_format || 'apk' }}
+      PKG_FORMAT: ${{ matrix.pkg_format }}
 
     steps:
       - name: Checkout repository
@@ -266,7 +259,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: luci-app-adguardhome-${{ env.SDK_DISTRIBUTION }}-${{ env.OPENWRT_TARGET }}-${{ env.OPENWRT_SUBTARGET }}-${{ env.PKG_FORMAT }}
+          name: luci-app-adguardhome-${{ env.BUILD_PROFILE }}-${{ env.SDK_DISTRIBUTION }}-${{ env.OPENWRT_TARGET }}-${{ env.OPENWRT_SUBTARGET }}
           path: ${{ env.ARTIFACT_DIR }}/
           if-no-files-found: error
 
@@ -274,13 +267,6 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/adguardhome-v') || (github.event_name == 'workflow_dispatch' && inputs.publish_release)
-
-    env:
-      SDK_DISTRIBUTION: ${{ inputs.sdk_distribution || 'immortalwrt' }}
-      OPENWRT_VERSION: ${{ inputs.openwrt_version || '25.12-SNAPSHOT' }}
-      OPENWRT_TARGET: ${{ inputs.openwrt_target || 'mediatek' }}
-      OPENWRT_SUBTARGET: ${{ inputs.openwrt_subtarget || 'filogic' }}
-      PKG_FORMAT: ${{ inputs.pkg_format || 'apk' }}
 
     steps:
       - name: Determine release metadata
@@ -311,8 +297,11 @@ jobs:
       - name: Download build artifact
         uses: actions/download-artifact@v4
         with:
-          name: luci-app-adguardhome-${{ env.SDK_DISTRIBUTION }}-${{ env.OPENWRT_TARGET }}-${{ env.OPENWRT_SUBTARGET }}-${{ env.PKG_FORMAT }}
+          pattern: luci-app-adguardhome-*
           path: release-assets
+
+      - name: List release assets
+        run: find release-assets -type f | sort
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
@@ -324,8 +313,9 @@ jobs:
           files: release-assets/**/*
           fail_on_unmatched_files: true
           body: |
-            SDK distribution: ${{ env.SDK_DISTRIBUTION }}
-            SDK release: ${{ env.OPENWRT_VERSION }}
-            Target: ${{ env.OPENWRT_TARGET }}/${{ env.OPENWRT_SUBTARGET }}
-            Package format: ${{ env.PKG_FORMAT }}
+            Build outputs:
+            - ImmortalWrt 24.10.2 ipk
+            - ImmortalWrt 25.12-SNAPSHOT apk
+
+            Target: ${{ inputs.openwrt_target || 'mediatek' }}/${{ inputs.openwrt_subtarget || 'filogic' }}
             Package architecture: all
