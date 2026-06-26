@@ -1345,6 +1345,12 @@ force_reload() {
 	_isrunning && procd_send_signal "$CONFIGURATION" || start
 }
 
+stop() {
+	procd_lock
+	stop_service "$@"
+	procd_kill "$CONFIGURATION" "$1" >/dev/null 2>&1 || true
+}
+
 get_tz() {
 	SET_TZ=''
 	if [ -r /etc/localtime ]; then

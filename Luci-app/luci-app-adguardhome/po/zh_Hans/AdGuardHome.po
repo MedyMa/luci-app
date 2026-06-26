@@ -456,8 +456,16 @@ msgid "AdGuard Home intercepts LAN DNS while bypassing the PassWall2 DNS redirec
 msgstr "AdGuard Home 会拦截局域网 DNS，并绕过 PassWall2 的 DNS 重定向链。上游 DNS 不会被自动修改。"
 
 #: htdocs/luci-static/resources/view/adguardhome/overview.js
+msgid "AdGuard Home intercepts LAN DNS while bypassing the PassWall2 DNS redirect chain. One managed PassWall2 upstream entry is maintained when the frontend port is known."
+msgstr "AdGuard Home 会拦截局域网 DNS，并绕过 PassWall2 的 DNS 重定向链。检测到前端端口时，会维护一条托管的 PassWall2 上游记录。"
+
+#: htdocs/luci-static/resources/view/adguardhome/overview.js
 msgid "AdGuard Home intercepts LAN DNS while bypassing the PassWall DNS redirect chain. Upstream DNS is not changed automatically."
 msgstr "AdGuard Home 会拦截局域网 DNS，并绕过 PassWall 的 DNS 重定向链。上游 DNS 不会被自动修改。"
+
+#: htdocs/luci-static/resources/view/adguardhome/overview.js
+msgid "AdGuard Home intercepts LAN DNS while bypassing the PassWall DNS redirect chain. One managed PassWall upstream entry is maintained when the frontend port is known."
+msgstr "AdGuard Home 会拦截局域网 DNS，并绕过 PassWall 的 DNS 重定向链。检测到前端端口时，会维护一条托管的 PassWall 上游记录。"
 
 #: htdocs/luci-static/resources/view/adguardhome/overview.js
 msgid "DNS Frontend"
@@ -466,6 +474,10 @@ msgstr "DNS 前端"
 #: htdocs/luci-static/resources/view/adguardhome/overview.js
 msgid "Frontend Port"
 msgstr "前端端口"
+
+#: htdocs/luci-static/resources/view/adguardhome/overview.js
+msgid "Managed Upstream"
+msgstr "托管上游"
 
 #: htdocs/luci-static/resources/view/adguardhome/overview.js
 msgid "Running"

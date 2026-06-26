@@ -6,8 +6,15 @@
 var callGetStatus = rpc.declare({ object: 'luci.adguardhome', method: 'getStatus', expect: { '': {} } });
 var callGetStats = rpc.declare({ object: 'luci.adguardhome', method: 'getStats', expect: { '': {} } });
 
-function t(message) {
-	return _(message);
+function hasChineseLocale() {
+	var htmlLang = document.documentElement ? (document.documentElement.lang || '') : '';
+	var bodyClass = document.body ? (document.body.className || '') : '';
+	return /^zh(?:-|_|$)/i.test(htmlLang) || /\blang_zh(?:[-_][^\s]+)?\b/i.test(bodyClass);
+}
+
+function t(message, fallback) {
+	var translated = _(message);
+	return translated !== message || !fallback || !hasChineseLocale() ? translated : fallback;
 }
 
 function actionError(err, fallback) {
@@ -208,9 +215,9 @@ function redirectConflictMessage(status) {
 		return '';
 
 	if (status.redirect_conflict_reason === 'passwall2-dns-redirect')
-		return t('PassWall2 DNS redirect is active. AdGuard Home keeps DNS interception enabled and uses compatibility bypass rules.');
+		return t('PassWall2 DNS redirect is active. AdGuard Home keeps DNS interception enabled and uses compatibility bypass rules.', '检测到 PassWall2 已开启 DNS 重定向，AdGuard Home 会保持 DNS 拦截，并使用兼容旁路规则。');
 
-	return t('PassWall DNS redirect is active. AdGuard Home keeps DNS interception enabled and uses compatibility bypass rules.');
+	return t('PassWall DNS redirect is active. AdGuard Home keeps DNS interception enabled and uses compatibility bypass rules.', '检测到 PassWall 已开启 DNS 重定向，AdGuard Home 会保持 DNS 拦截，并使用兼容旁路规则。');
 }
 
 function renderRedirectCompatAlert(status) {
@@ -220,16 +227,16 @@ function renderRedirectCompatAlert(status) {
 	var upstream = text(status.redirect_compat_upstream, '');
 	var vendor = status.redirect_compat_reason === 'passwall2-dns-redirect' ? 'PassWall2' : 'PassWall';
 	var title = vendor === 'PassWall2'
-		? t('PassWall2 Compatibility Mode')
-		: t('PassWall Compatibility Mode');
+		? t('PassWall2 Compatibility Mode', 'PassWall2 兼容模式')
+		: t('PassWall Compatibility Mode', 'PassWall 兼容模式');
 	var autoUpstream = yes(status.passwall_upstream_auto);
 	var summary = vendor === 'PassWall2'
 		? (autoUpstream
-			? t('AdGuard Home intercepts LAN DNS while bypassing the PassWall2 DNS redirect chain. One managed PassWall2 upstream entry is maintained when the frontend port is known.')
-			: t('AdGuard Home intercepts LAN DNS while bypassing the PassWall2 DNS redirect chain. Upstream DNS is not changed automatically.'))
+			? t('AdGuard Home intercepts LAN DNS while bypassing the PassWall2 DNS redirect chain. One managed PassWall2 upstream entry is maintained when the frontend port is known.', 'AdGuard Home 会拦截局域网 DNS，并绕过 PassWall2 的 DNS 重定向链。检测到前端端口时，会维护一条托管的 PassWall2 上游记录。')
+			: t('AdGuard Home intercepts LAN DNS while bypassing the PassWall2 DNS redirect chain. Upstream DNS is not changed automatically.', 'AdGuard Home 会拦截局域网 DNS，并绕过 PassWall2 的 DNS 重定向链。上游 DNS 不会被自动修改。'))
 		: (autoUpstream
-			? t('AdGuard Home intercepts LAN DNS while bypassing the PassWall DNS redirect chain. One managed PassWall upstream entry is maintained when the frontend port is known.')
-			: t('AdGuard Home intercepts LAN DNS while bypassing the PassWall DNS redirect chain. Upstream DNS is not changed automatically.'));
+			? t('AdGuard Home intercepts LAN DNS while bypassing the PassWall DNS redirect chain. One managed PassWall upstream entry is maintained when the frontend port is known.', 'AdGuard Home 会拦截局域网 DNS，并绕过 PassWall 的 DNS 重定向链。检测到前端端口时，会维护一条托管的 PassWall 上游记录。')
+			: t('AdGuard Home intercepts LAN DNS while bypassing the PassWall DNS redirect chain. Upstream DNS is not changed automatically.', 'AdGuard Home 会拦截局域网 DNS，并绕过 PassWall 的 DNS 重定向链。上游 DNS 不会被自动修改。'));
 
 	return E('div', { 'class': 'agh-alert-compat' }, [
 		E('div', { 'class': 'agh-alert-head', 'tabindex': '0', 'title': summary }, [
@@ -239,15 +246,15 @@ function renderRedirectCompatAlert(status) {
 			E('p', { 'class': 'agh-alert-copy' }, summary),
 			E('div', { 'class': 'agh-alert-meta' }, [
 				E('div', { 'class': 'agh-alert-pill' }, [
-					E('span', {}, t('DNS Frontend')),
+					E('span', {}, t('DNS Frontend', 'DNS 前端')),
 					E('strong', {}, vendor)
 				]),
 				upstream ? E('div', { 'class': 'agh-alert-pill' }, [
-					E('span', {}, t('Frontend Port')),
+					E('span', {}, t('Frontend Port', '前端端口')),
 					E('strong', {}, upstream)
 				]) : '',
 				autoUpstream && upstream ? E('div', { 'class': 'agh-alert-pill' }, [
-					E('span', {}, t('Managed Upstream')),
+					E('span', {}, t('Managed Upstream', '托管上游')),
 					E('strong', {}, '127.0.0.1:' + upstream)
 				]) : ''
 			])
