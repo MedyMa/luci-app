@@ -7,7 +7,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-adguardhome
 PKG_VERSION:=2.0
-PKG_RELEASE:=11
+PKG_RELEASE:=13
 
 LUCI_TITLE:=LuCI app for AdGuard Home
 LUCI_DESCRIPTION:=Modern LuCI dashboard for AdGuard Home
@@ -40,6 +40,11 @@ endef
 define Package/luci-app-adguardhome/postinst
 #!/bin/sh
 if [ -z "$$IPKG_INSTROOT" ]; then
+	was_running=0
+	if [ -e /var/run/AdGuardHome.ipk-was-running ]; then
+		was_running=1
+		rm -f /var/run/AdGuardHome.ipk-was-running
+	fi
 	for runtime_file in \
 		/etc/init.d/AdGuardHome \
 		/etc/uci-defaults/40_luci-AdGuardHome \
@@ -115,10 +120,23 @@ if [ -z "$$IPKG_INSTROOT" ]; then
 	uci -q get AdGuardHome.AdGuardHome.release_channel >/dev/null 2>&1 || uci set AdGuardHome.AdGuardHome.release_channel='release'
 	uci -q get AdGuardHome.AdGuardHome.username >/dev/null 2>&1 || uci set AdGuardHome.AdGuardHome.username='root'
 	uci -q get AdGuardHome.AdGuardHome.password >/dev/null 2>&1 || uci set AdGuardHome.AdGuardHome.password='admin'
+	if [ "$$was_running" = '1' ]; then
+		uci -q set AdGuardHome.AdGuardHome.enabled='1'
+	fi
 	uci -q commit AdGuardHome
 	[ -x /etc/init.d/AdGuardHome ] && /etc/init.d/AdGuardHome enable >/dev/null 2>&1
 	if [ "$$(uci -q get AdGuardHome.AdGuardHome.enabled 2>/dev/null)" = '1' ] && [ -x /etc/init.d/AdGuardHome ]; then
-		/etc/init.d/AdGuardHome reload >/dev/null 2>&1 || /etc/init.d/AdGuardHome restart >/dev/null 2>&1 || true
+		if /etc/init.d/AdGuardHome isrunning >/dev/null 2>&1; then
+			AGH_SKIP_UPDATE=1 /etc/init.d/AdGuardHome reload >/dev/null 2>&1 || true
+		else
+			AGH_SKIP_UPDATE=1 /etc/init.d/AdGuardHome start >/dev/null 2>&1 || true
+		fi
+		(
+			sleep 5
+			[ "$$(uci -q get AdGuardHome.AdGuardHome.enabled 2>/dev/null)" = '1' ] || exit 0
+			/etc/init.d/AdGuardHome isrunning >/dev/null 2>&1 && exit 0
+			AGH_SKIP_UPDATE=1 /etc/init.d/AdGuardHome force_reload >/dev/null 2>&1 || true
+		) &
 	fi
 	rm -rf /tmp/luci-modulecache/ /var/luci-modulecache/
 	rm -f /tmp/luci-indexcache /tmp/luci-indexcache.* /var/luci-indexcache.* 2>/dev/null
@@ -133,8 +151,19 @@ endef
 define Package/luci-app-adguardhome/prerm
 #!/bin/sh
 if [ -z "$$IPKG_INSTROOT" ]; then
-	/etc/init.d/AdGuardHome disable >/dev/null 2>&1 || true
-	/etc/init.d/AdGuardHome stop >/dev/null 2>&1 || true
+	case "$$1" in
+		upgrade)
+			if [ -x /etc/init.d/AdGuardHome ] && /etc/init.d/AdGuardHome isrunning >/dev/null 2>&1; then
+				mkdir -p /var/run 2>/dev/null
+				: > /var/run/AdGuardHome.ipk-was-running
+			fi
+			/etc/init.d/AdGuardHome stop nobackup >/dev/null 2>&1 || true
+			;;
+		*)
+			/etc/init.d/AdGuardHome disable >/dev/null 2>&1 || true
+			/etc/init.d/AdGuardHome stop >/dev/null 2>&1 || true
+			;;
+	esac
 	uci -q batch <<-EOF >/dev/null 2>&1
 		delete ucitrack.@AdGuardHome[-1]
 		commit ucitrack

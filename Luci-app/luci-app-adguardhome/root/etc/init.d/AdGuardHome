@@ -1560,6 +1560,8 @@ boot_service() {
 	binpath=$(resolve_binpath "$binpath")
 	if [ "$enabled" = '1' ] && [ "$waitonboot" = '1' ]; then
 		start_waitnet_guard
+	elif [ "$enabled" = '1' ]; then
+		start_service
 	else
 		[ -x "$binpath" ] && start_service
 	fi

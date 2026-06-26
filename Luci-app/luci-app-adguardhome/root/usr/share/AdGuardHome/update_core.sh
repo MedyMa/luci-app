@@ -550,6 +550,18 @@ run_update() {
 	now_ver=$(current_version "$binpath")
 	if [ "$force" != 'force' ] && [ -n "$now_ver" ] && [ "$now_ver" = "$latest_ver" ]; then
 		log_success "Already latest: $now_ver"
+		if [ "$enabled" = '1' ]; then
+			if ! wait_core_running "$binpath" "$configpath"; then
+				log_warn 'Service is enabled but not healthy; starting AdGuard Home.'
+				AGH_SKIP_UPDATE=1 /etc/init.d/AdGuardHome start >/dev/null 2>&1 || true
+				if wait_core_running "$binpath" "$configpath"; then
+					log_success 'AdGuard Home service is running.'
+				else
+					log_error 'Latest core is installed, but failed to start service.'
+					exit_update 1
+				fi
+			fi
+		fi
 		exit_update 0
 	fi
 	log_info "Local version: ${now_ver:-missing}."
