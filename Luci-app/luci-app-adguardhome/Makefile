@@ -7,7 +7,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-adguardhome
 PKG_VERSION:=2.0
-PKG_RELEASE:=9
+PKG_RELEASE:=10
 
 LUCI_TITLE:=LuCI app for AdGuard Home
 LUCI_DESCRIPTION:=Modern LuCI dashboard for AdGuard Home
@@ -110,6 +110,7 @@ if [ -z "$$IPKG_INSTROOT" ]; then
 	uci -q set AdGuardHome.AdGuardHome.workdir="$$workdir"
 	uci -q set AdGuardHome.AdGuardHome.binpath="$$binpath"
 	uci -q set AdGuardHome.AdGuardHome.redirect="$$redirect_mode"
+	uci -q get AdGuardHome.AdGuardHome.waitonboot >/dev/null 2>&1 || uci set AdGuardHome.AdGuardHome.waitonboot='1'
 	uci -q get AdGuardHome.AdGuardHome.downloadarch >/dev/null 2>&1 || uci set AdGuardHome.AdGuardHome.downloadarch='auto'
 	uci -q get AdGuardHome.AdGuardHome.release_channel >/dev/null 2>&1 || uci set AdGuardHome.AdGuardHome.release_channel='release'
 	uci -q get AdGuardHome.AdGuardHome.username >/dev/null 2>&1 || uci set AdGuardHome.AdGuardHome.username='root'

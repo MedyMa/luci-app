@@ -64,6 +64,7 @@ uci -q batch <<-EOF >/dev/null 2>&1
 EOF
 
 # Set default API credentials matching the template (root / admin)
+uci -q get AdGuardHome.AdGuardHome.waitonboot >/dev/null 2>&1 || uci -q set AdGuardHome.AdGuardHome.waitonboot='1'
 uci -q get AdGuardHome.AdGuardHome.redirect >/dev/null 2>&1 || uci -q set AdGuardHome.AdGuardHome.redirect='dnsmasq-upstream'
 uci -q get AdGuardHome.AdGuardHome.username >/dev/null 2>&1 || uci -q set AdGuardHome.AdGuardHome.username='root'
 uci -q get AdGuardHome.AdGuardHome.password >/dev/null 2>&1 || uci -q set AdGuardHome.AdGuardHome.password='admin'

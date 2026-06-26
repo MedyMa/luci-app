@@ -1,5 +1,6 @@
 config AdGuardHome 'AdGuardHome'
 	option enabled '0'
+	option waitonboot '1'
 	option update '1'
 	option httpport '3000'
 	option redirect 'dnsmasq-upstream'

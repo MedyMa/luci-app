@@ -263,7 +263,9 @@ return view.extend({
 		var passwallUpstreamHelp = passwallUpstreamDetected
 			? t('Detected PassWall DNS frontend: ', '检测到 PassWall DNS 前端：') + '127.0.0.1:' + passwallUpstreamPort + '. ' +
 				t('When enabled, only this managed AdGuard Home upstream entry is maintained; other upstream DNS entries stay untouched.', '启用后，只维护这一条受管 AdGuard Home 上游记录，其它上游 DNS 不会被改动。')
-			: t('Managed PassWall upstream is enabled, but the PassWall DNS frontend port is not detected yet. The last managed upstream entry is kept until a new port is detected.', '托管 PassWall 上游已启用，但暂未检测到 PassWall DNS 前端端口。上一条受管上游记录会保留，直到检测到新端口。');
+			: (passwallUpstreamAutoEnabled
+				? t('Managed PassWall upstream is enabled, but the PassWall DNS frontend port is not detected yet. The managed entry is removed until a valid frontend port is detected.', '托管 PassWall 上游已启用，但暂未检测到 PassWall DNS 前端端口。检测到有效前端端口前会移除托管上游记录。')
+				: t('Enable this to maintain one managed PassWall upstream when the PassWall DNS frontend port is detected. If PassWall is stopped or DNS redirect is disabled, AdGuard Home keeps its normal redirect mode.', '启用后，在检测到 PassWall DNS 前端端口时维护一条托管上游。PassWall 停止或 DNS 重定向关闭时，AdGuard Home 会保持自身普通重定向模式。'));
 		var linksBox = E('textarea', {}, linksText);
 		var channelSelect = E('select', {}, [
 			E('option', { value: 'release' }, t('Stable', '稳定版')),
@@ -303,16 +305,9 @@ return view.extend({
 
 		o = s.taboption('network', form.Value, 'httpport', t('Web console port', 'Web 控制台端口'), t('Port used by the AdGuard Home management UI.', 'AdGuard Home 管理界面使用的端口。')); o.datatype = 'port'; o.placeholder = '3000';
 		o = s.taboption('network', form.ListValue, 'redirect', t('DNS redirect mode', 'DNS 重定向模式'), t('Choose how LAN DNS traffic is handed to AdGuard Home.', '选择局域网 DNS 流量交给 AdGuard Home 的方式。')); o.default = 'dnsmasq-upstream'; o.value('none', t('None', '无')); o.value('dnsmasq-upstream', t('Use as dnsmasq upstream', '作为 dnsmasq 上游')); o.value('redirect', t('Redirect port 53', '重定向 53 端口')); o.value('exchange', t('Swap with dnsmasq port', '与 dnsmasq 交换端口'));
-		if (passwallUpstreamDetected || passwallUpstreamAutoEnabled) {
-			o = s.taboption('network', form.Flag, 'passwall_upstream_auto', t('Managed PassWall upstream', '托管 PassWall 上游'), passwallUpstreamHelp);
-			o.default = '0';
-			o.rmempty = false;
-		} else {
-			o = s.taboption('network', form.DummyValue, '_passwall_upstream_auto_wait', t('Managed PassWall upstream', '托管 PassWall 上游'), t('The switch appears after redirect compatibility detects a PassWall DNS frontend port.', '检测到 PassWall DNS 前端端口后才会显示此开关。'));
-			o.cfgvalue = function() {
-				return t('Waiting for PassWall DNS frontend', '等待 PassWall DNS 前端');
-			};
-		}
+		o = s.taboption('network', form.Flag, 'passwall_upstream_auto', t('Managed PassWall upstream', '托管 PassWall 上游'), passwallUpstreamHelp);
+		o.default = '0';
+		o.rmempty = false;
 
 		o = s.taboption('files', form.Value, 'binpath', t('Core binary path', '核心文件路径'), t('Executable path for the AdGuard Home binary.', 'AdGuard Home 核心可执行文件路径。')); o.placeholder = '/etc/config/adGuardConfig/AdGuardHome'; o.rmempty = false;
 		o = s.taboption('files', form.Value, 'configpath', t('YAML config path', 'YAML 配置路径'), t('Main YAML configuration file edited by the YAML editor.', 'YAML 编辑器操作的主配置文件。')); o.placeholder = '/etc/config/adGuardConfig/AdGuardHome.yaml'; o.rmempty = false;

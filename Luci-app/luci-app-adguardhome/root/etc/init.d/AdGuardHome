@@ -17,6 +17,7 @@ REDIRECT_COMPAT_UPSTREAM_FILE='/var/run/AdGredirect_compat_upstream'
 UPSTREAM_DNS_BACKUP_FILE='/var/run/AdGupstream_dns_backup'
 PASSWALL_UPSTREAM_BEGIN='# agh-managed-passwall-upstream-begin'
 PASSWALL_UPSTREAM_END='# agh-managed-passwall-upstream-end'
+PASSWALL_UPSTREAM_RELOAD_FILE='/var/run/AdGpasswall_upstream_reload'
 PASSWALL_DNS_BYPASS_COMMENT='AGH_COMPAT_BYPASS'
 GFWSET='gfwlist'
 
@@ -115,6 +116,60 @@ passwall2_cache_get() {
 	awk -F '=' -v key="$key" '$1 == key { value = $2 } END { gsub(/^"|"$/, "", value); if (value != "") print value }' /tmp/etc/passwall2/var
 }
 
+first_valid_port() {
+	local port
+	for port in "$@"; do
+		is_valid_port "$port" || continue
+		printf '%s\n' "$port"
+		return 0
+	done
+	return 1
+}
+
+scan_passwall_cache_dns_port() {
+	local file="$1"
+	[ -s "$file" ] || return 1
+	awk -F '=' '
+		{
+			key = tolower($1)
+		}
+		key ~ /dns/ && key ~ /port/ {
+			value = $2
+			gsub(/^"|"$/, "", value)
+			if (value ~ /^[0-9]+$/ && value >= 1 && value <= 65535 && value != 53) {
+				print value
+				exit
+			}
+		}' "$file"
+}
+
+scan_passwall_chain_redirect_port() {
+	local vendor="$1" text port
+	case "$vendor" in
+		passwall2)
+			if command -v nft >/dev/null 2>&1; then
+				text=$(nft list chain inet passwall2 PSW2_DNS 2>/dev/null)
+			fi
+			if [ -z "$text" ] && command -v iptables >/dev/null 2>&1; then
+				text=$(iptables -t nat -S PSW2_DNS 2>/dev/null)
+			fi
+			;;
+		*)
+			if command -v nft >/dev/null 2>&1; then
+				text=$(nft list chain inet passwall PSW_DNS 2>/dev/null)
+			fi
+			if [ -z "$text" ] && command -v iptables >/dev/null 2>&1; then
+				text=$(iptables -t nat -S PSW_DNS 2>/dev/null)
+			fi
+			;;
+	esac
+	port=$(printf '%s\n' "$text" | sed -n \
+		-e 's/.*redirect[[:space:]]\+to[[:space:]]*:\([0-9][0-9]*\).*/\1/p' \
+		-e 's/.*--to-ports[[:space:]]\+\([0-9][0-9]*\).*/\1/p' | head -n 1)
+	is_valid_port "$port" || return 1
+	printf '%s\n' "$port"
+}
+
 passwall_dns_redirect_enabled() {
 	local enabled dns_redirect
 	enabled=$(uci -q get passwall.@global[0].enabled 2>/dev/null)
@@ -135,14 +190,26 @@ passwall2_dns_redirect_enabled() {
 
 resolve_passwall_dns_front_port() {
 	local port
-	port=$(passwall_cache_get ACL_default_dns_port 2>/dev/null | tail -n 1)
+	port=$(first_valid_port \
+		"$(passwall_cache_get ACL_default_dns_port 2>/dev/null | tail -n 1)" \
+		"$(scan_passwall_cache_dns_port /tmp/etc/passwall/var 2>/dev/null)" \
+		"$(scan_passwall_chain_redirect_port passwall 2>/dev/null)" \
+		"$(uci -q get passwall.@global[0].dns_port 2>/dev/null)" \
+		"$(uci -q get passwall.@global[0].dns_forward_port 2>/dev/null)" \
+		2>/dev/null)
 	is_valid_port "$port" || return 1
 	printf '%s\n' "$port"
 }
 
 resolve_passwall2_dns_front_port() {
 	local port
-	port=$(passwall2_cache_get ACL_default_dns_port 2>/dev/null | tail -n 1)
+	port=$(first_valid_port \
+		"$(passwall2_cache_get ACL_default_dns_port 2>/dev/null | tail -n 1)" \
+		"$(scan_passwall_cache_dns_port /tmp/etc/passwall2/var 2>/dev/null)" \
+		"$(scan_passwall_chain_redirect_port passwall2 2>/dev/null)" \
+		"$(uci -q get passwall2.@global[0].dns_port 2>/dev/null)" \
+		"$(uci -q get passwall2.@global[0].dns_forward_port 2>/dev/null)" \
+		2>/dev/null)
 	is_valid_port "$port" || return 1
 	printf '%s\n' "$port"
 }
@@ -407,7 +474,7 @@ add_managed_passwall_upstream_dns() {
 }
 
 sync_passwall_upstream_dns() {
-	local configpath="$1" port="$2" keep_missing="$3" enabled endpoint changed status
+	local configpath="$1" port="$2" enabled endpoint changed status
 	[ -f "$configpath" ] || return 0
 	changed=0
 	get_opt enabled passwall_upstream_auto '0'
@@ -417,7 +484,6 @@ sync_passwall_upstream_dns() {
 		return 0
 	fi
 	if ! is_valid_port "$port"; then
-		[ "$keep_missing" = '1' ] && return 0
 		strip_managed_passwall_upstream_dns "$configpath"
 		[ "$?" = 10 ] && return 10
 		return 0
@@ -432,6 +498,16 @@ sync_passwall_upstream_dns() {
 	[ "$status" = 10 ] && changed=1
 	[ "$changed" = 1 ] && return 10
 	return 0
+}
+
+schedule_passwall_upstream_reload() {
+	[ -e "$PASSWALL_UPSTREAM_RELOAD_FILE" ] && return 0
+	: > "$PASSWALL_UPSTREAM_RELOAD_FILE"
+	(
+		sleep 2
+		rm -f "$PASSWALL_UPSTREAM_RELOAD_FILE"
+		AGH_SKIP_UPSTREAM_RELOAD=1 /etc/init.d/AdGuardHome reload >/dev/null 2>&1
+	) &
 }
 
 _nft_chain_exists() {
@@ -703,6 +779,66 @@ wait_for_port_listening() {
 		waited=$((waited + 1))
 	done
 	return 1
+}
+
+network_route_ready() {
+	if command -v ip >/dev/null 2>&1 && ip route show default 2>/dev/null | grep -q .; then
+		return 0
+	fi
+	[ -r /proc/net/route ] && awk '$2 == "00000000" { found = 1 } END { exit(found ? 0 : 1) }' /proc/net/route
+}
+
+network_ping_ready() {
+	local target
+	for target in 223.5.5.5 119.29.29.29 1.1.1.1 8.8.8.8 202.108.22.5; do
+		ping -c 1 -W 1 -q "$target" >/dev/null 2>&1 && return 0
+	done
+	return 1
+}
+
+network_http_ready() {
+	local url
+	if command -v wget >/dev/null 2>&1; then
+		for url in \
+			http://connectivitycheck.gstatic.com/generate_204 \
+			http://www.gstatic.com/generate_204 \
+			http://detectportal.firefox.com/canonical.html
+		do
+			wget -q -T 2 -O /dev/null "$url" >/dev/null 2>&1 && return 0
+		done
+	fi
+	if command -v curl >/dev/null 2>&1; then
+		for url in \
+			http://connectivitycheck.gstatic.com/generate_204 \
+			http://www.gstatic.com/generate_204 \
+			http://detectportal.firefox.com/canonical.html
+		do
+			curl -fsS --connect-timeout 2 --max-time 3 -o /dev/null "$url" >/dev/null 2>&1 && return 0
+		done
+	fi
+	return 1
+}
+
+network_dns_ready() {
+	local server
+	command -v nslookup >/dev/null 2>&1 || return 1
+	command -v timeout >/dev/null 2>&1 || return 1
+	for server in 223.5.5.5 119.29.29.29 1.1.1.1 8.8.8.8; do
+		timeout 3 nslookup openwrt.org "$server" 2>/dev/null | grep -q '^Name:' && return 0
+	done
+	return 1
+}
+
+network_reachable() {
+	network_route_ready || return 1
+	network_ping_ready || network_http_ready || network_dns_ready
+}
+
+start_waitnet_guard() {
+	pgrep -f '/usr/share/AdGuardHome/waitnet.sh' >/dev/null 2>&1 && return 0
+	procd_open_instance waitnet
+	procd_set_param command /usr/share/AdGuardHome/waitnet.sh
+	procd_close_instance
 }
 
 append_unique_token() {
@@ -1067,15 +1203,11 @@ start_passwall_compat_guard() {
 	local mode
 	mode=$(normalize_redirect_mode "$redirect")
 	[ "$mode" = 'redirect' ] || return 0
-	passwall_dns_redirect_enabled || passwall2_dns_redirect_enabled || return 0
 	# Explicitly stop old watcher before creating new procd instance
 	# This ensures convergence in pure shell without relying on procd's instance-override behavior
 	pgrep -f '/usr/share/AdGuardHome/passwall_watch.sh' 2>/dev/null | while read -r pid; do
 		kill "$pid" 2>/dev/null || true
 	done
-	# Clear stale state so new watcher starts with Phase 1 (slow first-detect poll)
-	# instead of reading an old cached state and triggering premature redirect
-	rm -f /var/run/AdGpasswall_state
 	procd_open_instance passwall_watch
 	procd_set_param command /usr/share/AdGuardHome/passwall_watch.sh
 	procd_set_param respawn 3600 5 5
@@ -1091,7 +1223,7 @@ start_watchconfig_guard() {
 }
 
 _do_redirect() {
-	local enabled="$1" configpath redirect effective_redirect old_redirect old_port old_compat_reason agh_port redirect_active conflict_reason compat_reason compat_upstream keep_compat_upstream upstream_sync_status
+	local enabled="$1" configpath redirect effective_redirect old_redirect old_port old_compat_reason agh_port redirect_active conflict_reason compat_reason compat_upstream upstream_sync_status
 	get_opt configpath configpath "$DEFAULT_CONFIGPATH"
 	get_opt redirect redirect "$DEFAULT_REDIRECT"
 	redirect=$(normalize_redirect_mode "$redirect")
@@ -1104,15 +1236,11 @@ _do_redirect() {
 		compat_reason=''
 		compat_upstream=''
 	fi
-	keep_compat_upstream=0
-	if [ "$effective_redirect" = 'redirect' ] && { passwall_dns_redirect_enabled || passwall2_dns_redirect_enabled; }; then
-		keep_compat_upstream=1
-	fi
-	sync_passwall_upstream_dns "$configpath" "$compat_upstream" "$keep_compat_upstream"
+	sync_passwall_upstream_dns "$configpath" "$compat_upstream"
 	upstream_sync_status=$?
 	if [ "$upstream_sync_status" = 10 ] && [ "$enabled" = '1' ] && _isrunning && [ "${AGH_SKIP_UPSTREAM_RELOAD:-0}" != '1' ]; then
 		logger -t AdGuardHome "managed PassWall upstream changed, reloading AdGuard Home to apply DNS upstream"
-		AGH_SKIP_UPSTREAM_RELOAD=1 reload_service >/dev/null 2>&1 &
+		schedule_passwall_upstream_reload
 	fi
 	old_redirect=$(uci -q get AdGuardHome.AdGuardHome.old_redirect 2>/dev/null)
 	old_port=$(uci -q get AdGuardHome.AdGuardHome.old_port 2>/dev/null)
@@ -1281,9 +1409,10 @@ write_keep_file() {
 }
 
 start_service() {
-	local enabled raw_binpath raw_configpath raw_workdir binpath configpath workdir httpport logfile verbose hashpass update ipset_file skip_update redirect agh_port
+	local enabled waitonboot raw_binpath raw_configpath raw_workdir binpath configpath workdir httpport logfile verbose hashpass update ipset_file skip_update redirect agh_port
 	config_load "$CONFIGURATION"
 	get_opt enabled enabled '0'
+	get_opt waitonboot waitonboot '0'
 	get_opt binpath raw_binpath "$DEFAULT_BINPATH"
 	binpath=$(resolve_binpath "$raw_binpath")
 	get_opt configpath raw_configpath "$DEFAULT_CONFIGPATH"
@@ -1319,6 +1448,12 @@ start_service() {
 		}
 		return 0
 	fi
+	if [ "$waitonboot" = '1' ] && [ "${AGH_WAITNET_READY:-0}" != '1' ] && ! network_reachable; then
+		logger -t AdGuardHome "network is not reachable; leaving AdGuard Home stopped and DNS redirect disabled"
+		_do_redirect 0
+		start_waitnet_guard
+		return 0
+	fi
 	[ -n "$hashpass" ] && yaml_set 'users.password' "$hashpass" "$configpath" && uci -q set AdGuardHome.AdGuardHome.hashpass='' && uci -q commit AdGuardHome
 	write_keep_file
 	if [ ! -x "$binpath" ]; then
@@ -1350,9 +1485,9 @@ start_service() {
 	esac
 	prepare_dns_runtime "$redirect" "$configpath"
 	if [ "$(normalize_redirect_mode "$redirect")" = 'redirect' ] && { passwall_dns_redirect_enabled || passwall2_dns_redirect_enabled; }; then
-		sync_passwall_upstream_dns "$configpath" "$(resolve_redirect_compat_upstream_port "$redirect" 2>/dev/null)" 1
+		sync_passwall_upstream_dns "$configpath" "$(resolve_redirect_compat_upstream_port "$redirect" 2>/dev/null)"
 	else
-		sync_passwall_upstream_dns "$configpath" '' 0
+		sync_passwall_upstream_dns "$configpath" ''
 	fi
 	agh_port=$(yaml_get 'dns.port' "$configpath")
 	if [ "$update" = '1' ] && [ "$skip_update" != '1' ] && [ ! -e /var/run/update_core ]; then
@@ -1380,16 +1515,8 @@ start_service() {
 	procd_set_param file "$configpath" /etc/hosts /etc/config/AdGuardHome
 	procd_close_instance
 	if [ -r "$configpath" ]; then
-		if [ "$(normalize_redirect_mode "$redirect")" = 'redirect' ] && \
-		   { passwall_dns_redirect_enabled || passwall2_dns_redirect_enabled; } && \
-		   ! resolve_redirect_compat_state "$redirect" >/dev/null 2>&1; then
-			logger -t AdGuardHome "PassWall DNS redirect enabled but not ready; clearing redirect until watcher detects readiness"
-			_do_redirect 0
-			update_redirect_runtime_state 0 'none' '' '' ''
-		else
-			wait_for_port_listening "$agh_port" 10 || logger -t AdGuardHome "dns port ${agh_port} did not become ready before redirect setup"
-			_do_redirect 1
-		fi
+		wait_for_port_listening "$agh_port" 10 || logger -t AdGuardHome "dns port ${agh_port} did not become ready before redirect setup"
+		_do_redirect 1
 		start_runtime_guard "$binpath" "$configpath" "$agh_port"
 		start_passwall_compat_guard "$redirect"
 	else
@@ -1426,9 +1553,7 @@ boot_service() {
 	get_opt binpath binpath "$DEFAULT_BINPATH"
 	binpath=$(resolve_binpath "$binpath")
 	if [ "$enabled" = '1' ] && [ "$waitonboot" = '1' ]; then
-		procd_open_instance waitnet
-		procd_set_param command /usr/share/AdGuardHome/waitnet.sh
-		procd_close_instance
+		start_waitnet_guard
 	else
 		[ -x "$binpath" ] && start_service
 	fi
