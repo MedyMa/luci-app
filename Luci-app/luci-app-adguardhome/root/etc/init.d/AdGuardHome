@@ -1100,6 +1100,31 @@ ensure_adguard_non53_port() {
 	printf '%s\n' "$target_port"
 }
 
+ensure_querylog_file_enabled() {
+	local file="$1"
+	[ -f "$file" ] || return 0
+	# New config format (AGH v0.107+): querylog.file_enabled
+	if grep -qE '^[[:space:]]*file_enabled:[[:space:]]*(false|no|0)' "$file" 2>/dev/null && \
+	   awk '/^querylog:/{in_block=1} in_block && /^[^ ]/{if(!/^querylog:/) in_block=0} in_block && /file_enabled:/{found=1} END{exit(!found)}' "$file" 2>/dev/null; then
+		if awk '
+		/^querylog:/ { in_block=1 }
+		in_block && /^[^ ]/ { if (!/^querylog:/) in_block=0 }
+		in_block && /^[[:space:]]*file_enabled:[[:space:]]*(false|no|0)[[:space:]]*(#.*)?$/ {
+			sub(/(false|no|0)/, "true")
+		}
+		{ print }' "$file" > "$file.tmp" && mv "$file.tmp" "$file"; then
+			logger -t AdGuardHome "enabled querylog.file_enabled in config to prevent shutdown flush error"
+		fi
+		rm -f "$file.tmp"
+		return 0
+	fi
+	# Old config format (schema_version <= 5): top-level querylog_enabled
+	if grep -qE '^[[:space:]]*querylog_enabled:[[:space:]]*(false|no|0)' "$file" 2>/dev/null; then
+		sed -i 's/^\([[:space:]]*querylog_enabled:[[:space:]]*\)\(false\|no\|0\)\([[:space:]]*\(#.*\)\?\)$/\1true\3/' "$file"
+		logger -t AdGuardHome "enabled querylog_enabled in config to prevent shutdown flush error"
+	fi
+}
+
 prepare_dns_runtime() {
 	local redirect="$1" configpath="$2" dnsmasq_port
 	[ -r "$configpath" ] || return 0
@@ -1315,7 +1340,13 @@ do_redirect() {
 }
 
 service_triggers() {
-	procd_add_reload_trigger "$CONFIGURATION" passwall passwall2
+	procd_add_reload_trigger "$CONFIGURATION"
+	# passwall/passwall2 are intentionally NOT added here: any UCI commit on
+	# those packages (rule updates, ACL changes, etc.) would trigger a full
+	# AGH stop+start which causes the "core frequently closing" symptom.
+	# The passwall_watch.sh daemon already polls passwall state every 10 s
+	# and calls do_redirect when the DNS-chain state actually changes, so
+	# real-time passwall compat is handled without the reload trigger.
 	if [ "$(uci -q get AdGuardHome.AdGuardHome.redirect 2>/dev/null)" = 'redirect' ]; then
 		procd_add_reload_trigger firewall
 	fi
@@ -1491,6 +1522,7 @@ start_service() {
 			ipset list "$GFWSET" >/dev/null 2>&1 || ipset create "$GFWSET" hash:ip 2>/dev/null
 			;;
 	esac
+	ensure_querylog_file_enabled "$configpath"
 	prepare_dns_runtime "$redirect" "$configpath"
 	if [ "$(normalize_redirect_mode "$redirect")" = 'redirect' ] && { passwall_dns_redirect_enabled || passwall2_dns_redirect_enabled; }; then
 		sync_passwall_upstream_dns "$configpath" "$(resolve_redirect_compat_upstream_port "$redirect" 2>/dev/null)"
@@ -1504,7 +1536,7 @@ start_service() {
 	procd_open_instance
 	get_tz
 	[ -n "$SET_TZ" ] && procd_set_param env TZ="$SET_TZ"
-	procd_set_param respawn 3600 10 5
+	procd_set_param respawn 3600 5 0
 	procd_set_param limits core='unlimited' nofile='65535 65535'
 	procd_set_param stderr 1
 	if [ -n "$logfile" ]; then

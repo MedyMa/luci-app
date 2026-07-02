@@ -20,7 +20,7 @@ dns:
   filters_update_interval: 24
   blocking_mode: nxdomain
   blocked_response_ttl: 10
-  querylog_enabled: false
+  querylog_enabled: true
   querylog_interval: 1
   ratelimit: 0
   ratelimit_whitelist: []
