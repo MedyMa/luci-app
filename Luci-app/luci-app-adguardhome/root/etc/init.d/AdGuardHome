@@ -1103,19 +1103,29 @@ ensure_adguard_non53_port() {
 ensure_querylog_file_enabled() {
 	local file="$1"
 	[ -f "$file" ] || return 0
-	# New config format (AGH v0.107+): querylog.file_enabled
-	if grep -qE '^[[:space:]]*file_enabled:[[:space:]]*(false|no|0)' "$file" 2>/dev/null && \
-	   awk '/^querylog:/{in_block=1} in_block && /^[^ ]/{if(!/^querylog:/) in_block=0} in_block && /file_enabled:/{found=1} END{exit(!found)}' "$file" 2>/dev/null; then
-		if awk '
-		/^querylog:/ { in_block=1 }
-		in_block && /^[^ ]/ { if (!/^querylog:/) in_block=0 }
-		in_block && /^[[:space:]]*file_enabled:[[:space:]]*(false|no|0)[[:space:]]*(#.*)?$/ {
-			sub(/(false|no|0)/, "true")
-		}
-		{ print }' "$file" > "$file.tmp" && mv "$file.tmp" "$file"; then
-			logger -t AdGuardHome "enabled querylog.file_enabled in config to prevent shutdown flush error"
+	# New config format (AGH v0.107+): querylog block with file_enabled key.
+	if grep -qE '^querylog:[[:space:]]*(#.*)?$' "$file" 2>/dev/null; then
+		if grep -qE '^[[:space:]]+file_enabled:[[:space:]]*(false|no|0)' "$file" 2>/dev/null; then
+			# Key present but set to false — patch it to true
+			if awk '
+			/^querylog:/ { in_block=1 }
+			in_block && /^[^ ]/ { if (!/^querylog:/) in_block=0 }
+			in_block && /^[[:space:]]+file_enabled:[[:space:]]*(false|no|0)[[:space:]]*(#.*)?$/ {
+				sub(/(false|no|0)/, "true")
+			}
+			{ print }' "$file" > "$file.tmp" && mv "$file.tmp" "$file"; then
+				logger -t AdGuardHome "enabled querylog.file_enabled in config to prevent shutdown flush error"
+			fi
+			rm -f "$file.tmp"
+		elif ! grep -qE '^[[:space:]]+file_enabled:' "$file" 2>/dev/null; then
+			# Key is absent — insert it under the querylog: block (defaults to false in AGH)
+			if awk '
+			/^querylog:/ { print; print "  file_enabled: true"; next }
+			{ print }' "$file" > "$file.tmp" && mv "$file.tmp" "$file"; then
+				logger -t AdGuardHome "inserted querylog.file_enabled: true in config to prevent shutdown flush error"
+			fi
+			rm -f "$file.tmp"
 		fi
-		rm -f "$file.tmp"
 		return 0
 	fi
 	# Old config format (schema_version <= 5): top-level querylog_enabled
@@ -1502,7 +1512,7 @@ start_service() {
 	fi
 	if _isrunning; then
 		agh_port=$(yaml_get 'dns.port' "$configpath")
-		_do_redirect 1
+		AGH_SKIP_UPSTREAM_RELOAD=1 _do_redirect 1
 		start_runtime_guard "$binpath" "$configpath" "$agh_port"
 		start_passwall_compat_guard "$redirect"
 		return 0
@@ -1556,11 +1566,11 @@ start_service() {
 	procd_close_instance
 	if [ -r "$configpath" ]; then
 		wait_for_port_listening "$agh_port" 10 || logger -t AdGuardHome "dns port ${agh_port} did not become ready before redirect setup"
-		_do_redirect 1
+		AGH_SKIP_UPSTREAM_RELOAD=1 _do_redirect 1
 		start_runtime_guard "$binpath" "$configpath" "$agh_port"
 		start_passwall_compat_guard "$redirect"
 	else
-		_do_redirect 0
+		AGH_SKIP_UPSTREAM_RELOAD=1 _do_redirect 0
 		start_watchconfig_guard "$redirect"
 	fi
 }
