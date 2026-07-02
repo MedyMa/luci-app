@@ -150,7 +150,10 @@ read_log_window() {
 	count=$((size - pos))
 	[ "$count" -le "$bytes" ] 2>/dev/null || count="$bytes"
 	if [ "$count" -gt 0 ] 2>/dev/null; then
-		LOG_CONTENT=$(dd if="$file" bs=1 skip="$pos" count="$count" 2>/dev/null | tr -d '\000')
+		# Use tail+head for efficient seeking: dd bs=1 skip=N makes N individual
+		# syscalls and is O(pos) in cost, which causes noticeable latency and
+		# memory pressure on large log files.  tail -c +N is O(file_size - pos).
+		LOG_CONTENT=$(tail -c "+$((pos + 1))" "$file" 2>/dev/null | head -c "$count" | tr -d '\000')
 		LOG_POS=$((pos + count))
 	else
 		LOG_POS="$size"
@@ -238,7 +241,8 @@ json_status() {
 	json_add_string downloadarch "$arch"
 	json_add_string release_channel "$channel"
 	json_bool enabled "$(get_option enabled 0)"
-	json_bool running "$(pgrep -f "$binpath" >/dev/null 2>&1 && echo 1 || echo 0)"
+	# Match only the running service, not --version or --check-config invocations.
+	json_bool running "$(pgrep -f "$binpath.*--no-check-update" >/dev/null 2>&1 && echo 1 || echo 0)"
 	json_bool redirected "$([ "$(cat /var/run/AdGredir 2>/dev/null)" = 1 ] && echo 1 || echo 0)"
 	json_bool redirect_conflict "$([ -n "$redirect_conflict" ] && echo 1 || echo 0)"
 	json_bool redirect_compat "$([ -n "$redirect_compat" ] && echo 1 || echo 0)"
@@ -326,7 +330,7 @@ save_yaml() {
 	binpath=$(resolve_binpath "$raw_binpath")
 	raw_configpath=$(get_option configpath "$DEFAULT_CONFIGPATH")
 	configpath=$(resolve_configpath "$raw_configpath" "$binpath")
-	if pgrep -f "$binpath" >/dev/null 2>&1; then
+	if pgrep -f "$binpath.*--no-check-update" >/dev/null 2>&1; then
 		json_init; json_add_boolean ok 0; json_add_string error 'AdGuard Home is running. Stop the service before saving YAML.'; json_dump; return
 	fi
 	mkdir -p "${configpath%/*}" 2>/dev/null
@@ -580,7 +584,7 @@ json_stats() {
 	local httpport data running
 	httpport=$(get_option httpport 3000)
 
-	if ! pgrep -f "$(resolve_binpath "$(get_option binpath "$DEFAULT_BINPATH")" 2>/dev/null || echo ADGUARDHOME_RUNNING_CHECK)" >/dev/null 2>&1; then
+	if ! pgrep -f "$(resolve_binpath "$(get_option binpath "$DEFAULT_BINPATH")" 2>/dev/null || echo ADGUARDHOME_RUNNING_CHECK).*--no-check-update" >/dev/null 2>&1; then
 		json_init
 		json_add_boolean ok 0
 		json_add_string error 'AdGuard Home is not running.'
