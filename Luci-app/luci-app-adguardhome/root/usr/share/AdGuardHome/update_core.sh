@@ -135,7 +135,12 @@ sync_runtime_paths() {
 		uci -q set "$CONFIGURATION.$CONFIGURATION.binpath=$binpath"
 		uci -q set "$CONFIGURATION.$CONFIGURATION.configpath=$configpath"
 		uci -q set "$CONFIGURATION.$CONFIGURATION.workdir=$workdir"
-		uci -q commit "$CONFIGURATION"
+		# Do NOT commit here: committing while the service is running triggers
+		# service_triggers -> reload_service -> stop/start, which kills the
+		# currently running AdGuard Home process mid-update.  The values set
+		# above are local to this process's UCI transaction buffer; start_service
+		# at the end of run_update() will normalize and commit paths via its
+		# own path-normalization block.
 	fi
 }
 

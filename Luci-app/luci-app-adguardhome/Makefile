@@ -7,7 +7,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-adguardhome
 PKG_VERSION:=2.0
-PKG_RELEASE:=17
+PKG_RELEASE:=18
 
 LUCI_TITLE:=LuCI app for AdGuard Home
 LUCI_DESCRIPTION:=Modern LuCI dashboard for AdGuard Home

@@ -15,6 +15,8 @@ REDIRECT_CONFLICT_FILE='/var/run/AdGredirect_conflict'
 REDIRECT_COMPAT_FILE='/var/run/AdGredirect_compat'
 REDIRECT_COMPAT_UPSTREAM_FILE='/var/run/AdGredirect_compat_upstream'
 UPSTREAM_DNS_BACKUP_FILE='/var/run/AdGupstream_dns_backup'
+OLD_REDIRECT_FILE='/var/run/AdGold_redirect'
+OLD_PORT_FILE='/var/run/AdGold_port'
 PASSWALL_UPSTREAM_BEGIN='# agh-managed-passwall-upstream-begin'
 PASSWALL_UPSTREAM_END='# agh-managed-passwall-upstream-end'
 PASSWALL_UPSTREAM_RELOAD_FILE='/var/run/AdGpasswall_upstream_reload'
@@ -506,7 +508,7 @@ schedule_passwall_upstream_reload() {
 	(
 		sleep 2
 		rm -f "$PASSWALL_UPSTREAM_RELOAD_FILE"
-		AGH_SKIP_UPSTREAM_RELOAD=1 /etc/init.d/AdGuardHome reload >/dev/null 2>&1
+		AGH_SKIP_UPSTREAM_RELOAD=1 /etc/init.d/AdGuardHome force_reload >/dev/null 2>&1
 	) &
 }
 
@@ -1047,7 +1049,7 @@ exchange_to_port53() {
 	agh_port=$(yaml_get 'dns.port' "$configpath")
 	dnsmasq_port=$(uci -q get dhcp.@dnsmasq[0].port 2>/dev/null)
 	[ -n "$dnsmasq_port" ] || dnsmasq_port='53'
-	saved_port=$(uci -q get AdGuardHome.AdGuardHome.old_port 2>/dev/null)
+	saved_port=$(cat "$OLD_PORT_FILE" 2>/dev/null)
 	if [ "$agh_port" = '53' ]; then
 		[ "$dnsmasq_port" != '53' ] && return 0
 		target_port=$(pick_non53_port "$saved_port" 5553 54)
@@ -1065,7 +1067,7 @@ exchange_to_port53() {
 
 restore_port53() {
 	local configpath="$1" old_port dnsmasq_port restore_port
-	old_port=$(uci -q get AdGuardHome.AdGuardHome.old_port 2>/dev/null)
+	old_port=$(cat "$OLD_PORT_FILE" 2>/dev/null)
 	is_valid_port "$old_port" || old_port=''
 	dnsmasq_port=$(uci -q get dhcp.@dnsmasq[0].port 2>/dev/null)
 	is_valid_port "$dnsmasq_port" || dnsmasq_port='53'
@@ -1090,7 +1092,7 @@ ensure_adguard_non53_port() {
 		printf '%s\n' "$agh_port"
 		return 0
 	fi
-	saved_port=$(uci -q get AdGuardHome.AdGuardHome.old_port 2>/dev/null)
+	saved_port=$(cat "$OLD_PORT_FILE" 2>/dev/null)
 	dnsmasq_port=$(uci -q get dhcp.@dnsmasq[0].port 2>/dev/null)
 	target_port=$(pick_non53_port "$saved_port" "$dnsmasq_port" 5553 54)
 	yaml_set 'dns.port' "$target_port" "$configpath" || {
@@ -1175,7 +1177,7 @@ auto_heal_redirect_mode() {
 		printf '%s\n' "$redirect"
 		return 0
 	}
-	old_redirect=$(uci -q get AdGuardHome.AdGuardHome.old_redirect 2>/dev/null)
+	old_redirect=$(cat "$OLD_REDIRECT_FILE" 2>/dev/null)
 	[ -n "$old_redirect" ] && {
 		printf '%s\n' "$redirect"
 		return 0
@@ -1277,8 +1279,8 @@ _do_redirect() {
 		logger -t AdGuardHome "managed PassWall upstream changed, reloading AdGuard Home to apply DNS upstream"
 		schedule_passwall_upstream_reload
 	fi
-	old_redirect=$(uci -q get AdGuardHome.AdGuardHome.old_redirect 2>/dev/null)
-	old_port=$(uci -q get AdGuardHome.AdGuardHome.old_port 2>/dev/null)
+	old_redirect=$(cat "$OLD_REDIRECT_FILE" 2>/dev/null)
+	old_port=$(cat "$OLD_PORT_FILE" 2>/dev/null)
 	old_compat_reason=$(cat "$REDIRECT_COMPAT_FILE" 2>/dev/null)
 	agh_port=$(yaml_get 'dns.port' "$configpath")
 	[ -n "$agh_port" ] || agh_port='0'
@@ -1338,10 +1340,8 @@ _do_redirect() {
 	fi
 	# Write status AFTER redirect setup, so the flag reflects actual state
 	update_redirect_runtime_state "$redirect_active" "$effective_redirect" "$conflict_reason" "$compat_reason" "$compat_upstream"
-	uci -q set AdGuardHome.AdGuardHome.old_redirect="$effective_redirect"
-	uci -q set AdGuardHome.AdGuardHome.old_port="$agh_port"
-	uci -q set AdGuardHome.AdGuardHome.old_enabled="$enabled"
-	uci -q commit AdGuardHome
+	printf '%s\n' "$effective_redirect" > "$OLD_REDIRECT_FILE"
+	printf '%s\n' "$agh_port" > "$OLD_PORT_FILE"
 }
 
 do_redirect() {
@@ -1391,7 +1391,11 @@ force_reload() {
 stop() {
 	procd_lock
 	stop_service "$@"
-	procd_kill "$CONFIGURATION" "$1" >/dev/null 2>&1 || true
+	# Do not forward $1 to procd_kill: procd_kill(name, instance, signal)
+	# treats the second argument as an instance name, not a modifier.  Passing
+	# "nobackup" would attempt to kill a non-existent instance and leave the
+	# real AdGuard Home process alive until wait_core_stopped force-kills it.
+	procd_kill "$CONFIGURATION" >/dev/null 2>&1 || true
 }
 
 get_tz() {
@@ -1459,6 +1463,12 @@ write_keep_file() {
 
 start_service() {
 	local enabled waitonboot raw_binpath raw_configpath raw_workdir binpath configpath workdir httpport logfile verbose hashpass update ipset_file skip_update redirect agh_port
+	# Set start-guard flag before any UCI commits.  If a commit below triggers
+	# service_triggers -> reload_service, reload_service will detect the flag
+	# and skip the destructive stop/start, applying only redirect changes.
+	# Background cleanup ensures the flag is removed even if no reload fires.
+	: > /var/run/AdGstartguard 2>/dev/null
+	( sleep 8; rm -f /var/run/AdGstartguard ) >/dev/null 2>&1 &
 	config_load "$CONFIGURATION"
 	get_opt enabled enabled '0'
 	get_opt waitonboot waitonboot '0'
@@ -1562,7 +1572,7 @@ start_service() {
 			procd_set_param command "$binpath" -c "$configpath" -w "$workdir" -p "$httpport" --no-check-update
 		fi
 	fi
-	procd_set_param file "$configpath" /etc/hosts /etc/config/AdGuardHome
+	procd_set_param file /etc/config/AdGuardHome
 	procd_close_instance
 	if [ -r "$configpath" ]; then
 		wait_for_port_listening "$agh_port" 10 || logger -t AdGuardHome "dns port ${agh_port} did not become ready before redirect setup"
@@ -1576,6 +1586,18 @@ start_service() {
 }
 
 reload_service() {
+	config_load "$CONFIGURATION"
+	# If start_service is currently running it may commit UCI changes that
+	# trigger this reload via service_triggers.  Performing a full stop/start
+	# in that window kills the process that start_service just launched.
+	# Detect this race via the start-guard flag and only reapply the redirect
+	# state instead of restarting the service.
+	if [ -e /var/run/AdGstartguard ]; then
+		logger -t AdGuardHome "reload: start in progress, applying redirect only (skipping stop/start)"
+		rm -f /var/run/AdGstartguard
+		_isrunning && _do_redirect 1 || true
+		return 0
+	fi
 	stop
 	local _rl_wait=0 _binpath
 	while _isrunning && [ "$_rl_wait" -lt 10 ]; do
