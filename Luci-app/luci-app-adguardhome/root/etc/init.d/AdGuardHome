@@ -10,6 +10,11 @@ DEFAULT_BINPATH='/etc/config/adGuardConfig/AdGuardHome'
 DEFAULT_CONFIGPATH='/etc/config/adGuardConfig/AdGuardHome.yaml'
 DEFAULT_WORKDIR='/etc/config/adGuardConfig/workspace'
 DEFAULT_REDIRECT='dnsmasq-upstream'
+START_GUARD_FILE='/var/run/AdGstartguard'
+# Prevents two concurrent start_service invocations from both calling
+# procd_open_instance, which would cause procd to SIGTERM the first AGH
+# process it started in favour of the second registration.
+PROCD_OPEN_GUARD_FILE='/var/run/AdGprocdopen'
 REDIRECT_EFFECTIVE_FILE='/var/run/AdGeffective'
 REDIRECT_CONFLICT_FILE='/var/run/AdGredirect_conflict'
 REDIRECT_COMPAT_FILE='/var/run/AdGredirect_compat'
@@ -732,6 +737,10 @@ stop_forward_dnsmasq() {
 		[ -e /tmp/resolv.conf.d/resolv.conf.auto ] && resolvfile='/tmp/resolv.conf.d/resolv.conf.auto'
 		uci -q set dhcp.@dnsmasq[0].resolvfile="$resolvfile"
 		uci -q delete dhcp.@dnsmasq[0].noresolv
+		# Also remove strictorder that set_forward_dnsmasq unconditionally
+		# enables; leaving it set after AGH stops changes dnsmasq query
+		# behaviour and may block fallback DNS from working correctly.
+		uci -q delete dhcp.@dnsmasq[0].strictorder
 	fi
 	uci -q commit dhcp
 	/etc/init.d/dnsmasq restart >/dev/null 2>&1
@@ -1466,9 +1475,15 @@ start_service() {
 	# Set start-guard flag before any UCI commits.  If a commit below triggers
 	# service_triggers -> reload_service, reload_service will detect the flag
 	# and skip the destructive stop/start, applying only redirect changes.
-	# Background cleanup ensures the flag is removed even if no reload fires.
-	: > /var/run/AdGstartguard 2>/dev/null
-	( sleep 8; rm -f /var/run/AdGstartguard ) >/dev/null 2>&1 &
+	# Keep the guard for a short grace period to absorb multiple commits in one
+	# start sequence (path normalization, hashpass sync, auto-heal updates).
+	printf '%s\n' "$$" > "$START_GUARD_FILE" 2>/dev/null || true
+	(
+		sleep 30
+		if [ "$(cat "$START_GUARD_FILE" 2>/dev/null)" = "$$" ]; then
+			rm -f "$START_GUARD_FILE"
+		fi
+	) >/dev/null 2>&1 &
 	config_load "$CONFIGURATION"
 	get_opt enabled enabled '0'
 	get_opt waitonboot waitonboot '0'
@@ -1553,6 +1568,36 @@ start_service() {
 	if [ "$update" = '1' ] && [ "$skip_update" != '1' ] && [ ! -e /var/run/update_core ]; then
 		sh /usr/share/AdGuardHome/update_core.sh > /tmp/AdGuardHome_update.log 2>&1 &
 	fi
+	# Atomically claim the procd-open slot.  If another start_service call
+	# (e.g. service_triggers race with postinst's explicit 'start') already
+	# holds this token, skip procd_open_instance entirely.  Registering a
+	# second instance with identical params causes procd to SIGTERM the
+	# first AGH process it just launched.
+	if ! ( set -C; : > "$PROCD_OPEN_GUARD_FILE" ) 2>/dev/null; then
+		# Another start_service invocation won the race and will register the
+		# procd instance, set up the runtime guard and start the passwall compat
+		# watcher.  This invocation must not duplicate those steps:
+		#  - Calling start_runtime_guard() here would start a redundant 10 s
+		#    background job (harmless but wasteful via the gen counter).
+		#  - Calling start_passwall_compat_guard() here would kill and
+		#    re-create the watcher the winning invocation just launched.
+		# config_load was already called above, so _isrunning's get_opt is safe.
+		logger -t AdGuardHome "start: procd instance already being registered; deferring to existing start"
+		local _pow=0
+		while [ "$_pow" -lt 8 ] && ! _isrunning; do
+			sleep 1
+			_pow=$((_pow + 1))
+		done
+		if _isrunning; then
+			# Only re-apply redirect state; guards are owned by the winner.
+			AGH_SKIP_UPSTREAM_RELOAD=1 _do_redirect 1 || true
+		else
+			logger -t AdGuardHome "start: AGH did not appear within procd-open guard wait window"
+		fi
+		return 0
+	fi
+	# Safety fallback: clear the guard after 60 s if not already cleared.
+	( sleep 60; rm -f "$PROCD_OPEN_GUARD_FILE" ) >/dev/null 2>&1 &
 	procd_open_instance
 	get_tz
 	[ -n "$SET_TZ" ] && procd_set_param env TZ="$SET_TZ"
@@ -1574,6 +1619,9 @@ start_service() {
 	fi
 	procd_set_param file /etc/config/AdGuardHome
 	procd_close_instance
+	# Release the procd-open guard immediately now that the instance is
+	# registered.  The 60 s background task remains as a safety net.
+	rm -f "$PROCD_OPEN_GUARD_FILE"
 	if [ -r "$configpath" ]; then
 		wait_for_port_listening "$agh_port" 10 || logger -t AdGuardHome "dns port ${agh_port} did not become ready before redirect setup"
 		AGH_SKIP_UPSTREAM_RELOAD=1 _do_redirect 1
@@ -1592,9 +1640,8 @@ reload_service() {
 	# in that window kills the process that start_service just launched.
 	# Detect this race via the start-guard flag and only reapply the redirect
 	# state instead of restarting the service.
-	if [ -e /var/run/AdGstartguard ]; then
+	if [ -e "$START_GUARD_FILE" ]; then
 		logger -t AdGuardHome "reload: start in progress, applying redirect only (skipping stop/start)"
-		rm -f /var/run/AdGstartguard
 		_isrunning && _do_redirect 1 || true
 		return 0
 	fi

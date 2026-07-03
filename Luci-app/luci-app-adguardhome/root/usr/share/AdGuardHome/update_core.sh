@@ -454,6 +454,10 @@ _restore_backup_and_exit() {
 			AGH_SKIP_UPDATE=1 /etc/init.d/AdGuardHome start >/dev/null 2>&1 || true
 		fi
 	fi
+	# Clean up temp work directory so /tmp is not littered after a failed
+	# or rolled-back update.
+	rm -rf "$WORK_DIR" 2>/dev/null || true
+	rm -f /tmp/run/AdHlinks.txt 2>/dev/null || true
 	exit_update 1
 }
 

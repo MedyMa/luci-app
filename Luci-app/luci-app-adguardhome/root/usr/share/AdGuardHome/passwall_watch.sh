@@ -172,7 +172,23 @@ reapply() {
 		local configpath agh_port listen_state
 		configpath="$(uci -q get AdGuardHome.AdGuardHome.configpath 2>/dev/null || echo '/etc/config/adGuardConfig/AdGuardHome.yaml')"
 		if [ -r "$configpath" ]; then
-			agh_port=$(grep -A5 '^dns:' "$configpath" | grep '^  port:' | sed 's/.*: *//' 2>/dev/null)
+			# Section-aware parser: reads port: only inside the dns: block,
+			# robust regardless of how many keys precede it.  Mirrors the
+			# resolve_dns_port() logic used in update_core.sh.
+			agh_port=$(awk '
+				BEGIN { in_dns = 0 }
+				/^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
+				/^[^[:space:]#][A-Za-z0-9_-]*:[[:space:]]*/ {
+					in_dns = ($0 ~ /^dns:[[:space:]]*($|#)/)
+					next
+				}
+				in_dns && /^[[:space:]]+port:[[:space:]]*/ {
+					sub(/^[[:space:]]*port:[[:space:]]*/, "", $0)
+					sub(/[[:space:]]+#.*$/, "", $0)
+					gsub(/["'"'"']/, "", $0)
+					print $0
+					exit
+				}' "$configpath" 2>/dev/null)
 		fi
 		if [ -n "$agh_port" ] && is_valid_port "$agh_port"; then
 			port_is_listening "$agh_port"
