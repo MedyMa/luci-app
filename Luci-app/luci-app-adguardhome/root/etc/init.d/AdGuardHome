@@ -1708,12 +1708,20 @@ has_token() {
 	case " $1 " in *" $2 "*) return 0 ;; *) return 1 ;; esac
 }
 
+logfile_on_tmpfs() {
+	case "$1" in
+		/tmp/*|/var/run/*|/var/tmp/*) return 0 ;;
+		*) return 1 ;;
+	esac
+}
+
 cron_set() {
 	local token="$1" pattern="$2" line="$3" enabled="$4"
 	mkdir -p "${CRON_FILE%/*}"
 	[ -f "$CRON_FILE" ] || touch "$CRON_FILE"
 	sed -i "\,$pattern,d" "$CRON_FILE"
 	[ "$enabled" = '1' ] && echo "$line" >> "$CRON_FILE"
+	return 0
 }
 
 do_crontab() {
@@ -1726,8 +1734,12 @@ do_crontab() {
 	reload=0
 	has_token "$crontab" autoupdate && cron_set autoupdate '/usr/share/AdGuardHome/update_core.sh' '30 3 * * * /usr/share/AdGuardHome/update_core.sh 2>&1' "$active" && reload=1
 	has_token "$crontab" cutquerylog && cron_set cutquerylog '/usr/share/AdGuardHome/tailto.sh [0-9].*querylog.json' '0 * * * * /usr/share/AdGuardHome/tailto.sh 2000 $(uci get AdGuardHome.AdGuardHome.workdir)/data/querylog.json' "$active" && reload=1
-	if [ -n "$logfile" ] && [ "$logfile" != 'syslog' ] && has_token "$crontab" cutruntimelog; then
-		cron_set cutruntimelog '/usr/share/AdGuardHome/tailto.sh [0-9].*AdGuardHome.AdGuardHome.logfile' '30 3 * * * /usr/share/AdGuardHome/tailto.sh 2000 $(uci get AdGuardHome.AdGuardHome.logfile)' "$active" && reload=1
+	if [ -n "$logfile" ] && [ "$logfile" != 'syslog' ]; then
+		if has_token "$crontab" cutruntimelog || logfile_on_tmpfs "$logfile"; then
+			cron_set cutruntimelog '/usr/share/AdGuardHome/tailto.sh [0-9].*AdGuardHome.AdGuardHome.logfile' '*/15 * * * * /usr/share/AdGuardHome/tailto.sh 2000 $(uci get AdGuardHome.AdGuardHome.logfile) cleanup-rotated' "$active" && reload=1
+		fi
+	else
+		cron_set cutruntimelog '/usr/share/AdGuardHome/tailto.sh [0-9].*AdGuardHome.AdGuardHome.logfile' '' 0 && reload=1
 	fi
 	has_token "$crontab" autohost && cron_set autohost '/usr/share/AdGuardHome/addhost.sh' '0 * * * * /usr/share/AdGuardHome/addhost.sh' "$active" && reload=1
 	has_token "$crontab" autogfw && cron_set autogfw '/usr/share/AdGuardHome/gfw2adg.sh' '30 3 * * * /usr/share/AdGuardHome/gfw2adg.sh' "$active" && reload=1

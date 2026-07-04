@@ -82,6 +82,23 @@ safe_cat() {
 	cat "$1" 2>/dev/null
 }
 
+cleanup_rotated_tmp_logs() {
+	local file="$1" dir base prefix rotated
+	case "$file" in
+		/tmp/*|/var/run/*|/var/tmp/*) ;;
+		*) return 0 ;;
+	esac
+	dir="${file%/*}"
+	base="${file##*/}"
+	prefix="${base%.*}"
+	[ -n "$dir" ] && [ "$dir" != "$file" ] || return 0
+	[ -n "$prefix" ] || return 0
+	for rotated in "$dir"/"$prefix"-*.log; do
+		[ -f "$rotated" ] || continue
+		rm -f "$rotated" 2>/dev/null || true
+	done
+}
+
 normalize_arch() {
 	case "$1" in
 		auto|'') printf '%s\n' auto ;;
@@ -400,7 +417,10 @@ clear_log() {
 			file="$logfile"
 		fi
 	fi
-	[ -n "$file" ] && : > "$file" 2>/dev/null
+	if [ -n "$file" ]; then
+		: > "$file" 2>/dev/null
+		cleanup_rotated_tmp_logs "$file"
+	fi
 	json_init; json_add_boolean ok 1; json_dump
 }
 

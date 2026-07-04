@@ -7,7 +7,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-adguardhome
 PKG_VERSION:=2.0
-PKG_RELEASE:=21
+PKG_RELEASE:=22
 
 LUCI_TITLE:=LuCI app for AdGuard Home
 LUCI_DESCRIPTION:=Modern LuCI dashboard for AdGuard Home
@@ -99,6 +99,7 @@ if [ -z "$$IPKG_INSTROOT" ]; then
 	configpath="$$(uci -q get AdGuardHome.AdGuardHome.configpath 2>/dev/null)"
 	workdir="$$(uci -q get AdGuardHome.AdGuardHome.workdir 2>/dev/null)"
 	binpath="$$(uci -q get AdGuardHome.AdGuardHome.binpath 2>/dev/null)"
+	logfile="$$(uci -q get AdGuardHome.AdGuardHome.logfile 2>/dev/null)"
 	redirect_mode="$$(uci -q get AdGuardHome.AdGuardHome.redirect 2>/dev/null)"
 	[ -n "$$binpath" ] || binpath='/etc/config/adGuardConfig/AdGuardHome'
 	while [ "$${binpath%/}" != "$$binpath" ]; do binpath="$${binpath%/}"; done
@@ -114,6 +115,12 @@ if [ -z "$$IPKG_INSTROOT" ]; then
 	uci -q set AdGuardHome.AdGuardHome.configpath="$$configpath"
 	uci -q set AdGuardHome.AdGuardHome.workdir="$$workdir"
 	uci -q set AdGuardHome.AdGuardHome.binpath="$$binpath"
+	case "$$logfile" in
+		''|'/tmp/AdGuardHome.log')
+			uci -q set AdGuardHome.AdGuardHome.logfile='syslog'
+			rm -f /tmp/AdGuardHome.log /tmp/AdGuardHome-*.log 2>/dev/null
+			;;
+	esac
 	uci -q set AdGuardHome.AdGuardHome.redirect="$$redirect_mode"
 	uci -q get AdGuardHome.AdGuardHome.waitonboot >/dev/null 2>&1 || uci set AdGuardHome.AdGuardHome.waitonboot='1'
 	uci -q get AdGuardHome.AdGuardHome.downloadarch >/dev/null 2>&1 || uci set AdGuardHome.AdGuardHome.downloadarch='auto'
