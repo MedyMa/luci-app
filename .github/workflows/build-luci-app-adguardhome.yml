@@ -118,20 +118,37 @@ jobs:
 
           sdk_target_id="${OPENWRT_TARGET}-${OPENWRT_SUBTARGET}"
 
-          _fetch_sdk_listing() {
-            local url="$1"
-            # curl with generous retry/timeout
-            curl -fsSL --retry 5 --retry-delay 10 --max-time 60 --connect-timeout 15 "$url/" 2>/dev/null && return 0
-            # fallback: wget
-            wget -q -O - --timeout=30 --tries=5 "$url/" 2>/dev/null && return 0
+          _find_sdk() {
+            local base_url="$1" prefix="$2" ver="$3" tid="$4" ext="$5"
+            local page sdk
+
+            # Fetch directory listing once; don't fail on HTTP errors (no -f)
+            page="$(curl -sSL --retry 5 --retry-delay 10 --max-time 60 --connect-timeout 15 \
+              -H "User-Agent: Mozilla/5.0" "$base_url/" 2>/dev/null || \
+              wget -qO- --timeout=30 --tries=5 \
+              --user-agent="Mozilla/5.0" "$base_url/" 2>/dev/null)"
+            [ -n "$page" ] || return 1
+
+            # Try with version in filename
+            sdk="$(printf '%s\n' "$page" | grep -oE "${prefix}-${ver}-${tid}_[^\"]+${ext}" | head -n1)"
+            [ -n "$sdk" ] && printf '%s\n' "$sdk" && return 0
+
+            # Try without version in filename
+            sdk="$(printf '%s\n' "$page" | grep -oE "${prefix}-${tid}_[^\"]+${ext}" | head -n1)"
+            [ -n "$sdk" ] && printf '%s\n' "$sdk" && return 0
+
             return 1
           }
 
-          sdk_file="$(_fetch_sdk_listing "$sdk_base_url" | grep -oE "${sdk_prefix}-${OPENWRT_VERSION}-${sdk_target_id}_[^\"]+${sdk_ext}" | head -n1)"
+          sdk_file="$(_find_sdk "$sdk_base_url" "$sdk_prefix" "$OPENWRT_VERSION" "$sdk_target_id" "$sdk_ext")"
           if [ -z "$sdk_file" ]; then
-            sdk_file="$(_fetch_sdk_listing "$sdk_base_url" | grep -oE "${sdk_prefix}-${sdk_target_id}_[^\"]+${sdk_ext}" | head -n1)"
+            echo "Failed to locate SDK at: $sdk_base_url" >&2
+            echo "Trying snapshot URL as fallback..." >&2
+            sdk_base_url="https://downloads.immortalwrt.org/snapshots/targets/${OPENWRT_TARGET}/${OPENWRT_SUBTARGET}"
+            sdk_file="$(_find_sdk "$sdk_base_url" "$sdk_prefix" "$OPENWRT_VERSION" "$sdk_target_id" "$sdk_ext")"
           fi
           test -n "$sdk_file"
+          echo "Found SDK: $sdk_file"
           wget -q --timeout=30 --tries=5 "$sdk_base_url/$sdk_file" -O sdk.tar.zst
           tar --zstd -xf sdk.tar.zst
           sdk_dir="$(find . -maxdepth 1 -type d -name "${sdk_prefix}-*" | head -n1)"
