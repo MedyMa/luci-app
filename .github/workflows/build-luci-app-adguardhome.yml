@@ -45,7 +45,7 @@ jobs:
         include:
           - build_profile: 24.10-ipk
             sdk_distribution: immortalwrt
-            openwrt_version: 24.10.2
+            openwrt_version: 24.10.7
             pkg_format: ipk
           - build_profile: 25.12-apk
             sdk_distribution: immortalwrt
@@ -63,7 +63,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6.0.2
-
 
       - name: Install build dependencies
         run: |
@@ -118,12 +117,12 @@ jobs:
           esac
 
           sdk_target_id="${OPENWRT_TARGET}-${OPENWRT_SUBTARGET}"
-          sdk_file="$(curl -fsSL "$sdk_base_url/" | grep -oE "${sdk_prefix}-${OPENWRT_VERSION}-${sdk_target_id}_[^\"[:space:]]+${sdk_ext}" | head -n1)"
+          sdk_file="$(curl -fsSL --http1.1 --retry 3 --retry-delay 5 --connect-timeout 15 "$sdk_base_url/" | grep -oE "${sdk_prefix}-${OPENWRT_VERSION}-${sdk_target_id}_[^\"[:space:]]+${sdk_ext}" | head -n1)"
           if [ -z "$sdk_file" ]; then
-            sdk_file="$(curl -fsSL "$sdk_base_url/" | grep -oE "${sdk_prefix}-${sdk_target_id}_[^\"[:space:]]+${sdk_ext}" | head -n1)"
+            sdk_file="$(curl -fsSL --http1.1 --retry 3 --retry-delay 5 --connect-timeout 15 "$sdk_base_url/" | grep -oE "${sdk_prefix}-${sdk_target_id}_[^\"[:space:]]+${sdk_ext}" | head -n1)"
           fi
           test -n "$sdk_file"
-          wget -q "$sdk_base_url/$sdk_file" -O sdk.tar.zst
+          wget -q --timeout=30 --tries=3 "$sdk_base_url/$sdk_file" -O sdk.tar.zst
           tar --zstd -xf sdk.tar.zst
           sdk_dir="$(find . -maxdepth 1 -type d -name "${sdk_prefix}-*" | head -n1)"
           test -n "$sdk_dir"
