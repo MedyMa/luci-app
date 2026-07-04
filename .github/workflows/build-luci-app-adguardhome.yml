@@ -127,9 +127,9 @@ jobs:
             return 1
           }
 
-          sdk_file="$(_fetch_sdk_listing "$sdk_base_url" | grep -oE "${sdk_prefix}-${OPENWRT_VERSION}-${sdk_target_id}_[^\"[:space:]]+${sdk_ext}" | head -n1)"
+          sdk_file="$(_fetch_sdk_listing "$sdk_base_url" | grep -oE "${sdk_prefix}-${OPENWRT_VERSION}-${sdk_target_id}_[^\"]+${sdk_ext}" | head -n1)"
           if [ -z "$sdk_file" ]; then
-            sdk_file="$(_fetch_sdk_listing "$sdk_base_url" | grep -oE "${sdk_prefix}-${sdk_target_id}_[^\"[:space:]]+${sdk_ext}" | head -n1)"
+            sdk_file="$(_fetch_sdk_listing "$sdk_base_url" | grep -oE "${sdk_prefix}-${sdk_target_id}_[^\"]+${sdk_ext}" | head -n1)"
           fi
           test -n "$sdk_file"
           wget -q --timeout=30 --tries=5 "$sdk_base_url/$sdk_file" -O sdk.tar.zst
