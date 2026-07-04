@@ -120,33 +120,32 @@ jobs:
 
           _find_sdk() {
             local base_url="$1" prefix="$2" ver="$3" tid="$4" ext="$5"
-            local page sdk
+            local page sdk_fname gcc_ver
 
-            # Fetch directory listing once; don't fail on HTTP errors (no -f)
-            page="$(curl -sSL --retry 5 --retry-delay 10 --max-time 60 --connect-timeout 15 \
-              -H "User-Agent: Mozilla/5.0" "$base_url/" 2>/dev/null || \
-              wget -qO- --timeout=30 --tries=5 \
-              --user-agent="Mozilla/5.0" "$base_url/" 2>/dev/null)"
-            [ -n "$page" ] || return 1
+            # Strategy 1: scrape directory listing (fastest when CDN cooperates)
+            page="$(curl -sSL --retry 2 --retry-delay 5 --max-time 30 "$base_url/" 2>/dev/null || true)"
+            if [ -n "$page" ]; then
+              sdk_fname="$(printf '%s\n' "$page" | grep -oE "${prefix}-${ver}-${tid}_[^\"]+${ext}" | head -n1)"
+              [ -z "$sdk_fname" ] && sdk_fname="$(printf '%s\n' "$page" | grep -oE "${prefix}-${tid}_[^\"]+${ext}" | head -n1)"
+              [ -n "$sdk_fname" ] && printf '%s\n' "$sdk_fname" && return 0
+            fi
 
-            # Try with version in filename
-            sdk="$(printf '%s\n' "$page" | grep -oE "${prefix}-${ver}-${tid}_[^\"]+${ext}" | head -n1)"
-            [ -n "$sdk" ] && printf '%s\n' "$sdk" && return 0
-
-            # Try without version in filename
-            sdk="$(printf '%s\n' "$page" | grep -oE "${prefix}-${tid}_[^\"]+${ext}" | head -n1)"
-            [ -n "$sdk" ] && printf '%s\n' "$sdk" && return 0
+            # Strategy 2: probe common GCC versions (bypasses CDN listing issues)
+            for gcc_ver in 13.3.0 13.2.0 12.3.0 12.2.0 11.4.0 11.3.0; do
+              sdk_fname="${prefix}-${ver}-${tid}_gcc-${gcc_ver}_musl.Linux-x86_64${ext}"
+              if wget --spider -q --timeout=10 "$base_url/$sdk_fname" 2>/dev/null; then
+                printf '%s\n' "$sdk_fname" && return 0
+              fi
+              sdk_fname="${prefix}-${tid}_gcc-${gcc_ver}_musl.Linux-x86_64${ext}"
+              if wget --spider -q --timeout=10 "$base_url/$sdk_fname" 2>/dev/null; then
+                printf '%s\n' "$sdk_fname" && return 0
+              fi
+            done
 
             return 1
           }
 
           sdk_file="$(_find_sdk "$sdk_base_url" "$sdk_prefix" "$OPENWRT_VERSION" "$sdk_target_id" "$sdk_ext")"
-          if [ -z "$sdk_file" ]; then
-            echo "Failed to locate SDK at: $sdk_base_url" >&2
-            echo "Trying snapshot URL as fallback..." >&2
-            sdk_base_url="https://downloads.immortalwrt.org/snapshots/targets/${OPENWRT_TARGET}/${OPENWRT_SUBTARGET}"
-            sdk_file="$(_find_sdk "$sdk_base_url" "$sdk_prefix" "$OPENWRT_VERSION" "$sdk_target_id" "$sdk_ext")"
-          fi
           test -n "$sdk_file"
           echo "Found SDK: $sdk_file"
           wget -q --timeout=30 --tries=5 "$sdk_base_url/$sdk_file" -O sdk.tar.zst
