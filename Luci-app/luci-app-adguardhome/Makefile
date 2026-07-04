@@ -7,7 +7,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-adguardhome
 PKG_VERSION:=2.0
-PKG_RELEASE:=22
+PKG_RELEASE:=23
 
 LUCI_TITLE:=LuCI app for AdGuard Home
 LUCI_DESCRIPTION:=Modern LuCI dashboard for AdGuard Home
@@ -116,7 +116,7 @@ if [ -z "$$IPKG_INSTROOT" ]; then
 	uci -q set AdGuardHome.AdGuardHome.workdir="$$workdir"
 	uci -q set AdGuardHome.AdGuardHome.binpath="$$binpath"
 	case "$$logfile" in
-		''|'/tmp/AdGuardHome.log')
+		'')
 			uci -q set AdGuardHome.AdGuardHome.logfile='syslog'
 			rm -f /tmp/AdGuardHome.log /tmp/AdGuardHome-*.log 2>/dev/null
 			;;

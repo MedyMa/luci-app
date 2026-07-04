@@ -230,6 +230,9 @@ return view.extend({
 				terminalStates[scope] = createTerminalState();
 				output.textContent = '';
 				status.textContent = t('Log cleared.', '日志已清空。');
+				return callGetLog(scope, 0).then(function(res) {
+					appendLog(res, true);
+				});
 			}).catch(function(err) {
 				status.textContent = actionError(err, t('Clearing log failed', '清空日志失败'));
 			});

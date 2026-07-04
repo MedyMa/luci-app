@@ -99,6 +99,20 @@ cleanup_rotated_tmp_logs() {
 	done
 }
 
+truncate_log_file() {
+	local file="$1"
+	[ -n "$file" ] || return 0
+	case "$file" in
+		/tmp/*|/var/run/*|/var/tmp/*)
+			cleanup_rotated_tmp_logs "$file"
+			;;
+	esac
+	# Truncate in-place (same inode) so a running process (AGH /
+	# logread -f) that holds an open fd continues using the same file
+	# and filesystem space is reclaimed immediately.
+	: > "$file" 2>/dev/null || true
+}
+
 normalize_arch() {
 	case "$1" in
 		auto|'') printf '%s\n' auto ;;
@@ -417,10 +431,7 @@ clear_log() {
 			file="$logfile"
 		fi
 	fi
-	if [ -n "$file" ]; then
-		: > "$file" 2>/dev/null
-		cleanup_rotated_tmp_logs "$file"
-	fi
+	truncate_log_file "$file"
 	json_init; json_add_boolean ok 1; json_dump
 }
 
