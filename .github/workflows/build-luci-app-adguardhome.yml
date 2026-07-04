@@ -131,7 +131,7 @@ jobs:
             fi
 
             # Strategy 2: probe common GCC versions (bypasses CDN listing issues)
-            for gcc_ver in 13.3.0 13.2.0 12.3.0 12.2.0 11.4.0 11.3.0; do
+            for gcc_ver in 14.2.0 14.1.0 13.3.0 13.2.0 12.3.0 12.2.0 11.4.0 11.3.0; do
               sdk_fname="${prefix}-${ver}-${tid}_gcc-${gcc_ver}_musl.Linux-x86_64${ext}"
               if wget --spider -q --timeout=10 "$base_url/$sdk_fname" 2>/dev/null; then
                 printf '%s\n' "$sdk_fname" && return 0
