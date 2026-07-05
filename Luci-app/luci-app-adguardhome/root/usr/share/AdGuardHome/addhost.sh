@@ -10,17 +10,21 @@ if [ "$nowmd5" != "$lastmd5" ]; then
 fi
 }
 [ "$1" = "del" ] && sed -i '/programaddstart/,/programaddend/d' /etc/hosts && checkmd5 "$2" && exit 0
-/usr/bin/awk 'BEGIN{
-while ((getline < "/tmp/dhcp.leases") > 0)
-{
-    a[$2]=$4;
-}
-while (("ip -6 neighbor show | grep -v fe80" | getline) > 0)
-{
-    if (a[$5]) {print $1" "a[$5] >"/tmp/tmphost"; }
-}
-print "#programaddend" >"/tmp/tmphost";
-}'
+if [ -s /tmp/dhcp.leases ]; then
+	/usr/bin/awk 'BEGIN{
+	while ((getline < "/tmp/dhcp.leases") > 0)
+	{
+	    a[$2]=$4;
+	}
+	while (("ip -6 neighbor show 2>/dev/null | grep -v fe80" | getline) > 0)
+	{
+	    if (a[$5]) {print $1" "a[$5] >"/tmp/tmphost"; }
+	}
+	print "#programaddend" >"/tmp/tmphost";
+	}'
+else
+	echo "#programaddend" > /tmp/tmphost
+fi
 grep programaddstart /etc/hosts >/dev/null 2>&1
 if [ "$?" = "0" ]; then
 	sed -i '/programaddstart/,/programaddend/c\#programaddstart' /etc/hosts
