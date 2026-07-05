@@ -283,7 +283,7 @@ jobs:
           echo "ARTIFACT_DIR=$artifact_dir" >> "$GITHUB_ENV"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: luci-app-adguardhome-${{ env.BUILD_PROFILE }}-${{ env.SDK_DISTRIBUTION }}-${{ env.OPENWRT_TARGET }}-${{ env.OPENWRT_SUBTARGET }}
           path: ${{ env.ARTIFACT_DIR }}/
