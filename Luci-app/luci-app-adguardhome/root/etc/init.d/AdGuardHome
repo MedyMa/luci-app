@@ -1715,31 +1715,38 @@ logfile_on_tmpfs() {
 	esac
 }
 
+cron_quote_arg() {
+	printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"
+}
+
 cron_set() {
 	local token="$1" pattern="$2" line="$3" enabled="$4"
 	mkdir -p "${CRON_FILE%/*}"
 	[ -f "$CRON_FILE" ] || touch "$CRON_FILE"
 	sed -i "\,$pattern,d" "$CRON_FILE"
+	[ "$token" = 'cutruntimelog' ] && sed -i '\,/usr/share/AdGuardHome/tailto.sh [0-9].*AdGuardHome.AdGuardHome.logfile,d' "$CRON_FILE"
 	[ "$enabled" = '1' ] && echo "$line" >> "$CRON_FILE"
 	return 0
 }
 
 do_crontab() {
-	local enabled crontab workdir logfile active reload
+	local enabled crontab workdir logfile active reload querylog_arg logfile_arg
 	get_opt enabled enabled '0'
 	get_opt crontab crontab ''
 	get_opt workdir workdir "$DEFAULT_WORKDIR"
 	get_opt logfile logfile ''
+	querylog_arg=$(cron_quote_arg "${workdir}/data/querylog.json")
+	logfile_arg=$(cron_quote_arg "$logfile")
 	[ "$enabled" = '1' ] && active=1 || active=0
 	reload=0
 	has_token "$crontab" autoupdate && cron_set autoupdate '/usr/share/AdGuardHome/update_core.sh' '30 3 * * * /usr/share/AdGuardHome/update_core.sh 2>&1' "$active" && reload=1
-	has_token "$crontab" cutquerylog && cron_set cutquerylog '/usr/share/AdGuardHome/tailto.sh [0-9].*querylog.json' '0 * * * * /usr/share/AdGuardHome/tailto.sh 2000 $(uci get AdGuardHome.AdGuardHome.workdir)/data/querylog.json' "$active" && reload=1
+	has_token "$crontab" cutquerylog && cron_set cutquerylog '/usr/share/AdGuardHome/tailto.sh [0-9].*querylog.json' "0 * * * * /usr/share/AdGuardHome/tailto.sh 2000 ${querylog_arg}" "$active" && reload=1
 	if [ -n "$logfile" ] && [ "$logfile" != 'syslog' ]; then
 		if has_token "$crontab" cutruntimelog || logfile_on_tmpfs "$logfile"; then
-			cron_set cutruntimelog '/usr/share/AdGuardHome/tailto.sh [0-9].*AdGuardHome.AdGuardHome.logfile' '*/15 * * * * /usr/share/AdGuardHome/tailto.sh 2000 $(uci get AdGuardHome.AdGuardHome.logfile) cleanup-rotated' "$active" && reload=1
+			cron_set cutruntimelog '/usr/share/AdGuardHome/tailto.sh [0-9].*cleanup-rotated' "*/15 * * * * /usr/share/AdGuardHome/tailto.sh 2000 ${logfile_arg} cleanup-rotated" "$active" && reload=1
 		fi
 	else
-		cron_set cutruntimelog '/usr/share/AdGuardHome/tailto.sh [0-9].*AdGuardHome.AdGuardHome.logfile' '' 0 && reload=1
+		cron_set cutruntimelog '/usr/share/AdGuardHome/tailto.sh [0-9].*cleanup-rotated' '' 0 && reload=1
 	fi
 	has_token "$crontab" autohost && cron_set autohost '/usr/share/AdGuardHome/addhost.sh' '0 * * * * /usr/share/AdGuardHome/addhost.sh' "$active" && reload=1
 	has_token "$crontab" autogfw && cron_set autogfw '/usr/share/AdGuardHome/gfw2adg.sh' '30 3 * * * /usr/share/AdGuardHome/gfw2adg.sh' "$active" && reload=1
