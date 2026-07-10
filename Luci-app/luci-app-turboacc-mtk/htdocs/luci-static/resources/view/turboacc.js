@@ -1328,17 +1328,19 @@ function renderStyle() {
 
 		'.ta-chip.is-neutral{background:rgba(148,163,184,.14);color:var(--ta-text-muted)}',
 
-		'.ta-engine-popup-wrap{position:relative;display:inline-flex;max-width:100%;margin-left:8px}',
+		'.ta-engine-popup-wrap{position:relative;display:inline-flex;max-width:100%;margin-left:8px;z-index:3}',
 
 		'.cbi-value-field:has(.ta-engine-popup-wrap){overflow:visible}',
 
 		'.ta-engine-status{margin-left:0;vertical-align:middle;white-space:nowrap;cursor:help}',
 
-		'.ta-engine-hint{position:absolute;left:0;top:calc(100% + 8px);z-index:999;max-width:min(480px,calc(100vw - 32px));padding:14px 16px;border-radius:16px;background:var(--ta-info-bg);border:1px solid var(--ta-panel-border);box-shadow:0 12px 28px rgba(0,0,0,.12);color:var(--ta-info);font-size:.82rem;font-weight:600;line-height:1.5;white-space:nowrap;opacity:0;visibility:hidden;transform:translateY(-4px);transition:opacity .18s ease,transform .18s ease,visibility .18s ease;pointer-events:none}',
+		'.ta-engine-hint{position:absolute;left:50%;bottom:calc(100% + 10px);z-index:999;width:clamp(280px,36vw,560px);max-width:calc(100vw - 32px);padding:13px 15px;border-radius:14px;background:transparent;border:1px solid var(--ta-panel-border);box-shadow:0 14px 30px rgba(15,23,42,.18);color:var(--ta-info);font-size:.82rem;font-weight:600;line-height:1.55;white-space:normal;text-align:left;text-shadow:0 1px 2px var(--ta-panel-bg);opacity:0;visibility:hidden;transform:translate(-50%,4px);transition:opacity .18s ease,transform .18s ease,visibility .18s ease;pointer-events:none}',
 
-		'.ta-dark .ta-engine-hint{box-shadow:0 12px 28px rgba(0,0,0,.35)}',
+		'.ta-dark .ta-engine-hint{background:transparent;box-shadow:0 14px 30px rgba(0,0,0,.42)}',
 
-		'.ta-engine-popup-wrap:hover .ta-engine-hint{opacity:1;visibility:visible;transform:translateY(0)}',
+		'.ta-engine-popup-wrap:hover .ta-engine-hint{opacity:1;visibility:visible;transform:translate(-50%,0)}',
+
+		'.cbi-value-field:focus-within .ta-engine-hint{opacity:0!important;visibility:hidden!important}',
 
 		'.ta-status-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}',
 
