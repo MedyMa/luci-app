@@ -200,8 +200,8 @@ function getRuntimeLabel(token) {
 		return _('Boardcom_FULLCONE_NAT');
 	case 'Ethernet HNAT Disabled':
 		return _('以太网 HNAT 未启用');
-	case 'Wireless HNAT Disabled':
-		return _('无线 HNAT 未启用');
+	case 'HNAT Partially Enabled':
+		return _('HNAT 部分启用');
 	default:
 		return token;
 	}
@@ -1035,7 +1035,7 @@ function buildForm(features, config) {
 		s.tab('hnat', _('HNAT 高级项'), _('MediaTek HNAT 专用设置。'));
 
 	o = s.taboption('engine', form.ListValue, 'fastpath', _('主加速引擎'),
-		_('选择当前使用的加速通路。Flow Offloading、Fast Classifier 与 SFE 在 25.12 中作为 UI 兼容项显示，实际生效取决于对应内核模块是否存在。'));
+		_('选择主要的转发加速方式。MediaTek HNAT 是当前固件的推荐通路；其他选项保留用于兼容旧配置。'));
 	o.value('disabled', _('禁用'));
 	if (showFlowOffloading)
 		o.value('flow_offloading', _('流量分载'));
@@ -1043,40 +1043,40 @@ function buildForm(features, config) {
 		o.value('fast_classifier', _('快速分类器'));
 	if (showShortcutFeCm)
 		o.value('shortcut_fe_cm', _('SFE 连接管理器'));
-	o.value('mediatek_hnat', features.hasMEDIATEKHNAT ? _('MediaTek HNAT') : _('MediaTek HNAT（尝试加载）'));
+	o.value('mediatek_hnat', features.hasMEDIATEKHNAT ? _('MediaTek HNAT') : _('MediaTek HNAT（保存后尝试）'));
 	o.default = config.fastpath || 'disabled';
 	o.widget = 'select';
 	o.rmempty = false;
 	var engineStatus = {
 		'disabled': {
-			label: _('已禁用'),
+			label: _('关闭'),
 			cls: 'is-neutral',
-			title: _('禁用所有加速引擎'),
-			hint: _('禁用所有加速引擎。')
+			title: _('关闭转发加速'),
+			hint: _('不启用额外加速，网络和 Wi-Fi 会按系统默认方式运行。')
 		},
 		'flow_offloading': {
-			label: _('兼容显示'),
+			label: _('保留选项'),
 			cls: 'is-warning',
-			title: _('Flow Offloading — 25.12 中作为兼容选项显示，实际生效取决于内核 flow offload 支持。'),
-			hint: _('UI 兼容项：25.12 中不作为主加速路径维护，选择后若运行时能力缺失会自动跳过。')
+			title: _('Flow Offloading 是兼容旧配置的保留选项。'),
+			hint: _('保留给旧配置使用；当前固件通常优先使用 HNAT，系统不支持时会自动跳过。')
 		},
 		'fast_classifier': {
-			label: _('兼容显示'),
+			label: _('保留选项'),
 			cls: 'is-warning',
-			title: _('Fast Classifier — 25.12 内核未编译 fast-classifier.ko，选择后不会生效。'),
-			hint: _('UI 兼容项：当前 25.12 内核未编译 fast-classifier.ko，保存后服务会尝试加载，失败则跳过。')
+			title: _('Fast Classifier 是兼容旧配置的保留选项。'),
+			hint: _('当前固件未提供 Fast Classifier 模块；保存后若无法加载，会自动跳过，不影响网络。')
 		},
 		'shortcut_fe_cm': {
-			label: _('兼容显示'),
+			label: _('保留选项'),
 			cls: 'is-warning',
-			title: _('SFE CM — 25.12 内核未编译 shortcut-fe-cm.ko，选择后不会生效。'),
-			hint: _('UI 兼容项：当前 25.12 内核未编译 shortcut-fe-cm.ko，保存后服务会尝试加载，失败则跳过。')
+			title: _('SFE 连接管理器是兼容旧配置的保留选项。'),
+			hint: _('当前固件未提供 SFE 连接管理器模块；保存后若无法加载，会自动跳过，不影响网络。')
 		},
 		'mediatek_hnat': {
-			label: features.hasMEDIATEKHNAT ? _('功能正常') : _('尝试加载'),
+			label: features.hasMEDIATEKHNAT ? _('推荐') : _('待加载'),
 			cls: features.hasMEDIATEKHNAT ? 'is-ok' : 'is-warning',
-			title: features.hasMEDIATEKHNAT ? _('MediaTek HNAT — MT7988 主线硬件加速通路（PPE + WED + HNAT），功能完整。') : _('MediaTek HNAT — 当前未检测到 mtkhnat.ko，保存后会尝试加载。'),
-			hint: features.hasMEDIATEKHNAT ? _('MT7988 主线硬件加速通路（PPE + WED + HNAT），这是 25.12 + MTK SDK 的真实功能路径。') : _('当前未检测到 mtkhnat.ko；待内核 HNAT 模块生成后会自动成为真实可用路径。')
+			title: features.hasMEDIATEKHNAT ? _('MediaTek HNAT 已可用，适合 MT7988 硬件加速。') : _('MediaTek HNAT 当前未检测到，保存后会尝试加载。'),
+			hint: features.hasMEDIATEKHNAT ? _('MediaTek HNAT（PPE + WED + HNAT），绕过 CPU 直接硬件转发，推荐作为主加速引擎。') : _('当前尚未检测到 HNAT 模块；保存配置后会尝试加载，失败时不影响基础网络。')
 		}
 	};
 	var updateEngineStatus = function(container, value) {
@@ -1207,26 +1207,12 @@ function buildForm(features, config) {
 		o.placeholder = '30';
 		o.depends({ fastpath: 'mediatek_hnat', fastpath_mh_eth_hnat: '1' });
 
-		o = s.taboption('hnat', form.ListValue, 'fastpath_mh_eth_hnat_ppenum', _('HNAT PPE 数量'),
-			_('PPE 引擎数量，默认 2。重启后生效。'));
-		o.rmempty = false;
-		o.value('1');
-		o.value('2');
-		o.default = '2';
-		o.depends({ fastpath: 'mediatek_hnat', fastpath_mh_eth_hnat: '1' });
-
 		o = s.taboption('hnat', form.Flag, 'fastpath_mh_eth_hnat_macvlan', _('启用 macvlan HNAT'),
 			_('为 macvlan 接口启用硬件加速。'));
 		o.default = o.disabled;
 		o.rmempty = false;
 		o.depends({ fastpath: 'mediatek_hnat', fastpath_mh_eth_hnat: '1' });
 
-		o = s.taboption('hnat', form.Value, 'fastpath_mh_eth_hnat_ap', _('AP 模式目标 IP（预留）'),
-			_('仅记录 AP 模式目标 IP，不会由 TurboACC 自动改写 LAN/WAN 或 WiFi 配置。'));
-		o.optional = true;
-		o.datatype = 'ip4addr';
-		o.placeholder = '192.168.1.2';
-		o.depends({ fastpath: 'mediatek_hnat', fastpath_mh_eth_hnat: '1' });
 	}
 
 	return m;
