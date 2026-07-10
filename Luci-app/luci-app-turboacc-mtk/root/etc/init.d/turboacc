@@ -183,10 +183,10 @@ start_service() {
 			config_get_bool fastpath_mh_eth_hnat_v6 "config" "fastpath_mh_eth_hnat_v6" "1"
 			config_get fastpath_mh_eth_hnat_bind_rate "config" "fastpath_mh_eth_hnat_bind_rate" "30"
 
-			# hnat_setting: cmd 8 = IPv6 HNAT toggle, cmd 7 = bind rate threshold
+			# hnat_setting: cmd 8 = IPv6 HNAT toggle, cmd 11 = bind rate threshold
 			hwrite "$hnat_path/hnat_setting" "8 $fastpath_mh_eth_hnat_v6" || \
 				logger -t turboacc "WARNING: failed to write hnat_setting (IPv6)"
-			hwrite "$hnat_path/hnat_setting" "7 $fastpath_mh_eth_hnat_bind_rate" || \
+			hwrite "$hnat_path/hnat_setting" "11 $fastpath_mh_eth_hnat_bind_rate" || \
 				logger -t turboacc "WARNING: failed to write hnat_setting (bind_rate)"
 
 			logger -t turboacc "engine=mediatek_hnat eth=$fastpath_mh_eth_hnat v6=$fastpath_mh_eth_hnat_v6 bind_rate=$fastpath_mh_eth_hnat_bind_rate"
