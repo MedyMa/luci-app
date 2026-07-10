@@ -13,7 +13,6 @@ LUCI_TITLE:=LuCI support for MTK HNAT
 LUCI_DEPENDS:= \
 	+luci-base \
 	+rpcd \
-
 	+luci-lua-runtime \
 	+kmod-mediatek_hnat \
 	@!PACKAGE_luci-app-turboacc
