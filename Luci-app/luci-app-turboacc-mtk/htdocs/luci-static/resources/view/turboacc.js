@@ -1035,7 +1035,7 @@ function buildForm(features, config) {
 		s.tab('hnat', _('HNAT 高级项'), _('MediaTek HNAT 专用设置。'));
 
 	o = s.taboption('engine', form.ListValue, 'fastpath', _('主加速引擎'),
-		_('选择主要的转发加速方式。MediaTek HNAT 是当前固件的推荐通路；其他选项保留用于兼容旧配置。'));
+		_('选择当前使用的加速方式。'));
 	o.value('disabled', _('禁用'));
 	if (showFlowOffloading)
 		o.value('flow_offloading', _('流量分载'));
@@ -1117,6 +1117,8 @@ function buildForm(features, config) {
 	};
 	o.onchange = function(ev, section_id, value) {
 		updateEngineStatus(ev.target, value);
+		if (ev.target && ev.target.blur)
+			ev.target.blur();
 	};
 	o.cfgvalue = function(section_id) {
 		var value = normalizeFastpathValue(uci.get('turboacc', section_id, 'fastpath'));
@@ -1341,8 +1343,6 @@ function renderStyle() {
 		'.ta-dark .ta-engine-hint{background:transparent;box-shadow:0 14px 30px rgba(0,0,0,.42)}',
 
 		'.ta-engine-popup-wrap:hover .ta-engine-hint{opacity:1;visibility:visible;transform:translate(-50%,0)}',
-
-		'.cbi-value-field:focus-within .ta-engine-hint{opacity:0!important;visibility:hidden!important}',
 
 		'.ta-status-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}',
 
@@ -1657,7 +1657,7 @@ function renderStyle() {
 
 		'.ta-config-shell select{width:clamp(240px,22vw,340px)}',
 
-		'.ta-config-shell select.ta-engine-select{width:clamp(280px,28vw,380px);min-width:280px}',
+		'.ta-config-shell select.ta-engine-select{width:clamp(240px,20vw,320px);min-width:240px}',
 
 		'.ta-config-shell select:focus,.ta-config-shell input:focus{border-color:#7aa8ff!important;box-shadow:0 0 0 3px rgba(91,111,238,.12)!important;outline:none}',
 
