@@ -1332,7 +1332,9 @@ function renderStyle() {
 
 		'.ta-engine-status{margin-left:8px;vertical-align:middle;white-space:nowrap}',
 
-		'.ta-engine-hint{margin-top:10px;padding:9px 12px;border-left:3px solid var(--ta-panel-border);border-radius:8px;background:var(--ta-info-bg);color:var(--ta-info);font-size:.82rem;font-weight:600;line-height:1.45}',
+		'.ta-engine-hint{display:none;margin-top:10px;padding:9px 12px;border-left:3px solid var(--ta-panel-border);border-radius:8px;background:var(--ta-info-bg);color:var(--ta-info);font-size:.82rem;font-weight:600;line-height:1.45}',
+
+		'.cbi-value-field:hover .ta-engine-hint{display:block}',
 
 		'.ta-status-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}',
 
