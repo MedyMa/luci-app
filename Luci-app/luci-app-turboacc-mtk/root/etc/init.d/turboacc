@@ -177,11 +177,9 @@ start_service() {
 
 		if _uci_bool_enabled "$fastpath_mh_eth_hnat"; then
 			local fastpath_mh_eth_hnat_v6 fastpath_mh_eth_hnat_bind_rate
-			local fastpath_mh_eth_hnat_macvlan
 
 			config_get_bool fastpath_mh_eth_hnat_v6 "config" "fastpath_mh_eth_hnat_v6" "1"
 			config_get fastpath_mh_eth_hnat_bind_rate "config" "fastpath_mh_eth_hnat_bind_rate" "30"
-			config_get_bool fastpath_mh_eth_hnat_macvlan "config" "fastpath_mh_eth_hnat_macvlan" "0"
 
 			# hnat_setting: cmd 8 = IPv6 HNAT toggle, cmd 11 = bind rate threshold
 			hwrite "$hnat_path/hnat_setting" "8 $fastpath_mh_eth_hnat_v6" || \
@@ -189,15 +187,7 @@ start_service() {
 			hwrite "$hnat_path/hnat_setting" "11 $fastpath_mh_eth_hnat_bind_rate" || \
 				logger -t turboacc "WARNING: failed to write hnat_setting (bind_rate)"
 
-			# macvlan HNAT (cmd 12); only on 6.6 kernel - 6.12 lacks this cmd
-			if [ "$fastpath_mh_eth_hnat_macvlan" = "1" ]; then
-				hwrite "$hnat_path/hnat_setting" "12 1" || \
-					logger -t turboacc "WARNING: failed to write hnat_setting (macvlan) - kernel may not support cmd 12"
-			else
-				hwrite "$hnat_path/hnat_setting" "12 0" 2>/dev/null || true
-			fi
-
-			logger -t turboacc "engine=mediatek_hnat eth=$fastpath_mh_eth_hnat v6=$fastpath_mh_eth_hnat_v6 bind_rate=$fastpath_mh_eth_hnat_bind_rate macvlan=$fastpath_mh_eth_hnat_macvlan"
+			logger -t turboacc "engine=mediatek_hnat eth=$fastpath_mh_eth_hnat v6=$fastpath_mh_eth_hnat_v6 bind_rate=$fastpath_mh_eth_hnat_bind_rate"
 		else
 			logger -t turboacc "engine=mediatek_hnat eth=0 (Ethernet HNAT disabled by config)"
 		fi

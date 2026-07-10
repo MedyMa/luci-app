@@ -1211,12 +1211,6 @@ function buildForm(features, config) {
 		o.placeholder = '30';
 		o.depends({ fastpath: 'mediatek_hnat', fastpath_mh_eth_hnat: '1' });
 
-		o = s.taboption('hnat', form.Flag, 'fastpath_mh_eth_hnat_macvlan', _('启用 macvlan HNAT'),
-			_('为 macvlan 接口启用硬件加速。'));
-		o.default = o.disabled;
-		o.rmempty = false;
-		o.depends({ fastpath: 'mediatek_hnat', fastpath_mh_eth_hnat: '1' });
-
 	}
 
 	return m;
@@ -1335,8 +1329,6 @@ function renderStyle() {
 		'.ta-chip.is-neutral{background:rgba(148,163,184,.14);color:var(--ta-text-muted)}',
 
 		'.ta-engine-popup-wrap{position:relative;display:inline-flex;max-width:100%;margin-left:8px}',
-
-		'.cbi-value-field:has(.ta-engine-popup-wrap){overflow:visible}',
 
 		'.ta-engine-status{margin-left:0;vertical-align:middle;white-space:nowrap;cursor:help}',
 
