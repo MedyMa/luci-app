@@ -19,6 +19,8 @@ if has_module_file "mtkhnat" "mediatek_hnat"; then
 	uci -q set "turboacc.config.fastpath_mh_eth_hnat"="1"
 	uci -q set "turboacc.config.fastpath_mh_eth_hnat_v6"="1"
 	uci -q set "turboacc.config.fastpath_mh_eth_hnat_bind_rate"="30"
+	uci -q set "turboacc.config.fastpath_mh_eth_hnat_ppenum"="2"
+	uci -q set "turboacc.config.fastpath_mh_eth_hnat_macvlan"="0"
 elif has_module_file "fast-classifier"; then
 	uci -q set "turboacc.config.fastpath"="fast_classifier"
 	uci -q set "turboacc.config.fastpath_fc_br"="1"

@@ -1023,9 +1023,9 @@ function buildForm(features, config) {
 	var s = m.section(form.NamedSection, 'config', 'turboacc');
 	var o;
 	var tcpccaOptions = parseTokenList(features.hasTCPCCA);
-	var showFlowOffloading = !!features.hasFLOWOFFLOADING;
-	var showFastClassifier = isEngineAvailable(features.hasFASTCLASSIFIER, config, 'fast_classifier');
-	var showShortcutFeCm = isEngineAvailable(features.hasSHORTCUTFECM, config, 'shortcut_fe_cm');
+	var showFlowOffloading = true;
+	var showFastClassifier = true;
+	var showShortcutFeCm = true;
 	var showMediatekHnat = true;
 
 	s.tab('engine', _('主通路'), _('选择主加速引擎。'));
@@ -1035,7 +1035,7 @@ function buildForm(features, config) {
 		s.tab('hnat', _('HNAT 高级项'), _('MediaTek HNAT 专用设置。'));
 
 	o = s.taboption('engine', form.ListValue, 'fastpath', _('主加速引擎'),
-		_('选择当前使用的加速通路。'));
+		_('选择当前使用的加速通路。Flow Offloading、Fast Classifier 与 SFE 在 25.12 中作为 UI 兼容项显示，实际生效取决于对应内核模块是否存在。'));
 	o.value('disabled', _('禁用'));
 	if (showFlowOffloading)
 		o.value('flow_offloading', _('流量分载'));
@@ -1047,16 +1047,81 @@ function buildForm(features, config) {
 	o.default = config.fastpath || 'disabled';
 	o.widget = 'select';
 	o.rmempty = false;
+	var engineStatus = {
+		'disabled': {
+			label: _('已禁用'),
+			cls: 'is-neutral',
+			title: _('禁用所有加速引擎'),
+			hint: _('禁用所有加速引擎。')
+		},
+		'flow_offloading': {
+			label: _('兼容显示'),
+			cls: 'is-warning',
+			title: _('Flow Offloading — 25.12 中作为兼容选项显示，实际生效取决于内核 flow offload 支持。'),
+			hint: _('UI 兼容项：25.12 中不作为主加速路径维护，选择后若运行时能力缺失会自动跳过。')
+		},
+		'fast_classifier': {
+			label: _('兼容显示'),
+			cls: 'is-warning',
+			title: _('Fast Classifier — 25.12 内核未编译 fast-classifier.ko，选择后不会生效。'),
+			hint: _('UI 兼容项：当前 25.12 内核未编译 fast-classifier.ko，保存后服务会尝试加载，失败则跳过。')
+		},
+		'shortcut_fe_cm': {
+			label: _('兼容显示'),
+			cls: 'is-warning',
+			title: _('SFE CM — 25.12 内核未编译 shortcut-fe-cm.ko，选择后不会生效。'),
+			hint: _('UI 兼容项：当前 25.12 内核未编译 shortcut-fe-cm.ko，保存后服务会尝试加载，失败则跳过。')
+		},
+		'mediatek_hnat': {
+			label: features.hasMEDIATEKHNAT ? _('功能正常') : _('尝试加载'),
+			cls: features.hasMEDIATEKHNAT ? 'is-ok' : 'is-warning',
+			title: features.hasMEDIATEKHNAT ? _('MediaTek HNAT — MT7988 主线硬件加速通路（PPE + WED + HNAT），功能完整。') : _('MediaTek HNAT — 当前未检测到 mtkhnat.ko，保存后会尝试加载。'),
+			hint: features.hasMEDIATEKHNAT ? _('MT7988 主线硬件加速通路（PPE + WED + HNAT），这是 25.12 + MTK SDK 的真实功能路径。') : _('当前未检测到 mtkhnat.ko；待内核 HNAT 模块生成后会自动成为真实可用路径。')
+		}
+	};
+	var updateEngineStatus = function(container, value) {
+		var info = engineStatus[value] || engineStatus['disabled'];
+		var field = container.closest('.cbi-value-field') || container.parentNode;
+		var chip = field.querySelector('.ta-engine-status');
+		var hint = field.querySelector('.ta-engine-hint');
+		if (!chip) {
+			chip = E('span', { 'class': 'ta-engine-status ta-chip' });
+			container.parentNode.appendChild(chip);
+		}
+		if (!hint) {
+			hint = E('div', { 'class': 'ta-engine-hint' });
+			field.appendChild(hint);
+		}
+		chip.className = 'ta-engine-status ta-chip ' + info.cls;
+		chip.replaceChildren(E('span', { 'class': 'ta-chip-dot' }), info.label);
+		chip.title = info.title || '';
+		hint.textContent = info.hint || info.title || '';
+	};
+	var renderEngineWidget = o.renderWidget;
+	o.renderWidget = function(section_id, option_index, cfgvalue) {
+		var node = renderEngineWidget.apply(this, arguments);
+
+		window.setTimeout(L.bind(function() {
+			var select = node.querySelector ? node.querySelector('select') : null;
+			if (select)
+				updateEngineStatus(select, select.value || cfgvalue || 'disabled');
+		}, this), 0);
+
+		return node;
+	};
+	o.onchange = function(ev, section_id, value) {
+		updateEngineStatus(ev.target, value);
+	};
 	o.cfgvalue = function(section_id) {
 		var value = normalizeFastpathValue(uci.get('turboacc', section_id, 'fastpath'));
 
-		return value === 'flow_offloading' && !showFlowOffloading ? 'disabled' : value;
+		return value;
 	};
 	o.write = function(section_id, value) {
 		return uci.set('turboacc', section_id, 'fastpath', value === 'disabled' ? 'none' : value);
 	};
 	o.validate = function(section_id, value) {
-		return value === 'disabled' || (showFlowOffloading && value === 'flow_offloading') || value === 'fast_classifier' ||
+		return value === 'disabled' || value === 'flow_offloading' || value === 'fast_classifier' ||
 			value === 'shortcut_fe_cm' || value === 'mediatek_hnat'
 				? true
 				: _('无效的主加速引擎');
@@ -1140,6 +1205,27 @@ function buildForm(features, config) {
 		o.optional = true;
 		o.datatype = 'range(1,30)';
 		o.placeholder = '30';
+		o.depends({ fastpath: 'mediatek_hnat', fastpath_mh_eth_hnat: '1' });
+
+		o = s.taboption('hnat', form.ListValue, 'fastpath_mh_eth_hnat_ppenum', _('HNAT PPE 数量'),
+			_('PPE 引擎数量，默认 2。重启后生效。'));
+		o.rmempty = false;
+		o.value('1');
+		o.value('2');
+		o.default = '2';
+		o.depends({ fastpath: 'mediatek_hnat', fastpath_mh_eth_hnat: '1' });
+
+		o = s.taboption('hnat', form.Flag, 'fastpath_mh_eth_hnat_macvlan', _('启用 macvlan HNAT'),
+			_('为 macvlan 接口启用硬件加速。'));
+		o.default = o.disabled;
+		o.rmempty = false;
+		o.depends({ fastpath: 'mediatek_hnat', fastpath_mh_eth_hnat: '1' });
+
+		o = s.taboption('hnat', form.Value, 'fastpath_mh_eth_hnat_ap', _('AP 模式目标 IP（预留）'),
+			_('仅记录 AP 模式目标 IP，不会由 TurboACC 自动改写 LAN/WAN 或 WiFi 配置。'));
+		o.optional = true;
+		o.datatype = 'ip4addr';
+		o.placeholder = '192.168.1.2';
 		o.depends({ fastpath: 'mediatek_hnat', fastpath_mh_eth_hnat: '1' });
 	}
 
@@ -1246,6 +1332,8 @@ function renderStyle() {
 
 		'.ta-chip{display:inline-flex;align-items:center;max-width:100%;padding:6px 11px;border-radius:999px;background:var(--ta-chip-bg);border:1px solid var(--ta-chip-border);color:var(--ta-chip);font-size:.8rem;font-weight:700;line-height:1.2;word-break:break-word}',
 
+		'.ta-chip-dot{display:inline-block;width:6px;height:6px;margin-right:6px;border-radius:999px;background:currentColor;flex:0 0 auto}',
+
 		'.ta-chip.is-ok{background:var(--ta-good-bg);color:var(--ta-good)}',
 
 		'.ta-chip.is-warning{background:var(--ta-warn-bg);color:var(--ta-warn)}',
@@ -1253,6 +1341,12 @@ function renderStyle() {
 		'.ta-chip.is-info{background:var(--ta-info-bg);color:var(--ta-info)}',
 
 		'.ta-chip.is-muted{background:rgba(148,163,184,.14);color:var(--ta-text-muted)}',
+
+		'.ta-chip.is-neutral{background:rgba(148,163,184,.14);color:var(--ta-text-muted)}',
+
+		'.ta-engine-status{margin-left:8px;vertical-align:middle;white-space:nowrap}',
+
+		'.ta-engine-hint{margin-top:10px;padding:9px 12px;border-left:3px solid var(--ta-panel-border);border-radius:8px;background:var(--ta-info-bg);color:var(--ta-info);font-size:.82rem;font-weight:600;line-height:1.45}',
 
 		'.ta-status-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}',
 

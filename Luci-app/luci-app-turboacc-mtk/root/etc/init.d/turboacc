@@ -34,9 +34,11 @@ load_hnat_module() {
 	try_modprobe "mtkhnat" "mediatek_hnat"
 }
 
-unload_hnat_module() {
-	rmmod "mtkhnat" 2>/dev/null || true
-	rmmod "mediatek_hnat" 2>/dev/null || true
+disable_hnat_runtime() {
+	local hnat_path="${1:-/sys/kernel/debug/hnat}"
+
+	[ -w "$hnat_path/hook_toggle" ] && echo "0" >"$hnat_path/hook_toggle" 2>/dev/null
+	[ -w "$hnat_path/hnat_setting" ] && echo "8 0" >"$hnat_path/hnat_setting" 2>/dev/null
 }
 
 wait_hnat_debugfs() {
@@ -51,7 +53,7 @@ wait_hnat_debugfs() {
 	return 1
 }
 
-# busybox-safe debugfs mount check — avoids `mountpoint -q` which may be absent
+# busybox-safe debugfs mount check; avoids `mountpoint -q` which may be absent
 ensure_debugfs() {
 	grep -q ' /sys/kernel/debug debugfs ' /proc/mounts 2>/dev/null && return 0
 	mkdir -p /sys/kernel/debug 2>/dev/null
@@ -94,9 +96,7 @@ stop_service() {
 	ensure_debugfs
 
 	# disable HNAT hook if still accessible
-	[ -w "$hnat_path/hook_toggle" ] && echo "0" >"$hnat_path/hook_toggle" 2>/dev/null
-	[ -w "$hnat_path/hnat_setting" ] && echo "8 0" >"$hnat_path/hnat_setting" 2>/dev/null
-	unload_hnat_module
+	disable_hnat_runtime "$hnat_path"
 
 	# restore fullcone to a safe default
 	if [ -w "/proc/sys/net/netfilter/nf_conntrack_nat_mode" ]; then
@@ -133,9 +133,7 @@ start_service() {
 	ensure_debugfs
 
 	if [ "$fastpath" != "mediatek_hnat" ] && hnat_module_loaded && [ -w "$hnat_path/hook_toggle" ]; then
-		echo "0" >"$hnat_path/hook_toggle" 2>/dev/null
-		[ -w "$hnat_path/hnat_setting" ] && echo "8 0" >"$hnat_path/hnat_setting" 2>/dev/null
-		unload_hnat_module
+		disable_hnat_runtime "$hnat_path"
 	fi
 
 	# ---------- engine activation ----------
@@ -179,9 +177,13 @@ start_service() {
 
 		if _uci_bool_enabled "$fastpath_mh_eth_hnat"; then
 			local fastpath_mh_eth_hnat_v6 fastpath_mh_eth_hnat_bind_rate
+			local fastpath_mh_eth_hnat_ppenum fastpath_mh_eth_hnat_macvlan fastpath_mh_eth_hnat_ap
 
 			config_get_bool fastpath_mh_eth_hnat_v6 "config" "fastpath_mh_eth_hnat_v6" "1"
 			config_get fastpath_mh_eth_hnat_bind_rate "config" "fastpath_mh_eth_hnat_bind_rate" "30"
+			config_get fastpath_mh_eth_hnat_ppenum "config" "fastpath_mh_eth_hnat_ppenum" "2"
+			config_get_bool fastpath_mh_eth_hnat_macvlan "config" "fastpath_mh_eth_hnat_macvlan" "0"
+			config_get fastpath_mh_eth_hnat_ap "config" "fastpath_mh_eth_hnat_ap" ""
 
 			# hnat_setting: cmd 8 = IPv6 HNAT toggle, cmd 11 = bind rate threshold
 			hwrite "$hnat_path/hnat_setting" "8 $fastpath_mh_eth_hnat_v6" || \
@@ -189,7 +191,21 @@ start_service() {
 			hwrite "$hnat_path/hnat_setting" "11 $fastpath_mh_eth_hnat_bind_rate" || \
 				logger -t turboacc "WARNING: failed to write hnat_setting (bind_rate)"
 
-			logger -t turboacc "engine=mediatek_hnat eth=$fastpath_mh_eth_hnat v6=$fastpath_mh_eth_hnat_v6 bind_rate=$fastpath_mh_eth_hnat_bind_rate"
+			# macvlan HNAT (cmd 12); only on 6.6 kernel - 6.12 lacks this cmd
+			if [ "$fastpath_mh_eth_hnat_macvlan" = "1" ]; then
+				hwrite "$hnat_path/hnat_setting" "12 1" || \
+					logger -t turboacc "WARNING: failed to write hnat_setting (macvlan) - kernel may not support cmd 12"
+			else
+				hwrite "$hnat_path/hnat_setting" "12 0" 2>/dev/null || true
+			fi
+
+			logger -t turboacc "engine=mediatek_hnat eth=$fastpath_mh_eth_hnat v6=$fastpath_mh_eth_hnat_v6 bind_rate=$fastpath_mh_eth_hnat_bind_rate ppenum=$fastpath_mh_eth_hnat_ppenum macvlan=$fastpath_mh_eth_hnat_macvlan"
+
+			# AP mode is intentionally not applied here. Rewriting LAN/WAN topology
+			# from a service reload can make LuCI lose network/WiFi management.
+			if echo "$fastpath_mh_eth_hnat_ap" | grep -qE '^([0-9]{1,3}\.){3}[0-9]{1,3}$'; then
+				logger -t turboacc "AP mode target IP configured ($fastpath_mh_eth_hnat_ap), but automatic network rewrite is disabled"
+			fi
 		else
 			logger -t turboacc "engine=mediatek_hnat eth=0 (Ethernet HNAT disabled by config)"
 		fi
@@ -215,11 +231,6 @@ start_service() {
 			logger -t turboacc "WARNING: failed to set tcp_congestion_control=$tcpcca"
 	else
 		logger -t turboacc "WARNING: tcpcca=$tcpcca not available, keeping current"
-	fi
-
-	# ---------- reload firewall (may be needed for fullcone rules) ----------
-	if [ -x /etc/init.d/firewall ]; then
-		/etc/init.d/firewall reload >/dev/null 2>&1 || true
 	fi
 
 	logger -t turboacc "started (fastpath=$fastpath fullcone=$fullcone tcpcca=$tcpcca)"
