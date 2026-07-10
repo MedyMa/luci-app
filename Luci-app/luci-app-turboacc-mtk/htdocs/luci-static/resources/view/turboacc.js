@@ -1336,7 +1336,7 @@ function renderStyle() {
 
 		'.cbi-value-field .ta-engine-hint{position:absolute;left:0;top:calc(100% + 6px);z-index:8;min-width:min(520px,calc(100vw - 48px));max-width:560px;padding:12px 16px;border-radius:12px;background:var(--ta-info-bg);border:1px solid var(--ta-panel-border);box-shadow:0 12px 28px rgba(0,0,0,.12);color:var(--ta-info);font-size:.82rem;font-weight:600;line-height:1.5;opacity:0;visibility:hidden;transform:translateY(-4px);transition:opacity .18s ease,transform .18s ease,visibility .18s ease;pointer-events:none}',
 
-		'.cbi-value-field:hover .ta-engine-hint{opacity:1;visibility:visible;transform:translateY(0)}',
+		'.ta-engine-status:hover ~ .ta-engine-hint{opacity:1;visibility:visible;transform:translateY(0)}',
 
 		'.ta-dark .ta-engine-hint{box-shadow:0 12px 28px rgba(0,0,0,.35)}',
 
