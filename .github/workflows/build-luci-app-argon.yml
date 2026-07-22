@@ -1,0 +1,315 @@
+name: Build luci-theme-argon
+
+on:
+  workflow_dispatch:
+    inputs:
+      openwrt_target:
+        description: OpenWrt target
+        required: false
+        default: 'mediatek'
+      openwrt_subtarget:
+        description: OpenWrt subtarget
+        required: false
+        default: 'filogic'
+      publish_release:
+        description: Publish built packages to GitHub Releases
+        required: false
+        default: false
+        type: boolean
+      release_tag:
+        description: 'Release tag to use when publishing from workflow_dispatch (for example: argon-v3.0.0)'
+        required: false
+        default: ''
+  push:
+    tags:
+      - 'argon-v*'
+    paths:
+      - '.github/workflows/build-luci-app-argon.yml'
+      - 'luci-theme-argon/**'
+  pull_request:
+    paths:
+      - '.github/workflows/build-luci-app-argon.yml'
+      - 'luci-theme-argon/**'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - build_profile: 24.10-ipk
+            sdk_distribution: immortalwrt
+            openwrt_version: 24.10.6
+            pkg_format: ipk
+          - build_profile: 25.12-apk
+            sdk_distribution: immortalwrt
+            openwrt_version: 25.12-SNAPSHOT
+            pkg_format: apk
+
+    env:
+      BUILD_PROFILE: ${{ matrix.build_profile }}
+      SDK_DISTRIBUTION: ${{ matrix.sdk_distribution }}
+      OPENWRT_VERSION: ${{ matrix.openwrt_version }}
+      OPENWRT_TARGET: ${{ inputs.openwrt_target || 'mediatek' }}
+      OPENWRT_SUBTARGET: ${{ inputs.openwrt_subtarget || 'filogic' }}
+      PKG_FORMAT: ${{ matrix.pkg_format }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            clang \
+            curl \
+            file \
+            flex \
+            bison \
+            g++ \
+            gawk \
+            gcc-multilib \
+            gettext \
+            git \
+            libncurses5-dev \
+            libssl-dev \
+            python3 \
+            python3-pyelftools \
+            python3-setuptools \
+            rsync \
+            subversion \
+            swig \
+            unzip \
+            wget \
+            zlib1g-dev \
+            zstd
+
+      - name: Download SDK
+        run: |
+          set -eux
+          case "$SDK_DISTRIBUTION" in
+            openwrt)
+              sdk_base_url="https://downloads.openwrt.org/releases/${OPENWRT_VERSION}/targets/${OPENWRT_TARGET}/${OPENWRT_SUBTARGET}"
+              sdk_prefix='openwrt-sdk'
+              sdk_ext='.tar.zst'
+              ;;
+            immortalwrt)
+              if echo "$OPENWRT_VERSION" | grep -q 'SNAPSHOT'; then
+                sdk_base_url="https://downloads.immortalwrt.org/snapshots/targets/${OPENWRT_TARGET}/${OPENWRT_SUBTARGET}"
+              else
+                sdk_base_url="https://downloads.immortalwrt.org/releases/${OPENWRT_VERSION}/targets/${OPENWRT_TARGET}/${OPENWRT_SUBTARGET}"
+              fi
+              sdk_prefix='immortalwrt-sdk'
+              sdk_ext='.tar.zst'
+              ;;
+            *)
+              echo "Unsupported SDK distribution: $SDK_DISTRIBUTION" >&2
+              exit 1
+              ;;
+          esac
+
+          sdk_target_id="${OPENWRT_TARGET}-${OPENWRT_SUBTARGET}"
+
+          _find_sdk() {
+            local base_url="$1" prefix="$2" ver="$3" tid="$4" ext="$5"
+            local page sdk_fname gcc_ver
+
+            page="$(curl -sSL --retry 2 --retry-delay 5 --max-time 30 "$base_url/" 2>/dev/null || true)"
+            if [ -n "$page" ]; then
+              sdk_fname="$(printf '%s\n' "$page" | grep -oE "${prefix}-${ver}-${tid}_[^\"]+${ext}" | head -n1)"
+              [ -z "$sdk_fname" ] && sdk_fname="$(printf '%s\n' "$page" | grep -oE "${prefix}-${tid}_[^\"]+${ext}" | head -n1)"
+              [ -n "$sdk_fname" ] && printf '%s\n' "$sdk_fname" && return 0
+            fi
+
+            for gcc_ver in 14.3.0 14.2.0 14.1.0 13.3.0 13.2.0 12.3.0 12.2.0 11.4.0 11.3.0; do
+              sdk_fname="${prefix}-${ver}-${tid}_gcc-${gcc_ver}_musl.Linux-x86_64${ext}"
+              if wget --spider -q --timeout=10 "$base_url/$sdk_fname" 2>/dev/null; then
+                printf '%s\n' "$sdk_fname" && return 0
+              fi
+              sdk_fname="${prefix}-${tid}_gcc-${gcc_ver}_musl.Linux-x86_64${ext}"
+              if wget --spider -q --timeout=10 "$base_url/$sdk_fname" 2>/dev/null; then
+                printf '%s\n' "$sdk_fname" && return 0
+              fi
+            done
+
+            return 1
+          }
+
+          sdk_file="$(_find_sdk "$sdk_base_url" "$sdk_prefix" "$OPENWRT_VERSION" "$sdk_target_id" "$sdk_ext")"
+          test -n "$sdk_file"
+          echo "Found SDK: $sdk_file"
+          wget -q --timeout=30 --tries=5 "$sdk_base_url/$sdk_file" -O sdk.tar.zst
+          tar --zstd -xf sdk.tar.zst
+          sdk_dir="$(find . -maxdepth 1 -type d -name "${sdk_prefix}-*" | head -n1)"
+          test -n "$sdk_dir"
+          echo "SDK_DIR=$sdk_dir" >> "$GITHUB_ENV"
+
+      - name: Update feeds
+        working-directory: ${{ env.SDK_DIR }}
+        run: |
+          set -eux
+          ./scripts/feeds update -a
+
+      - name: Inject package into LuCI feed
+        run: |
+          set -eux
+          package_makefile="$(find "$GITHUB_WORKSPACE" -type f -name Makefile \
+            -not -path "$GITHUB_WORKSPACE/.git/*" \
+            -not -path "$GITHUB_WORKSPACE/openwrt-sdk-*/*" \
+            -not -path "$GITHUB_WORKSPACE/immortalwrt-sdk-*/*" \
+            -print | while IFS= read -r candidate; do
+              if sed 's/\r$//' "$candidate" | grep -q '^PKG_NAME:=luci-theme-argon$'; then
+                printf '%s\n' "$candidate"
+                break
+              fi
+            done | head -n1)"
+          package_src="${package_makefile%/Makefile}"
+
+          if [ -z "$package_makefile" ] || [ ! -f "$package_makefile" ]; then
+            echo "Unable to locate luci-theme-argon Makefile in workspace" >&2
+            exit 1
+          fi
+
+          sed 's/\r$//' "$package_makefile" | grep -q '^PKG_NAME:=luci-theme-argon$'
+
+          sdk_feed_dir="$SDK_DIR/feeds/luci/themes/luci-theme-argon"
+          sdk_pkg_dir="$SDK_DIR/package/feeds/luci/luci-theme-argon"
+
+          mkdir -p "$SDK_DIR/feeds/luci/themes"
+          mkdir -p "$SDK_DIR/package/feeds/luci"
+          rm -rf "$sdk_feed_dir" "$sdk_pkg_dir"
+
+          rsync -a \
+            --exclude '.git/' \
+            --exclude '.github/' \
+            --exclude 'openwrt-sdk-*' \
+            --exclude 'immortalwrt-sdk-*' \
+            "$package_src/" "$sdk_feed_dir/"
+
+          # Fix CRLF for all scripts
+          find "$sdk_feed_dir" -type f \( \
+            -name Makefile -o \
+            -name '*.sh' -o \
+            -path '*/root/etc/init.d/*' -o \
+            -path '*/root/etc/uci-defaults/*' -o \
+            -path '*/root/usr/libexec/*' \
+          \) -exec sed -i 's/\r$//' {} +
+
+          ln -sfn "../../../feeds/luci/themes/luci-theme-argon" "$sdk_pkg_dir"
+          test -f "$sdk_feed_dir/Makefile"
+          test -f "$sdk_pkg_dir/Makefile"
+          sed 's/\r$//' "$sdk_feed_dir/Makefile" | grep -q '^PKG_NAME:=luci-theme-argon$'
+
+      - name: Install package definitions
+        working-directory: ${{ env.SDK_DIR }}
+        run: |
+          set -eux
+          ./scripts/feeds install -a
+
+      - name: Configure SDK
+        working-directory: ${{ env.SDK_DIR }}
+        run: |
+          set -eux
+          echo 'CONFIG_PACKAGE_luci-theme-argon=y' >> .config
+          make defconfig
+          grep '^CONFIG_PACKAGE_luci-theme-argon=' .config
+
+      - name: Compile package
+        working-directory: ${{ env.SDK_DIR }}
+        run: |
+          set -eux
+          make package/feeds/luci/luci-theme-argon/compile -j"$(nproc)" V=s
+
+      - name: Collect build artifacts
+        run: |
+          set -eux
+          artifact_dir="$RUNNER_TEMP/luci-theme-argon-artifacts"
+          rm -rf "$artifact_dir"
+          mkdir -p "$artifact_dir"
+
+          pkg_ext=".${PKG_FORMAT:-apk}"
+          find "$SDK_DIR/bin/packages" -type f \( \
+            -name "luci-theme-argon*${pkg_ext}" \
+            -o -name "luci-i18n-argon*${pkg_ext}" \
+            -o -path '*/luci/Packages*' \
+          \) -exec cp -f {} "$artifact_dir/" \;
+
+          if ! find "$artifact_dir" -maxdepth 1 -type f \( -name "luci-theme-argon*${pkg_ext}" -o -name "luci-theme-argon*.${PKG_FORMAT:-apk}" \) | grep -q .; then
+            echo "No luci-theme-argon ${pkg_ext} was produced by the build." >&2
+            echo "Dumping SDK bin/packages tree for diagnostics:" >&2
+            find "$SDK_DIR/bin/packages" -maxdepth 5 -type d | sort >&2
+            find "$SDK_DIR/bin/packages" -maxdepth 6 -type f -name "luci-theme-argon*" 2>/dev/null | sort >&2 || echo "(no luci-theme-argon files found anywhere)" >&2
+            exit 1
+          fi
+
+          echo "ARTIFACT_DIR=$artifact_dir" >> "$GITHUB_ENV"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: luci-theme-argon-${{ env.BUILD_PROFILE }}-${{ env.SDK_DISTRIBUTION }}-${{ env.OPENWRT_TARGET }}-${{ env.OPENWRT_SUBTARGET }}
+          path: ${{ env.ARTIFACT_DIR }}/
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/argon-v') || (github.event_name == 'workflow_dispatch' && inputs.publish_release)
+
+    steps:
+      - name: Determine release metadata
+        id: meta
+        run: |
+          set -eu
+          if [ "$GITHUB_EVENT_NAME" = 'workflow_dispatch' ]; then
+            tag='${{ inputs.release_tag }}'
+          else
+            tag="$GITHUB_REF_NAME"
+          fi
+
+          if [ -z "$tag" ]; then
+            echo 'release_tag is required when publishing from workflow_dispatch' >&2
+            exit 1
+          fi
+
+          display_tag="$tag"
+          case "$tag" in
+            argon-v*)
+              display_tag="v${tag#argon-v}"
+              ;;
+          esac
+
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "name=luci-theme-argon $display_tag" >> "$GITHUB_OUTPUT"
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          pattern: luci-theme-argon-*
+          path: release-assets
+
+      - name: List release assets
+        run: find release-assets -type f | sort
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: ${{ steps.meta.outputs.name }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          files: release-assets/**/*
+          fail_on_unmatched_files: true
+          body: |
+            Build outputs:
+            - ImmortalWrt 24.10.6 ipk
+            - ImmortalWrt 25.12-SNAPSHOT apk
+
+            Target: ${{ inputs.openwrt_target || 'mediatek' }}/${{ inputs.openwrt_subtarget || 'filogic' }}
+            Package architecture: all
