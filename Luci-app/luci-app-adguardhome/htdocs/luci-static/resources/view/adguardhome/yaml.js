@@ -376,8 +376,12 @@ return view.extend({
 			setStatus(t('CodeMirror failed to load, using textarea: ', 'CodeMirror 加载失败，已回退为文本框：') + err.message);
 		});
 
-		if (!rpcError)
-			poll.add(function() {
+		/* Clean up previous poll handle before re-adding */
+		if (this._aghPollHandle != null && typeof poll !== 'undefined' && poll.remove)
+			poll.remove(this._aghPollHandle);
+
+		if (!rpcError && typeof poll !== 'undefined' && poll.add)
+			this._aghPollHandle = poll.add(function() {
 				return callGetStatus().then(function(nextStatus) {
 					statusData = nextStatus || {};
 					editingLocked = yes(statusData.running);
@@ -388,6 +392,8 @@ return view.extend({
 					return null;
 				});
 			});
+		else
+			this._aghPollHandle = null;   // prevent stale handle on re-render
 
 		return node;
 	}

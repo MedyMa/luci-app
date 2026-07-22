@@ -269,15 +269,18 @@ return view.extend({
 		if (!rpcError) {
 			loadScope('runtime');
 			/* Store poll handle for cleanup on re-render */
-			if (this._aghPollHandle !== null && typeof poll !== 'undefined' && poll.remove)
+			if (this._aghPollHandle != null && typeof poll !== 'undefined' && poll.remove)
 				poll.remove(this._aghPollHandle);
-			this._aghPollHandle = poll.add(function() {
-				return callGetLog(scope, positions[scope] || 0).then(function(res) {
-					appendLog(res, false);
-				}).catch(function(err) {
-					status.textContent = actionError(err, t('Polling log failed', '轮询日志失败'));
-				});
-			}, 3);
+			if (typeof poll !== 'undefined' && poll.add)
+				this._aghPollHandle = poll.add(function() {
+					return callGetLog(scope, positions[scope] || 0).then(function(res) {
+						appendLog(res, false);
+					}).catch(function(err) {
+						status.textContent = actionError(err, t('Polling log failed', '轮询日志失败'));
+					});
+				}, 3);
+			else
+				this._aghPollHandle = null;   // prevent stale handle on re-render
 		}
 
 		return applyThemeClass(E('div', { 'class': 'agh-log' }, [

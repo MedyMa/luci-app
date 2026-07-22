@@ -309,7 +309,7 @@ return view.extend({
 		var h;
 		while (this._aghPollHandles.length) {
 			h = this._aghPollHandles.pop();
-			if (typeof poll !== 'undefined' && poll.remove)
+			if (h != null && typeof poll !== 'undefined' && poll.remove)
 				poll.remove(h);
 		}
 	},
