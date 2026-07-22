@@ -211,6 +211,12 @@ jobs:
         run: |
           set -eux
           ./scripts/feeds install -a
+          # 显式安装注入的包以确保 Kconfig 注册
+          ./scripts/feeds install luci-theme-argon || {
+            echo "WARNING: ./scripts/feeds install luci-theme-argon failed, checking feed state..." >&2
+            ls -la feeds/luci/themes/luci-theme-argon/Makefile 2>/dev/null || echo "Feed Makefile missing"
+            ls -la package/feeds/luci/luci-theme-argon/Makefile 2>/dev/null || echo "Package symlink missing"
+          }
 
       - name: Configure SDK
         working-directory: ${{ env.SDK_DIR }}
