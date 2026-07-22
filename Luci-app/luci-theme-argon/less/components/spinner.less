@@ -32,7 +32,11 @@
 
 // ── 暗色模式反色 ──────────────────────────────
 
-[data-theme="dark"] .spinning::before,
+[data-theme="dark"] .spinning::before {
+  border-color: var(--color-border);
+  border-top-color: var(--color-brand);
+}
+
 @media (prefers-color-scheme: dark) {
   [data-theme="auto"] .spinning::before {
     border-color: var(--color-border);

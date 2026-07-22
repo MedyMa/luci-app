@@ -27,7 +27,7 @@ define Build/Prepare/$(PKG_NAME)
 		root/usr/libexec/rpcd/luci.argon_wallpaper \
 		root/usr/share/rpcd/acl.d/luci-argon.json
 	do
-		[ -f "$(PKG_BUILD_DIR)/$$f" ] && chmod 0755 "$(PKG_BUILD_DIR)/$$f"
+		[ -f "$(PKG_BUILD_DIR)/$$f" ] && chmod 0644 "$(PKG_BUILD_DIR)/$$f"
 	done
 	# Convert CRLF to LF for all scripts
 	find "$(PKG_BUILD_DIR)/root" -type f \( \

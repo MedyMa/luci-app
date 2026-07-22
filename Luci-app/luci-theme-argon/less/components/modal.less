@@ -15,8 +15,12 @@
   justify-content: center;
   padding-top: 8vh;
   background: rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+
+  // 毛玻璃: @supports 守卫旧浏览器 (不支持时回退纯色遮罩)
+  @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
 
   // 入场动画
   animation: modal-fade-in var(--duration-slow) var(--ease-out) both;

@@ -72,7 +72,9 @@ header {
     font-size: var(--text-sm);
 
     li a {
-      display: block;
+      display: flex;
+      align-items: center;
+      min-height: 2.75rem;         // Apple HIG: 44px 触摸目标
       padding: 0.5rem 0.75rem;
       color: var(--color-text-secondary);
       text-decoration: none;
@@ -86,7 +88,8 @@ header {
         background: var(--color-surface-hover);
       }
 
-      &:focus-visible {
+      &:focus-visible,
+      &:focus {
         outline: 2px solid var(--color-border-focus);
         outline-offset: 2px;
       }

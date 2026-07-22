@@ -298,41 +298,52 @@
 
 // ── 暗色模式登录页覆写 ──────────────────────────
 
-[data-theme="dark"] .login-page,
-@media (prefers-color-scheme: dark) {
-  [data-theme="auto"] .login-page {
-    .login-container {
-      background-color: var(--glass-bg);
+._argon-login-dark() {
+  .login-container {
+    background-color: var(--glass-bg);
+
+    // 暗色模式毛玻璃: @supports 守卫
+    @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
       backdrop-filter: blur(var(--glass-blur));
       -webkit-backdrop-filter: blur(var(--glass-blur));
     }
+  }
 
-    .login-form {
-      background-color: transparent;
+  .login-form {
+    background-color: transparent;
 
-      .brand {
-        color: var(--color-text-secondary);
+    .brand {
+      color: var(--color-text-secondary);
+    }
+
+    .form-login {
+      .input-group {
+        &::before {
+          color: var(--color-text-secondary);
+        }
+
+        input {
+          background: transparent !important;
+          color: var(--color-text-primary);
+          border-bottom-color: var(--color-border) !important;
+        }
       }
 
-      .form-login {
-        .input-group {
-          &::before {
-            color: var(--color-text-secondary);
-          }
+      .cbi-button-apply {
+        background-color: var(--dark-primary) !important;
 
-          input {
-            background: transparent !important;
-            color: var(--color-text-primary);
-            border-bottom-color: var(--color-border) !important;
-          }
-        }
-
-        .cbi-button-apply {
-          background-color: var(--dark-primary) !important;
-
-          &:hover { opacity: 0.9; }
-        }
+        &:hover { opacity: 0.9; }
       }
     }
+  }
+}
+
+[data-theme="dark"] .login-page {
+  ._argon-login-dark();
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme="auto"] .login-page {
+    ._argon-login-dark();
   }
 }

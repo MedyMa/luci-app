@@ -55,7 +55,8 @@
       display: block;
       position: relative;
       margin: 0.125rem 0.5rem;
-      padding: 0.7rem 0 0.7rem 2.5rem;
+      padding: 0.75rem 0 0.75rem 2.5rem;
+      min-height: 2.75rem;         // Apple HIG: 44px 触摸目标
       font-size: 1rem;
       font-weight: var(--font-normal);
       color: var(--color-text-secondary);
@@ -250,8 +251,13 @@
   inset: 0;                         // Safari < 14.1 回退
   z-index: 99;
   background-color: rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+
+  // 毛玻璃: @supports 守卫旧浏览器
+  @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+  }
+
   transition: opacity var(--duration-normal) var(--ease-apple-default);
 
   &.active {
