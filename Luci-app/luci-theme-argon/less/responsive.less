@@ -1,0 +1,175 @@
+// ==========================================================================
+// Responsive — 移动端适配
+// ==========================================================================
+
+// ── ≤1600px: 大屏桌面 ──────────────────────────
+
+@media screen and (max-width: 1600px) {
+  header > .fill > .container > #logo {
+    margin: 0 2.5rem 0 0.5rem;
+  }
+
+  .main-left {
+    width: calc(0% + 13rem);
+  }
+
+  .cbi-value-title {
+    width: 14rem;
+    padding-right: 0.6rem;
+  }
+
+  .cbi-value-field .cbi-dropdown,
+  .cbi-value-field .cbi-input-select,
+  .cbi-value input[type="text"],
+  .cbi-value input[type="password"],
+  .cbi-value textarea {
+    min-width: 16rem;
+  }
+
+  #cbi-firewall-zone .cbi-input-select {
+    min-width: 8rem;
+  }
+
+  .cbi-input-textarea {
+    font-size: small;
+  }
+}
+
+// ── ≤1366px: 标准桌面 ──────────────────────────
+
+@media screen and (max-width: 1366px) {
+  .main-left {
+    width: calc(0% + 13rem);
+  }
+
+  .tabs > li > a,
+  .cbi-tabmenu > li > a {
+    padding: 0.25rem 0.75rem;
+  }
+
+  .panel-title {
+    font-size: var(--text-lg);
+    padding-bottom: 0.75rem;
+  }
+
+  table { width: 100% !important; }
+
+  .cbi-value-field .cbi-dropdown,
+  .cbi-value-field .cbi-input-select,
+  .cbi-value input[type="text"],
+  .cbi-value input[type="password"] {
+    min-width: 14rem;
+  }
+
+  #cbi-firewall-zone .cbi-input-select {
+    min-width: 5rem;
+  }
+
+  .main > .main-left > .nav > li,
+  .main > .main-left > .nav > li > a,
+  .main .main-left .nav > li > a:first-child,
+  .main > .main-left > .nav > .slide > .menu,
+  .main > .main-left > .nav > li > [data-title="Log_out"] {
+    font-size: 0.9rem;
+  }
+
+  .main > .main-left > .nav > .slide > .slide-menu > li > a {
+    font-size: var(--text-sm);
+  }
+
+  #modal_overlay {
+    top: 0;
+  }
+}
+
+// ── ≤1024px: 平板 / 小屏笔记本 ─────────────────
+
+@media screen and (max-width: 1024px) {
+  .login-page .login-container {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .cbi-value {
+    flex-direction: column;
+  }
+
+  .cbi-value-title {
+    flex: none;
+    width: 100%;
+    text-align: left;
+    padding-top: 0;
+  }
+
+  .cbi-value-description {
+    margin-left: 0;
+  }
+}
+
+// ── ≤768px: 手机 ───────────────────────────────
+
+@media screen and (max-width: 768px) {
+  // iOS Safari: 防止输入框聚焦时自动缩放 (font-size < 16px 触发)
+  input[type="text"],
+  input[type="password"],
+  input[type="email"],
+  input[type="number"],
+  input[type="search"],
+  input[type="url"],
+  input[type="tel"],
+  textarea,
+  select,
+  .cbi-input-text,
+  .cbi-input-password,
+  .cbi-input-textarea,
+  .cbi-input-select {
+    font-size: 16px !important;
+  }
+
+  .main-left {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100%;
+    z-index: 150;
+    transform: translateX(-100%);
+    transition: transform var(--duration-normal) var(--ease-out);
+    box-shadow: var(--shadow-xl);
+
+    &.active {
+      transform: translateX(0);
+    }
+  }
+
+  .main-right {
+    margin-left: 0 !important;
+  }
+
+  header .showSide {
+    display: flex;
+  }
+
+  .main > .container {
+    padding: var(--space-3);
+  }
+
+  h2 {
+    font-size: var(--text-xl);
+    padding: 0.75rem 1rem;
+  }
+
+  .login-page .login-container {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .login-page .login-form .form-login {
+    padding: 1rem 1.5rem;
+  }
+
+  .modal {
+    min-width: auto;
+    max-width: 95vw;
+    max-height: 90vh;
+  }
+}

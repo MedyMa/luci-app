@@ -1,0 +1,90 @@
+// ==========================================================================
+// Alert & Notification Component — 通知 / 警告 / 消息
+// ==========================================================================
+
+.alert-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  margin: 0.5rem 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+
+  // 入场动画
+  animation: alert-slide-in var(--duration-normal) var(--ease-out) both;
+
+  // 变体
+  &.alert-success {
+    color: #0d6b3d;
+    background: var(--color-success-muted);
+    border-color: rgba(var(--color-success-rgb), 0.25);
+  }
+
+  &.alert-warning {
+    color: #9a3d0f;
+    background: var(--color-warning-muted);
+    border-color: rgba(var(--color-warning-rgb), 0.25);
+  }
+
+  &.alert-danger,
+  &.alert-error {
+    color: #9a1a3a;
+    background: var(--color-danger-muted);
+    border-color: rgba(var(--color-danger-rgb), 0.25);
+  }
+
+  &.alert-info {
+    color: #0d5e7a;
+    background: var(--color-info-muted);
+    border-color: rgba(var(--color-info-rgb), 0.25);
+  }
+}
+
+// ── 命令输出中的浮动通知 ──────────────────────
+
+#command-rc-output .alert-message {
+  line-height: var(--leading-normal);
+  position: absolute;
+  top: 40px;
+  right: 32px;
+  max-width: 40%;
+  margin: 0;
+  animation: alert-banner-in 2s var(--ease-out) forwards;
+  word-break: break-word;
+  opacity: 0;
+}
+
+// ── 错误框 ────────────────────────────────────
+
+.errorbox {
+  padding: 0.75rem 1rem;
+  margin: 0.5rem 0;
+  color: var(--color-danger);
+  background: var(--color-danger-muted);
+  border: 1px solid rgba(var(--color-danger-rgb), 0.25);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+}
+
+// ── 动画关键帧 ────────────────────────────────
+
+@keyframes alert-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes alert-banner-in {
+  0%   { opacity: 0; transform: translateY(-12px); }
+  15%  { opacity: 1; transform: translateY(0); }
+  85%  { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-4px); }
+}

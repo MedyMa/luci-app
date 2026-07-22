@@ -1,0 +1,67 @@
+// out: ../htdocs/luci-static/argon/css/cascade.css, compress: true, sourceMap: false
+/**
+ *  Argon Theme v3 — Apple Design Edition
+ *  基于 luci-theme-argon v2.4.5 架构升级
+ *
+ *  Apple Design 原则:
+ *    - Damping 1.0 临界阻尼默认弹簧
+ *    - 响应在 pointer-down (scale 0.97 即时反馈)
+ *    - 对称入场/退场路径 (空间一致性)
+ *    - 毛玻璃材质 (backdrop-filter + 半透明)
+ *    - prefers-reduced-motion 全局支持
+ *    - 侧边栏折叠态 (icon-only 模式)
+ *
+ *  架构:
+ *    - CSS 自定义属性二段式主题 (data-theme="dark" / "auto")
+ *    - 组件化 Less (tokens → base → components → layout)
+ *    - 系统字体栈 (零额外下载, ~150KB节省)
+ *    - transitionend 事件驱动 (替代 setTimeout)
+ *
+ *  Copyright 2020-2026 Jerrykuku <jerrykuku@qq.com>
+ *  Licensed under Apache License 2.0
+ */
+
+// ═══════════════════════════════════════════════════════════════════════
+// 1. Design Tokens — Apple 设计变量
+// ═══════════════════════════════════════════════════════════════════════
+@import "tokens/colors.less";
+@import "tokens/typography.less";
+@import "tokens/motion.less";
+@import "tokens/spacing.less";
+
+// ═══════════════════════════════════════════════════════════════════════
+// 2. Base — 全局重置
+// ═══════════════════════════════════════════════════════════════════════
+@import "base/reset.less";
+@import "normalize.less";
+@import "pure-min.less";
+
+// ═══════════════════════════════════════════════════════════════════════
+// 3. Components — UI 组件 (Apple 流体交互)
+// ═══════════════════════════════════════════════════════════════════════
+@import "components/button.less";
+@import "components/form.less";
+@import "components/table.less";
+@import "components/tab.less";
+@import "components/modal.less";
+@import "components/tooltip.less";
+@import "components/alert.less";
+@import "components/spinner.less";
+
+// ═══════════════════════════════════════════════════════════════════════
+// 4. Layout — 页面布局 (毛玻璃 + 折叠态)
+// ═══════════════════════════════════════════════════════════════════════
+@import "layout/header.less";
+@import "layout/sidebar.less";
+@import "layout/main.less";
+@import "layout/login.less";
+
+// ═══════════════════════════════════════════════════════════════════════
+// 5. Responsive
+// ═══════════════════════════════════════════════════════════════════════
+@import "responsive.less";
+
+// ═══════════════════════════════════════════════════════════════════════
+// 6. Page Fixes — 页面特定修复 (已审计: 色彩变量化)
+// ═══════════════════════════════════════════════════════════════════════
+@import "page-fix.less";

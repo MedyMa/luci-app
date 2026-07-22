@@ -1,0 +1,135 @@
+// ==========================================================================
+// Header Layout — 顶部导航栏
+// ==========================================================================
+
+header {
+  position: relative;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  height: var(--header-height);
+  padding: 0;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: var(--shadow-xs);
+  user-select: none;
+
+  // 底部装饰线
+  &::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--color-brand);
+  }
+
+  // 填充区域
+  > .fill {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    height: 100%;
+
+    > .container {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      height: 100%;
+      padding: 0 var(--space-4);
+      gap: var(--space-3);
+    }
+  }
+
+  // Logo
+  #logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-sans);
+    font-size: var(--text-lg);
+    font-weight: var(--font-bold);
+    color: var(--color-text-primary);
+    text-decoration: none;
+    white-space: nowrap;
+    margin-right: var(--space-4);
+    transition: opacity var(--duration-fast) var(--ease-out);
+
+    &:hover {
+      opacity: 0.8;
+    }
+  }
+
+  // 模式菜单
+  #modemenu {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: var(--text-sm);
+
+    li a {
+      display: block;
+      padding: 0.5rem 0.75rem;
+      color: var(--color-text-secondary);
+      text-decoration: none;
+      border-radius: var(--radius-md);
+      transition:
+        background-color var(--duration-fast) var(--ease-apple-default),
+        color var(--duration-fast) var(--ease-apple-default);
+
+      &:hover {
+        color: var(--color-text-primary);
+        background: var(--color-surface-hover);
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--color-border-focus);
+        outline-offset: 2px;
+      }
+
+      &.active {
+        color: var(--color-brand);
+        background: var(--color-brand-muted);
+        font-weight: var(--font-medium);
+      }
+    }
+  }
+
+  // 侧边栏切换按钮
+  .showSide {
+    display: none;
+    width: var(--control-height-md);
+    height: var(--control-height-md);
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    border-radius: var(--radius-md);
+    transition:
+      background-color var(--duration-fast) var(--ease-apple-default),
+      color var(--duration-fast) var(--ease-apple-default),
+      transform var(--duration-instant) var(--ease-apple-default);
+
+    &:hover {
+      background: var(--color-surface-hover);
+      color: var(--color-text-primary);
+    }
+
+    &:active {
+      transform: scale(0.97);
+    }
+
+    &.active {
+      color: var(--color-brand);
+    }
+  }
+}
+
+// ── 暗色模式 header 底部装饰线 ────────────────
+[data-theme="dark"] header::after {
+  background: var(--color-brand);
+}

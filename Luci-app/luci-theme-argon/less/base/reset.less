@@ -1,0 +1,79 @@
+// ==========================================================================
+// Base Reset — 全局重置 + Box-sizing + 基础元素
+// ==========================================================================
+
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+main {
+  display: block;
+}
+
+// ── 列表重置 ────────────────────────────────────
+
+ul, ol {
+  list-style: none;
+}
+
+// ── 表格重置 ────────────────────────────────────
+
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+// ── 链接重置 ────────────────────────────────────
+
+a {
+  background-color: transparent;
+  color: var(--color-text-link);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// ── 隐藏辅助类 ──────────────────────────────────
+
+.hidden { display: none !important; }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+// ── 滚动条美化 ──────────────────────────────────
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+
+  &:hover {
+    background: var(--color-text-tertiary);
+  }
+}
+
+// Firefox
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}

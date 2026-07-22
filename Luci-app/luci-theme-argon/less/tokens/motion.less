@@ -1,0 +1,89 @@
+// ==========================================================================
+// Motion Tokens — Apple Design 流体接口原则
+//
+// 核心原则 (WWDC 2018 "Designing Fluid Interfaces"):
+//   1. 响应在 pointer-down，不等 release
+//   2. 弹簧动画可中断、可从当前速度重定向
+//   3. Damping 1.0 (临界阻尼) 为默认，仅动量驱动时加 bounce
+//   4. 对称路径: 入场 = 退场的逆方向
+//   5. 高频操作 (>100次/天) 零动画
+//
+// Apple 弹簧参数映射 (CSS cubic-bezier 近似):
+//   Damping 1.0, Response 0.4 → cubic-bezier(0.25, 1, 0.25, 1)
+//   Damping 0.8, Response 0.4 → cubic-bezier(0.25, 1, 0.35, 1.1) (轻微 overshoot)
+//   Damping 0.8, Response 0.3 → cubic-bezier(0.15, 1, 0.3, 1.1)  (更快的 bounce)
+// ==========================================================================
+
+:root {
+  // ── Apple 弹簧缓动 ────────────────────────────
+
+  // 临界阻尼 (Damping 1.0) — 默认 UI 弹簧，无 overshoot
+  // 适用于: 按钮反馈、hover、下拉菜单、标签切换
+  --ease-apple-default:  cubic-bezier(0.25, 1, 0.25, 1);
+
+  // 轻微弹性 (Damping ~0.85) — 手势驱动时才用
+  // 适用于: 抽屉/面板关闭、滑动释放后的 settle
+  --ease-apple-spring:   cubic-bezier(0.25, 1, 0.35, 1.1);
+
+  // 强弹性 (Damping ~0.7) — 仅低频愉悦时刻
+  // 适用于: 登录页入场、成功动画
+  --ease-apple-bouncy:   cubic-bezier(0.15, 1, 0.4, 1.2);
+
+  // ── 传统缓动 (兼容保留) ───────────────────────
+  --ease-out:       var(--ease-apple-default);
+  --ease-in-out:    cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-in:        cubic-bezier(0.55, 0, 0.55, 0.2);
+  --ease-spring:    var(--ease-apple-spring);
+  --ease-linear:    linear;
+
+  // ── Apple 响应时长刻度 ─────────────────────────
+  // Response (苹果术语): 到达稳态的时间，非固定 duration
+
+  --duration-instant:  80ms;   // 按钮按下反馈 (pointer-down 即时)
+  --duration-fast:     150ms;  // hover/tooltip/小 popover (125-200ms)
+  --duration-normal:   220ms;  // 下拉/展开/选择 (150-250ms)
+  --duration-slow:     350ms;  // 模态框/抽屉 (200-500ms)
+  --duration-glacial:  500ms;  // 登录页入场/大过渡
+
+  // ── Apple 流体交互复合值 ──────────────────────
+  --transition-press:    transform var(--duration-instant) var(--ease-apple-default);
+  --transition-hover:    background-color var(--duration-fast) var(--ease-apple-default),
+                         box-shadow var(--duration-fast) var(--ease-apple-default);
+  --transition-fade:     opacity var(--duration-normal) var(--ease-apple-default);
+  --transition-slide:    transform var(--duration-normal) var(--ease-apple-spring),
+                         opacity var(--duration-normal) var(--ease-apple-default);
+  --transition-modal:    opacity var(--duration-slow) var(--ease-apple-default),
+                         transform var(--duration-slow) var(--ease-apple-spring);
+}
+
+// ==========================================================================
+// prefers-reduced-motion — Apple 辅助功能
+// 完全禁用所有非必要动画
+// ==========================================================================
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-instant:  0ms;
+    --duration-fast:     0ms;
+    --duration-normal:   0ms;
+    --duration-slow:     0ms;
+    --duration-glacial:  0ms;
+
+    --ease-apple-default: linear;
+    --ease-apple-spring:  linear;
+    --ease-apple-bouncy:  linear;
+    --ease-out:           linear;
+    --ease-in-out:        linear;
+    --ease-in:            linear;
+    --ease-spring:        linear;
+  }
+
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .spinning::before { animation: none !important; }
+}
+

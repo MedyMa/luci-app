@@ -1,0 +1,81 @@
+// ==========================================================================
+// Main Content Layout — 主内容区 (Apple 流体: 对称转场)
+// ==========================================================================
+
+.main {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: row;
+}
+
+.main-right {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+
+  // Apple 流体: 侧边栏折叠时内容区平滑扩展
+  transition: margin-left var(--duration-normal) var(--ease-apple-spring);
+
+  // 主内容容器
+  > .container {
+    flex: 1;
+    padding: var(--space-4) var(--space-5);
+  }
+}
+
+// ── 标签菜单容器 ──────────────────────────────
+
+#tabmenu {
+  margin: -0.5rem 0 0.5rem 0;
+}
+
+// ── 主菜单容器 ────────────────────────────────
+
+#mainmenu {
+  // 默认由 JS 控制显示
+}
+
+// ── 页面切换微过渡 ────────────────────────────
+
+#maincontent {
+  animation: page-enter var(--duration-normal) var(--ease-out) both;
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// ── 卡片/面板 ─────────────────────────────────
+
+.cbi-map,
+.cbi-section {
+  margin-bottom: var(--space-4);
+}
+
+.panel-title {
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  padding-bottom: 0.75rem;
+  color: var(--color-text-primary);
+}
+
+// ── 控制组 ───────────────────────────────────
+
+.control-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}

@@ -1,0 +1,224 @@
+// ==========================================================================
+// Typography Tokens — 系统字体栈优先，零额外下载
+// ==========================================================================
+
+:root {
+  // ── 字体栈 ──────────────────────────────────
+  // Sans: 中西文混排最优，macOS/iOS 使用 SF，Windows 使用 Segoe UI，
+  //       Android 使用 Roboto，Linux 回退到系统默认
+  --font-sans:  -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                "Helvetica Neue", Arial, "Noto Sans SC", "PingFang SC",
+                "Microsoft YaHei", "WenQuanYi Micro Hei", sans-serif;
+
+  // Mono: 代码 / 日志 / 终端输出
+  --font-mono:  "SF Mono", "Cascadia Code", "Fira Code", "JetBrains Mono",
+                Consolas, "Liberation Mono", "Courier New", monospace;
+
+  // Display: Logo / 品牌标识 (保留图标字体兼容)
+  --font-display: var(--font-sans);
+
+  // Icon: 图标字体
+  --font-icon:  "argon";
+
+  // ── 字号刻度 (1rem = 16px 基准) ────────────
+  --text-xs:    0.75rem;    // 12px — 标签/辅助文字
+  --text-sm:    0.8125rem;  // 13px — 表单说明/表格
+  --text-base:  0.875rem;   // 14px — 正文 (LuCI 默认)
+  --text-md:    0.9375rem;  // 15px — 强调正文
+  --text-lg:    1.0625rem;  // 17px — 小标题
+  --text-xl:    1.25rem;    // 20px — H3/面板标题
+  --text-2xl:   1.5rem;     // 24px — H2
+  --text-3xl:   1.875rem;   // 30px — H1
+
+  // ── 字重 ────────────────────────────────────
+  --font-normal:   400;
+  --font-medium:   500;
+  --font-semibold: 600;
+  --font-bold:     700;
+
+  // ── 行高 ────────────────────────────────────
+  --leading-tight:  1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed:1.625;
+
+  // ── 字间距 ──────────────────────────────────
+  --tracking-tight:  -0.01em;
+  --tracking-normal:  0;
+  --tracking-wide:    0.02em;
+
+  // ── 兼容旧变量名 ────────────────────────────
+  --font-family-sans-serif: var(--font-sans);
+}
+
+// ==========================================================================
+// 全局排版基础
+// ==========================================================================
+
+html {
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
+}
+
+// ── 标题层级 ──────────────────────────────────
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-sans);
+  font-weight: var(--font-semibold);
+  line-height: var(--leading-tight);
+  color: var(--color-text-primary);
+}
+
+h1 {
+  font-size: var(--text-3xl);
+  margin: 0.67em 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+h2 {
+  padding: 1rem 1.25rem;
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
+  color: var(--color-text-primary);
+  border-radius: 0.5rem;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-xs);
+}
+
+h3 {
+  margin: 0;
+  padding: 0.875rem 1.25rem;
+  font-size: var(--text-xl);
+  font-weight: var(--font-bold);
+  line-height: 1;
+  color: var(--color-text-primary);
+  border-radius: 0.5rem;
+  background: var(--color-surface);
+  display: block;
+  width: 100%;
+}
+
+h4 {
+  margin: 0;
+  padding: 0.75rem 1.25rem;
+  font-size: var(--text-base);
+  font-weight: var(--font-bold);
+  color: var(--color-text-secondary);
+}
+
+h4 em {
+  padding: 0 0.5rem;
+}
+
+h5 {
+  margin: 2rem 0 0 0;
+  padding-bottom: 0.5rem;
+  font-size: 1rem;
+}
+
+// ── 内联元素 ──────────────────────────────────
+
+a {
+  color: var(--color-text-link);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  &:active {
+    opacity: 0.7;
+  }
+}
+
+b, strong {
+  font-weight: var(--font-semibold);
+}
+
+small {
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  white-space: normal;
+  color: var(--color-text-tertiary);
+}
+
+code, kbd, samp {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  padding: 1px 5px;
+  color: var(--color-text-primary);
+  background: var(--color-surface-hover);
+  border: 1px solid var(--color-border-light);
+  border-radius: 4px;
+}
+
+pre {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: var(--leading-normal);
+  overflow: auto;
+  padding: 1rem;
+  background: var(--color-surface-hover);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  color: var(--color-text-primary);
+}
+
+hr {
+  box-sizing: content-box;
+  height: 0;
+  margin: 1rem 0;
+  overflow: visible;
+  opacity: 0.1;
+  border-color: var(--color-border);
+}
+
+abbr {
+  cursor: help;
+  text-decoration: underline;
+  color: var(--color-brand);
+}
+
+abbr[title] {
+  border-bottom: none;
+  text-decoration: underline dotted;
+}
+
+sub, sup {
+  font-size: 75%;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+}
+
+sub { bottom: -0.25em; }
+sup { top: -0.5em; }
+
+img { border-style: none; }
+
+// ── 图标字体 ──────────────────────────────────
+@font-face {
+  font-family: 'argon';
+  src: url('../fonts/argon.woff2') format('woff2'),
+       url('../fonts/argon.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}

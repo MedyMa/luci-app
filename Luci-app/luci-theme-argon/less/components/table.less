@@ -1,0 +1,94 @@
+// ==========================================================================
+// Table Component — 数据表格
+// ==========================================================================
+
+.table {
+  position: relative;
+  display: table;
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.tr {
+  display: table-row;
+  transition: background-color var(--duration-fast) var(--ease-out);
+
+  &:hover {
+    background-color: var(--color-surface-hover);
+  }
+
+  &:nth-child(even) {
+    background-color: rgba(var(--color-brand-rgb), 0.015);
+
+    &:hover {
+      background-color: var(--color-surface-hover);
+    }
+  }
+}
+
+.thead {
+  display: table-header-group;
+
+  .tr {
+    background: var(--color-bg-secondary);
+    border-bottom: 2px solid var(--color-border);
+
+    &:hover {
+      background: var(--color-bg-secondary);
+    }
+  }
+}
+
+.tbody {
+  display: table-row-group;
+}
+
+.tfoot {
+  display: table-footer-group;
+}
+
+.td, .th {
+  display: table-cell;
+  padding: 0.625rem 0.75rem;
+  font-size: var(--text-sm);
+  text-align: center;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--color-border-light);
+
+  &:first-child {
+    padding-left: 1.25rem;
+    text-align: left;
+  }
+
+  &:last-child {
+    padding-right: 1.25rem;
+  }
+}
+
+.th {
+  font-weight: var(--font-semibold);
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+  text-transform: none;
+  letter-spacing: var(--tracking-wide);
+  white-space: nowrap;
+}
+
+// ── CBI 表格 ────────────────────────────────────
+
+.cbi-section-table {
+  .cbi-row {
+    // 继承 .tr hover
+  }
+}
+
+// ── 表格容器 (溢出滚动) ────────────────────────
+
+.table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
