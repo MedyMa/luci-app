@@ -3,27 +3,6 @@ name: Build luci-app-fan
 on:
   workflow_dispatch:
     inputs:
-      sdk_distribution:
-        description: SDK distribution
-        required: false
-        default: 'immortalwrt'
-        type: choice
-        options:
-          - openwrt
-          - immortalwrt
-      openwrt_version:
-        description: OpenWrt / ImmortalWrt release version (overrides matrix)
-        required: false
-        default: ''
-      pkg_format:
-        description: Package output format (overrides matrix)
-        required: false
-        default: ''
-        type: choice
-        options:
-          - ''
-          - apk
-          - ipk
       openwrt_target:
         description: OpenWrt target
         required: false
@@ -33,12 +12,12 @@ on:
         required: false
         default: 'filogic'
       publish_release:
-        description: Publish the built packages to GitHub Releases
+        description: Publish built packages to GitHub Releases
         required: false
         default: false
         type: boolean
       release_tag:
-        description: 'Release tag (for example: fan-v0.1.0)'
+        description: 'Release tag to use when publishing from workflow_dispatch (for example: fan-v0.1.0)'
         required: false
         default: ''
   push:
@@ -60,25 +39,26 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     strategy:
       fail-fast: false
       matrix:
         include:
-          - openwrt_version: '24.10-SNAPSHOT'
-            pkg_format: 'ipk'
-            version_label: '24.10'
-          - openwrt_version: '25.12-SNAPSHOT'
-            pkg_format: 'apk'
-            version_label: '25.12'
+          - build_profile: 24.10-ipk
+            sdk_distribution: immortalwrt
+            openwrt_version: 24.10.6
+            pkg_format: ipk
+          - build_profile: 25.12-apk
+            sdk_distribution: immortalwrt
+            openwrt_version: 25.12-SNAPSHOT
+            pkg_format: apk
 
     env:
-      SDK_DISTRIBUTION: ${{ inputs.sdk_distribution || 'immortalwrt' }}
-      OPENWRT_VERSION: ${{ inputs.openwrt_version || matrix.openwrt_version }}
+      BUILD_PROFILE: ${{ matrix.build_profile }}
+      SDK_DISTRIBUTION: ${{ matrix.sdk_distribution }}
+      OPENWRT_VERSION: ${{ matrix.openwrt_version }}
       OPENWRT_TARGET: ${{ inputs.openwrt_target || 'mediatek' }}
       OPENWRT_SUBTARGET: ${{ inputs.openwrt_subtarget || 'filogic' }}
-      PKG_FORMAT: ${{ inputs.pkg_format || matrix.pkg_format }}
-      MATRIX_VERSION_LABEL: ${{ matrix.version_label }}
+      PKG_FORMAT: ${{ matrix.pkg_format }}
 
     steps:
       - name: Checkout repository
@@ -137,12 +117,36 @@ jobs:
           esac
 
           sdk_target_id="${OPENWRT_TARGET}-${OPENWRT_SUBTARGET}"
-          sdk_file="$(curl -fsSL "$sdk_base_url/" | grep -oE "${sdk_prefix}-${OPENWRT_VERSION}-${sdk_target_id}_[^\"[:space:]]+${sdk_ext}" | head -n1)"
-          if [ -z "$sdk_file" ]; then
-            sdk_file="$(curl -fsSL "$sdk_base_url/" | grep -oE "${sdk_prefix}-${sdk_target_id}_[^\"[:space:]]+${sdk_ext}" | head -n1)"
-          fi
+
+          _find_sdk() {
+            local base_url="$1" prefix="$2" ver="$3" tid="$4" ext="$5"
+            local page sdk_fname gcc_ver
+
+            page="$(curl -sSL --retry 2 --retry-delay 5 --max-time 30 "$base_url/" 2>/dev/null || true)"
+            if [ -n "$page" ]; then
+              sdk_fname="$(printf '%s\n' "$page" | grep -oE "${prefix}-${ver}-${tid}_[^\"]+${ext}" | head -n1)"
+              [ -z "$sdk_fname" ] && sdk_fname="$(printf '%s\n' "$page" | grep -oE "${prefix}-${tid}_[^\"]+${ext}" | head -n1)"
+              [ -n "$sdk_fname" ] && printf '%s\n' "$sdk_fname" && return 0
+            fi
+
+            for gcc_ver in 14.3.0 14.2.0 14.1.0 13.3.0 13.2.0 12.3.0 12.2.0 11.4.0 11.3.0; do
+              sdk_fname="${prefix}-${ver}-${tid}_gcc-${gcc_ver}_musl.Linux-x86_64${ext}"
+              if wget --spider -q --timeout=10 "$base_url/$sdk_fname" 2>/dev/null; then
+                printf '%s\n' "$sdk_fname" && return 0
+              fi
+              sdk_fname="${prefix}-${tid}_gcc-${gcc_ver}_musl.Linux-x86_64${ext}"
+              if wget --spider -q --timeout=10 "$base_url/$sdk_fname" 2>/dev/null; then
+                printf '%s\n' "$sdk_fname" && return 0
+              fi
+            done
+
+            return 1
+          }
+
+          sdk_file="$(_find_sdk "$sdk_base_url" "$sdk_prefix" "$OPENWRT_VERSION" "$sdk_target_id" "$sdk_ext")"
           test -n "$sdk_file"
-          wget -q "$sdk_base_url/$sdk_file" -O sdk.tar.zst
+          echo "Found SDK: $sdk_file"
+          wget -q --timeout=30 --tries=5 "$sdk_base_url/$sdk_file" -O sdk.tar.zst
           tar --zstd -xf sdk.tar.zst
           sdk_dir="$(find . -maxdepth 1 -type d -name "${sdk_prefix}-*" | head -n1)"
           test -n "$sdk_dir"
@@ -262,9 +266,11 @@ jobs:
             -o -path '*/luci/Packages*' \
           \) -exec cp -f {} "$artifact_dir/" \;
 
-          if ! find "$artifact_dir" -maxdepth 1 -type f -name "luci-app-fan*${pkg_ext}" | grep -q .; then
+          if ! find "$artifact_dir" -maxdepth 1 -type f \( -name "luci-app-fan*${pkg_ext}" -o -name "luci-app-fan*.${PKG_FORMAT:-apk}" \) | grep -q .; then
             echo "No luci-app-fan ${pkg_ext} was produced by the build." >&2
-            find "$SDK_DIR/bin/packages" -maxdepth 4 -type f | sort >&2
+            echo "Dumping SDK bin/packages tree for diagnostics:" >&2
+            find "$SDK_DIR/bin/packages" -maxdepth 5 -type d | sort >&2
+            find "$SDK_DIR/bin/packages" -maxdepth 6 -type f -name "luci-app-fan*" 2>/dev/null | sort >&2 || echo "(no luci-app-fan files found anywhere)" >&2
             exit 1
           fi
 
@@ -283,7 +289,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v7.0.1
         with:
-          name: luci-app-fan-${{ env.SDK_DISTRIBUTION }}-${{ env.OPENWRT_TARGET }}-${{ env.OPENWRT_SUBTARGET }}-${{ env.PKG_FORMAT }}-${{ env.MATRIX_VERSION_LABEL }}
+          name: luci-app-fan-${{ env.BUILD_PROFILE }}-${{ env.SDK_DISTRIBUTION }}-${{ env.OPENWRT_TARGET }}-${{ env.OPENWRT_SUBTARGET }}
           path: ${{ env.ARTIFACT_DIR }}/
           if-no-files-found: error
 
@@ -292,24 +298,19 @@ jobs:
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/fan-v') || (github.event_name == 'workflow_dispatch' && inputs.publish_release)
 
-    env:
-      SDK_DISTRIBUTION: ${{ inputs.sdk_distribution || 'immortalwrt' }}
-      OPENWRT_TARGET: ${{ inputs.openwrt_target || 'mediatek' }}
-      OPENWRT_SUBTARGET: ${{ inputs.openwrt_subtarget || 'filogic' }}
-
     steps:
       - name: Determine release metadata
         id: meta
         run: |
           set -eu
-          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
-            tag="${{ inputs.release_tag }}"
+          if [ "$GITHUB_EVENT_NAME" = 'workflow_dispatch' ]; then
+            tag='${{ inputs.release_tag }}'
           else
             tag="$GITHUB_REF_NAME"
           fi
 
           if [ -z "$tag" ]; then
-            echo "release_tag is required when publishing from workflow_dispatch" >&2
+            echo 'release_tag is required when publishing from workflow_dispatch' >&2
             exit 1
           fi
 
@@ -323,19 +324,14 @@ jobs:
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "name=luci-app-fan $display_tag" >> "$GITHUB_OUTPUT"
 
-      - name: Download build artifacts (24.10 ipk)
+      - name: Download build artifact
         uses: actions/download-artifact@v8.0.1
         with:
-          name: luci-app-fan-${{ env.SDK_DISTRIBUTION }}-${{ env.OPENWRT_TARGET }}-${{ env.OPENWRT_SUBTARGET }}-ipk-24.10
+          pattern: luci-app-fan-*
           path: release-assets
-        continue-on-error: true
 
-      - name: Download build artifacts (25.12 apk)
-        uses: actions/download-artifact@v8.0.1
-        with:
-          name: luci-app-fan-${{ env.SDK_DISTRIBUTION }}-${{ env.OPENWRT_TARGET }}-${{ env.OPENWRT_SUBTARGET }}-apk-25.12
-          path: release-assets
-        continue-on-error: true
+      - name: List release assets
+        run: find release-assets -type f | sort
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v3
@@ -347,11 +343,9 @@ jobs:
           files: release-assets/**/*
           fail_on_unmatched_files: true
           body: |
-            SDK distribution: ${{ env.SDK_DISTRIBUTION }}
-            Target: ${{ env.OPENWRT_TARGET }}/${{ env.OPENWRT_SUBTARGET }}
-            
-            ### Packages
-            - **24.10**: ipk format (`luci-app-fan_*.ipk`)
-            - **25.12**: apk format (`luci-app-fan_*.apk`)
-            
+            Build outputs:
+            - ImmortalWrt 24.10.6 ipk
+            - ImmortalWrt 25.12-SNAPSHOT apk
+
+            Target: ${{ inputs.openwrt_target || 'mediatek' }}/${{ inputs.openwrt_subtarget || 'filogic' }}
             Package architecture: all
