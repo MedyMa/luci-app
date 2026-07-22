@@ -96,6 +96,8 @@ function applyThemeClass(node, darkClass) {
 			}
 			if (!applyThemeClass._themeQueue)
 				applyThemeClass._themeQueue = [];
+			/* Prune detached nodes to prevent unbounded growth on re-render */
+			applyThemeClass._themeQueue = applyThemeClass._themeQueue.filter(function(n) { return n && document.body && document.body.contains(n); });
 			if (applyThemeClass._themeQueue.indexOf(node) === -1)
 				applyThemeClass._themeQueue.push(node);
 		}
@@ -269,8 +271,9 @@ return view.extend({
 		if (!rpcError) {
 			loadScope('runtime');
 			/* Store poll handle for cleanup on re-render */
-			if (this._aghPollHandle != null && typeof poll !== 'undefined' && poll.remove)
-				poll.remove(this._aghPollHandle);
+			if (this._aghPollHandle != null && typeof poll !== 'undefined' && poll.remove) {
+				try { poll.remove(this._aghPollHandle); } catch(e) { /* already removed by LuCI nav */ }
+			}
 			if (typeof poll !== 'undefined' && poll.add)
 				this._aghPollHandle = poll.add(function() {
 					return callGetLog(scope, positions[scope] || 0).then(function(res) {
@@ -281,6 +284,8 @@ return view.extend({
 				}, 3);
 			else
 				this._aghPollHandle = null;   // prevent stale handle on re-render
+		} else {
+			this._aghPollHandle = null;   // rpcError: clear handle from previous success
 		}
 
 		return applyThemeClass(E('div', { 'class': 'agh-log' }, [
@@ -297,5 +302,15 @@ return view.extend({
 				status
 			])
 		]), 'agh-dark');
-	}
+	},
+
+	handleSaveApply: function() {
+		/* Stop log polling when navigating away */
+		if (this._aghPollHandle != null && typeof poll !== 'undefined' && poll.remove) {
+			try { poll.remove(this._aghPollHandle); } catch(e) { /* already removed */ }
+			this._aghPollHandle = null;
+		}
+	},
+	handleSave: null,
+	handleReset: null
 });

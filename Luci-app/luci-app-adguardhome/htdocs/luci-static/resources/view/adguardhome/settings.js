@@ -103,6 +103,8 @@ function applyThemeClass(node, darkClass) {
 			}
 			if (!applyThemeClass._themeQueue)
 				applyThemeClass._themeQueue = [];
+			/* Prune detached nodes to prevent unbounded growth on re-render */
+			applyThemeClass._themeQueue = applyThemeClass._themeQueue.filter(function(n) { return n && document.body && document.body.contains(n); });
 			if (applyThemeClass._themeQueue.indexOf(node) === -1)
 				applyThemeClass._themeQueue.push(node);
 		}

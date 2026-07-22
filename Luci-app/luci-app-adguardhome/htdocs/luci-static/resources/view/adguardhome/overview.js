@@ -309,8 +309,9 @@ return view.extend({
 		var h;
 		while (this._aghPollHandles.length) {
 			h = this._aghPollHandles.pop();
-			if (h != null && typeof poll !== 'undefined' && poll.remove)
-				poll.remove(h);
+			if (h != null && typeof poll !== 'undefined' && poll.remove) {
+				try { poll.remove(h); } catch(e) { /* already removed by LuCI nav */ }
+			}
 		}
 	},
 	_aghStopTheme: function() {
