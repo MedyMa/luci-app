@@ -1,115 +1,21 @@
 // out: false
 // ==========================================================================
-// Normalize.less
-// Based on normalize.css for style reset and standardization
+// Normalize.less — 浏览器一致性重置 (精简版)
+// 全局重置 + 排版基础已在 tokens/typography.less + base/reset.less 中处理
+// 仅保留浏览器特有修复 (Firefox/Moz/Safari/WebKit quirks)
 // ==========================================================================
 
-// 1. Global Reset
-// ==========================================================================
-
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-// 2. Document Root Elements
+// 1. Document Root
 // ==========================================================================
 
 html {
-    -webkit-text-size-adjust: 100%;
-    -ms-text-size-adjust: 100%;
 }
 
-html,
-body {
-    margin: 0;
-    padding: 0;
-    height: 100%;
-    font-family: var(--font-family-sans-serif);
-}
-
-body {
-    background-color: var(--background-color);
-    color: var(--gray-dark);
-    font-size: 0.875rem;
-}
-
-// 3. Semantic Elements
+// 3. Semantic Elements — main/display 已在 base/reset.less 中处理
 // ==========================================================================
 
-main {
-    display: block;
-}
-
-// 4. Heading Elements
+// 4. Heading Elements — 由 tokens/typography.less 统一定义, 此处不再重复
 // ==========================================================================
-
-.h1,
-.h2,
-.h3,
-.h4,
-.h5,
-.h6,
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-    font-family: inherit;
-    font-weight: normal;
-    line-height: 1.1 !important;
-    color: inherit;
-}
-
-h1 {
-    font-size: 2rem;
-    margin: 0.67em 0;
-    padding-bottom: 0.5rem;
-    border-bottom: thin solid var(--lighter);
-}
-
-h2 {
-    padding: 1rem 1.25rem;
-    font-size: 1.25rem;
-    font-weight: bold;
-    color: var(--gray-dark);
-    border-radius: 0.25rem;
-    background: var(--white);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.03);
-}
-
-h3 {
-    margin: 0;
-    padding: 0.8755rem 1.25rem;
-    font-size: 1.1rem;
-    font-weight: bold;
-    line-height: 1;
-    color: var(--gray-dark);
-    border-radius: 0.25rem;
-    background: var(--white);
-    display: block;
-    width: 100%;
-}
-
-h4 {
-    margin: 0;
-    padding: 0.75rem 1.25rem;
-    font-size: 0.875rem;
-    font-weight: bold;
-    color: var(--gray-dark-400);
-
-    em {
-        padding: 0 0.5rem;
-    }
-}
-
-h5 {
-    margin: 2rem 0 0 0;
-    padding-bottom: 0.5rem;
-    font-size: 1rem;
-}
 
 // 5. Text Elements
 // ==========================================================================
@@ -194,39 +100,10 @@ img {
     border-style: none;
 }
 
-// 8. Form Elements
+// 8. Form Elements — 基础重置, 详细样式在 components/form.less
 // ==========================================================================
 
-button,
-input,
-optgroup,
-select,
-textarea {
-    font-family: inherit;
-    font-size: 100%;
-    line-height: 1.15;
-    margin: 0;
-}
-
-button,
-input {
-    overflow: visible;
-}
-
-button,
-select {
-    text-transform: none;
-}
-
-// Button Styles
-[type=button],
-[type=reset],
-[type=submit],
-button {
-    -webkit-appearance: button;
-    appearance: button;
-}
-
+// Firefox 专有修复
 [type=button]::-moz-focus-inner,
 [type=reset]::-moz-focus-inner,
 [type=submit]::-moz-focus-inner,
