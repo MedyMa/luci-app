@@ -164,7 +164,7 @@ jobs:
             -not -path "$GITHUB_WORKSPACE/openwrt-sdk-*/*" \
             -not -path "$GITHUB_WORKSPACE/immortalwrt-sdk-*/*" \
             -print | while IFS= read -r candidate; do
-              if sed 's/\r$//' "$candidate" | grep -q '^PKG_NAME:=luci-theme-argon$'; then
+              if echo "$candidate" | grep -q 'luci-theme-argon/Makefile$'; then
                 printf '%s\n' "$candidate"
                 break
               fi
@@ -176,7 +176,7 @@ jobs:
             exit 1
           fi
 
-          sed 's/\r$//' "$package_makefile" | grep -q '^PKG_NAME:=luci-theme-argon$'
+          sed 's/\r$//' "$package_makefile" | grep -q '^LUCI_TITLE:='
 
           sdk_feed_dir="$SDK_DIR/feeds/luci/applications/luci-theme-argon"
           sdk_pkg_dir="$SDK_DIR/package/feeds/luci/luci-theme-argon"
@@ -204,7 +204,7 @@ jobs:
           ln -sfn "../../../feeds/luci/applications/luci-theme-argon" "$sdk_pkg_dir"
           test -f "$sdk_feed_dir/Makefile"
           test -f "$sdk_pkg_dir/Makefile"
-          sed 's/\r$//' "$sdk_feed_dir/Makefile" | grep -q '^PKG_NAME:=luci-theme-argon$'
+          sed 's/\r$//' "$sdk_feed_dir/Makefile" | grep -q '^LUCI_TITLE:='
 
       - name: Install package definitions
         working-directory: ${{ env.SDK_DIR }}
