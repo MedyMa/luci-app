@@ -178,10 +178,10 @@ jobs:
 
           sed 's/\r$//' "$package_makefile" | grep -q '^PKG_NAME:=luci-theme-argon$'
 
-          sdk_feed_dir="$SDK_DIR/feeds/luci/themes/luci-theme-argon"
+          sdk_feed_dir="$SDK_DIR/feeds/luci/applications/luci-theme-argon"
           sdk_pkg_dir="$SDK_DIR/package/feeds/luci/luci-theme-argon"
 
-          mkdir -p "$SDK_DIR/feeds/luci/themes"
+          mkdir -p "$SDK_DIR/feeds/luci/applications"
           mkdir -p "$SDK_DIR/package/feeds/luci"
           rm -rf "$sdk_feed_dir" "$sdk_pkg_dir"
 
@@ -201,7 +201,7 @@ jobs:
             -path '*/root/usr/libexec/*' \
           \) -exec sed -i 's/\r$//' {} +
 
-          ln -sfn "../../../feeds/luci/themes/luci-theme-argon" "$sdk_pkg_dir"
+          ln -sfn "../../../feeds/luci/applications/luci-theme-argon" "$sdk_pkg_dir"
           test -f "$sdk_feed_dir/Makefile"
           test -f "$sdk_pkg_dir/Makefile"
           sed 's/\r$//' "$sdk_feed_dir/Makefile" | grep -q '^PKG_NAME:=luci-theme-argon$'
@@ -214,7 +214,7 @@ jobs:
           # 显式安装注入的包以确保 Kconfig 注册
           ./scripts/feeds install luci-theme-argon || {
             echo "WARNING: ./scripts/feeds install luci-theme-argon failed, checking feed state..." >&2
-            ls -la feeds/luci/themes/luci-theme-argon/Makefile 2>/dev/null || echo "Feed Makefile missing"
+            ls -la feeds/luci/applications/luci-theme-argon/Makefile 2>/dev/null || echo "Feed Makefile missing"
             ls -la package/feeds/luci/luci-theme-argon/Makefile 2>/dev/null || echo "Package symlink missing"
           }
 
