@@ -60,7 +60,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6.0.2
 
       - name: Install build dependencies
         run: |
@@ -257,7 +257,7 @@ jobs:
           echo "ARTIFACT_DIR=$artifact_dir" >> "$GITHUB_ENV"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: luci-theme-argon-${{ env.BUILD_PROFILE }}-${{ env.SDK_DISTRIBUTION }}-${{ env.OPENWRT_TARGET }}-${{ env.OPENWRT_SUBTARGET }}
           path: ${{ env.ARTIFACT_DIR }}/
@@ -295,7 +295,7 @@ jobs:
           echo "name=luci-theme-argon $display_tag" >> "$GITHUB_OUTPUT"
 
       - name: Download build artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8.0.1
         with:
           pattern: luci-theme-argon-*
           path: release-assets
@@ -304,7 +304,7 @@ jobs:
         run: find release-assets -type f | sort
 
       - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.meta.outputs.tag }}
           name: ${{ steps.meta.outputs.name }}
