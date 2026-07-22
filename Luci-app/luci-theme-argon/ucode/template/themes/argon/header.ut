@@ -26,7 +26,7 @@
 
 	// Theme settings — v3: CSS variable approach, no inline dark.css
 	let mode = 'auto';  // default: follow system preference
-	let bar_color = '#5e72e4';
+	let bar_color = '#3b82f6';
 	let primary, dark_primary, blur_radius, blur_radius_dark, blur_opacity, blur_opacity_dark;
 
 	if (access('/etc/config/argon')) {

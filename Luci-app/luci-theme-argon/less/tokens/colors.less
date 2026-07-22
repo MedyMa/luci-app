@@ -4,11 +4,11 @@
 // ==========================================================================
 
 :root {
-  // ── 品牌色 ──────────────────────────────────
-  --color-brand:             #5e72e4;
-  --color-brand-hover:       #4a5cd4;
-  --color-brand-pressed:     #3d4ec0;
-  --color-brand-muted:       rgba(94, 114, 228, 0.12);
+  // ── 品牌色 (科技蓝) ────────────────────────
+  --color-brand:             #3b82f6;
+  --color-brand-hover:       #2563eb;
+  --color-brand-pressed:     #1d4ed8;
+  --color-brand-muted:       rgba(59, 130, 246, 0.12);
 
   // ── 语义色 ──────────────────────────────────
   --color-success:           #2dce89;
@@ -55,7 +55,7 @@
 
   // ── 兼容旧变量名 (渐进迁移) ──────────────────
   --primary:                var(--color-brand);
-  --dark-primary:           #483d8b;
+  --dark-primary:           #1e40af;
   --header-color:           var(--color-text-inverse);
   --menu-bg-color:          var(--color-surface);
   --menu-color:             var(--color-text-secondary);
@@ -86,7 +86,7 @@
   --blur-opacity-dark:      0.5;
 
   // ── 品牌色 RGB 分量 (用于 rgba() 构建) ──────
-  --color-brand-rgb:        94, 114, 228;
+  --color-brand-rgb:        59, 130, 246;
   --color-success-rgb:      45, 206, 137;
   --color-warning-rgb:      251, 99, 64;
   --color-danger-rgb:       245, 54, 92;
@@ -122,16 +122,16 @@
   --glass-blur:             16px;
   --glass-border:           rgba(255, 255, 255, 0.08);
 
-  --color-brand-muted:      rgba(94, 114, 228, 0.18);
+  --color-brand-muted:      rgba(59, 130, 246, 0.18);
   --color-success-muted:    rgba(45, 206, 137, 0.18);
   --color-warning-muted:    rgba(251, 99, 64, 0.18);
   --color-danger-muted:     rgba(245, 54, 92, 0.18);
   --color-info-muted:       rgba(17, 205, 239, 0.18);
 
   // 暗色模式品牌色 (提升对比度至 WCAG AA ≥4.5:1)
-  --color-brand:            #7b8af0;
-  --color-brand-hover:      #95a1f4;
-  --color-brand-pressed:    #6575e0;
+  --color-brand:            #60a5fa;
+  --color-brand-hover:      #93bbfd;
+  --color-brand-pressed:    #3b82f6;
 
   // 兼容旧变量
   --header-color:           var(--color-text-inverse);
@@ -142,7 +142,7 @@
   --lighter:                var(--color-border);
   --background-color:       var(--color-bg);
   --login-form-bg-color:    var(--glass-bg);
-  --dark-primary:           #6c5ce7;
+  --dark-primary:           #3b82f6;
   --default:                #e3e3e6;
 }
 
@@ -174,16 +174,16 @@
     --glass-blur:             16px;
     --glass-border:           rgba(255, 255, 255, 0.08);
 
-    --color-brand-muted:      rgba(94, 114, 228, 0.18);
+    --color-brand-muted:      rgba(59, 130, 246, 0.18);
     --color-success-muted:    rgba(45, 206, 137, 0.18);
     --color-warning-muted:    rgba(251, 99, 64, 0.18);
     --color-danger-muted:     rgba(245, 54, 92, 0.18);
     --color-info-muted:       rgba(17, 205, 239, 0.18);
 
     // 暗色模式品牌色 (提升对比度)
-    --color-brand:            #7b8af0;
-    --color-brand-hover:      #95a1f4;
-    --color-brand-pressed:    #6575e0;
+    --color-brand:            #60a5fa;
+    --color-brand-hover:      #93bbfd;
+    --color-brand-pressed:    #3b82f6;
 
     --header-color:           var(--color-text-inverse);
     --menu-bg-color:          var(--color-surface);
@@ -193,7 +193,7 @@
     --lighter:                var(--color-border);
     --background-color:       var(--color-bg);
     --login-form-bg-color:    var(--glass-bg);
-    --dark-primary:           #6c5ce7;
+    --dark-primary:           #3b82f6;
     --default:                #e3e3e6;
   }
 }

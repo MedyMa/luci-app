@@ -260,6 +260,36 @@
   padding: var(--space-4) 0;
 }
 
+// ── 按钮图标 (使用 argon icon font) ──────────────
+
+.btn-icon-base() {
+  font-family: 'argon' !important;
+  font-style: normal;
+  font-weight: normal;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+// 保存 → ✓
+.cbi-button-apply::before,
+.cbi-button-save::before  { .btn-icon-base(); content: "\e900"; margin-right: 0.25rem; }
+// 重置 → ↺
+.cbi-button-reset::before       { .btn-icon-base(); content: "\e901"; margin-right: 0.25rem; }
+// 删除 → ✕
+.cbi-button-remove::before      { .btn-icon-base(); content: "\e902"; margin-right: 0.25rem; }
+// 刷新 → ↻
+.cbi-button-reload::before      { .btn-icon-base(); content: "\e903"; margin-right: 0.25rem; }
+// 编辑 → ✎
+.cbi-button-edit::before        { .btn-icon-base(); content: "\e904"; margin-right: 0.25rem; }
+
+// 无文字纯图标按钮隐藏 margin
+.cbi-button-up::before,
+.cbi-button-down::before,
+.btn-icon::before              { margin-right: 0; }
+
 // ── 加载中的按钮 ────────────────────────────────
 
 .btn-loading {
