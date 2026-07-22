@@ -117,8 +117,12 @@ function applyThemeClass(node, darkClass) {
 			}
 		}
 
-		window.addEventListener('pageshow', syncThemeClass);
-		window.addEventListener('focus', syncThemeClass);
+		/* Singleton window listeners — register once, not per applyThemeClass call */
+		if (!applyThemeClass._windowListenersAttached) {
+			applyThemeClass._windowListenersAttached = true;
+			window.addEventListener('pageshow', syncThemeClass);
+			window.addEventListener('focus', syncThemeClass);
+		}
 	}
 
 	return node;
@@ -521,9 +525,6 @@ return view.extend({
 	runtimeSignature: null,
 	pendingSyncFrame: null,
 	reducedMotion: false,
-	_pollHandle: null,
-	_animFrameId: null,
-	_cleanupTimers: [],
 
 	load: function() {
 		return Promise.all([
@@ -1079,16 +1080,9 @@ return view.extend({
 	},
 
 	animationLoop: function(timestamp) {
-		if (!this.root)
-			return;
-
-		if (!document.body || !document.body.contains(this.root)) {
+		if (!this.root || !document.body || !document.body.contains(this.root)) {
 			this.lastTick = 0;
 			this._stopAnimation();
-
-			if (!this.animationStarted)
-				this.requestFrame(this.animationLoop.bind(this));
-
 			return;
 		}
 
@@ -1317,6 +1311,18 @@ return view.extend({
 	},
 
 	render: function(data) {
+		/* Initialize per-instance mutable state (avoid prototype sharing) */
+		this._pollHandle = null;
+		this._animFrameId = null;
+		this._cleanupTimers = [];
+		this.animationStarted = false;
+		this.runtimeSignature = null;
+		this.pendingSyncFrame = null;
+		this.lastTick = 0;
+		this.rotorAngle = 0;
+		this.targetRotorSpeed = 0;
+		this.currentRotorSpeed = 0;
+
 		var initialStatus = normalizeStatus(data[1]);
 		var m = new form.Map('luci-fan', t('Fan Control', '风扇控制'), t('Configure Smart, Turbo and Manual fan profiles for pwm-fan capable boards such as the BPI-R4. The live panel reads CPU temperature, PWM duty, and fan speed feedback over ubus.', '为 BPI-R4 等支持 pwm-fan 的设备配置智能、狂暴和手动风扇模式。实时面板会通过 ubus 读取 CPU 温度、PWM 占空比，以及风扇转速反馈。'));
 		var s = m.section(form.TypedSection, 'luci-fan', t('Profile Settings', '基本设置'));
