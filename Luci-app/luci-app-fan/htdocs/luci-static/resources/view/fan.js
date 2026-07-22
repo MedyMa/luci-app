@@ -65,7 +65,6 @@ function applyThemeClass(node, darkClass) {
 	}
 	var retries = [ 0, 80, 220, 480, 900 ];
 	var index;
-	var themeObserver;
 	var mediaQuery;
 
 	syncThemeClass();
@@ -77,12 +76,34 @@ function applyThemeClass(node, darkClass) {
 		if (window.requestAnimationFrame)
 			window.requestAnimationFrame(syncThemeClass);
 
+		/* Singleton MutationObserver — avoid observer accumulation on re-render */
 		if (typeof MutationObserver !== 'undefined' && document.documentElement) {
-			themeObserver = new MutationObserver(syncThemeClass);
-			themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: [ 'class', 'style', 'data-theme' ] });
+			if (!applyThemeClass._themeObserver) {
+				applyThemeClass._themeObserver = new MutationObserver(function() {
+					isDarkTheme(); /* prime the internal state if needed */
+				});
+				applyThemeClass._themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: [ 'class', 'style', 'data-theme' ] });
+				if (document.body && document.body !== document.documentElement)
+					applyThemeClass._themeObserver.observe(document.body, { attributes: true, attributeFilter: [ 'class', 'style', 'data-theme' ] });
+			}
+			/* Re-run all registered nodes on theme change via a microtask queue */
+			if (!applyThemeClass._themeQueue)
+				applyThemeClass._themeQueue = [];
+			if (applyThemeClass._themeQueue.indexOf(node) === -1)
+				applyThemeClass._themeQueue.push(node);
 
-			if (document.body && document.body !== document.documentElement)
-				themeObserver.observe(document.body, { attributes: true, attributeFilter: [ 'class', 'style', 'data-theme' ] });
+			if (!applyThemeClass._themeFlusher) {
+				applyThemeClass._themeFlusher = new MutationObserver(function() {
+					var nodes = applyThemeClass._themeQueue;
+					var i;
+
+					for (i = 0; i < nodes.length; i++) {
+						if (nodes[i] && nodes[i].classList)
+							nodes[i].classList.toggle(darkClass, isDarkTheme());
+					}
+				});
+				applyThemeClass._themeFlusher.observe(document.documentElement, { attributes: true, attributeFilter: [ 'class', 'style', 'data-theme' ] });
+			}
 		}
 
 		if (window.matchMedia) {
@@ -451,15 +472,44 @@ function recommendedSmartWindow(status) {
 
 return view.extend({
 	requestFrame: function(callback) {
-		if (window.requestAnimationFrame)
-			return window.requestAnimationFrame.call(window, callback);
+		var id;
 
-		return window.setTimeout(function() { callback(Date.now()); }, 33);
+		if (window.requestAnimationFrame) {
+			id = window.requestAnimationFrame.call(window, callback);
+			this._animFrameId = id;
+			return id;
+		}
+
+		id = window.setTimeout(function() { callback(Date.now()); }, 33);
+		this._cleanupTimers.push(id);
+		return id;
 	},
 
 	statusPollInterval: function() {
 		var backendInterval = this.runtime && this.runtime.poll_interval != null ? Math.round(this.runtime.poll_interval) : 5;
 		return clamp(Math.max(2, backendInterval - 2), 2, 8);
+	},
+
+	_stopPoll: function() {
+		if (this._pollHandle !== null && typeof poll !== 'undefined' && poll.remove) {
+			poll.remove(this._pollHandle);
+			this._pollHandle = null;
+		}
+	},
+
+	_stopAnimation: function() {
+		if (this._animFrameId !== null && window.cancelAnimationFrame) {
+			window.cancelAnimationFrame(this._animFrameId);
+			this._animFrameId = null;
+		}
+	},
+
+	_clearTimers: function() {
+		var id;
+		while (this._cleanupTimers.length) {
+			id = this._cleanupTimers.pop();
+			window.clearTimeout(id);
+		}
 	},
 
 	degreeUnit: ' ' + String.fromCharCode(176) + 'C',
@@ -471,6 +521,9 @@ return view.extend({
 	runtimeSignature: null,
 	pendingSyncFrame: null,
 	reducedMotion: false,
+	_pollHandle: null,
+	_animFrameId: null,
+	_cleanupTimers: [],
 
 	load: function() {
 		return Promise.all([
@@ -1031,6 +1084,7 @@ return view.extend({
 
 		if (!document.body || !document.body.contains(this.root)) {
 			this.lastTick = 0;
+			this._stopAnimation();
 
 			if (!this.animationStarted)
 				this.requestFrame(this.animationLoop.bind(this));
@@ -1330,16 +1384,21 @@ return view.extend({
 			/* Entrance animation — scale+fade the shell in, remove class after animation completes */
 			if (dashboard && !this.reducedMotion) {
 				dashboard.classList.add('lf-entering');
-				window.setTimeout(function() {
+				this._cleanupTimers.push(window.setTimeout(function() {
 					dashboard.classList.remove('lf-entering');
-				}, 550);
+				}, 550));
 			}
 
 			this.collectNodes();
 			this.bindFields();
 			this.updateRuntime(initialStatus);
+
+			/* Stop previous poll before adding a new one (prevents accumulation on re-render) */
+			this._stopPoll();
+
+			this._animFrameId = null; /* allow new animation loop */
 			this.requestFrame(this.animationLoop.bind(this));
-			poll.add(this.pollStatus.bind(this), this.statusPollInterval());
+			this._pollHandle = poll.add(this.pollStatus.bind(this), this.statusPollInterval());
 			return applyThemeClass(E('div', { 'class': 'lf-page' }, [ dashboard, mapNode ]), 'lf-dark');
 		}.bind(this));
 	}
