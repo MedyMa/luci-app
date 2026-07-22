@@ -67,7 +67,6 @@ function applyThemeClass(node, darkClass) {
 	}
 	var retries = [ 0, 80, 220, 480, 900 ];
 	var index;
-	var themeObserver;
 	var mediaQuery;
 
 	syncThemeClass();
@@ -79,27 +78,56 @@ function applyThemeClass(node, darkClass) {
 		if (window.requestAnimationFrame)
 			window.requestAnimationFrame(syncThemeClass);
 
+		/* Singleton MutationObserver — avoid observer accumulation on re-render */
 		if (typeof MutationObserver !== 'undefined' && document.documentElement) {
-			themeObserver = new MutationObserver(syncThemeClass);
-			themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: [ 'class', 'style', 'data-theme' ] });
-
-			if (document.body && document.body !== document.documentElement)
-				themeObserver.observe(document.body, { attributes: true, attributeFilter: [ 'class', 'style', 'data-theme' ] });
+			if (!applyThemeClass._themeObserver) {
+				applyThemeClass._themeObserver = new MutationObserver(function() {
+					var nodes = applyThemeClass._themeQueue;
+					var i;
+					if (!nodes) return;
+					for (i = 0; i < nodes.length; i++) {
+						if (nodes[i] && nodes[i].classList)
+							nodes[i].classList.toggle(darkClass, isDarkTheme());
+					}
+				});
+				applyThemeClass._themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: [ 'class', 'style', 'data-theme' ] });
+				if (document.body && document.body !== document.documentElement)
+					applyThemeClass._themeObserver.observe(document.body, { attributes: true, attributeFilter: [ 'class', 'style', 'data-theme' ] });
+			}
+			if (!applyThemeClass._themeQueue)
+				applyThemeClass._themeQueue = [];
+			if (applyThemeClass._themeQueue.indexOf(node) === -1)
+				applyThemeClass._themeQueue.push(node);
 		}
 
-		if (window.matchMedia) {
-			mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-
-			if (mediaQuery) {
-				if (mediaQuery.addEventListener)
-					mediaQuery.addEventListener('change', syncThemeClass);
-				else if (mediaQuery.addListener)
-					mediaQuery.addListener(syncThemeClass);
+		/* Singleton mediaQuery — register once, traverse queue on change */
+		applyThemeClass._darkClass = darkClass;
+		if (!applyThemeClass._mediaQueryRegistered && window.matchMedia) {
+			applyThemeClass._mediaQueryRegistered = true;
+			var mq = window.matchMedia('(prefers-color-scheme: dark)');
+			if (mq) {
+				var onColorSchemeChange = function() {
+					var nodes = applyThemeClass._themeQueue;
+					var i;
+					if (!nodes) return;
+					for (i = 0; i < nodes.length; i++) {
+						if (nodes[i] && nodes[i].classList)
+							nodes[i].classList.toggle(applyThemeClass._darkClass || darkClass, isDarkTheme());
+					}
+				};
+				if (mq.addEventListener)
+					mq.addEventListener('change', onColorSchemeChange);
+				else if (mq.addListener)
+					mq.addListener(onColorSchemeChange);
 			}
 		}
 
-		window.addEventListener('pageshow', syncThemeClass);
-		window.addEventListener('focus', syncThemeClass);
+		/* Singleton window listeners — register once, not per applyThemeClass call */
+		if (!applyThemeClass._windowListenersAttached) {
+			applyThemeClass._windowListenersAttached = true;
+			window.addEventListener('pageshow', syncThemeClass);
+			window.addEventListener('focus', syncThemeClass);
+		}
 	}
 
 	return node;
@@ -147,7 +175,7 @@ function renderTerminalContent(state, content, reset) {
 }
 
 var style = [
-	'.agh-log{display:grid;gap:18px;color:var(--agh-text,var(--text-color-high,#203042));--agh-text:var(--text-color-high,#203042);--agh-border:rgba(76,108,157,.14);--agh-border-soft:rgba(76,108,157,.08);--agh-card-bg:rgba(249,252,255,.98);--agh-toolbar-bg:rgba(232,240,251,.94);--agh-tab-bg:rgba(224,235,250,.92);--agh-tab-active-bg:rgba(255,255,255,.98);--agh-tab-text:#5e6f88;--agh-tab-active-text:var(--text-color-high,#17373c);--agh-status-bg:rgba(232,240,251,.94);--agh-status-text:#5e6f88;--agh-console-bg:#0f1a2c;--agh-console-fg:#d7e8ff;--agh-alert-bg:#fff4df;--agh-alert-fg:#805718;--agh-hero-bg:linear-gradient(135deg,#294a7a 0%,#3d679f 52%,#6f93cc 100%);--agh-hero-shadow:0 20px 42px rgba(25,50,87,.16)}',
+	'.agh-log{display:grid;gap:18px;--agh-ease-out:cubic-bezier(.23,1,.32,1);--agh-ease-in-out:cubic-bezier(.77,0,.175,1);color:var(--agh-text,var(--text-color-high,#203042));--agh-text:var(--text-color-high,#203042);--agh-border:rgba(76,108,157,.14);--agh-border-soft:rgba(76,108,157,.08);--agh-card-bg:rgba(249,252,255,.98);--agh-toolbar-bg:rgba(232,240,251,.94);--agh-tab-bg:rgba(224,235,250,.92);--agh-tab-active-bg:rgba(255,255,255,.98);--agh-tab-text:#5e6f88;--agh-tab-active-text:var(--text-color-high,#17373c);--agh-status-bg:rgba(232,240,251,.94);--agh-status-text:#5e6f88;--agh-console-bg:#0f1a2c;--agh-console-fg:#d7e8ff;--agh-alert-bg:#fff4df;--agh-alert-fg:#805718;--agh-hero-bg:linear-gradient(135deg,#294a7a 0%,#3d679f 52%,#6f93cc 100%);--agh-hero-shadow:0 20px 42px rgba(25,50,87,.16)}',
 	'.agh-log.agh-dark,body.dark .agh-log,html.dark .agh-log,body.mode-dark .agh-log,body.argon-dark .agh-log,html[data-theme="dark"] .agh-log,body[data-theme="dark"] .agh-log{--agh-border:rgba(124,147,186,.22);--agh-border-soft:rgba(124,147,186,.16);--agh-card-bg:rgba(16,24,38,.96);--agh-toolbar-bg:rgba(9,15,27,.84);--agh-tab-bg:rgba(10,17,30,.9);--agh-tab-active-bg:rgba(23,35,52,.96);--agh-tab-text:#9eb1c5;--agh-tab-active-text:#f1f6fc;--agh-status-bg:rgba(9,15,27,.88);--agh-status-text:#aebed0;--agh-console-bg:#08111d;--agh-console-fg:#dce7f8;--agh-alert-bg:rgba(92,68,24,.32);--agh-alert-fg:#f5d28a;--agh-hero-bg:linear-gradient(135deg,#0c1424 0%,#15253d 52%,#234267 100%);--agh-hero-shadow:0 22px 44px rgba(0,0,0,.3)}',
 	'.agh-hero{border-radius:24px;padding:26px;color:#f7fbf8;background:var(--agh-hero-bg);box-shadow:var(--agh-hero-shadow)}',
 	'.agh-hero h2{all:unset;display:block!important;margin:0 0 10px!important;font-size:28px!important;line-height:1.18!important;font-weight:700!important;color:#fff!important;background:transparent!important;border:0!important;box-shadow:none!important}',
@@ -240,7 +268,10 @@ return view.extend({
 
 		if (!rpcError) {
 			loadScope('runtime');
-			poll.add(function() {
+			/* Store poll handle for cleanup on re-render */
+			if (this._aghPollHandle !== null && typeof poll !== 'undefined' && poll.remove)
+				poll.remove(this._aghPollHandle);
+			this._aghPollHandle = poll.add(function() {
 				return callGetLog(scope, positions[scope] || 0).then(function(res) {
 					appendLog(res, false);
 				}).catch(function(err) {

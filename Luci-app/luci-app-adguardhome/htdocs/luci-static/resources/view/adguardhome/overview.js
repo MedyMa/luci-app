@@ -133,9 +133,11 @@ function applyThemeClass(node, darkClass) {
 }
 
 var style = [
-	'.agh-page{display:grid;gap:18px;color:var(--agh-text,var(--text-color-high,#203042));--agh-text:var(--text-color-high,#203042);--agh-text-high:var(--text-color-high,#17373c);--agh-text-muted:var(--text-color-medium,#667084);--agh-border:rgba(76,108,157,.12);--agh-card-bg:rgba(249,252,255,.98);--agh-card-shadow:0 12px 30px rgba(25,50,87,.09);--agh-alert-bg:#fff4df;--agh-alert-fg:#805718;--agh-path-bg:linear-gradient(180deg,rgba(255,255,255,.98) 0%,rgba(239,245,255,.99) 100%);--agh-path-code:var(--text-color-high,#17373c);--agh-chip-bg:rgba(255,255,255,.16);--agh-chip-border:rgba(255,255,255,.18);--agh-hero-bg:linear-gradient(135deg,#294a7a 0%,#3d679f 52%,#6f93cc 100%);--agh-hero-shadow:0 20px 42px rgba(25,50,87,.18);--agh-compat-text:#eef5fd;--agh-compat-muted:rgba(247,251,248,.72);--agh-compat-pop-bg:linear-gradient(180deg,rgba(244,248,255,.98) 0%,rgba(237,244,255,.96) 100%);--agh-compat-pop-border:rgba(84,119,176,.16);--agh-compat-pop-shadow:0 16px 34px rgba(31,55,92,.16),inset 0 1px 0 rgba(255,255,255,.6);--agh-compat-pill-bg:rgba(255,255,255,.78);--agh-compat-pill-border:rgba(84,119,176,.12);--agh-compat-pill-strong:#355989}',
+	'.agh-page{display:grid;gap:18px;--agh-ease-out:cubic-bezier(.23,1,.32,1);--agh-ease-in-out:cubic-bezier(.77,0,.175,1);color:var(--agh-text,var(--text-color-high,#203042));--agh-text:var(--text-color-high,#203042);--agh-text-high:var(--text-color-high,#17373c);--agh-text-muted:var(--text-color-medium,#667084);--agh-border:rgba(76,108,157,.12);--agh-card-bg:rgba(249,252,255,.98);--agh-card-shadow:0 12px 30px rgba(25,50,87,.09);--agh-alert-bg:#fff4df;--agh-alert-fg:#805718;--agh-path-bg:linear-gradient(180deg,rgba(255,255,255,.98) 0%,rgba(239,245,255,.99) 100%);--agh-path-code:var(--text-color-high,#17373c);--agh-chip-bg:rgba(255,255,255,.16);--agh-chip-border:rgba(255,255,255,.18);--agh-hero-bg:linear-gradient(135deg,#294a7a 0%,#3d679f 52%,#6f93cc 100%);--agh-hero-shadow:0 20px 42px rgba(25,50,87,.18);--agh-compat-text:#eef5fd;--agh-compat-muted:rgba(247,251,248,.72);--agh-compat-pop-bg:linear-gradient(180deg,rgba(244,248,255,.98) 0%,rgba(237,244,255,.96) 100%);--agh-compat-pop-border:rgba(84,119,176,.16);--agh-compat-pop-shadow:0 16px 34px rgba(31,55,92,.16),inset 0 1px 0 rgba(255,255,255,.6);--agh-compat-pill-bg:rgba(255,255,255,.78);--agh-compat-pill-border:rgba(84,119,176,.12);--agh-compat-pill-strong:#355989}',
 	'.agh-page.agh-dark,body.dark .agh-page,html.dark .agh-page,body.mode-dark .agh-page,body.argon-dark .agh-page,html[data-theme="dark"] .agh-page,body[data-theme="dark"] .agh-page{--agh-text:#e7eef7;--agh-text-high:#eef5fd;--agh-text-muted:#a8b7c7;--agh-border:rgba(124,147,186,.22);--agh-card-bg:rgba(16,24,38,.96);--agh-card-shadow:0 14px 32px rgba(0,0,0,.24);--agh-alert-bg:rgba(92,68,24,.32);--agh-alert-fg:#f5d28a;--agh-path-bg:linear-gradient(180deg,rgba(17,27,43,.92) 0%,rgba(10,17,29,.98) 100%);--agh-path-code:#eef5fd;--agh-chip-bg:rgba(255,255,255,.10);--agh-chip-border:rgba(255,255,255,.14);--agh-hero-bg:linear-gradient(135deg,#0c1424 0%,#15253d 52%,#234267 100%);--agh-hero-shadow:0 22px 44px rgba(0,0,0,.3);--agh-compat-text:#eef5fd;--agh-compat-muted:rgba(231,238,247,.74);--agh-compat-pop-bg:linear-gradient(180deg,rgba(17,27,43,.98) 0%,rgba(12,20,35,.96) 100%);--agh-compat-pop-border:rgba(124,147,186,.22);--agh-compat-pop-shadow:0 16px 34px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.03);--agh-compat-pill-bg:rgba(255,255,255,.08);--agh-compat-pill-border:rgba(124,147,186,.18);--agh-compat-pill-strong:#eef5fd}',
 	'.agh-shell{position:relative;overflow:hidden;border-radius:24px;background:var(--agh-hero-bg);box-shadow:var(--agh-hero-shadow)}',
+	'.agh-shell.agh-entering{animation:agh-shell-enter 500ms var(--agh-ease-out) both}',
+	'@keyframes agh-shell-enter{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}',
 	'.agh-shell:before{content:"";position:absolute;right:-90px;top:-100px;width:300px;height:300px;border-radius:999px;background:radial-gradient(circle,rgba(160,196,255,.26),rgba(160,196,255,0) 70%)}',
 	'.agh-shell:after{content:"";position:absolute;left:-110px;bottom:-140px;width:340px;height:340px;border-radius:999px;background:radial-gradient(circle,rgba(214,230,255,.20),rgba(214,230,255,0) 70%)}',
 	'.agh-hero{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(260px,.75fr);gap:18px;padding:26px;color:#f7fbf8}',
@@ -368,7 +370,7 @@ return view.extend({
 			root.appendChild(E('section', { 'class': 'agh-alert' }, actionError(rpcError, t('Overview data unavailable'))));
 		if (!rpcError && yes(status.redirect_conflict))
 			root.appendChild(E('section', { 'class': 'agh-alert' }, redirectConflictMessage(status)));
-		root.appendChild(E('section', { 'class': 'agh-shell' }, E('div', { 'class': 'agh-hero' }, [
+		var heroShell = E('section', { 'class': 'agh-shell agh-entering' }, E('div', { 'class': 'agh-hero' }, [
 			E('div', { 'class': 'agh-hero-main' }, [
 				E('div', { 'class': 'agh-hero-topline' }, [
 					E('span', { 'class': 'agh-eyebrow' }, t('Network DNS Guard')),
@@ -387,7 +389,9 @@ return view.extend({
 				E('div', { 'class': 'agh-chip' }, [ E('span', {}, t('DNS Port')), E('strong', {}, text(status.dns_port, rpcError ? '?' : '-')) ]),
 				E('div', { 'class': 'agh-chip agh-redirect-chip' }, [ E('span', {}, t('Running Mode')), E('strong', { 'class': yes(status.redirected) ? 'agh-ok' : '' }, redirectModeLabel(effectiveRedirectMode(status))) ])
 			])
-		])));
+		]));
+		root.appendChild(heroShell);
+		window.setTimeout(function() { heroShell.classList.remove('agh-entering'); }, 550);
 		root.appendChild(E('section', { 'class': 'agh-grid' }, [
 			card(t('Web Console'), text(status.httpport, '3000'), 'agh-ok'),
 			card(t('Config File'), yes(status.config_ready) ? t('Ready') : t('Missing'), yes(status.config_ready) ? 'agh-ok' : 'agh-warn'),
