@@ -1234,7 +1234,7 @@ function renderStyle() {
 		/* ===== Dark: LuCI form elements ===== */
 		'.ta-dark .cbi-section,.ta-dark .cbi-section-descr,.ta-dark .cbi-section-node,.ta-dark .cbi-map-descr,.ta-dark .cbi-value-field,.ta-dark .cbi-value-title,.ta-dark .cbi-value-description,.ta-dark .cbi-tab-descr{color:var(--ta-text)!important}',
 
-		'.ta-dark .cbi-dropdown,.ta-dark select,.ta-dark .cbi-input-select,.ta-dark .cbi-input-text,.ta-dark input[type="text"],.ta-dark input[type="number"]{background:rgba(255,255,255,.06)!important;color:var(--ta-text-strong)!important;border-color:var(--ta-panel-border)!important}',
+		'.ta-dark .cbi-dropdown,.ta-dark select,.ta-dark .cbi-input-select,.ta-dark .cbi-input-text,.ta-dark input[type="text"],.ta-dark input[type="number"]{background:rgba(255,255,255,.06)!important;color:var(--ta-text-strong)!important;border-color:var(--ta-panel-border)!important;color-scheme:dark}',
 
 		'.ta-dark .cbi-input-checkbox,.ta-dark .cbi-input-radio{accent-color:var(--ta-info)!important}',
 
@@ -1675,7 +1675,9 @@ function renderStyle() {
 
 		'.ta-dark .ta-section-pill{background:rgba(255,255,255,.04)}',
 
-		'.ta-dark .ta-config-shell select,.ta-dark .ta-config-shell input[type="text"],.ta-dark .ta-config-shell input[type="number"],.ta-dark .ta-config-shell input:not([type]){background:rgba(255,255,255,.06)!important;color:var(--ta-text-strong)!important;-webkit-text-fill-color:var(--ta-text-strong);border-color:rgba(148,163,184,.24)!important}',
+		'.ta-dark .ta-config-shell select,.ta-dark .ta-config-shell input[type="text"],.ta-dark .ta-config-shell input[type="number"],.ta-dark .ta-config-shell input:not([type]){background:rgba(255,255,255,.06)!important;color:var(--ta-text-strong)!important;-webkit-text-fill-color:var(--ta-text-strong);border-color:rgba(148,163,184,.24)!important;color-scheme:dark}',
+
+		'.ta-dark .ta-config-shell select option{color:var(--ta-text-strong)!important;background:#1b2535!important}',
 
 		/* ===== State text colors ===== */
 		'.ta-hero-title.is-enabled,.ta-compact-state.is-enabled,.ta-status-value.is-enabled,.ta-section-pill.is-good .ta-section-pill-value,.ta-chip.is-ok{color:var(--ta-good)!important;-webkit-text-fill-color:var(--ta-good)}',
