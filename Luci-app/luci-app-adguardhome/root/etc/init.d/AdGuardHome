@@ -442,6 +442,40 @@ upstream_dns_has_all() {
 	return 0
 }
 
+# Returns 0 when upstream_dns contains a loopback (127.0.0.1/::1) entry whose
+# port is not currently listening and is not dnsmasq (53). Such an entry is
+# almost always a dead PassWall DNS front-end left over after PassWall stops.
+upstream_dns_has_dead_loopback() {
+	local file="$1" found entry port
+	[ -f "$file" ] || return 1
+	found=$(awk '
+		function norm(s) {
+			sub(/^[[:space:]]*-[[:space:]]*/, "", s)
+			sub(/[[:space:]]+#.*$/, "", s)
+			gsub(/^["'\''\[]|["'\''\]]$/, "", s)
+			sub(/^(tcp|udp|tls|https):\/\//, "", s)
+			return s
+		}
+		/^[[:space:]]*upstream_dns:[[:space:]]*/ { in_up = 1; next }
+		in_up {
+			if ($0 ~ /^[[:space:]]*($|#)/) next
+			if ($0 ~ /^[[:space:]]*[A-Za-z0-9_][A-Za-z0-9_-]*:/) { in_up = 0; next }
+			if ($0 ~ /^[[:space:]]*-/) {
+				e = norm($0)
+				if (e ~ /^(127\.0\.0\.1|::1|localhost):[0-9]+$/) print e
+			}
+		}' "$file" | while read -r entry; do
+		port=${entry##*:}
+		is_valid_port "$port" || continue
+		[ "$port" = '53' ] && continue
+		port_is_listening "$port" || {
+			printf 'dead\n'
+			break
+		}
+	done)
+	[ "$found" = 'dead' ]
+}
+
 managed_passwall_upstream_has_endpoint() {
 	local file="$1" endpoint="$2"
 	[ -f "$file" ] || return 1
@@ -509,37 +543,38 @@ sync_passwall_upstream_dns() {
 	[ -f "$configpath" ] || return 0
 	changed=0
 	get_opt enabled passwall_upstream_auto '0'
-	if [ "$enabled" != '1' ]; then
-		strip_managed_passwall_upstream_dns "$configpath"
-		[ "$?" = 10 ] && return 10
-		return 0
-	fi
 	get_opt redirect redirect "$DEFAULT_REDIRECT"
 	redirect=$(normalize_redirect_mode "$redirect")
-	if [ "$redirect" != 'redirect' ]; then
-		# Only redirect mode manages the upstream block; in every other mode
-		# just clean up whatever the block used to contain.
-		strip_managed_passwall_upstream_dns "$configpath"
-		[ "$?" = 10 ] && return 10
-		return 0
-	fi
 	get_opt fallback fallback_dns "$AGH_FALLBACK_DNS"
 	[ -n "$fallback" ] || fallback="$AGH_FALLBACK_DNS"
+
 	if is_valid_port "$port"; then
-		# PassWall is up: keep its DNS front-end as the managed upstream so
-		# domain-based routing (分流) keeps working.
-		endpoint="127.0.0.1:${port}"
-		managed_passwall_upstream_has_endpoint "$configpath" "$endpoint" && return 0
-		strip_managed_passwall_upstream_dns "$configpath"
-		status=$?
-		[ "$status" = 10 ] && changed=1
-		add_managed_passwall_upstream_dns "$configpath" "$endpoint"
-		status=$?
-		[ "$status" = 10 ] && changed=1
-	else
-		# PassWall is down: the managed block must hold working public
-		# resolvers so AdGuard Home keeps resolving and intercepting DNS
-		# instead of pointing at the dead loopback port.
+		# PassWall is up.
+		if [ "$enabled" = '1' ] && [ "$redirect" = 'redirect' ]; then
+			# Managed upstream for split-domain routing (分流).
+			endpoint="127.0.0.1:${port}"
+			managed_passwall_upstream_has_endpoint "$configpath" "$endpoint" && return 0
+			strip_managed_passwall_upstream_dns "$configpath"
+			status=$?
+			[ "$status" = 10 ] && changed=1
+			add_managed_passwall_upstream_dns "$configpath" "$endpoint"
+			status=$?
+			[ "$status" = 10 ] && changed=1
+		else
+			# Not managed in this mode/flag: only clean our own block, never
+			# the user's own upstream list.
+			strip_managed_passwall_upstream_dns "$configpath"
+			status=$?
+			[ "$status" = 10 ] && changed=1
+		fi
+		[ "$changed" = 1 ] && return 10
+		return 0
+	fi
+
+	# PassWall is down.
+	if [ "$enabled" = '1' ] && [ "$redirect" = 'redirect' ]; then
+		# Managed mode: keep the block populated with working public
+		# resolvers so DNS interception survives without PassWall.
 		if upstream_dns_has_all "$configpath" "$fallback"; then
 			return 0
 		fi
@@ -549,7 +584,28 @@ sync_passwall_upstream_dns() {
 		add_managed_passwall_upstream_dns "$configpath" "$fallback"
 		status=$?
 		[ "$status" = 10 ] && changed=1
+		[ "$changed" = 1 ] && return 10
+		return 0
 	fi
+	# Unmanaged (auto=0 / non-redirect) mode: rescue only when the user's own
+	# upstream list still points at a dead loopback port (a PassWall DNS
+	# front-end left behind), so manual configs survive PassWall stops too.
+	if upstream_dns_has_dead_loopback "$configpath"; then
+		if upstream_dns_has_all "$configpath" "$fallback"; then
+			return 0
+		fi
+		strip_managed_passwall_upstream_dns "$configpath"
+		status=$?
+		[ "$status" = 10 ] && changed=1
+		add_managed_passwall_upstream_dns "$configpath" "$fallback"
+		status=$?
+		[ "$status" = 10 ] && changed=1
+		[ "$changed" = 1 ] && return 10
+		return 0
+	fi
+	strip_managed_passwall_upstream_dns "$configpath"
+	status=$?
+	[ "$status" = 10 ] && changed=1
 	[ "$changed" = 1 ] && return 10
 	return 0
 }
@@ -1308,7 +1364,11 @@ start_passwall_compat_guard() {
 	local redirect="$1"
 	local mode
 	mode=$(normalize_redirect_mode "$redirect")
-	[ "$mode" = 'redirect' ] || return 0
+	# Watch PassWall state in every DNS-managing mode (redirect,
+	# dnsmasq-upstream, exchange): the dead-loopback upstream rescue in
+	# sync_passwall_upstream_dns must fire in all of them.  Only 'none' opts
+	# out entirely.
+	[ "$mode" = 'none' ] && return 0
 	# Explicitly stop old watcher before creating new procd instance
 	# This ensures convergence in pure shell without relying on procd's instance-override behavior
 	pgrep -f '/usr/share/AdGuardHome/passwall_watch.sh' 2>/dev/null | while read -r pid; do
