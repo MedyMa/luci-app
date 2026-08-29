@@ -209,14 +209,22 @@ return view.extend({
 		var clearButton = E('button', { 'class': 'btn cbi-button cbi-button-negative', 'disabled': rpcError ? 'disabled' : null }, t('Clear', '清空'));
 
 		function appendLog(res, reset) {
-			positions[scope] = Number(res.position || positions[scope] || 0);
+			var nextPos = Number(res.position || 0);
+			/* If the log file shrank (syslog mirror rotation, update log
+			 * truncation), the previous position no longer applies: replace
+			 * the view instead of appending, otherwise already-displayed
+			 * content is shown a second time. */
+			var shrank = nextPos < positions[scope];
+			if (shrank)
+				terminalStates[scope] = createTerminalState();
+			positions[scope] = nextPos;
 
 			if (scope === 'update') {
-				output.textContent = renderTerminalContent(terminalStates.update, res.content, reset);
+				output.textContent = renderTerminalContent(terminalStates.update, res.content, reset || shrank);
 			}
 			else {
 				var content = normalizeLogContent(res.content);
-				if (reset)
+				if (reset || shrank)
 					output.textContent = content;
 				else if (content)
 					output.textContent += content;

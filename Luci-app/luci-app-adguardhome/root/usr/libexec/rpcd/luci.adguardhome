@@ -185,6 +185,14 @@ read_log_window() {
 		# syscalls and is O(pos) in cost, which causes noticeable latency and
 		# memory pressure on large log files.  tail -c +N is O(file_size - pos).
 		LOG_CONTENT=$(tail -c "+$((pos + 1))" "$file" 2>/dev/null | head -c "$count" | tr -d '\000')
+		# Command substitution strips trailing newlines, which would make the
+		# UI merge the last line of this chunk with the first line of the next
+		# one.  Restore the newline only when this *window's* last byte (1-based
+		# pos+count) actually was one; a partial last line must keep
+		# state.line continuing across chunks.
+		if tail -c "+$((pos + count))" "$file" 2>/dev/null | head -c 1 | od -c 2>/dev/null | grep -q '\\n'; then
+			LOG_CONTENT="$LOG_CONTENT"$'\n'
+		fi
 		LOG_POS=$((pos + count))
 	else
 		LOG_POS="$size"
@@ -203,6 +211,9 @@ read_log_snapshot() {
 	case "$bytes" in ''|*[!0-9]*) bytes=32768 ;; esac
 	if [ "$size" -gt 0 ] 2>/dev/null; then
 		LOG_CONTENT=$(tail -c "$bytes" "$file" 2>/dev/null | tr -d '\000')
+		if tail -c 1 "$file" 2>/dev/null | od -c 2>/dev/null | grep -q '\\n'; then
+			LOG_CONTENT="$LOG_CONTENT"$'\n'
+		fi
 	fi
 	LOG_POS="$size"
 	LOG_SIZE="$size"
