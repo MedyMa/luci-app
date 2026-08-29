@@ -505,7 +505,7 @@ add_managed_passwall_upstream_dns() {
 }
 
 sync_passwall_upstream_dns() {
-	local configpath="$1" port="$2" enabled endpoint fallback changed status
+	local configpath="$1" port="$2" enabled redirect fallback endpoint changed status
 	[ -f "$configpath" ] || return 0
 	changed=0
 	get_opt enabled passwall_upstream_auto '0'
@@ -514,7 +514,17 @@ sync_passwall_upstream_dns() {
 		[ "$?" = 10 ] && return 10
 		return 0
 	fi
+	get_opt redirect redirect "$DEFAULT_REDIRECT"
+	redirect=$(normalize_redirect_mode "$redirect")
+	if [ "$redirect" != 'redirect' ]; then
+		# Only redirect mode manages the upstream block; in every other mode
+		# just clean up whatever the block used to contain.
+		strip_managed_passwall_upstream_dns "$configpath"
+		[ "$?" = 10 ] && return 10
+		return 0
+	fi
 	get_opt fallback fallback_dns "$AGH_FALLBACK_DNS"
+	[ -n "$fallback" ] || fallback="$AGH_FALLBACK_DNS"
 	if is_valid_port "$port"; then
 		# PassWall is up: keep its DNS front-end as the managed upstream so
 		# domain-based routing (分流) keeps working.
@@ -550,7 +560,10 @@ schedule_passwall_upstream_reload() {
 	(
 		sleep 2
 		rm -f "$PASSWALL_UPSTREAM_RELOAD_FILE"
-		AGH_SKIP_UPSTREAM_RELOAD=1 /etc/init.d/AdGuardHome force_reload >/dev/null 2>&1
+		# AGH does not watch its config file (SIGHUP only refreshes ARP/TLS),
+		# so a managed upstream change only takes effect on restart. Use
+		# reload (stop+start) here; the reload guard file prevents loops.
+		AGH_SKIP_UPSTREAM_RELOAD=1 /etc/init.d/AdGuardHome reload >/dev/null 2>&1
 	) &
 }
 
