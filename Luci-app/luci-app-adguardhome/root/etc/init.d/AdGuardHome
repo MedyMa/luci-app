@@ -27,6 +27,10 @@ PASSWALL_UPSTREAM_END='# agh-managed-passwall-upstream-end'
 PASSWALL_UPSTREAM_RELOAD_FILE='/var/run/AdGpasswall_upstream_reload'
 PASSWALL_DNS_BYPASS_COMMENT='AGH_COMPAT_BYPASS'
 GFWSET='gfwlist'
+# Resolvers used when PassWall's DNS front-end is not running. AdGuard Home
+# keeps these in its managed upstream list so DNS interception never points at
+# a dead loopback port after PassWall stops or crashes.
+AGH_FALLBACK_DNS='223.5.5.5 119.29.29.29'
 
 EXTRA_COMMANDS='do_redirect testbackup test_crontab force_reload isrunning'
 EXTRA_HELP='do_redirect 0|1
@@ -239,17 +243,22 @@ resolve_redirect_compat_state() {
 	local redirect="$1" port
 	redirect=$(normalize_redirect_mode "$redirect")
 	[ "$redirect" = 'redirect' ] || return 1
+	# Only treat PassWall as active when its DNS front port is actually
+	# listening. A leftover UCI switch or nft chain after a crash/kill must
+	# not keep AdGuard Home pointing at a dead upstream port.
 	if passwall_dns_redirect_enabled && passwall_dns_chain_ready; then
 		port=$(resolve_passwall_dns_front_port 2>/dev/null)
-		is_valid_port "$port" || port=''
-		printf 'passwall-dns-redirect:%s\n' "$port"
-		return 0
+		if is_valid_port "$port" && port_listening_or_unknown "$port"; then
+			printf 'passwall-dns-redirect:%s\n' "$port"
+			return 0
+		fi
 	fi
 	if passwall2_dns_redirect_enabled && passwall2_dns_chain_ready; then
 		port=$(resolve_passwall2_dns_front_port 2>/dev/null)
-		is_valid_port "$port" || port=''
-		printf 'passwall2-dns-redirect:%s\n' "$port"
-		return 0
+		if is_valid_port "$port" && port_listening_or_unknown "$port"; then
+			printf 'passwall2-dns-redirect:%s\n' "$port"
+			return 0
+		fi
 	fi
 	return 1
 }
@@ -425,6 +434,14 @@ upstream_dns_has_endpoint() {
 		END { exit(found ? 0 : 1) }' "$file"
 }
 
+upstream_dns_has_all() {
+	local file="$1" e
+	for e in $2; do
+		upstream_dns_has_endpoint "$file" "$e" || return 1
+	done
+	return 0
+}
+
 managed_passwall_upstream_has_endpoint() {
 	local file="$1" endpoint="$2"
 	[ -f "$file" ] || return 1
@@ -445,21 +462,30 @@ managed_passwall_upstream_has_endpoint() {
 }
 
 add_managed_passwall_upstream_dns() {
-	local file="$1" endpoint="$2" status
+	local file="$1" endpoints="$2" status
 	[ -f "$file" ] || return 0
-	[ -n "$endpoint" ] || return 0
-	upstream_dns_has_endpoint "$file" "$endpoint" && return 0
-	awk -v endpoint="$endpoint" -v begin="$PASSWALL_UPSTREAM_BEGIN" -v end="$PASSWALL_UPSTREAM_END" '
+	[ -n "$endpoints" ] || return 0
+	# Skip endpoints the user already lists outside the managed block.
+	local filtered='' e
+	for e in $endpoints; do
+		upstream_dns_has_endpoint "$file" "$e" || filtered="$filtered $e"
+	done
+	[ -n "$filtered" ] || return 0
+	awk -v endpoints="$filtered" -v begin="$PASSWALL_UPSTREAM_BEGIN" -v end="$PASSWALL_UPSTREAM_END" '
 		function leading_ws(s) {
 			match(s, /^[ ]*/)
 			return substr(s, RSTART, RLENGTH)
 		}
+		BEGIN { n = split(endpoints, arr, " ") }
+		function print_block(indent) {
+			print indent "  " begin
+			for (i = 1; i <= n; i++) print indent "  - " arr[i]
+			print indent "  " end
+		}
 		!inserted && /^[[:space:]]*upstream_dns:[[:space:]]*\[\][[:space:]]*($|#)/ {
 			indent = leading_ws($0)
 			print indent "upstream_dns:"
-			print indent "  " begin
-			print indent "  - " endpoint
-			print indent "  " end
+			print_block(indent)
 			inserted = 1
 			next
 		}
@@ -467,9 +493,7 @@ add_managed_passwall_upstream_dns() {
 			print
 			if (!inserted && $0 ~ /^[[:space:]]*upstream_dns:[[:space:]]*($|#)/) {
 				indent = leading_ws($0)
-				print indent "  " begin
-				print indent "  - " endpoint
-				print indent "  " end
+				print_block(indent)
 				inserted = 1
 			}
 		}
@@ -481,7 +505,7 @@ add_managed_passwall_upstream_dns() {
 }
 
 sync_passwall_upstream_dns() {
-	local configpath="$1" port="$2" enabled endpoint changed status
+	local configpath="$1" port="$2" enabled endpoint fallback changed status
 	[ -f "$configpath" ] || return 0
 	changed=0
 	get_opt enabled passwall_upstream_auto '0'
@@ -490,19 +514,32 @@ sync_passwall_upstream_dns() {
 		[ "$?" = 10 ] && return 10
 		return 0
 	fi
-	if ! is_valid_port "$port"; then
+	get_opt fallback fallback_dns "$AGH_FALLBACK_DNS"
+	if is_valid_port "$port"; then
+		# PassWall is up: keep its DNS front-end as the managed upstream so
+		# domain-based routing (分流) keeps working.
+		endpoint="127.0.0.1:${port}"
+		managed_passwall_upstream_has_endpoint "$configpath" "$endpoint" && return 0
 		strip_managed_passwall_upstream_dns "$configpath"
-		[ "$?" = 10 ] && return 10
-		return 0
+		status=$?
+		[ "$status" = 10 ] && changed=1
+		add_managed_passwall_upstream_dns "$configpath" "$endpoint"
+		status=$?
+		[ "$status" = 10 ] && changed=1
+	else
+		# PassWall is down: the managed block must hold working public
+		# resolvers so AdGuard Home keeps resolving and intercepting DNS
+		# instead of pointing at the dead loopback port.
+		if upstream_dns_has_all "$configpath" "$fallback"; then
+			return 0
+		fi
+		strip_managed_passwall_upstream_dns "$configpath"
+		status=$?
+		[ "$status" = 10 ] && changed=1
+		add_managed_passwall_upstream_dns "$configpath" "$fallback"
+		status=$?
+		[ "$status" = 10 ] && changed=1
 	fi
-	endpoint="127.0.0.1:${port}"
-	managed_passwall_upstream_has_endpoint "$configpath" "$endpoint" && return 0
-	strip_managed_passwall_upstream_dns "$configpath"
-	status=$?
-	[ "$status" = 10 ] && changed=1
-	add_managed_passwall_upstream_dns "$configpath" "$endpoint"
-	status=$?
-	[ "$status" = 10 ] && changed=1
 	[ "$changed" = 1 ] && return 10
 	return 0
 }
@@ -776,6 +813,16 @@ port_is_listening() {
 	fi
 	[ "$checked" = '1' ] || return 2
 	return 1
+}
+
+# Returns 0 when the port is confirmed listening, or when neither ss nor
+# netstat exists so the listening state cannot be verified (trust the other
+# state signals in that case).
+port_listening_or_unknown() {
+	local state
+	port_is_listening "$1"
+	state="$?"
+	[ "$state" = '0' ] || [ "$state" = '2' ]
 }
 
 wait_for_port_listening() {

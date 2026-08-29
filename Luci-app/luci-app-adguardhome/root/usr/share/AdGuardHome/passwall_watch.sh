@@ -36,6 +36,16 @@ port_is_listening() {
 	return 1
 }
 
+# Returns 0 when the port is confirmed listening, or when neither ss nor
+# netstat exists so the listening state cannot be verified (trust the chain
+# and UCI signals in that case).
+port_listening_or_unknown() {
+	local state
+	port_is_listening "$1"
+	state="$?"
+	[ "$state" = '0' ] || [ "$state" = '2' ]
+}
+
 _uci_bool_enabled() {
 	case "$1" in
 		1|on|true|yes|enabled) return 0 ;;
@@ -128,8 +138,10 @@ passwall2_chain_ready() {
 	command -v iptables >/dev/null 2>&1 && iptables -t nat -L PSW2_DNS >/dev/null 2>&1
 }
 
-# Replicates resolve_redirect_compat_state logic from init.d/AdGuardHome
-# Checks UCI switch + DNS chain readiness to avoid false positives
+# Replicates resolve_redirect_compat_state logic from init.d/AdGuardHome.
+# Checks UCI switch + DNS chain readiness AND that the PassWall DNS front port
+# is actually listening, so a killed/crashed PassWall (leftover UCI switch or
+# nft chain) is treated as down instead of keeping a dead upstream in AGH.
 passwall_state() {
 	local enabled dns_redirect port
 
@@ -138,8 +150,10 @@ passwall_state() {
 		dns_redirect=$(uci -q get passwall.@global[0].dns_redirect 2>/dev/null)
 		if [ "$dns_redirect" != '0' ] && passwall_chain_ready; then
 			port=$(detect_front_port passwall 2>/dev/null || true)
-			printf 'passwall:%s' "$port"
-			return 0
+			if is_valid_port "$port" && port_listening_or_unknown "$port"; then
+				printf 'passwall:%s' "$port"
+				return 0
+			fi
 		fi
 	fi
 
@@ -148,8 +162,10 @@ passwall_state() {
 		dns_redirect=$(uci -q get passwall2.@global[0].dns_redirect 2>/dev/null)
 		if [ "$dns_redirect" != '0' ] && passwall2_chain_ready; then
 			port=$(detect_front_port passwall2 2>/dev/null || true)
-			printf 'passwall2:%s' "$port"
-			return 0
+			if is_valid_port "$port" && port_listening_or_unknown "$port"; then
+				printf 'passwall2:%s' "$port"
+				return 0
+			fi
 		fi
 	fi
 
