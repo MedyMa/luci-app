@@ -790,6 +790,21 @@ clear_passwall_dns_bypass() {
 	esac
 }
 
+# Returns 0 when the AGH_COMPAT_BYPASS RETURN rules should be removed for the
+# given reason: only when the PassWall DNS chain no longer exists.  A
+# still-present chain means PassWall was killed/crashed and its leftover
+# redirect to the dead port would hijack LAN DNS the moment our RETURN rules
+# are gone, so they must stay; PassWall's next start recreates the chain and
+# wipes them anyway.
+passwall_bypass_should_clear() {
+	case "$1" in
+		passwall-dns-redirect) passwall_dns_chain_ready || return 0 ;;
+		passwall2-dns-redirect) passwall2_dns_chain_ready || return 0 ;;
+		*) return 0 ;;
+	esac
+	return 1
+}
+
 set_forward_dnsmasq() {
 	local port="$1" addr old_server server found first changed current_resolv current_noresolv current_strict
 	[ -n "$port" ] || return 0
@@ -1416,7 +1431,7 @@ _do_redirect() {
 	redirect_active=0
 	[ -n "$conflict_reason" ] && logger -t AdGuardHome "redirect mode conflicts with ${conflict_reason}; using ${effective_redirect} instead"
 	[ -n "$old_compat_reason" ] && {
-		clear_passwall_dns_bypass "$old_compat_reason"
+		passwall_bypass_should_clear "$old_compat_reason" && clear_passwall_dns_bypass "$old_compat_reason"
 		rm -f "$UPSTREAM_DNS_BACKUP_FILE"
 	}
 	case "$old_redirect" in
