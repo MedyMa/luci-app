@@ -468,10 +468,15 @@ upstream_dns_has_dead_loopback() {
 		port=${entry##*:}
 		is_valid_port "$port" || continue
 		[ "$port" = '53' ] && continue
-		port_is_listening "$port" || {
-			printf 'dead\n'
-			break
-		}
+		port_is_listening "$port"
+		state=$?
+		# Only a *confirmed* dead port (rc=1) triggers the rescue; rc=2 means
+		# neither ss nor netstat exists so we cannot verify - do not inject
+		# fallbacks based on a guess.
+		[ "$state" = '0' ] && continue
+		[ "$state" = '2' ] && continue
+		printf 'dead\n'
+		break
 	done)
 	[ "$found" = 'dead' ]
 }
