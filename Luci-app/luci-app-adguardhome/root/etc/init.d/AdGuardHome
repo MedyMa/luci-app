@@ -291,16 +291,21 @@ passwall_dnsmasq_shunt_port() {
 	return 0
 }
 
-# Dedicated PassWall DNS front-end port, only when its chain is loaded and the
-# port really answers.
+# Dedicated PassWall DNS front-end port.  It only exists while PassWall's own
+# "DNS redirect" is on: with it off PassWall runs no front-end at all and
+# stretches the system dnsmasq instead, so a port still cached in
+# /tmp/etc/passwall/var or left behind in its nft chain is a leftover and must
+# not be used as AdGuard Home's resolver.
 passwall_dns_front_port() {
 	local port
 	case "$1" in
 		passwall2)
+			passwall2_dns_redirect_enabled || return 1
 			passwall2_dns_chain_ready || return 1
 			port=$(resolve_passwall2_dns_front_port 2>/dev/null)
 			;;
 		*)
+			passwall_dns_redirect_enabled || return 1
 			passwall_dns_chain_ready || return 1
 			port=$(resolve_passwall_dns_front_port 2>/dev/null)
 			;;
@@ -535,6 +540,159 @@ strip_managed_passwall_upstream_dns() {
 	return "$status"
 }
 
+# ---------------------------------------------------------------------------
+# Managed upstream bookkeeping.
+#
+# AdGuard Home rewrites its own YAML from its internal configuration, which
+# drops our "# agh-managed-passwall-upstream-begin/end" comment markers while
+# keeping the entries themselves.  Once that happened the entries could never be
+# recognised again, so every PassWall layout switch left the previous resolver
+# behind and AdGuard Home load-balanced between a working and a dead upstream.
+#
+# The values we write are therefore also recorded next to the config file, and
+# entries are recycled by value instead of by marker.
+# ---------------------------------------------------------------------------
+MANAGED_UPSTREAM_FILE=''
+
+managed_upstream_state_file() {
+	local configpath="$1"
+	[ -n "$configpath" ] || return 1
+	printf '%s/.agh-managed-upstreams\n' "${configpath%/*}"
+}
+
+managed_upstream_values() {
+	[ -n "$MANAGED_UPSTREAM_FILE" ] || return 0
+	[ -s "$MANAGED_UPSTREAM_FILE" ] || return 0
+	cat "$MANAGED_UPSTREAM_FILE"
+}
+
+managed_upstream_has_value() {
+	[ -n "$1" ] || return 1
+	[ -n "$MANAGED_UPSTREAM_FILE" ] || return 1
+	grep -qxF -- "$1" "$MANAGED_UPSTREAM_FILE" 2>/dev/null
+}
+
+managed_upstream_remember() {
+	local value
+	[ -n "$1" ] || return 0
+	[ -n "$MANAGED_UPSTREAM_FILE" ] || return 0
+	mkdir -p "${MANAGED_UPSTREAM_FILE%/*}" 2>/dev/null
+	for value in $1; do
+		[ -n "$value" ] || continue
+		managed_upstream_has_value "$value" && continue
+		printf '%s\n' "$value" >> "$MANAGED_UPSTREAM_FILE"
+	done
+}
+
+managed_upstream_forget() {
+	local values="$1"
+	[ -n "$values" ] || return 0
+	[ -s "$MANAGED_UPSTREAM_FILE" ] || return 0
+	awk -v values="$values" '
+		BEGIN { n = split(values, drop, " ") }
+		{ for (i = 1; i <= n; i++) if ($0 == drop[i]) next; print }' \
+		"$MANAGED_UPSTREAM_FILE" > "$MANAGED_UPSTREAM_FILE.tmp" || return 1
+	mv "$MANAGED_UPSTREAM_FILE.tmp" "$MANAGED_UPSTREAM_FILE"
+}
+
+# Loopback endpoints currently listed in AdGuard Home's upstream_dns.
+upstream_dns_loopback_endpoints() {
+	local file="$1"
+	[ -f "$file" ] || return 0
+	awk '
+		function norm(s) {
+			sub(/^[[:space:]]*-[[:space:]]*/, "", s)
+			sub(/[[:space:]]+#.*$/, "", s)
+			gsub(/^["'\''\[]|["'\''\]]$/, "", s)
+			sub(/^(tcp|udp|tls|https):\/\//, "", s)
+			return s
+		}
+		/^[[:space:]]*upstream_dns:[[:space:]]*/ { in_up = 1; next }
+		in_up {
+			if ($0 ~ /^[[:space:]]*($|#)/) next
+			if ($0 ~ /^[[:space:]]*[A-Za-z0-9_][A-Za-z0-9_-]*:/) { in_up = 0; next }
+			if ($0 ~ /^[[:space:]]*-/) {
+				e = norm($0)
+				if (e ~ /^(127\.0\.0\.1|::1|localhost):[0-9]+$/) print e
+			}
+		}' "$file"
+}
+
+# First run after upgrading from a version that only used comment markers (or
+# after a hand-made list): adopt the loopback entries already present, plus the
+# ports PassWall may have written, so that the next layout switch can recycle
+# them.  Only done while the managed upstream feature is enabled, so that a
+# user-managed list is never touched.
+bootstrap_managed_upstreams() {
+	local file="$1" port
+	[ -n "$MANAGED_UPSTREAM_FILE" ] || return 0
+	[ -e "$MANAGED_UPSTREAM_FILE" ] && return 0
+	for port in \
+		"$(resolve_passwall_dns_front_port 2>/dev/null)" \
+		"$(resolve_passwall2_dns_front_port 2>/dev/null)" \
+		"$(uci -q get dhcp.@dnsmasq[0].port 2>/dev/null)" ; do
+		is_valid_port "$port" || continue
+		managed_upstream_remember "127.0.0.1:$port"
+	done
+	managed_upstream_remember "$(upstream_dns_loopback_endpoints "$file")"
+	: >> "$MANAGED_UPSTREAM_FILE"
+}
+
+# Remove the given endpoints from AdGuard Home's upstream_dns list.
+# Returns 10 when something was actually removed.
+remove_upstream_endpoints() {
+	local file="$1" endpoints="$2" status
+	[ -f "$file" ] || return 0
+	[ -n "$endpoints" ] || return 0
+	awk -v endpoints="$endpoints" '
+		function indent_len(s, n) {
+			n = match(s, /[^ ]/)
+			return n ? n - 1 : length(s)
+		}
+		function trim_scalar(s) {
+			sub(/^[[:space:]]*-[[:space:]]*/, "", s)
+			sub(/[[:space:]]+#.*$/, "", s)
+			sub(/^[[:space:]]+/, "", s)
+			sub(/[[:space:]]+$/, "", s)
+			gsub(/^["\047]|["\047]$/, "", s)
+			return s
+		}
+		BEGIN { n = split(endpoints, want, " ") }
+		{
+			# Everything outside the upstream_dns list is copied verbatim: this
+			# rewrites the whole YAML, so a missing fallback would truncate the
+			# config (and then dns.port could no longer be read).
+			if (!in_up) {
+				if ($0 ~ /^[[:space:]]*upstream_dns:[[:space:]]*/) {
+					in_up = 1
+					base = indent_len($0)
+				}
+				print
+				next
+			}
+			if ($0 ~ /^[[:space:]]*($|#)/) { print; next }
+			if (indent_len($0) <= base) { in_up = 0; print; next }
+			if ($0 ~ /^[[:space:]]*-/) {
+				value = trim_scalar($0)
+				for (i = 1; i <= n; i++) {
+					if (value == want[i]) {
+						removed = 1
+						next
+					}
+				}
+			}
+			print
+		}
+		END { exit(removed ? 10 : 0) }' "$file" > "$file.tmp"
+	status=$?
+	case "$status" in
+		0|10) mv "$file.tmp" "$file" ;;
+		*) rm -f "$file.tmp"; return "$status" ;;
+	esac
+	[ "$status" = '10' ] && return 10
+	return 0
+}
+
 upstream_dns_has_endpoint() {
 	local file="$1" endpoint="$2"
 	[ -f "$file" ] || return 1
@@ -679,7 +837,7 @@ add_managed_passwall_upstream_dns() {
 }
 
 sync_passwall_upstream_dns() {
-	local configpath="$1" port="$2" enabled redirect fallback endpoint changed status
+	local configpath="$1" port="$2" enabled redirect fallback endpoint changed status stale value
 	[ -f "$configpath" ] || return 0
 	changed=0
 	get_opt enabled passwall_upstream_auto '0'
@@ -687,71 +845,74 @@ sync_passwall_upstream_dns() {
 	redirect=$(normalize_redirect_mode "$redirect")
 	get_opt fallback fallback_dns "$AGH_FALLBACK_DNS"
 	[ -n "$fallback" ] || fallback="$AGH_FALLBACK_DNS"
+	MANAGED_UPSTREAM_FILE=$(managed_upstream_state_file "$configpath")
+	# Adopting entries that are already there is part of "we manage this"; with
+	# the flag off we only ever clean up values this package wrote itself.
+	[ "$enabled" = '1' ] && bootstrap_managed_upstreams "$configpath"
 
+	# 1) Which endpoint has to be present?  Empty means "none for now".
+	endpoint=''
 	if is_valid_port "$port"; then
-		# PassWall is up.
-		# The managed entry is kept in every interception mode: the mode decides
-		# how LAN DNS traffic reaches AdGuard Home, not which resolver AdGuard
-		# Home must query for PassWall's split-domain routing (分流).  Without it
-		# AdGuard Home falls back to plain public DNS, which poisons A/AAAA
-		# answers for foreign domains (YouTube/X/ChatGPT become unreachable).
+		# PassWall is up.  The managed entry is kept in every interception mode:
+		# the mode decides how LAN DNS traffic reaches AdGuard Home, not which
+		# resolver AdGuard Home must query for PassWall's split-domain routing
+		# (分流).  Without it AdGuard Home falls back to plain public DNS, which
+		# poisons A/AAAA answers for foreign domains.
 		if [ "$enabled" = '1' ] && [ "$redirect" != 'none' ]; then
-			# Managed upstream for split-domain routing (分流).
 			endpoint="127.0.0.1:${port}"
-			managed_passwall_upstream_has_endpoint "$configpath" "$endpoint" && return 0
-			strip_managed_passwall_upstream_dns "$configpath"
-			status=$?
-			[ "$status" = 10 ] && changed=1
-			add_managed_passwall_upstream_dns "$configpath" "$endpoint"
-			status=$?
-			[ "$status" = 10 ] && changed=1
-		else
-			# Not managed in this mode/flag: only clean our own block, never
-			# the user's own upstream list.
-			strip_managed_passwall_upstream_dns "$configpath"
-			status=$?
-			[ "$status" = 10 ] && changed=1
 		fi
-		[ "$changed" = 1 ] && return 10
-		return 0
+	elif [ "$enabled" = '1' ] && [ "$redirect" = 'redirect' ]; then
+		# PassWall is down.  Managed mode: keep working public resolvers so DNS
+		# interception survives without PassWall.
+		endpoint="$fallback"
+	elif upstream_dns_has_dead_loopback "$configpath"; then
+		# Unmanaged (auto=0 / non-redirect) mode: rescue only when the user's own
+		# upstream list still points at a dead loopback port (a PassWall DNS
+		# front-end left behind), so manual configs survive PassWall stops too.
+		endpoint="$fallback"
 	fi
 
-	# PassWall is down.
-	if [ "$enabled" = '1' ] && [ "$redirect" = 'redirect' ]; then
-		# Managed mode: keep the block populated with working public
-		# resolvers so DNS interception survives without PassWall.
-		if upstream_dns_has_all "$configpath" "$fallback"; then
-			return 0
-		fi
-		strip_managed_passwall_upstream_dns "$configpath"
-		status=$?
-		[ "$status" = 10 ] && changed=1
-		add_managed_passwall_upstream_dns "$configpath" "$fallback"
-		status=$?
-		[ "$status" = 10 ] && changed=1
-		[ "$changed" = 1 ] && return 10
-		return 0
+	# 2) Recycle what we wrote before, including the resolver of the *other*
+	# PassWall layout - that is what makes switching layouts safe.  AdGuard
+	# Home's YAML no longer carries our comment markers after it rewrites the
+	# file itself, so the entries are matched by value.
+	stale=''
+	for value in $(managed_upstream_values); do
+		case " $endpoint " in
+			*" $value "*) continue ;;
+		esac
+		stale="$stale $value"
+	done
+	# Recycling is part of the managed feature: with the flag off, leave whatever
+	# is in the list alone (the user owns it then) and only drop our own block.
+	if [ "$enabled" = '1' ] && [ -n "$stale" ]; then
+		remove_upstream_endpoints "$configpath" "$stale"
+		[ "$?" = '10' ] && changed=1
+		managed_upstream_forget "$stale"
 	fi
-	# Unmanaged (auto=0 / non-redirect) mode: rescue only when the user's own
-	# upstream list still points at a dead loopback port (a PassWall DNS
-	# front-end left behind), so manual configs survive PassWall stops too.
-	if upstream_dns_has_dead_loopback "$configpath"; then
-		if upstream_dns_has_all "$configpath" "$fallback"; then
-			return 0
-		fi
-		strip_managed_passwall_upstream_dns "$configpath"
-		status=$?
-		[ "$status" = 10 ] && changed=1
-		add_managed_passwall_upstream_dns "$configpath" "$fallback"
-		status=$?
-		[ "$status" = 10 ] && changed=1
-		[ "$changed" = 1 ] && return 10
-		return 0
-	fi
+	# Old-style marked block, for as long as AdGuard Home has not rewritten the
+	# file yet.
 	strip_managed_passwall_upstream_dns "$configpath"
 	status=$?
-	[ "$status" = 10 ] && changed=1
-	[ "$changed" = 1 ] && return 10
+	[ "$status" = '10' ] && changed=1
+
+	# 3) Install the endpoint that has to be there, or adopt it when it is
+	# already listed (so that a later layout switch can recycle it).
+	if [ -n "$endpoint" ]; then
+		if upstream_dns_has_all "$configpath" "$endpoint"; then
+			for value in $endpoint; do
+				managed_upstream_has_value "$value" && continue
+				logger -t AdGuardHome "upstream ${value} is already in AdGuard Home's list; managing it from now on"
+			done
+		else
+			add_managed_passwall_upstream_dns "$configpath" "$endpoint"
+			status=$?
+			[ "$status" = '10' ] && changed=1
+		fi
+		managed_upstream_remember "$endpoint"
+	fi
+
+	[ "$changed" = '1' ] && return 10
 	return 0
 }
 
