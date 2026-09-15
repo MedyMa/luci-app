@@ -618,6 +618,26 @@ upstream_dns_loopback_endpoints() {
 		}' "$file"
 }
 
+# Every endpoint currently listed in AdGuard Home's upstream_dns.
+upstream_dns_endpoints() {
+	local file="$1"
+	[ -f "$file" ] || return 0
+	awk '
+		function norm(s) {
+			sub(/^[[:space:]]*-[[:space:]]*/, "", s)
+			sub(/[[:space:]]+#.*$/, "", s)
+			gsub(/^["'\''\[]|["'\''\]]$/, "", s)
+			sub(/^(tcp|udp|tls|https):\/\//, "", s)
+			return s
+		}
+		/^[[:space:]]*upstream_dns:[[:space:]]*/ { in_up = 1; next }
+		in_up {
+			if ($0 ~ /^[[:space:]]*($|#)/) next
+			if ($0 ~ /^[[:space:]]*[A-Za-z0-9_][A-Za-z0-9_-]*:/) { in_up = 0; next }
+			if ($0 ~ /^[[:space:]]*-/) print norm($0)
+		}' "$file"
+}
+
 # First run after upgrading from a version that only used comment markers (or
 # after a hand-made list): adopt the loopback entries already present, plus the
 # ports PassWall may have written, so that the next layout switch can recycle
@@ -636,6 +656,48 @@ bootstrap_managed_upstreams() {
 	done
 	managed_upstream_remember "$(upstream_dns_loopback_endpoints "$file")"
 	: >> "$MANAGED_UPSTREAM_FILE"
+}
+
+# Claim the public resolvers this package injects while PassWall is down (the
+# configured fallback_dns) when they are sitting in the list unclaimed.
+#
+# They are not loopback addresses, so bootstrap_managed_upstreams() cannot see
+# them, and that is how they become permanent orphans: the YAML is a package
+# conffile and survives a firmware upgrade, while the ledger is a runtime file
+# that does not - so after an upgrade the list still holds resolvers this
+# package wrote while nothing claims them any more.  Under AdGuard Home's
+# default load_balance they then keep answering foreign lookups behind
+# PassWall's back.
+#
+# Claiming is gated hard, because getting it wrong would delete a deliberate
+# choice: every entry in the list has to be either such a fallback or a loopback
+# endpoint, and at least one loopback endpoint has to be present (that is what
+# marks the list as this package's PassWall block rather than a hand-made one).
+adopt_stranded_fallback_upstreams() {
+	local file="$1" fallback entry foreign=0 saw_loopback=0
+	get_opt fallback fallback_dns "$AGH_FALLBACK_DNS"
+	[ -n "$fallback" ] || fallback="$AGH_FALLBACK_DNS"
+	[ -n "$fallback" ] || return 0
+	for entry in $(upstream_dns_endpoints "$file"); do
+		case "$entry" in
+			127.0.0.1:*|::1:*|localhost:*) saw_loopback=1; continue ;;
+		esac
+		case " $fallback " in
+			*" $entry "*) continue ;;
+		esac
+		foreign=1
+		break
+	done
+	[ "$foreign" = '0' ] && [ "$saw_loopback" = '1' ] || return 0
+	for entry in $(upstream_dns_endpoints "$file"); do
+		case " $fallback " in
+			*" $entry "*) ;;
+			*) continue ;;
+		esac
+		managed_upstream_has_value "$entry" && continue
+		logger -t AdGuardHome "adopting the stranded fallback resolver ${entry} (written by this package, no longer recorded; a firmware upgrade drops the ledger while the config survives)"
+		managed_upstream_remember "$entry"
+	done
 }
 
 # Remove the given endpoints from AdGuard Home's upstream_dns list.
@@ -837,7 +899,7 @@ add_managed_passwall_upstream_dns() {
 }
 
 sync_passwall_upstream_dns() {
-	local configpath="$1" port="$2" enabled redirect fallback endpoint changed status stale value
+	local configpath="$1" port="$2" enabled redirect fallback endpoint changed status value
 	[ -f "$configpath" ] || return 0
 	changed=0
 	get_opt enabled passwall_upstream_auto '0'
@@ -848,7 +910,13 @@ sync_passwall_upstream_dns() {
 	MANAGED_UPSTREAM_FILE=$(managed_upstream_state_file "$configpath")
 	# Adopting entries that are already there is part of "we manage this"; with
 	# the flag off we only ever clean up values this package wrote itself.
-	[ "$enabled" = '1' ] && bootstrap_managed_upstreams "$configpath"
+	if [ "$enabled" = '1' ]; then
+		bootstrap_managed_upstreams "$configpath"
+		# Runs on every pass, not just on the bootstrap: a ledger lost to a
+		# firmware upgrade was already re-created by the time we get here, so the
+		# bootstrap guard is gone and this is what heals the stranded values.
+		adopt_stranded_fallback_upstreams "$configpath"
+	fi
 
 	# 1) Which endpoint has to be present?  Empty means "none for now".
 	endpoint=''
@@ -876,19 +944,24 @@ sync_passwall_upstream_dns() {
 	# PassWall layout - that is what makes switching layouts safe.  AdGuard
 	# Home's YAML no longer carries our comment markers after it rewrites the
 	# file itself, so the entries are matched by value.
-	stale=''
-	for value in $(managed_upstream_values); do
-		case " $endpoint " in
-			*" $value "*) continue ;;
-		esac
-		stale="$stale $value"
-	done
 	# Recycling is part of the managed feature: with the flag off, leave whatever
 	# is in the list alone (the user owns it then) and only drop our own block.
-	if [ "$enabled" = '1' ] && [ -n "$stale" ]; then
-		remove_upstream_endpoints "$configpath" "$stale"
-		[ "$?" = '10' ] && changed=1
-		managed_upstream_forget "$stale"
+	# Handled one value at a time, and a value is only forgotten once it is
+	# really gone from the file: forgetting one whose removal did not match would
+	# strand it in the list forever, with nothing left knowing this package put
+	# it there (which is exactly how a fallback block survives a firmware
+	# upgrade that dropped the ledger and then bypasses the PassWall front-end
+	# for good).
+	if [ "$enabled" = '1' ]; then
+		for value in $(managed_upstream_values); do
+			case " $endpoint " in
+				*" $value "*) continue ;;
+			esac
+			remove_upstream_endpoints "$configpath" "$value"
+			[ "$?" = '10' ] && changed=1
+			upstream_dns_has_endpoint "$configpath" "$value" && continue
+			managed_upstream_forget "$value"
+		done
 	fi
 	# Old-style marked block.  Leave it untouched when it already holds exactly
 	# the endpoint we want: stripping and re-adding it would report a change on
@@ -2031,10 +2104,19 @@ testbackup() {
 }
 
 write_keep_file() {
-	local upprotect item path
+	local upprotect item path ledger
 	get_opt upprotect upprotect ''
 	mkdir -p /lib/upgrade/keep.d 2>/dev/null
 	: > /lib/upgrade/keep.d/luci-app-adguardhome
+	# Always protect the managed-upstream ledger, whatever "upprotect" says.
+	# It is this package's own bookkeeping, and a sysupgrade keeps the AdGuard
+	# Home config (it is a package conffile) while dropping the ledger (a runtime
+	# file, and the generated keep list is empty unless the user set upprotect).
+	# Once that happens the values this package wrote are still in the list but
+	# nothing claims them, so they can never be recycled again.
+	get_opt path configpath "$DEFAULT_CONFIGPATH"
+	ledger=$(managed_upstream_state_file "$path" 2>/dev/null)
+	[ -n "$ledger" ] && echo "$ledger" >> /lib/upgrade/keep.d/luci-app-adguardhome
 	for item in $upprotect; do
 		case "$item" in
 			'') continue ;;
