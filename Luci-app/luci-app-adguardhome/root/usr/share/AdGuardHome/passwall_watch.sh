@@ -169,6 +169,20 @@ passwall_dnsmasq_shunt_active() {
 	esac
 }
 
+# Port of the system dnsmasq carrying PassWall's stretched shunt.  It has to be
+# part of the tracked state: uci reports the port dnsmasq was moved to (for
+# example after the exchange mode swapped it), and a port change with the same
+# layout would otherwise go unnoticed and leave AdGuard Home pointing at the
+# previous port.
+passwall_dnsmasq_shunt_port() {
+	local port
+	passwall_dnsmasq_shunt_active "$1" || return 1
+	port=$(uci -q get dhcp.@dnsmasq[0].port 2>/dev/null)
+	[ -n "$port" ] || port='53'
+	is_valid_port "$port" || return 1
+	printf '%s\n' "$port"
+}
+
 # Replicates resolve_redirect_compat_state logic from init.d/AdGuardHome.
 # Checks UCI switch + DNS chain readiness AND that the PassWall DNS front port
 # is actually listening, so a killed/crashed PassWall (leftover UCI switch or
@@ -187,7 +201,7 @@ passwall_state() {
 			fi
 		fi
 		if passwall_dnsmasq_shunt_active passwall; then
-			printf 'passwall:dnsmasq'
+			printf 'passwall:dnsmasq:%s' "$(passwall_dnsmasq_shunt_port passwall 2>/dev/null || printf 'none')"
 			return 0
 		fi
 	fi
@@ -203,7 +217,7 @@ passwall_state() {
 			fi
 		fi
 		if passwall_dnsmasq_shunt_active passwall2; then
-			printf 'passwall2:dnsmasq'
+			printf 'passwall2:dnsmasq:%s' "$(passwall_dnsmasq_shunt_port passwall2 2>/dev/null || printf 'none')"
 			return 0
 		fi
 	fi
