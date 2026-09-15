@@ -890,11 +890,18 @@ sync_passwall_upstream_dns() {
 		[ "$?" = '10' ] && changed=1
 		managed_upstream_forget "$stale"
 	fi
-	# Old-style marked block, for as long as AdGuard Home has not rewritten the
-	# file yet.
-	strip_managed_passwall_upstream_dns "$configpath"
-	status=$?
-	[ "$status" = '10' ] && changed=1
+	# Old-style marked block.  Leave it untouched when it already holds exactly
+	# the endpoint we want: stripping and re-adding it would report a change on
+	# every pass, and a reported change schedules an AdGuard Home reload, so the
+	# service would restart for nothing (the "core frequently closing" symptom).
+	# Remove it only when it holds something else, or when no endpoint is wanted.
+	if [ -n "$endpoint" ] && managed_passwall_upstream_has_endpoint "$configpath" "$endpoint"; then
+		:
+	else
+		strip_managed_passwall_upstream_dns "$configpath"
+		status=$?
+		[ "$status" = '10' ] && changed=1
+	fi
 
 	# 3) Install the endpoint that has to be there, or adopt it when it is
 	# already listed (so that a later layout switch can recycle it).
