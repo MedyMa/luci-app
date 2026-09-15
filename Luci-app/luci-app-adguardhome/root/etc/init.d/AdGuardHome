@@ -1587,7 +1587,7 @@ start_watchconfig_guard() {
 }
 
 _do_redirect() {
-	local enabled="$1" configpath redirect effective_redirect old_redirect old_port old_compat_reason agh_port redirect_active conflict_reason compat_reason compat_upstream upstream_sync_status
+	local enabled="$1" configpath redirect effective_redirect old_redirect old_port old_compat_reason agh_port redirect_active conflict_reason compat_reason compat_upstream upstream_sync_status fallback_upstream
 	get_opt configpath configpath "$DEFAULT_CONFIGPATH"
 	get_opt redirect redirect "$DEFAULT_REDIRECT"
 	redirect=$(normalize_redirect_mode "$redirect")
@@ -1676,6 +1676,33 @@ _do_redirect() {
 				effective_redirect='dnsmasq-upstream'
 				redirect_active=1
 				uci -q set AdGuardHome.AdGuardHome.redirect="$effective_redirect"
+				# The managed upstream above was resolved for "redirect", where
+				# the stretched system dnsmasq is a legitimate resolver.  dnsmasq
+				# now forwards to AdGuard Home, so leaving that entry in place
+				# would make the two query each other forever
+				# (dnsmasq -> AGH -> dnsmasq).  Re-resolve for the mode we
+				# actually ended up in: a dedicated PassWall front-end stays
+				# usable in any mode, the stretched system dnsmasq does not.
+				fallback_upstream=$(resolve_passwall_dns_upstream "$effective_redirect" "$agh_port" 2>/dev/null)
+				if [ "$fallback_upstream" != "$compat_upstream" ]; then
+					if [ -n "$fallback_upstream" ]; then
+						sync_passwall_upstream_dns "$configpath" "$fallback_upstream"
+						upstream_sync_status=$?
+					else
+						# Do not route this through sync_passwall_upstream_dns:
+						# it re-reads the configured mode, which this pass has
+						# already changed above, so a "down" path could inject the
+						# public fallback resolvers while PassWall is up.  Just
+						# drop our own block and leave the user's upstream alone.
+						strip_managed_passwall_upstream_dns "$configpath"
+						upstream_sync_status=$?
+					fi
+					compat_upstream="$fallback_upstream"
+					logger -t AdGuardHome "redirect fell back to dnsmasq-upstream; passwall upstream is now ${fallback_upstream:-none}"
+					if [ "$upstream_sync_status" = 10 ] && _isrunning && [ "${AGH_SKIP_UPSTREAM_RELOAD:-0}" != '1' ]; then
+						schedule_passwall_upstream_reload
+					fi
+				fi
 			fi
 		fi
 		[ "$effective_redirect" = 'none' ] || [ "$redirect_active" = '1' ] || logger -t AdGuardHome "redirect mode ${effective_redirect} is not active on port ${agh_port}"
