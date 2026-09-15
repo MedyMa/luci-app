@@ -1392,13 +1392,16 @@ get_redirect_lan_devices() {
 # Is one specific redirect rule already in the chain?  Matches the same way
 # firewall_redirect_is_active() does, but per protocol, so a half-installed pair
 # (UDP present, TCP missing) still gets completed instead of being skipped
-# wholesale.  The device is anchored on its closing quote so that an interface
-# sharing a prefix (br-lan vs br-lan2) never matches another device's rule.
+# wholesale.  Two anchors matter here, because this decides whether the rule
+# gets installed at all: the interface name is anchored on its closing quote so
+# that an interface sharing a prefix (br-lan vs br-lan2) never matches another
+# device's rule, and the destination port is anchored so that a rule for a
+# different port (dport 5353) cannot satisfy a check for dport 53.
 _nft_redirect_rule_present() {
 	local family="$1" port="$2" device="$3" proto="$4" device_regex pattern
 	is_valid_port "$port" || return 1
 	device_regex=$(_nft_escape_regex "$device")
-	pattern=$(printf 'iifname "%s"[[:space:]].*%s.*dport 53.*redirect to :%s([[:space:]]|$)\n' \
+	pattern=$(printf 'iifname "%s"[[:space:]].*%s.*dport 53([[:space:]]|$).*redirect to :%s([[:space:]]|$)\n' \
 		"$device_regex" "$proto" "$port")
 	nft list chain "$family" nat PREROUTING 2>/dev/null | grep -Eq "$pattern"
 }
@@ -1444,7 +1447,9 @@ _nft_escape_regex() {
 }
 
 _nft_redirect_regex() {
-	local port="$1" device="$2" device_regex
+	# The device is optional - the by-port cleanup calls this with the port
+	# alone - so it must not be a hard positional read.
+	local port="$1" device="${2:-}" device_regex
 	is_valid_port "$port" || return 1
 	if [ -n "$device" ]; then
 		device_regex=$(_nft_escape_regex "$device")
@@ -1479,14 +1484,23 @@ set_firewall_redirect() {
 		logger -t AdGuardHome "redirect mode skipped: unable to resolve LAN devices"
 		return 1
 	}
-	uci -q batch <<-EOF >/dev/null 2>&1
-		delete firewall.AdGuardHome
-		set firewall.AdGuardHome=include
-		set firewall.AdGuardHome.type=script
-		set firewall.AdGuardHome.path=/usr/share/AdGuardHome/firewall.start
-		set firewall.AdGuardHome.reload=1
-		commit firewall
-	EOF
+	# Register the firewall include that re-applies this redirect after a
+	# firewall reload, but only rewrite the config when it is not already what
+	# we want: uci commit rewrites /etc/config/firewall (a flash write on these
+	# devices) and _do_redirect() runs on every PassWall state change, every
+	# service restart and on every firewall reload.
+	if [ "$(uci -q get firewall.AdGuardHome.type 2>/dev/null)" != 'script' ] || \
+		[ "$(uci -q get firewall.AdGuardHome.path 2>/dev/null)" != '/usr/share/AdGuardHome/firewall.start' ] || \
+		[ "$(uci -q get firewall.AdGuardHome.reload 2>/dev/null)" != '1' ]; then
+		uci -q batch <<-EOF >/dev/null 2>&1
+			delete firewall.AdGuardHome
+			set firewall.AdGuardHome=include
+			set firewall.AdGuardHome.type=script
+			set firewall.AdGuardHome.path=/usr/share/AdGuardHome/firewall.start
+			set firewall.AdGuardHome.reload=1
+			commit firewall
+		EOF
+	fi
 	added=0
 	if _has_cmd nft; then
 		for device in $devices; do
@@ -1509,8 +1523,12 @@ set_firewall_redirect() {
 
 clear_firewall_redirect() {
 	local port="$1" devices device
-	uci -q delete firewall.AdGuardHome
-	uci -q commit firewall
+	# Only touch the firewall config when our include is actually registered;
+	# committing it unconditionally would be a flash write per teardown.
+	if uci -q get firewall.AdGuardHome >/dev/null 2>&1; then
+		uci -q delete firewall.AdGuardHome
+		uci -q commit firewall
+	fi
 	if _has_cmd nft; then
 		_nft_clear_redirect ip "$port"
 		_nft_clear_redirect ip6 "$port"

@@ -331,6 +331,16 @@ repair_agh_redirect_once() {
 		[ $((now - last)) -lt "$AGH_REDIRECT_RETRY_INTERVAL" ]; then
 		return 0
 	fi
+	# The rule is usually lost by whatever is already putting it back: a firewall
+	# reload flushes the whole ruleset and then runs the include that re-applies
+	# the redirect, which takes a moment (the include logs its state before it
+	# installs the rules).  Acting straight away races that apply - both sides
+	# clear and re-add - so wait for it to finish and look again.  When nothing
+	# restored the rule, the mismatch is real and we apply it ourselves.
+	sleep 1
+	agh_redirect_needs_repair || return 0
+	# Stamped only when we really apply, so a skipped attempt does not consume
+	# the throttle window that a later, genuine repair would need.
 	printf '%s\n' "$now" > "$AGH_REDIRECT_RETRY_FILE" 2>/dev/null
 	logger -t AdGuardHome "passwall watch: DNS redirect rule is missing while redirect mode is active; reapplying"
 	"$AGH_INIT" do_redirect 1
