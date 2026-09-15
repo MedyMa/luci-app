@@ -156,16 +156,16 @@ function buildLinks(channel) {
 function actionError(err, fallback) {
 	var message = err && (err.message || err.toString && err.toString()) || '';
 	var knownErrors = [
-		[/Failed to download a non-empty GFW list from all known mirrors\./i, t('Unable to download a usable GFW list from any known mirror. Check the router network or DNS connectivity to jsDelivr and GitHub Raw, then try again.', '无法从已知镜像下载可用的 GFW 列表。请检查路由器到 jsDelivr 和 GitHub Raw 的联网或 DNS 连通性后重试。')],
-		[/Failed to generate a non-empty GFW rule file\./i, t('The downloaded GFW list did not produce any usable upstream DNS rules. Try generating the rule file again later or check the source content.', '下载到的 GFW 列表没有生成任何可用的上游 DNS 规则。请稍后重试生成，或检查上游列表内容。')],
-		[/Please generate the GFW rule file first\./i, t('Generate the GFW rule file first, then copy entries manually in the AdGuard Home console if needed.', '请先生成 GFW 规则文件；如有需要，请在 AdGuard Home 控制台手动复制条目。')],
-		[/The GFW rule file is empty\./i, t('The current GFW rule file only contains headers and no usable DNS rules. Regenerate the rule file before copying entries manually.', '当前 GFW 规则文件只有表头，没有可用的 DNS 规则。请先重新生成规则文件，再手动复制条目。')]
+		[/Failed to download a non-empty GFW list from all known mirrors\./i, t('Could not download a usable GFW list from any known mirror. Check network/DNS access to jsDelivr and GitHub Raw, then retry.', '无法从任何已知镜像下载 GFW 列表，请检查到 jsDelivr / GitHub Raw 的联网或 DNS 后重试。')],
+		[/Failed to generate a non-empty GFW rule file\./i, t('The downloaded GFW list produced no usable upstream DNS rules. Retry later or check the source list.', 'GFW 列表未生成可用的上游 DNS 规则，请稍后重试或检查列表内容。')],
+		[/Please generate the GFW rule file first\./i, t('Generate the GFW rule file first, then copy entries in the AdGuard Home console.', '请先生成 GFW 规则文件，再到 AdGuard Home 控制台复制条目。')],
+		[/The GFW rule file is empty\./i, t('The GFW rule file has only headers and no usable rules. Regenerate it before copying entries.', 'GFW 规则文件只有表头、无可用规则，请重新生成后再复制条目。')]
 	];
 	var i;
 	if (/Object not found/i.test(message))
-		return t('The luci.adguardhome rpcd object is not available. Reinstall this package or restart rpcd, then refresh LuCI.', '当前设备没有导出 luci.adguardhome rpcd 后端对象。请重新安装当前软件包或重启 rpcd，然后刷新 LuCI。');
+		return t('The luci.adguardhome rpcd object is missing. Reinstall this package or restart rpcd, then refresh LuCI.', '缺少 luci.adguardhome rpcd 后端对象，请重装本包或重启 rpcd 后刷新 LuCI。');
 	if (/Method not found/i.test(message))
-		return t('The rpcd backend is outdated and does not provide this action. Reinstall this package or restart rpcd, then refresh LuCI.', '当前设备上的 rpcd 后端版本过旧，未提供此操作。请重新安装当前软件包或重启 rpcd，然后刷新 LuCI。');
+		return t('The rpcd backend is outdated and lacks this action. Reinstall this package or restart rpcd, then refresh LuCI.', 'rpcd 后端过旧、不支持此操作，请重装本包或重启 rpcd 后刷新 LuCI。');
 	for (i = 0; i < knownErrors.length; i++)
 		if (knownErrors[i][0].test(message))
 			return knownErrors[i][1];
@@ -329,8 +329,8 @@ return view.extend({
 		var o;
 		o = s.taboption('service', form.Flag, 'enabled', t('Enable service', '启用服务'), t('Start AdGuard Home through procd when this option is enabled.', '启用后通过 procd 启动 AdGuard Home。'));
 		o = s.taboption('service', form.Flag, 'waitonboot', t('Wait for network on boot', '开机等待网络'), t('Delay service startup until the network is ready.', '开机时等待网络就绪后再启动服务。'));
-		o = s.taboption('service', form.Value, 'username', t('API login username', 'API 登录用户名'), t('Username LuCI uses when requesting the local AdGuard Home API. Keep it in sync with the AdGuard Home admin account.', 'LuCI 请求本地 AdGuard Home API 时使用的用户名，请与 AdGuard Home 管理员账号保持一致。')); o.placeholder = 'root'; o.rmempty = false;
-		o = s.taboption('service', form.Value, 'password', t('API login password', 'API 登录密码'), t('Password LuCI uses when requesting the local AdGuard Home API. Update it whenever you change the AdGuard Home web password.', 'LuCI 请求本地 AdGuard Home API 时使用的密码。修改 AdGuard Home 后台密码后，这里也要同步更新。')); o.password = true; o.rmempty = true;
+		o = s.taboption('service', form.Value, 'username', t('API login username', 'API 登录用户名'), t('Username LuCI uses for the local AdGuard Home API; keep it in sync with the AdGuard Home admin account.', 'LuCI 访问本地 AdGuard Home API 的用户名，需与管理员账号一致。')); o.placeholder = 'root'; o.rmempty = false;
+		o = s.taboption('service', form.Value, 'password', t('API login password', 'API 登录密码'), t('Password LuCI uses for the local AdGuard Home API; update it after changing the AdGuard Home web password.', 'LuCI 访问本地 AdGuard Home API 的密码，改后台密码后需同步更新。')); o.password = true; o.rmempty = true;
 		o = s.taboption('service', form.Value, 'hashpass', t('Web password bcrypt hash', 'Web 密码 bcrypt 哈希'), t('Use the password helper above to generate a hash, then save and apply.', '可使用上方密码助手生成哈希，然后保存并应用。')); o.password = true; o.rmempty = true;
 
 		o = s.taboption('network', form.Value, 'httpport', t('Web console port', 'Web 控制台端口'), t('Port used by the AdGuard Home management UI.', 'AdGuard Home 管理界面使用的端口。')); o.datatype = 'port'; o.placeholder = '3000';
@@ -432,7 +432,7 @@ function passwordCard() {
 	var button = E('button', { 'class': softButtonClass(), 'click': function() { ensureBcrypt().then(function() { var bcrypt = window.TwinBcrypt || (window.dcodeIO && window.dcodeIO.bcrypt); var rawPassword = input.value || ''; var hash = bcrypt && bcrypt.hashSync ? bcrypt.hashSync(rawPassword, 10) : ''; var hashTarget = document.querySelector('[data-name="hashpass"] input'); var plainTarget = document.querySelector('[data-name="password"] input'); if (hashTarget && hash) { hashTarget.value = hash; if (plainTarget) plainTarget.value = rawPassword; statusBox.textContent = t('Hash generated and both password fields were updated.', '哈希已生成，并已同步更新两个密码字段。'); } else { statusBox.textContent = t('bcrypt library unavailable or hash generation failed.', 'bcrypt 库不可用，或哈希生成失败。'); } }); } }, t('Generate hash', '生成哈希'));
 	return E('div', { 'class': 'agh-action agh-action-password' }, [
 		actionHeader(t('Security', '安全'), t('Password Hash Helper', '密码哈希助手')),
-		E('p', {}, t('Generate a bcrypt hash for the AdGuard Home web console password, write it into the hash field, and keep the local API password field in sync.', '为 AdGuard Home 后台密码生成 bcrypt 哈希，自动写入哈希字段，并同步本地 API 密码字段。')),
+		E('p', {}, t('Generate a bcrypt hash for the AdGuard Home web password: it fills the hash field and syncs the local API password.', '为 AdGuard Home 后台密码生成 bcrypt 哈希，写入哈希字段并同步本地 API 密码。')),
 		E('div', { 'class': 'agh-row' }, [ input, button ]),
 		statusBox
 	]);
@@ -451,16 +451,16 @@ function gfwCard(rpcError, running) {
 	}
 	return E('div', { 'class': 'agh-action agh-action-gfw' }, [
 		actionHeader(t('Rules', '规则'), t('GFW Rule Tools', 'GFW 规则工具')),
-		E('p', {}, t('Generate or clean the external GFW rule file at /etc/AdGuardHome/gfw_upstream.txt. Upstream DNS is never written by this page; edit it in the AdGuard Home console.', '生成或清理 /etc/AdGuardHome/gfw_upstream.txt 外部规则文件。本页面不会写入上游 DNS；需要时请到 AdGuard Home 控制台手动填写。')),
+		E('p', {}, t('Generate or clean /etc/AdGuardHome/gfw_upstream.txt. This page never writes upstream DNS; edit it in the AdGuard Home console.', '生成或清理 /etc/AdGuardHome/gfw_upstream.txt。本页不写入上游 DNS，请在 AdGuard Home 控制台手动填写。')),
 		E('div', { 'class': 'agh-button-row' }, [
 			button('add', t('Generate rule file', '生成规则文件'), t('GFW rule file generated. Import it manually into YAML if needed.', 'GFW 规则文件已生成；如有需要，请手动导入 YAML。')),
 			button('del', t('Delete rule file', '删除规则文件'), t('GFW rule file deleted and legacy injected YAML rules were cleaned if present.', 'GFW 规则文件已删除；若存在旧版自动注入的 YAML 规则，也已一并清理。')),
-			button('import', t('Manual DNS note', '手动DNS提示'), t('Automatic upstream DNS import is disabled. Copy entries from /etc/AdGuardHome/gfw_upstream.txt in the AdGuard Home console if needed.', '已禁用自动导入上游 DNS。如有需要，请在 AdGuard Home 控制台手动复制 /etc/AdGuardHome/gfw_upstream.txt 中的条目。')),
-			button('remove_import', t('Manual cleanup note', '手动清理提示'), t('Automatic upstream DNS removal is disabled. Edit upstream DNS in the AdGuard Home console if needed.', '已禁用自动移除上游 DNS。如有需要，请在 AdGuard Home 控制台手动编辑上游 DNS。')),
+			button('import', t('Manual DNS note', '手动DNS提示'), t('Automatic upstream DNS import is disabled. Copy entries from gfw_upstream.txt in the AdGuard Home console.', '已禁用自动导入上游 DNS，请在 AdGuard Home 控制台复制 gfw_upstream.txt 中的条目。')),
+			button('remove_import', t('Manual cleanup note', '手动清理提示'), t('Automatic upstream DNS removal is disabled. Edit upstream DNS in the AdGuard Home console.', '已禁用自动移除上游 DNS，请在 AdGuard Home 控制台手动编辑。')),
 			button('ipset_add', t('Add ipset', '添加 ipset'), t('GFW ipset task started.', 'GFW ipset 任务已启动。')),
 			button('ipset_del', t('Delete ipset', '删除 ipset'), t('GFW ipset delete task started.', 'GFW ipset 删除任务已启动。'))
 		]),
-		running ? E('div', { 'class': 'agh-status' }, t('Changing ipset references is disabled while AdGuard Home is running. Upstream DNS is only edited in the AdGuard Home console.', 'AdGuard Home 运行中时不允许修改 ipset 引用。上游 DNS 只在 AdGuard Home 控制台中编辑。')) : '',
+		running ? E('div', { 'class': 'agh-status' }, t('ipset references cannot be changed while AdGuard Home is running; upstream DNS is edited in its console only.', 'AdGuard Home 运行中不可改 ipset 引用；上游 DNS 只在控制台中编辑。')) : '',
 		statusBox
 	]);
 }

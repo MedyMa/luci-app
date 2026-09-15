@@ -20,9 +20,9 @@ function t(message, fallback) {
 function actionError(err, fallback) {
 	var message = err && (err.message || err.toString && err.toString()) || '';
 	if (/Object not found/i.test(message))
-		return t('The luci.adguardhome rpcd object is not available. Reinstall this package or restart rpcd, then refresh LuCI.');
+		return t('The luci.adguardhome rpcd object is missing. Reinstall this package or restart rpcd, then refresh LuCI.');
 	if (/Method not found/i.test(message))
-		return t('The rpcd backend is outdated and does not provide this view data. Reinstall this package or restart rpcd, then refresh LuCI.');
+		return t('The rpcd backend is outdated and lacks this view data. Reinstall this package or restart rpcd, then refresh LuCI.');
 	return fallback + (message ? ': ' + message : '');
 }
 

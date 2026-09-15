@@ -20,9 +20,9 @@ function t(message, fallback) {
 function actionError(err, fallback) {
 	var message = err && (err.message || err.toString && err.toString()) || '';
 	if (/Object not found/i.test(message))
-		return t('The luci.adguardhome rpcd object is not available. Reinstall this package or restart rpcd, then refresh LuCI.', '当前设备没有导出 luci.adguardhome rpcd 后端对象。请重新安装当前软件包或重启 rpcd，然后刷新 LuCI。');
+		return t('The luci.adguardhome rpcd object is missing. Reinstall this package or restart rpcd, then refresh LuCI.', '缺少 luci.adguardhome rpcd 后端对象，请重装本包或重启 rpcd 后刷新 LuCI。');
 	if (/Method not found/i.test(message))
-		return t('The rpcd backend is outdated and does not provide log actions. Reinstall this package or restart rpcd, then refresh LuCI.', '当前设备上的 rpcd 后端版本过旧，未提供日志相关操作。请重新安装当前软件包或重启 rpcd，然后刷新 LuCI。');
+		return t('The rpcd backend is outdated and lacks log actions. Reinstall this package or restart rpcd, then refresh LuCI.', 'rpcd 后端过旧、不支持日志相关操作，请重装本包或重启 rpcd 后刷新 LuCI。');
 	return fallback + (message ? ': ' + message : '');
 }
 
