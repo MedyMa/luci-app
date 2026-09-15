@@ -2,6 +2,13 @@
 PATH="/usr/sbin:/usr/bin:/sbin:/bin"
 
 LAST_STATE_FILE='/var/run/AdGpasswall_state'
+# AdGuard Home's uci section and service entry point.  The port-53 redirect
+# rules belong to the init script, so the watcher re-applies through it instead
+# of duplicating the firewall logic here.
+AGH_CONFIG='AdGuardHome.AdGuardHome'
+AGH_INIT='/etc/init.d/AdGuardHome'
+AGH_REDIRECT_RETRY_FILE='/var/run/AdGwatch_redir_retry'
+AGH_REDIRECT_RETRY_INTERVAL=30
 
 is_valid_port() {
 	case "$1" in
@@ -225,6 +232,110 @@ passwall_state() {
 	return 1
 }
 
+# AdGuard Home's DNS port, read from the dns: block of its YAML config.
+# Section-aware parser: reads port: only inside the dns: block, robust
+# regardless of how many keys precede it.  Mirrors resolve_dns_port() in
+# update_core.sh.
+agh_dns_port() {
+	local configpath="$1"
+	[ -r "$configpath" ] || return 1
+	awk '
+		BEGIN { in_dns = 0 }
+		/^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
+		/^[^[:space:]#][A-Za-z0-9_-]*:[[:space:]]*/ {
+			in_dns = ($0 ~ /^dns:[[:space:]]*($|#)/)
+			next
+		}
+		in_dns && /^[[:space:]]+port:[[:space:]]*/ {
+			sub(/^[[:space:]]*port:[[:space:]]*/, "", $0)
+			sub(/[[:space:]]+#.*$/, "", $0)
+			gsub(/["'"'"']/, "", $0)
+			print $0
+			exit
+		}' "$configpath" 2>/dev/null
+}
+
+# Are AdGuard Home's own port-53 redirect rules present?  Mirrors what
+# set_firewall_redirect() installs in the init script: one udp and one tcp rule
+# per LAN device in the ip and ip6 nat PREROUTING chains, targeting AGH's port.
+# Returns 0 = present, 1 = absent, 2 = cannot be verified (no nft/iptables).
+agh_redirect_rule_active() {
+	local port="$1" pattern checked=0
+	is_valid_port "$port" || return 2
+	if _has_cmd nft; then
+		checked=1
+		pattern=$(printf 'redirect to :%s([[:space:]]|$)\n' "$port")
+		nft list chain ip nat PREROUTING 2>/dev/null | grep -Eq "$pattern" && return 0
+		nft list chain ip6 nat PREROUTING 2>/dev/null | grep -Eq "$pattern" && return 0
+	fi
+	if _has_cmd iptables; then
+		checked=1
+		iptables -t nat -S PREROUTING 2>/dev/null | \
+			grep -Eq -e "--to-ports[[:space:]]+${port}([[:space:]]|\$)" && return 0
+	fi
+	if _has_cmd ip6tables; then
+		checked=1
+		ip6tables -t nat -S PREROUTING 2>/dev/null | \
+			grep -Eq -e "--to-ports[[:space:]]+${port}([[:space:]]|\$)" && return 0
+	fi
+	[ "$checked" = '1' ] || return 2
+	return 1
+}
+
+# Detect the gap left by the init script's redirect handling.  _do_redirect()
+# removes the previous redirect rules *before* it checks whether AdGuard Home's
+# DNS port is up, and when the port is not up yet it leaves the redirect
+# disabled.  That decision is right on its own - LAN DNS must never be pointed
+# at a dead port - but nothing retries afterwards, so recovery used to depend on
+# another PassWall state change or a service restart.  A slow AdGuard Home start
+# could therefore leave every LAN client bypassing it indefinitely.
+#
+# This runs on the watcher's existing 10 s tick and reports a repair only for a
+# real mismatch, so a healthy system is left untouched.
+agh_redirect_needs_repair() {
+	local configpath enabled redirect port rule_state
+	enabled=$(uci -q get "$AGH_CONFIG.enabled" 2>/dev/null)
+	_uci_bool_enabled "$enabled" || return 1
+	# Only the firewall-redirect mode installs rules that can be lost.  An unset
+	# value is NOT this mode: the package default is dnsmasq-upstream.
+	redirect=$(uci -q get "$AGH_CONFIG.redirect" 2>/dev/null)
+	[ "$redirect" = 'redirect' ] || return 1
+	configpath=$(uci -q get "$AGH_CONFIG.configpath" 2>/dev/null)
+	[ -n "$configpath" ] || configpath='/etc/config/adGuardConfig/AdGuardHome.yaml'
+	port=$(agh_dns_port "$configpath") || return 1
+	is_valid_port "$port" || return 1
+	# Never repair towards a port that is not listening: that is exactly the
+	# state _do_redirect refuses to create on purpose.  An unverifiable port
+	# state (neither ss nor netstat) is treated as "do not touch".
+	port_is_listening "$port" || return 1
+	agh_redirect_rule_active "$port"
+	rule_state=$?
+	[ "$rule_state" = '1' ]
+}
+
+# Re-apply through the init script, throttled.  Each attempt either restores the
+# rules, or makes the init script settle on a different mode (auto-heal), so this
+# converges; the throttle only keeps a persistently failing system from spinning
+# and from flooding the log.
+repair_agh_redirect_once() {
+	local now last
+	now=$(date +%s 2>/dev/null)
+	last=$(cat "$AGH_REDIRECT_RETRY_FILE" 2>/dev/null)
+	case "$now" in ''|*[!0-9]*) now=0 ;; esac
+	case "$last" in ''|*[!0-9]*) last=0 ;; esac
+	# A clock that stepped backwards (NTP) must not block repairs forever.
+	[ "$last" -gt "$now" ] && last=0
+	# Only throttle against a clock that is clearly set: before NTP the time is
+	# 1970, where "seconds since the last attempt" is meaningless.
+	if [ "$now" -ge 1000000000 ] && [ "$last" -ge 1000000000 ] && \
+		[ $((now - last)) -lt "$AGH_REDIRECT_RETRY_INTERVAL" ]; then
+		return 0
+	fi
+	printf '%s\n' "$now" > "$AGH_REDIRECT_RETRY_FILE" 2>/dev/null
+	logger -t AdGuardHome "passwall watch: DNS redirect rule is missing while redirect mode is active; reapplying"
+	"$AGH_INIT" do_redirect 1
+}
+
 load_last_state() {
 	[ -f "$LAST_STATE_FILE" ] && cat "$LAST_STATE_FILE" 2>/dev/null
 }
@@ -235,43 +346,25 @@ save_state() {
 
 reapply() {
 	logger -t AdGuardHome "passwall watch: state changed, reapplying redirect configuration"
-	if /etc/init.d/AdGuardHome isrunning >/dev/null 2>&1; then
+	if "$AGH_INIT" isrunning >/dev/null 2>&1; then
 		# Verify AGH DNS port before redirecting.
 		# If the router lacks ss/netstat, trust the running process instead of deadlocking.
 		local configpath agh_port listen_state
-		configpath="$(uci -q get AdGuardHome.AdGuardHome.configpath 2>/dev/null || echo '/etc/config/adGuardConfig/AdGuardHome.yaml')"
-		if [ -r "$configpath" ]; then
-			# Section-aware parser: reads port: only inside the dns: block,
-			# robust regardless of how many keys precede it.  Mirrors the
-			# resolve_dns_port() logic used in update_core.sh.
-			agh_port=$(awk '
-				BEGIN { in_dns = 0 }
-				/^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
-				/^[^[:space:]#][A-Za-z0-9_-]*:[[:space:]]*/ {
-					in_dns = ($0 ~ /^dns:[[:space:]]*($|#)/)
-					next
-				}
-				in_dns && /^[[:space:]]+port:[[:space:]]*/ {
-					sub(/^[[:space:]]*port:[[:space:]]*/, "", $0)
-					sub(/[[:space:]]+#.*$/, "", $0)
-					gsub(/["'"'"']/, "", $0)
-					print $0
-					exit
-				}' "$configpath" 2>/dev/null)
-		fi
+		configpath="$(uci -q get "$AGH_CONFIG.configpath" 2>/dev/null || echo '/etc/config/adGuardConfig/AdGuardHome.yaml')"
+		agh_port=$(agh_dns_port "$configpath" 2>/dev/null)
 		if [ -n "$agh_port" ] && is_valid_port "$agh_port"; then
 			port_is_listening "$agh_port"
 			listen_state="$?"
 			case "$listen_state" in
 				0|2)
-					/etc/init.d/AdGuardHome do_redirect 1
+					"$AGH_INIT" do_redirect 1
 					return 0
 					;;
 			esac
 			logger -t AdGuardHome "passwall watch: AGH DNS port ${agh_port} not listening yet, deferring redirect"
 			return 1
 		else
-			/etc/init.d/AdGuardHome do_redirect 1
+			"$AGH_INIT" do_redirect 1
 			return 0
 		fi
 	fi
@@ -316,4 +409,9 @@ while :; do
 			last="${state:-}"
 		fi
 	fi
+	# Independent of PassWall transitions: make sure our own port-53 redirect
+	# rule did not get lost.  _do_redirect only installs it while AdGuard Home's
+	# DNS port is already up, so a start-up race (or a rebuilt firewall) can
+	# leave it missing until something else happens to re-apply it.
+	agh_redirect_needs_repair && repair_agh_redirect_once
 done
