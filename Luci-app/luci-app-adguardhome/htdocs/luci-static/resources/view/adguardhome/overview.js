@@ -217,9 +217,9 @@ function redirectConflictMessage(status) {
 		return '';
 
 	if (status.redirect_conflict_reason === 'passwall2-dns-redirect')
-		return t('PassWall2 DNS redirect is active. AdGuard Home keeps DNS interception enabled and uses compatibility bypass rules.', '检测到 PassWall2 已开启 DNS 重定向，AdGuard Home 会保持 DNS 拦截，并使用兼容旁路规则。');
+		return t('PassWall2 DNS redirect is active; AdGuard Home keeps intercepting and adds compatibility bypass rules.', 'PassWall2 已开启 DNS 重定向；AdGuard Home 保持拦截并加兼容旁路规则。');
 
-	return t('PassWall DNS redirect is active. AdGuard Home keeps DNS interception enabled and uses compatibility bypass rules.', '检测到 PassWall 已开启 DNS 重定向，AdGuard Home 会保持 DNS 拦截，并使用兼容旁路规则。');
+	return t('PassWall DNS redirect is active; AdGuard Home keeps intercepting and adds compatibility bypass rules.', 'PassWall 已开启 DNS 重定向；AdGuard Home 保持拦截并加兼容旁路规则。');
 }
 
 function renderRedirectCompatAlert(status) {
@@ -234,11 +234,11 @@ function renderRedirectCompatAlert(status) {
 	var autoUpstream = yes(status.passwall_upstream_auto);
 	var summary = vendor === 'PassWall2'
 		? (autoUpstream
-			? t('AdGuard Home intercepts LAN DNS while bypassing the PassWall2 DNS redirect chain. One managed PassWall2 upstream entry is maintained when the frontend port is known.', 'AdGuard Home 会拦截局域网 DNS，并绕过 PassWall2 的 DNS 重定向链。检测到前端端口时，会维护一条托管的 PassWall2 上游记录。')
-			: t('AdGuard Home intercepts LAN DNS while bypassing the PassWall2 DNS redirect chain. Upstream DNS is not changed automatically.', 'AdGuard Home 会拦截局域网 DNS，并绕过 PassWall2 的 DNS 重定向链。上游 DNS 不会被自动修改。'))
+			? t('AdGuard Home intercepts LAN DNS, bypassing the PassWall2 redirect chain; one managed upstream is kept when the frontend port is known.', 'AdGuard Home 拦截局域网 DNS、绕过 PassWall2 重定向链；已知前端端口时维护一条托管上游。')
+			: t('AdGuard Home intercepts LAN DNS, bypassing the PassWall2 redirect chain; upstream DNS is left untouched.', 'AdGuard Home 拦截局域网 DNS、绕过 PassWall2 重定向链；上游 DNS 不自动修改。'))
 		: (autoUpstream
-			? t('AdGuard Home intercepts LAN DNS while bypassing the PassWall DNS redirect chain. One managed PassWall upstream entry is maintained when the frontend port is known.', 'AdGuard Home 会拦截局域网 DNS，并绕过 PassWall 的 DNS 重定向链。检测到前端端口时，会维护一条托管的 PassWall 上游记录。')
-			: t('AdGuard Home intercepts LAN DNS while bypassing the PassWall DNS redirect chain. Upstream DNS is not changed automatically.', 'AdGuard Home 会拦截局域网 DNS，并绕过 PassWall 的 DNS 重定向链。上游 DNS 不会被自动修改。'));
+			? t('AdGuard Home intercepts LAN DNS, bypassing the PassWall redirect chain; one managed upstream is kept when the frontend port is known.', 'AdGuard Home 拦截局域网 DNS、绕过 PassWall 重定向链；已知前端端口时维护一条托管上游。')
+			: t('AdGuard Home intercepts LAN DNS, bypassing the PassWall redirect chain; upstream DNS is left untouched.', 'AdGuard Home 拦截局域网 DNS、绕过 PassWall 重定向链；上游 DNS 不自动修改。'));
 
 	return E('div', { 'class': 'agh-alert-compat' }, [
 		E('div', { 'class': 'agh-alert-head', 'tabindex': '0', 'title': summary }, [
