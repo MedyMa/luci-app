@@ -1389,8 +1389,36 @@ get_redirect_lan_devices() {
 	printf '%s\n' "$_AGH_LAN_DEVICES"
 }
 
+# Is one specific redirect rule already in the chain?  Matches the same way
+# firewall_redirect_is_active() does, but per protocol, so a half-installed pair
+# (UDP present, TCP missing) still gets completed instead of being skipped
+# wholesale.  The device is anchored on its closing quote so that an interface
+# sharing a prefix (br-lan vs br-lan2) never matches another device's rule.
+_nft_redirect_rule_present() {
+	local family="$1" port="$2" device="$3" proto="$4" device_regex pattern
+	is_valid_port "$port" || return 1
+	device_regex=$(_nft_escape_regex "$device")
+	pattern=$(printf 'iifname "%s"[[:space:]].*%s.*dport 53.*redirect to :%s([[:space:]]|$)\n' \
+		"$device_regex" "$proto" "$port")
+	nft list chain "$family" nat PREROUTING 2>/dev/null | grep -Eq "$pattern"
+}
+
+# Add one redirect rule unless it is already installed.  The iptables branch of
+# set_firewall_redirect() checks with -C before -A for exactly this reason:
+# _do_redirect can be entered from several independent places (the firewall
+# include, this package's config reload trigger, the passwall watcher), and a
+# blind add lets duplicates accumulate - they keep working, but the by-port
+# cleanup removes them as a group, so they hide how often the rule was applied.
+_nft_add_redirect_rule() {
+	local family="$1" port="$2" device="$3" proto="$4"
+	_nft_redirect_rule_present "$family" "$port" "$device" "$proto" && return 0
+	nft add rule "$family" nat PREROUTING iifname "$device" "$proto" dport 53 redirect to :"$port" 2>/dev/null && return 0
+	logger -t AdGuardHome "nft: failed to add ${family} ${proto} ${device} dport 53 redirect to :${port}"
+	return 1
+}
+
 _nft_add_redirect() {
-	local port="$1" family="$2" device="$3"
+	local port="$1" family="$2" device="$3" rc=1
 	[ -n "$device" ] || return 1
 	# Ensure the nat table exists
 	if ! nft list table "$family" nat >/dev/null 2>&1; then
@@ -1406,14 +1434,9 @@ _nft_add_redirect() {
 			return 1
 		}
 	fi
-	nft add rule "$family" nat PREROUTING iifname "$device" udp dport 53 redirect to :"$port" 2>/dev/null || {
-		logger -t AdGuardHome "nft: failed to add ${family} UDP ${device} dport 53 redirect to :${port}"
-		return 1
-	}
-	nft add rule "$family" nat PREROUTING iifname "$device" tcp dport 53 redirect to :"$port" 2>/dev/null || {
-		logger -t AdGuardHome "nft: failed to add ${family} TCP ${device} dport 53 redirect to :${port}"
-		return 1
-	}
+	_nft_add_redirect_rule "$family" "$port" "$device" udp && rc=0
+	_nft_add_redirect_rule "$family" "$port" "$device" tcp && rc=0
+	return "$rc"
 }
 
 _nft_escape_regex() {
@@ -1894,9 +1917,13 @@ service_triggers() {
 	# The passwall_watch.sh daemon already polls passwall state every 10 s
 	# and calls do_redirect when the DNS-chain state actually changes, so
 	# real-time passwall compat is handled without the reload trigger.
-	if [ "$(uci -q get AdGuardHome.AdGuardHome.redirect 2>/dev/null)" = 'redirect' ]; then
-		procd_add_reload_trigger firewall
-	fi
+	#
+	# "firewall" is deliberately not added either, and for the same reason: the
+	# include that set_firewall_redirect() registers (firewall.start, reload=1)
+	# is already executed by the firewall on every reload and re-applies the
+	# redirect there, so a firewall commit does not have to stop and start the
+	# DNS core.  Should that re-apply ever be missed, passwall_watch.sh notices
+	# the missing rule within 10 s and asks for it again.
 }
 
 _isrunning() {
