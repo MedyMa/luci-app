@@ -294,8 +294,8 @@ return view.extend({
 			? t('Detected PassWall DNS frontend: ', '检测到 PassWall DNS 前端：') + '127.0.0.1:' + passwallUpstreamPort + '. ' +
 				t('When enabled, only this managed AdGuard Home upstream entry is maintained; other upstream DNS entries stay untouched.', '启用后，只维护这一条受管 AdGuard Home 上游记录，其它上游 DNS 不会被改动。')
 			: (passwallUpstreamAutoEnabled
-				? t('Managed PassWall upstream is enabled, but the PassWall DNS frontend port is not detected yet. The managed entry is removed until a valid frontend port is detected.', '托管 PassWall 上游已启用，但暂未检测到 PassWall DNS 前端端口。检测到有效前端端口前会移除托管上游记录。')
-				: t('Enable this to maintain one managed PassWall upstream when the PassWall DNS frontend port is detected. If PassWall is stopped or DNS redirect is disabled, AdGuard Home keeps its normal redirect mode.', '启用后，在检测到 PassWall DNS 前端端口时维护一条托管上游。PassWall 停止或 DNS 重定向关闭时，AdGuard Home 会保持自身普通重定向模式。'));
+				? t('Managed PassWall upstream is enabled, but no PassWall DNS resolver is detected yet. No managed entry is kept until a usable resolver is found; public fallback resolvers are only used once PassWall is stopped.', '托管 PassWall 上游已启用，但暂未检测到 PassWall 的 DNS 解析器。检测到可用解析器前不会保留托管上游记录；只有在 PassWall 停止后才会使用公共 DNS 兜底。')
+				: t('Enable this to maintain one managed PassWall upstream whenever PassWall is serving DNS, in every DNS redirect mode. When PassWall\'s own DNS redirect is off it queries the system dnsmasq that carries PassWall\'s split-domain rules instead; public fallback resolvers are only used after PassWall stops.', '启用后，只要 PassWall 在提供 DNS 服务，就在所有 DNS 重定向模式下维护一条托管 PassWall 上游。PassWall 自身的 DNS 重定向关闭时，会改为使用承载其分流规则的系统 dnsmasq；只有在 PassWall 停止后才会使用公共 DNS 兜底。'));
 		var linksBox = E('textarea', {}, linksText);
 		var channelSelect = E('select', {}, [
 			E('option', { value: 'release' }, t('Stable', '稳定版')),

@@ -239,6 +239,107 @@ passwall2_dns_chain_ready() {
 	command -v iptables >/dev/null 2>&1 && iptables -t nat -L PSW2_DNS >/dev/null 2>&1
 }
 
+# PassWall serves LAN DNS in one of two layouts:
+#   1. dns_redirect=1: it starts a dedicated dnsmasq instance and caches its port
+#      as ACL_default_dns_port (the chain redirect target).
+#   2. dns_redirect=0: it runs no front-end and instead "stretches" the system
+#      dnsmasq, writing its shunt rules into a file inside the system dnsmasq
+#      conf-dir.  /tmp/etc/passwall/var then has no *_dns_port entry at all
+#      (only GLOBAL_DNSMASQ_CONF/GLOBAL_DNSMASQ_CONF_PATH), which used to make
+#      AdGuard Home treat a running PassWall as absent and replace it with
+#      public resolvers - poisoning every foreign lookup.
+# In layout 2 the resolver to query is the system dnsmasq itself.
+passwall_dnsmasq_shunt_conf() {
+	case "$1" in
+		passwall2) passwall2_cache_get GLOBAL_DNSMASQ_CONF 2>/dev/null | tail -n 1 ;;
+		*) passwall_cache_get GLOBAL_DNSMASQ_CONF 2>/dev/null | tail -n 1 ;;
+	esac
+}
+
+passwall_dnsmasq_shunt_active() {
+	local conf
+	conf=$(passwall_dnsmasq_shunt_conf "$1" 2>/dev/null)
+	case "$conf" in
+		''|/tmp/etc/passwall/*|/tmp/etc/passwall2/*) return 1 ;;
+	esac
+	# PassWall only stretches the system dnsmasq while its own "DNS 重定向" is
+	# off; with the redirect on, the shunt lives in its dedicated instance.
+	case "$1" in
+		passwall2) [ "$(uci -q get passwall2.@global[0].dns_redirect 2>/dev/null)" = '0' ] || return 1 ;;
+		*) [ "$(uci -q get passwall.@global[0].dns_redirect 2>/dev/null)" = '0' ] || return 1 ;;
+	esac
+	# Only meaningful while PassWall's firewall chains are actually loaded.
+	case "$1" in
+		passwall2) passwall2_dns_chain_ready ;;
+		*) passwall_dns_chain_ready ;;
+	esac
+}
+
+# Port of the system dnsmasq carrying PassWall's stretched shunt.  uci already
+# reports the port it was moved to (for example after the exchange mode swapped
+# it), so no guessing is needed.
+passwall_dnsmasq_shunt_port() {
+	local port
+	passwall_dnsmasq_shunt_active "$1" || return 1
+	port=$(uci -q get dhcp.@dnsmasq[0].port 2>/dev/null)
+	[ -n "$port" ] || port='53'
+	is_valid_port "$port" || return 1
+	port_is_listening "$port"
+	# rc=1 is a confirmed dead port, rc=2 means the state cannot be verified.
+	[ "$?" = '1' ] && return 1
+	printf '%s\n' "$port"
+	return 0
+}
+
+# Dedicated PassWall DNS front-end port, only when its chain is loaded and the
+# port really answers.
+passwall_dns_front_port() {
+	local port
+	case "$1" in
+		passwall2)
+			passwall2_dns_chain_ready || return 1
+			port=$(resolve_passwall2_dns_front_port 2>/dev/null)
+			;;
+		*)
+			passwall_dns_chain_ready || return 1
+			port=$(resolve_passwall_dns_front_port 2>/dev/null)
+			;;
+	esac
+	is_valid_port "$port" || return 1
+	port_listening_or_unknown "$port" || return 1
+	printf '%s\n' "$port"
+}
+
+# Resolver AdGuard Home must forward to when PassWall owns DNS.  $1 is AdGuard
+# Home's own interception mode, $2 its listening port (never query ourselves).
+# Interception mode only decides how LAN DNS traffic reaches AdGuard Home, so
+# the dedicated front-end is usable from every mode.  The stretched system
+# dnsmasq is only safe when AdGuard Home is not dnsmasq's upstream, otherwise the
+# query would loop (dnsmasq -> AdGuard Home -> dnsmasq).
+resolve_passwall_dns_upstream() {
+	local redirect agh_port vendor port
+	redirect=$(normalize_redirect_mode "$1")
+	agh_port="$2"
+	[ "$redirect" = 'none' ] && return 1
+	for vendor in passwall passwall2; do
+		port=$(passwall_dns_front_port "$vendor" 2>/dev/null) || continue
+		[ -n "$agh_port" ] && [ "$port" = "$agh_port" ] && continue
+		printf '%s\n' "$port"
+		return 0
+	done
+	case "$redirect" in
+		redirect|exchange) ;;
+		*) return 1 ;;
+	esac
+	for vendor in passwall passwall2; do
+		port=$(passwall_dnsmasq_shunt_port "$vendor" 2>/dev/null) || continue
+		[ -n "$agh_port" ] && [ "$port" = "$agh_port" ] && continue
+		printf '%s\n' "$port"
+		return 0
+	done
+	return 1
+}
+
 resolve_redirect_compat_state() {
 	local redirect="$1" port
 	redirect=$(normalize_redirect_mode "$redirect")
@@ -555,7 +656,12 @@ sync_passwall_upstream_dns() {
 
 	if is_valid_port "$port"; then
 		# PassWall is up.
-		if [ "$enabled" = '1' ] && [ "$redirect" = 'redirect' ]; then
+		# The managed entry is kept in every interception mode: the mode decides
+		# how LAN DNS traffic reaches AdGuard Home, not which resolver AdGuard
+		# Home must query for PassWall's split-domain routing (分流).  Without it
+		# AdGuard Home falls back to plain public DNS, which poisons A/AAAA
+		# answers for foreign domains (YouTube/X/ChatGPT become unreachable).
+		if [ "$enabled" = '1' ] && [ "$redirect" != 'none' ]; then
 			# Managed upstream for split-domain routing (分流).
 			endpoint="127.0.0.1:${port}"
 			managed_passwall_upstream_has_endpoint "$configpath" "$endpoint" && return 0
@@ -1417,10 +1523,16 @@ _do_redirect() {
 	effective_redirect=$(resolve_effective_redirect_mode "$redirect")
 	compat_reason=$(resolve_redirect_compat_reason "$redirect" 2>/dev/null)
 	compat_upstream=$(resolve_redirect_compat_upstream_port "$redirect" 2>/dev/null)
+	# The managed PassWall upstream is about WHICH resolver AdGuard Home queries,
+	# which is independent of how LAN traffic reaches it, so it is resolved for
+	# every interception mode instead of only "redirect".
+	[ -n "$compat_upstream" ] || \
+		compat_upstream=$(resolve_passwall_dns_upstream "$redirect" "$(yaml_get 'dns.port' "$configpath" 2>/dev/null)" 2>/dev/null)
 	conflict_reason=$(resolve_redirect_conflict_reason "$redirect" 2>/dev/null)
 	if [ "$effective_redirect" != 'redirect' ]; then
+		# The PSW_DNS bypass rules only exist to win the port 53 race against
+		# PassWall's own redirect, so the reason stays redirect-only.
 		compat_reason=''
-		compat_upstream=''
 	fi
 	sync_passwall_upstream_dns "$configpath" "$compat_upstream"
 	upstream_sync_status=$?
@@ -1704,11 +1816,15 @@ start_service() {
 	esac
 	ensure_querylog_file_enabled "$configpath"
 	prepare_dns_runtime "$redirect" "$configpath"
-	if [ "$(normalize_redirect_mode "$redirect")" = 'redirect' ] && { passwall_dns_redirect_enabled || passwall2_dns_redirect_enabled; }; then
-		sync_passwall_upstream_dns "$configpath" "$(resolve_redirect_compat_upstream_port "$redirect" 2>/dev/null)"
-	else
-		sync_passwall_upstream_dns "$configpath" ''
-	fi
+	# Resolve the managed PassWall upstream exactly like _do_redirect does, so a
+	# start/boot never drops it back to plain public resolvers (which would poison
+	# every foreign lookup while PassWall is actually serving DNS).
+	local _pw_upstream
+	_pw_upstream=$(resolve_redirect_compat_upstream_port "$redirect" 2>/dev/null)
+	[ -n "$_pw_upstream" ] || \
+		_pw_upstream=$(resolve_passwall_dns_upstream "$redirect" "$(yaml_get 'dns.port' "$configpath" 2>/dev/null)" 2>/dev/null)
+	sync_passwall_upstream_dns "$configpath" "$_pw_upstream"
+	unset _pw_upstream
 	agh_port=$(yaml_get 'dns.port' "$configpath")
 	# Atomically claim the procd-open slot.  If another start_service call
 	# (e.g. service_triggers race with postinst's explicit 'start') already

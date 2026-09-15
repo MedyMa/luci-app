@@ -138,6 +138,37 @@ passwall2_chain_ready() {
 	command -v iptables >/dev/null 2>&1 && iptables -t nat -L PSW2_DNS >/dev/null 2>&1
 }
 
+# Mirrors resolve_passwall_dns_upstream() in init.d/AdGuardHome.  With PassWall's
+# "DNS 重定向" off there is no dedicated front-end instance: PassWall stretches
+# the system dnsmasq instead, so /tmp/etc/passwall/var carries no *_dns_port and
+# GLOBAL_DNSMASQ_CONF points into the system dnsmasq conf-dir.  That is still a
+# state AdGuard Home has to track, otherwise the managed upstream is never
+# re-synced when PassWall switches between the two layouts.
+passwall_dnsmasq_shunt_conf() {
+	case "$1" in
+		passwall2) cache_get /tmp/etc/passwall2/var GLOBAL_DNSMASQ_CONF 2>/dev/null | tail -n 1 ;;
+		*) cache_get /tmp/etc/passwall/var GLOBAL_DNSMASQ_CONF 2>/dev/null | tail -n 1 ;;
+	esac
+}
+
+passwall_dnsmasq_shunt_active() {
+	local conf
+	conf=$(passwall_dnsmasq_shunt_conf "$1" 2>/dev/null)
+	case "$conf" in
+		''|/tmp/etc/passwall/*|/tmp/etc/passwall2/*) return 1 ;;
+	esac
+	# PassWall only stretches the system dnsmasq while its own "DNS 重定向" is
+	# off; with the redirect on the shunt lives in its dedicated instance.
+	case "$1" in
+		passwall2) [ "$(uci -q get passwall2.@global[0].dns_redirect 2>/dev/null)" = '0' ] || return 1 ;;
+		*) [ "$(uci -q get passwall.@global[0].dns_redirect 2>/dev/null)" = '0' ] || return 1 ;;
+	esac
+	case "$1" in
+		passwall2) passwall2_chain_ready ;;
+		*) passwall_chain_ready ;;
+	esac
+}
+
 # Replicates resolve_redirect_compat_state logic from init.d/AdGuardHome.
 # Checks UCI switch + DNS chain readiness AND that the PassWall DNS front port
 # is actually listening, so a killed/crashed PassWall (leftover UCI switch or
@@ -155,6 +186,10 @@ passwall_state() {
 				return 0
 			fi
 		fi
+		if passwall_dnsmasq_shunt_active passwall; then
+			printf 'passwall:dnsmasq'
+			return 0
+		fi
 	fi
 
 	enabled=$(uci -q get passwall2.@global[0].enabled 2>/dev/null)
@@ -166,6 +201,10 @@ passwall_state() {
 				printf 'passwall2:%s' "$port"
 				return 0
 			fi
+		fi
+		if passwall_dnsmasq_shunt_active passwall2; then
+			printf 'passwall2:dnsmasq'
+			return 0
 		fi
 	fi
 
