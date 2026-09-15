@@ -958,13 +958,48 @@ set_forward_dnsmasq() {
 	/etc/init.d/dnsmasq restart >/dev/null 2>&1
 }
 
+# AdGuard Home's own DNS port, read from its YAML.
+# The runtime state files (AdGold_port / AdGold_redirect) live on tmpfs and are
+# cleared by a reboot, while the dnsmasq entries AdGuard Home installed survive
+# in flash.  The YAML is therefore the only durable record of the port that has
+# to be cleaned up.
+resolve_agh_dns_port() {
+	local configpath binpath agh_port
+	get_opt configpath configpath "$DEFAULT_CONFIGPATH"
+	if [ ! -r "$configpath" ]; then
+		get_opt binpath binpath "$DEFAULT_BINPATH"
+		configpath=$(resolve_configpath "$configpath" "$(resolve_binpath "$binpath")")
+	fi
+	[ -r "$configpath" ] || return 1
+	agh_port=$(yaml_get 'dns.port' "$configpath" 2>/dev/null)
+	is_valid_port "$agh_port" || return 1
+	printf '%s\n' "$agh_port"
+}
+
 stop_forward_dnsmasq() {
-	local port="$1" addr servers resolvfile
-	[ -n "$port" ] || return 0
-	addr="127.0.0.1#$port"
-	uci -q del_list dhcp.@dnsmasq[0].server="$addr"
+	local port="$1" addr servers resolvfile removed changed
+	changed=0
+	removed=0
+	# No recorded port means the tmpfs state was cleared (reboot) or AdGuard
+	# Home never got far enough to write it.  Fall back to the YAML port:
+	# otherwise a stopped AdGuard Home keeps dnsmasq pointed at a dead loopback
+	# port forever, and because set_forward_dnsmasq also sets noresolv=1 that
+	# takes the whole router's DNS down with it.
+	if [ -z "$port" ]; then
+		port=$(resolve_agh_dns_port 2>/dev/null)
+	fi
+	if [ -n "$port" ] && is_valid_port "$port"; then
+		addr="127.0.0.1#$port"
+		if dnsmasq_forward_is_active "$port"; then
+			uci -q del_list dhcp.@dnsmasq[0].server="$addr"
+			removed=1
+			changed=1
+		fi
+	fi
 	servers=$(uci -q get dhcp.@dnsmasq[0].server 2>/dev/null)
-	if [ -z "$servers" ]; then
+	if [ "$removed" = '1' ] && [ -z "$servers" ]; then
+		# We were the only upstream, so undo the rest of what
+		# set_forward_dnsmasq changed.
 		resolvfile='/tmp/resolv.conf.auto'
 		[ -e /tmp/resolv.conf.d/resolv.conf.auto ] && resolvfile='/tmp/resolv.conf.d/resolv.conf.auto'
 		uci -q set dhcp.@dnsmasq[0].resolvfile="$resolvfile"
@@ -974,6 +1009,9 @@ stop_forward_dnsmasq() {
 		# behaviour and may block fallback DNS from working correctly.
 		uci -q delete dhcp.@dnsmasq[0].strictorder
 	fi
+	# Only touch dnsmasq when something actually changed, so that a no-op call
+	# does not restart the resolver (and flap DNS) for nothing.
+	[ "$changed" = '1' ] || return 0
 	uci -q commit dhcp
 	/etc/init.d/dnsmasq restart >/dev/null 2>&1
 }
@@ -1558,6 +1596,13 @@ _do_redirect() {
 			;;
 		dnsmasq-upstream) stop_forward_dnsmasq "$old_port" ;;
 		exchange) restore_port53 "$configpath" ;;
+		'')
+			# The recorded mode lives on tmpfs and is gone after a reboot, but
+			# dnsmasq may still carry the entry AdGuard Home installed before
+			# that reboot.  stop_forward_dnsmasq falls back to the YAML port
+			# and is a no-op when there is nothing to remove.
+			stop_forward_dnsmasq ''
+			;;
 	esac
 	if [ "$enabled" = '1' ] && [ "$agh_port" != '0' ]; then
 		if ! wait_for_port_listening "$agh_port" 3; then
@@ -1946,8 +1991,14 @@ boot_service() {
 		start_waitnet_guard
 	elif [ "$enabled" = '1' ]; then
 		start_service
+	elif [ -x "$binpath" ]; then
+		start_service
 	else
-		[ -x "$binpath" ] && start_service
+		# Disabled and no core binary: no code path will run start_service, so
+		# clean up here.  Otherwise a dnsmasq upstream left over from a previous
+		# install keeps pointing at AdGuard Home's dead loopback port and, with
+		# noresolv=1, can leave the router without working DNS.
+		stop_forward_dnsmasq ''
 	fi
 }
 
