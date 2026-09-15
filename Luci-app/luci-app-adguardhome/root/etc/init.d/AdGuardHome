@@ -340,6 +340,40 @@ resolve_passwall_dns_upstream() {
 	return 1
 }
 
+# One-line summary of how PassWall's DNS was resolved, so a field report can be
+# matched to a code path at a glance:
+#   front_port=11400     PassWall runs its own DNS front-end (DNS redirect on)
+#   dnsmasq_shunt=53     PassWall stretched the system dnsmasq (redirect off),
+#                        so the system dnsmasq carries its split-domain rules
+#   upstream=none        no PassWall resolver was found; public fallbacks may
+#                        replace it, which poisons every foreign lookup
+# Grep with: logread | grep 'passwall dns'
+log_passwall_dns_state() {
+	local redirect="$1" upstream="$2" sync="$3" vendor enabled dns_redirect chain front shunt
+	for vendor in passwall passwall2; do
+		case "$vendor" in
+			passwall2)
+				enabled=$(uci -q get passwall2.@global[0].enabled 2>/dev/null)
+				[ "$enabled" = '1' ] || continue
+				dns_redirect=$(uci -q get passwall2.@global[0].dns_redirect 2>/dev/null)
+				passwall2_dns_chain_ready && chain='yes' || chain='no'
+				front=$(passwall_dns_front_port passwall2 2>/dev/null)
+				shunt=$(passwall_dnsmasq_shunt_port passwall2 2>/dev/null)
+				;;
+			*)
+				enabled=$(uci -q get passwall.@global[0].enabled 2>/dev/null)
+				dns_redirect=$(uci -q get passwall.@global[0].dns_redirect 2>/dev/null)
+				passwall_dns_chain_ready && chain='yes' || chain='no'
+				front=$(passwall_dns_front_port passwall 2>/dev/null)
+				shunt=$(passwall_dnsmasq_shunt_port passwall 2>/dev/null)
+				;;
+		esac
+		shunt=${shunt:+dnsmasq:$shunt}
+		shunt=${shunt:-none}
+		logger -t AdGuardHome "passwall dns (${vendor}): mode=${redirect} enabled=${enabled:-0} dns_redirect=${dns_redirect:-unset} chain=${chain} front_port=${front:-none} dnsmasq_shunt=${shunt} upstream=${upstream:-none} sync=${sync:-0}"
+	done
+}
+
 resolve_redirect_compat_state() {
 	local redirect="$1" port
 	redirect=$(normalize_redirect_mode "$redirect")
@@ -1578,6 +1612,8 @@ _do_redirect() {
 		logger -t AdGuardHome "managed PassWall upstream changed, reloading AdGuard Home to apply DNS upstream"
 		schedule_passwall_upstream_reload
 	fi
+	# Record which PassWall DNS layout was seen and which resolver was chosen.
+	log_passwall_dns_state "$redirect" "$compat_upstream" "$upstream_sync_status"
 	old_redirect=$(cat "$OLD_REDIRECT_FILE" 2>/dev/null)
 	old_port=$(cat "$OLD_PORT_FILE" 2>/dev/null)
 	old_compat_reason=$(cat "$REDIRECT_COMPAT_FILE" 2>/dev/null)
