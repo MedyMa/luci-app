@@ -204,7 +204,7 @@ return view.extend({
 		var output = E('pre', { 'class': 'agh-console' }, rpcError ? actionError(rpcError, t('Log backend unavailable', '日志后端不可用')) : t('Loading current log…', '正在载入当前日志…'));
 		var status = E('div', { 'class': 'agh-status' }, rpcError ? actionError(rpcError, t('Log backend unavailable', '日志后端不可用')) : t('Loading runtime log…', '正在载入运行日志…'));
 		var runtimeTab = E('button', { 'class': 'agh-tab active', 'disabled': rpcError ? 'disabled' : null }, t('Runtime', '运行日志'));
-		var updateTab = E('button', { 'class': 'agh-tab', 'disabled': rpcError ? 'disabled' : null }, t('Update', '更新日志'));
+		var updateTab = E('button', { 'class': 'agh-tab', 'disabled': rpcError ? 'disabled' : null }, t('Update log', '更新日志'));
 		var reloadButton = E('button', { 'class': 'btn cbi-button', 'disabled': rpcError ? 'disabled' : null }, t('Reload', '重新载入'));
 		var clearButton = E('button', { 'class': 'btn cbi-button cbi-button-negative', 'disabled': rpcError ? 'disabled' : null }, t('Clear', '清空'));
 

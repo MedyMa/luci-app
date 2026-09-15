@@ -237,7 +237,7 @@ msgstr "作为 dnsmasq 的上游 DNS 服务器"
 
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/model/cbi/AdGuardHome/base.lua:142
 msgid "Runtime log file"
-msgstr "运行日志"
+msgstr "运行日志文件"
 
 #: /mnt/A/openwrt-latest/package/ctcgfw/luci-app-adguardhome/luasrc/model/cbi/AdGuardHome/base.lua:49
 msgid "Update"
@@ -425,7 +425,7 @@ msgstr "rpcd 后端过旧、无法提供本页数据，请重装本包或重启 
 
 #: htdocs/luci-static/resources/view/adguardhome/overview.js
 msgid "Use as dnsmasq upstream"
-msgstr "dnsmasq 上游模式"
+msgstr "作为 dnsmasq 上游"
 
 #: htdocs/luci-static/resources/view/adguardhome/overview.js
 msgid "Redirect port 53"
@@ -433,7 +433,7 @@ msgstr "重定向 53 端口"
 
 #: htdocs/luci-static/resources/view/adguardhome/overview.js
 msgid "Swap with dnsmasq port"
-msgstr "与 dnsmasq 互换端口"
+msgstr "与 dnsmasq 交换端口"
 
 #: htdocs/luci-static/resources/view/adguardhome/overview.js
 msgid "PassWall2 DNS redirect is active; AdGuard Home keeps intercepting and adds compatibility bypass rules."
@@ -485,7 +485,7 @@ msgstr "运行中"
 
 #: htdocs/luci-static/resources/view/adguardhome/overview.js
 msgid "Stopped"
-msgstr "已停止"
+msgstr "未运行"
 
 #: htdocs/luci-static/resources/view/adguardhome/overview.js
 msgid "Overview data unavailable"
@@ -513,7 +513,7 @@ msgstr "服务"
 
 #: htdocs/luci-static/resources/view/adguardhome/overview.js
 msgid "Backend missing"
-msgstr "后端不可用"
+msgstr "后端未加载"
 
 #: htdocs/luci-static/resources/view/adguardhome/overview.js
 msgid "Core"
@@ -577,7 +577,7 @@ msgstr "DNS 统计暂不可用，AdGuard Home API 可能要求来自 localhost �
 
 #: htdocs/luci-static/resources/view/adguardhome/overview.js
 msgid "Core Binary"
-msgstr "核心执行文件"
+msgstr "核心文件"
 
 #: htdocs/luci-static/resources/view/adguardhome/overview.js
 msgid "YAML Config"
