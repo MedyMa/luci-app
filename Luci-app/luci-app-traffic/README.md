@@ -38,11 +38,11 @@ AGH querylog     ─┘
    mappings. A flow whose source is the router itself is the proxy tunnel and
    is reported separately, so the traffic it carries is not counted twice.
 4. **Names** — every flow gets a name, in this order:
-   1. `/etc/traffic/apps.tsv`, matched against the **full host name** first
+   1. `/etc/traffic/apps.tsv`, matched against the **host name exactly** first
       (AdGuard Home reports `music.163.com`, so sub-domain rules work) and then
-      against the **registrable domain**;
+      against the **longest matching domain suffix**;
    2. `/etc/traffic/categories.tsv`, longest suffix match — hardware and
-      advertising domains then read as `CDN` / `Ads` / `Cloud` instead of a
+      advertising domains then read as `CDN` / `Ads` / `Games` instead of a
       meaningless host name;
    3. the registrable domain itself: a website is identified by its domain,
       which is what the reader actually recognises;
@@ -50,6 +50,13 @@ AGH querylog     ─┘
       from protocol and port — `SSL/TLS`, `QUIC`, `HTTP`, `DNS`, `STUN`,
       `RTSP`, `Email`, `Other`. That is why an unnamed encrypted flow shows up
       as `SSL/TLS` rather than disappearing into an "unknown" heap.
+
+   The two catalogues are large (see below), so they are **not** read on every
+   poll: a host name is resolved once, when it is first seen, and the answer is
+   cached in `/tmp/traffic/namemap.tsv`. The poll path then reads only that
+   cache, which is what keeps a 32,000-key catalogue from costing more than the
+   accounting itself. Replacing the catalogue (an upgrade) invalidates the
+   cache and everything is resolved again in one batch.
 
 Flow state lives in `/tmp/traffic`. Once an hour the counters are appended to
 `<datadir>/hourly.tsv` and reset, which is the persistent history.
@@ -75,12 +82,56 @@ Home's workdir. Both are shown on the page and can be overridden.
 | `datadir` | `/etc/traffic` | where `hourly.tsv` (the history) is kept |
 | `querylog` | auto | AdGuard Home's `querylog.json` |
 | `lan4` / `lan6` | auto | client prefixes; anything else is "the router itself" |
-| `appmap` | `/etc/traffic/apps.tsv` | domain → friendly name |
+| `appmap` | `/etc/traffic/apps.tsv` | the application catalogue |
 | `retention_days` | `7` | how much hourly history to keep |
 | `top_apps` / `top_clients` | `50` / `20` | how many entries the snapshot carries |
+| `resolve_interval` | `30` | minimum seconds between catalogue reads (see below) |
 
 Every option can also be set through the environment (`TRAFFIC_INTERVAL`,
 `TRAFFIC_QUERYLOG`, …), which is how the offline tests drive it.
+
+## The catalogue
+
+`/etc/traffic/apps.tsv` and `/etc/traffic/categories.tsv` are generated, not
+hand-written. **1,631 applications** over ~32,000 keys, plus 44 categories:
+
+| File | Rows | What it holds |
+|---|---|---|
+| `apps.tsv` | 32,015 | `<name>` `<TAB>` `<key>` `<TAB>` `H\|S` — `H` matches the host name exactly, `S` matches it as the longest domain suffix |
+| `categories.tsv` | 10,384 | `<Category>` `<TAB>` `<key>` — suffix match only, used when no application claimed the host |
+
+Both are built by `tools/build-catalog.js` from two upstream projects, because
+neither is enough alone:
+
+* **[domain-list-community](https://github.com/v2fly/domain-list-community)**
+  (MIT) — 1,539 service files, the broadest domain coverage, but its file names
+  are slugs (`googlefcm`, `2kgames`) and it composes services with `include:`;
+* **[ios_rule_script](https://github.com/blackmatrix7/ios_rule_script)**
+  (GPL-2.0) — 666 per-service rule sets whose directory names are already brand
+  names (`XiaoHongShu`, `Epic`, `AppStore`, `AppleFirmware`) and which cover the
+  game clients, app stores and Apple/macOS services.
+
+```
+node tools/build-catalog.js          # re-download, regenerate tables and icons
+node tools/build-catalog.js --skip-icons
+```
+
+It also copies the icons: **580 brand logos** from
+[dashboard-icons](https://github.com/homarr-labs/dashboard-icons),
+[Iconify's logos collection](https://iconify.design),
+[selfhst/icons](https://github.com/selfhst/icons) and
+[simple-icons](https://simpleicons.org), matched by slug and, when that fails,
+by prefix or substring so that `Sina` finds `sinaweibo`. The remaining names
+keep their letter avatar — a logo is never invented.
+
+Two rules keep the tables readable rather than merely large. Sources that are
+*routing bundles* rather than products (`ChinaMax`, `Global`, `Proxy`, the
+advertising and privacy blocklists) are excluded outright — the `Privacy`
+bundle alone claimed 39,896 keys, over half the catalogue, and would have shown
+every tracker as one row. And when two services claim the same key, the smaller
+rule set wins, so `play.google.com` reads as *Google Play* rather than *Google*;
+a small curated layer fixes the brands whose only upstream owner is a bundle
+(`taobao.com` is listed under `alibaba` and nowhere else).
 
 ## The page
 
@@ -106,18 +157,18 @@ separated in name order, which is likewise rank-independent.
 
 ## Icons
 
-The package ships **84 icons** in two clearly different kinds:
+The package ships **649 icons** in two clearly different kinds:
 
 | Kind | Count | Source | Rendered as |
 |---|---|---|---|
-| Brand logos | 47 | [simple-icons](https://simpleicons.org) (brand colour) and [dashboard-icons](https://github.com/homarr-labs/dashboard-icons) | the product mark |
-| Category / protocol glyphs | 37 | [lucide-static](https://lucide.dev) (ISC) | line art in muted grey, plus a `TYPE` tag in the list |
+| Brand logos | 580 | [dashboard-icons](https://github.com/homarr-labs/dashboard-icons), [Iconify logos](https://iconify.design), [selfhst/icons](https://github.com/selfhst/icons) and [simple-icons](https://simpleicons.org) | the product mark |
+| Category / protocol glyphs | 69 | [lucide-static](https://lucide.dev) (ISC) | line art in muted grey, plus a `TYPE` tag in the list |
 
 The two kinds are deliberately not interchangeable. A brand logo answers *which
 product*, a glyph answers *what kind of traffic* — SSL/TLS, QUIC, HTTP, DNS,
-STUN, RTSP, CDN, Cloud, Ads, Email, Search, Social, Video, Software, Other. A
-bucket row is drawn with its glyph, an italic muted name and a `TYPE` tag, so it
-can never be mistaken for an application.
+STUN, RTSP, CDN, Media, Games, Ads, Tracker, IPTV… A bucket row is drawn with
+its glyph, an italic muted name and a `TYPE` tag, so it can never be mistaken
+for an application.
 
 Brand icons are keyed by the application name: lower-cased with runs of
 non-alphanumerics turned into dashes (`YouTube` → `youtube.svg`, `China Mobile`
@@ -125,22 +176,18 @@ non-alphanumerics turned into dashes (`YouTube` → `youtube.svg`, `China Mobile
 `/luci-static/resources/traffic/icons/<name>.svg` and keeps its coloured letter
 avatar until that file has actually loaded, so a missing icon is invisible
 rather than broken. Both the image and the avatar occupy the same 26 px box, so
-row rhythm never shifts. 13 of the 62 names in `apps.tsv` have no upstream match
-(Tmall, iQIYI, Youku, JD, Didi, Pinduoduo, Toutiao, China Mobile/Telecom/Unicom,
-Tencent Cloud, NetEase, NetEase Mail) and keep their avatar — the open sets
-carry very little of the Chinese app landscape, so those are best added by hand.
+row rhythm never shifts.
 
-To add or replace an icon, drop an SVG into
-`htdocs/luci-static/resources/traffic/icons/` — no code change. To regenerate
-the whole set (brand logos and glyphs) after editing `apps.tsv`:
+**580 of 1,631 names** have an upstream logo — 64 of the 100 that carry the most
+domains. The rest keep their avatar; the open sets carry comparatively little of
+the Chinese app landscape and no logo is invented for a name that none of them
+knows. To add one by hand, drop an SVG into
+`htdocs/luci-static/resources/traffic/icons/` — no code change.
 
-```
-pwsh -File tools/fetch-icons.ps1
-```
-
-Note that `currentColor` is replaced with an explicit grey when the glyphs are
-saved: an SVG loaded through `<img>` does not inherit the page colour, so
-`currentColor` would resolve to black and disappear in dark mode.
+Note that `currentColor` is replaced with an explicit grey when a glyph is
+saved, and a monochrome brand mark is pinned to the same grey: an SVG loaded
+through `<img>` does not inherit the page colour, so `currentColor` would
+resolve to black and disappear in dark mode.
 
 Icons remain the trademarks of their owners and are used here only to identify
 the corresponding service; check the upstream licences before redistributing.
@@ -172,12 +219,12 @@ the corresponding service; check the upstream licences before redistributing.
 | `/usr/libexec/rpcd/luci.traffic` | snapshot, hourly aggregation, reset |
 | `/www/luci-static/resources/view/traffic/overview.js` | the page |
 | `/etc/config/traffic` | settings |
-| `/etc/traffic/apps.tsv` | domain → friendly application name |
-| `/etc/traffic/categories.tsv` | domain suffix → category (CDN, Ads, …) |
+| `/etc/traffic/apps.tsv` | application catalogue (`name`, `key`, `H\|S`) |
+| `/etc/traffic/categories.tsv` | domain suffix → category (CDN, Games, Ads, …) |
 
 Not installed, but shipped in the repository for regeneration and verification:
 
 | Path | Purpose |
 |---|---|
-| `tools/fetch-icons.ps1` | rebuild the icon set from the upstream sets |
+| `tools/build-catalog.js` | rebuild both catalogues and the icon set from upstream |
 | `tools/collector-selftest.sh` | offline regression: every attribution path |

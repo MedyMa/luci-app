@@ -1,0 +1,974 @@
+#!/usr/bin/env node
+/*
+ * Build the application / site / service catalogue for luci-app-traffic.
+ *
+ * Two upstream projects are merged, because neither is sufficient alone:
+ *
+ *   v2fly/domain-list-community  1.5k service files, ~38k domain keys, but the
+ *                                file names are slugs ("googlefcm", "2kgames")
+ *   blackmatrix7/ios_rule_script 668 per-service rule sets whose directory
+ *                                names are already brand names ("XiaoHongShu",
+ *                                "Epic", "AppStore") and which add the game
+ *                                clients, app stores and Apple/macOS services
+ *
+ * Outputs (overwritten in place):
+ *
+ *   root/etc/traffic/apps.tsv        <name>\t<key>\tS|H
+ *   root/etc/traffic/categories.tsv  <Category>\t<key>
+ *   htdocs/.../traffic/icons/*.svg   brand logos, then category/protocol glyphs
+ *
+ * The third column is the lookup kind, which mirrors the upstream semantics:
+ *   S  DOMAIN-SUFFIX / bare domain  -> longest-suffix match on the host name
+ *   H  DOMAIN / full:host           -> exact host name match
+ *
+ * Usage:  node tools/build-catalog.js [--skip-icons] [--limit-icons N] [--cache DIR]
+ */
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+const { spawnSync } = require('child_process');
+
+const ROOT = path.resolve(__dirname, '..');
+const DATA_DIR = path.join(ROOT, 'root', 'etc', 'traffic');
+const ICON_DIR = path.join(ROOT, 'htdocs', 'luci-static', 'resources', 'traffic', 'icons');
+const CACHE = process.env.TRAFFIC_CATALOG_CACHE || path.join(os.tmpdir(), 'traffic-catalog');
+const GH_TOKEN = process.env.GH_TOKEN || process.env.GITHUB_TOKEN || '';
+
+const DLC_TARBALL = 'https://codeload.github.com/v2fly/domain-list-community/tar.gz/refs/heads/master';
+const BM7_TREE = 'https://api.github.com/repos/blackmatrix7/ios_rule_script/git/trees/master?recursive=1';
+const DASHBOARD_TREE = 'https://api.github.com/repos/homarr-labs/dashboard-icons/git/trees/main?recursive=1';
+const SIMPLE_TREE = 'https://api.github.com/repos/simple-icons/simple-icons/git/trees/develop?recursive=1';
+const SELFHST_TREE = 'https://api.github.com/repos/selfhst/icons/git/trees/main?recursive=1';
+const ICONIFY_LOGOS = 'https://api.iconify.design/collection?prefix=logos';
+
+const argv = process.argv.slice(2);
+const opt = {
+	skipIcons: argv.includes('--skip-icons'),
+	limitIcons: 0,
+	maxCategoryKeys: 2500,
+	cache: CACHE,
+};
+for (let i = 0; i < argv.length; i++) {
+	if (argv[i] === '--limit-icons') opt.limitIcons = parseInt(argv[++i], 10) || 0;
+	else if (argv[i] === '--max-category-keys') opt.maxCategoryKeys = parseInt(argv[++i], 10) || 0;
+	else if (argv[i] === '--cache') opt.cache = argv[++i];
+}
+const CACHE_DIR = opt.cache;
+
+/* ------------------------------------------------------------------ helpers */
+
+function log(msg) { process.stdout.write(msg + '\n'); }
+
+function ensureDir(dir) { fs.mkdirSync(dir, { recursive: true }); }
+
+function slug(name) {
+	return String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function httpText(url, { tries = 3, token = false } = {}) {
+	for (let attempt = 1; attempt <= tries; attempt++) {
+		try {
+			const headers = { 'user-agent': 'luci-app-traffic-catalog' };
+			if (token && GH_TOKEN) headers.authorization = 'Bearer ' + GH_TOKEN;
+			const res = await fetch(url, { headers });
+			if (res.status === 403 || res.status === 429) throw new Error('HTTP ' + res.status + ' (rate limited?)');
+			if (!res.ok) throw new Error('HTTP ' + res.status);
+			return await res.text();
+		} catch (err) {
+			if (attempt === tries) throw err;
+			await sleep(500 * attempt);
+		}
+	}
+}
+
+/** GitHub tree listing, cached on disk so repeat runs do not spend API quota. */
+async function ghTree(url, cacheName) {
+	const file = path.join(CACHE_DIR, cacheName);
+	if (fs.existsSync(file)) {
+		try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) { /* refetch */ }
+	}
+	if (!GH_TOKEN) log('  (提示: 未设置 GH_TOKEN，GitHub API 未认证配额仅 60 次/小时)');
+	const json = await httpText(url, { token: true, tries: 4 });
+	fs.writeFileSync(file, json, 'utf8');
+	return JSON.parse(json);
+}
+
+/** Run `worker` over `items` with a bounded number of concurrent workers. */
+async function pool(items, worker, concurrency) {
+	const results = new Array(items.length);
+	let next = 0;
+	const runners = new Array(Math.min(concurrency, items.length)).fill(0).map(async () => {
+		for (;;) {
+			const i = next++;
+			if (i >= items.length) return;
+			results[i] = await worker(items[i], i);
+		}
+	});
+	await Promise.all(runners);
+	return results;
+}
+
+/* ----------------------------------------------------- display name polishing */
+
+/* Slugs that a mechanical "capitalise each word" transform gets wrong.  Only
+ * names that a reader would notice are listed; everything else falls back to
+ * the generic transform. */
+const NAME_FIX = {
+	'2kgames': '2K Games', '2k': '2K', '3dm': '3DM', '4chan': '4chan', '4paradigm': '4Paradigm',
+	'115': '115', '12306': '12306', '1337x': '1337x', '17173': '17173', '17zuoye': '17zuoye',
+	'36kr': '36Kr', '4399': '4399', '51job': '51Job', '58tongcheng': '58.com', '6park': '6park',
+	'8btc': '8BTC', '9news': '9News', '9to5': '9to5',
+	'adobe': 'Adobe', 'adobeactivation': 'Adobe Activation', 'alibaba': 'Alibaba',
+	'alibabacloud': 'Alibaba Cloud', 'alicdn': 'AliCDN', 'aliyun': 'Alibaba Cloud', 'aliyuncs': 'Alibaba Cloud',
+	'amap': 'Amap', 'anthropic': 'Anthropic', 'anthropicai': 'Anthropic', 'apple': 'Apple',
+	'appledev': 'Apple Developer', 'applefirmware': 'Apple Firmware', 'applehardware': 'Apple Hardware',
+	'appleid': 'Apple Account', 'applemail': 'iCloud Mail', 'applemusic': 'Apple Music',
+	'applenews': 'Apple News', 'appleproxy': 'iCloud Private Relay', 'appletv': 'Apple TV',
+	'appstore': 'App Store', 'autodesk': 'Autodesk', 'aws': 'AWS', 'azure': 'Microsoft Azure',
+	'baidu': 'Baidu', 'baidutieba': 'Baidu Tieba', 'battle': 'Battle.net', 'battlenet': 'Battle.net',
+	'beats': 'Beats', 'bilibili': 'Bilibili', 'bilibiliintl': 'Bilibili (Intl)', 'bitly': 'Bitly',
+	'blizzard': 'Blizzard', 'bmw': 'BMW', 'bytedance': 'ByteDance', 'cainiao': 'Cainiao',
+	'cloudflare': 'Cloudflare', 'cloudfront': 'Amazon CloudFront', 'ctrip': 'Trip.com',
+	'dailymotion': 'Dailymotion', 'debian': 'Debian', 'dingtalk': 'DingTalk', 'discord': 'Discord',
+	'docker': 'Docker', 'didi': 'Didi', 'douyin': 'Douyin', 'dropbox': 'Dropbox',
+	'ea': 'EA', 'ebay': 'eBay', 'electron': 'Electron', 'epic': 'Epic Games', 'epicgames': 'Epic Games',
+	'facebook': 'Facebook', 'fastly': 'Fastly', 'figma': 'Figma', 'firebase': 'Firebase',
+	'garena': 'Garena', 'github': 'GitHub', 'gitlab': 'GitLab', 'gmail': 'Gmail', 'gog': 'GOG',
+	'google': 'Google', 'googleai': 'Google AI', 'googlecloud': 'Google Cloud',
+	'googledeepmind': 'Google DeepMind', 'googledrive': 'Google Drive', 'googleearth': 'Google Earth',
+	'googlefcm': 'Google Firebase', 'googleplay': 'Google Play', 'googlescholar': 'Google Scholar',
+	'googlesearch': 'Google Search', 'googletrustservices': 'Google Trust Services',
+	'googlevoice': 'Google Voice', 'googlevideo': 'YouTube', 'gopro': 'GoPro',
+	'hbo': 'HBO', 'hoyoverse': 'HoYoverse', 'mihoyo': 'HoYoverse', 'huawei': 'Huawei',
+	'ibm': 'IBM', 'icloud': 'iCloud', 'icloudprivaterelay': 'iCloud Private Relay',
+	'instagram': 'Instagram', 'iqiyi': 'iQIYI', 'iqiyiintl': 'iQIYI (Intl)', 'itunes': 'iTunes Store',
+	'jetbrains': 'JetBrains', 'jfrog': 'JFrog', 'kakaotalk': 'KakaoTalk', 'kuaishou': 'Kuaishou',
+	'lenovo': 'Lenovo', 'line': 'LINE', 'linkedin': 'LinkedIn', 'microsoft': 'Microsoft',
+	'microsoftedge': 'Microsoft Edge', 'mihoyo': 'HoYoverse', 'minecraft': 'Minecraft',
+	'netflix': 'Netflix', 'netease': 'NetEase', 'neteasecloudmusic': 'NetEase Cloud Music',
+	'neteasemusic': 'NetEase Cloud Music', 'nintendo': 'Nintendo', 'notion': 'Notion',
+	'office365': 'Microsoft 365', 'onedrive': 'OneDrive', 'openai': 'OpenAI', 'openwrt': 'OpenWrt',
+	'oppo': 'OPPO', 'paypal': 'PayPal', 'playstation': 'PlayStation', 'pinduoduo': 'Pinduoduo',
+	'pinterest': 'Pinterest', 'pixiv': 'Pixiv', 'qq': 'QQ', 'qqmusic': 'QQ Music',
+	'reddit': 'Reddit', 'riot': 'Riot Games', 'riotgames': 'Riot Games', 'roblox': 'Roblox',
+	'samsung': 'Samsung', 'shein': 'SHEIN', 'shopify': 'Shopify', 'skype': 'Skype', 'slack': 'Slack',
+	'snapchat': 'Snapchat', 'spotify': 'Spotify', 'steam': 'Steam', 'steamcn': 'Steam China',
+	'steamcommunity': 'Steam Community', 'steampowered': 'Steam', 'taobao': 'Taobao',
+	'taptap': 'TapTap', 'telegram': 'Telegram', 'temu': 'Temu', 'tencent': 'Tencent',
+	'tencentcloud': 'Tencent Cloud', 'tencentvideo': 'Tencent Video', 'tiktok': 'TikTok',
+	'tmall': 'Tmall', 'twitch': 'Twitch', 'twitter': 'X (Twitter)', 'ubisoft': 'Ubisoft',
+	'ubuntu': 'Ubuntu', 'uc': 'UC Browser', 'vercel': 'Vercel', 'verisign': 'Verisign',
+	'vmware': 'VMware', 'wechat': 'WeChat', 'wegame': 'WeGame', 'weibo': 'Weibo',
+	'whatsapp': 'WhatsApp', 'wikipedia': 'Wikipedia', 'wps': 'WPS Office', 'x': 'X (Twitter)',
+	'xbox': 'Xbox', 'xiaohongshu': 'Xiaohongshu', 'xiaomi': 'Xiaomi', 'yandex': 'Yandex',
+	'youtube': 'YouTube', 'youtubemusic': 'YouTube Music', 'youku': 'Youku', 'zhihu': 'Zhihu',
+	'zoom': 'Zoom', 'zalo': 'Zalo',
+	/* Names that would collide with a protocol bucket or a category row: the
+	 * page draws those as "type" rows, so an application must not share the
+	 * name.  The generator also warns if a new collision appears upstream. */
+	'dns': 'Public DNS', 'stun': 'STUN Servers', 'redis': 'Redis Labs',
+	/* acronyms and brands the generic transform gets wrong */
+	'rt': 'RT', 'att': 'AT&T', 'noip': 'No-IP', 'volcengine': 'Volcano Engine',
+	'jingdong': 'JD.com', 'kingsoft': 'Kingsoft', 'gmo': 'GMO Internet',
+	'wildberries': 'Wildberries', 'sber': 'Sberbank', 'tbank': 'T-Bank',
+	'thescoregroup': 'theScore', 'epochmediagroup': 'Epoch Media',
+	'wifimaster': 'WiFi Master', 'cibn': 'CIBN', 'hijacking': 'Hijacking',
+	'ntpservice': 'NTP Service', 'bloomberg': 'Bloomberg', 'nintendo': 'Nintendo',
+};
+
+const ACRONYMS = new Set(['ai', 'api', 'app', 'aws', 'bot', 'cdn', 'crm', 'dns', 'ea', 'gpu', 'hbo', 'ibm',
+	'iot', 'ip', 'isp', 'it', 'llc', 'ltd', 'nas', 'nft', 'ntp', 'os', 'pc', 'pdf', 'sdk', 'sms', 'ssd',
+	'tv', 'ui', 'uk', 'us', 'usa', 'vpn', 'vps', 'vpn', 'wps', 'xml']);
+
+/** Human-readable name for an upstream slug such as "google-play". */
+function prettyName(slugName) {
+	const key = String(slugName).toLowerCase();
+	if (NAME_FIX[key]) return NAME_FIX[key];
+
+	const parts = String(slugName)
+		.split(/[-_.]+/)
+		.filter(Boolean)
+		.map(p => {
+			const low = p.toLowerCase();
+			if (ACRONYMS.has(low)) return low.toUpperCase();
+			if (/^[0-9]+[a-z]*$/i.test(p)) return p.toUpperCase() === p ? p : p.toLowerCase();
+			return p.charAt(0).toUpperCase() + p.slice(1);
+		});
+
+	return parts.join(' ') || String(slugName);
+}
+
+/* ------------------------------------------------------------ curated layer */
+
+/* Domains whose upstream owner is a bundle rather than the product itself.
+ * taobao.com is listed by domain-list-community under `alibaba` and by nothing
+ * else, so without this layer 100% of Taobao traffic reads as "Alibaba".  These
+ * are claimed before either source, and only for keys the upstreams genuinely
+ * own (a more specific exact-host rule, such as Adobe's activation hosts, still
+ * wins at lookup time). */
+const CURATED = [
+	/* --- China: shopping, payments, services */
+	['Taobao', 'taobao.com'], ['Tmall', 'tmall.com'], ['Alipay', 'alipay.com'],
+	['Alibaba', 'alibaba.com'], ['AliCDN', 'alicdn.com'], ['Alibaba Cloud', 'aliyuncs.com'],
+	['Alibaba Cloud', 'aliyun.com'], ['1688', '1688.com'], ['AliExpress', 'aliexpress.com'],
+	['JD.com', 'jd.com'], ['JD.com', '360buyimg.com'], ['Pinduoduo', 'pinduoduo.com'],
+	['Pinduoduo', 'yangkeduo.com'], ['Meituan', 'meituan.com'], ['Meituan', 'meituan.net'],
+	['Dianping', 'dianping.com'], ['Ele.me', 'ele.me'], ['Didi', 'didiglobal.com'],
+	['Didi', 'xiaojukeji.com'], ['Ctrip', 'ctrip.com'], ['Trip.com', 'trip.com'],
+	['Qunar', 'qunar.com'], ['12306', '12306.cn'], ['Xianyu', 'goofish.com'],
+	['Suning', 'suning.com'], ['Vipshop', 'vip.com'], ['Mogu', 'mogujie.com'],
+	['Xiaohongshu', 'xhscdn.com'], ['Xiaohongshu', 'xiaohongshu.com'],
+	/* --- China: media, social, tools */
+	['WeChat', 'weixin.qq.com', 'H'], ['WeChat', 'wechat.com'], ['WeChat', 'weixin.com'],
+	['WeChat', 'wx.qq.com', 'H'], ['QQ', 'qq.com'], ['QQ', 'qpic.cn'], ['QQ', 'qlogo.cn'],
+	['Tencent Video', 'v.qq.com', 'H'], ['Tencent Video', 'qq.com', 'H'],
+	['Tencent Cloud', 'tencentcloudapi.com'], ['Tencent Cloud', 'myqcloud.com'],
+	['Tencent Cloud', 'qcloud.com'], ['Tencent', 'gtimg.cn'], ['Tencent', 'gtimg.com'],
+	['Weibo', 'weibo.com'], ['Weibo', 'sinaimg.cn'], ['Weibo', 'weibo.cn'], ['Sina', 'sina.com.cn'],
+	['Bilibili', 'bilibili.com'], ['Bilibili', 'bilivideo.com'], ['Bilibili', 'bilivideo.cn'],
+	['Bilibili', 'hdslb.com'], ['Bilibili', 'biliapi.net'], ['Douyin', 'douyin.com'],
+	['Douyin', 'douyinpic.com'], ['Douyin', 'douyinstatic.com'], ['Douyin', 'douyinvod.com'],
+	['TikTok', 'tiktokcdn.com'], ['TikTok', 'tiktokv.com'], ['TikTok', 'tiktokcdn-us.com'],
+	['ByteDance', 'bytedance.com'], ['ByteDance', 'byteimg.com'], ['ByteDance', 'pstatp.com'],
+	['ByteDance', 'snssdk.com'], ['ByteDance', 'toutiao.com'], ['ByteDance', 'ixigua.com'],
+	['Kuaishou', 'kuaishou.com'], ['Kuaishou', 'kwimgs.com'], ['Kuaishou', 'gifshow.com'],
+	['Zhihu', 'zhihu.com'], ['Zhihu', 'zhimg.com'], ['Douban', 'douban.com'], ['Douban', 'doubanio.com'],
+	['Baidu', 'baidu.com'], ['Baidu', 'bdstatic.com'], ['Baidu', 'bdimg.com'],
+	['Baidu', 'baidupcs.com'], ['Baidu', 'bcebos.com'], ['Baidu', 'hao123.com'],
+	['Xiaomi', 'mi.com'], ['Xiaomi', 'miui.com'], ['Xiaomi', 'xiaomi.com'], ['Xiaomi', 'mifile.cn'],
+	['Huawei', 'huawei.com'], ['Huawei', 'hicloud.com'], ['Huawei', 'dbankcdn.com'],
+	['Honor', 'hihonor.com'], ['OPPO', 'oppo.com'], ['vivo', 'vivo.com.cn'],
+	['NetEase', '163.com'], ['NetEase', '126.com'], ['NetEase', '126.net'],
+	['NetEase Cloud Music', 'music.163.com', 'H'], ['NetEase Cloud Music', '126.net', 'H'],
+	['QQ Music', 'y.qq.com', 'H'], ['QQ Music', 'qqmusic.qq.com', 'H'],
+	['Kugou', 'kugou.com'], ['Kuwo', 'kuwo.cn'], ['Ximalaya', 'ximalaya.com'],
+	['Qidian', 'qidian.com'], ['Jjwxc', 'jjwxc.net'], ['Zongheng', 'zongheng.com'],
+	['Youku', 'youku.com'], ['Youku', 'ykimg.com'], ['iQIYI', 'iqiyi.com'], ['iQIYI', 'qiyi.com'],
+	['iQIYI', 'iqiyipic.com'], ['Mango TV', 'mgtv.com'], ['Sohu', 'sohu.com'], ['Sohu', 'sohucs.com'],
+	['Huya', 'huya.com'], ['Douyu', 'douyu.com'], ['Douyu', 'douyucdn.cn'],
+	['WPS Office', 'wps.cn'], ['WPS Office', 'wps.com'], ['Kingsoft', 'ksord.com'],
+	['DingTalk', 'dingtalk.com'], ['Feishu', 'feishu.cn'], ['Feishu', 'larksuite.com'],
+	['Alibaba', 'aliyuncdn.com'], ['Umeng', 'umeng.com'], ['Umeng', 'umengcloud.com'],
+	['Getui', 'getui.com'], ['Jiguang', 'jiguang.cn'],
+	/* --- Apple / macOS */
+	['Apple', 'apple.com'], ['Apple', 'cdn-apple.com'], ['Apple', 'aaplimg.com'],
+	['iCloud', 'icloud.com'], ['iCloud', 'icloud.com.cn'], ['iCloud', 'me.com'],
+	['App Store', 'apps.apple.com', 'H'], ['App Store', 'itunes.apple.com', 'H'],
+	['iTunes Store', 'itunes.com'], ['Apple Music', 'music.apple.com', 'H'],
+	['Apple Music', 'mzstatic.com'], ['Apple Developer', 'developer.apple.com', 'H'],
+	['Apple Firmware', 'swcdn.apple.com', 'H'], ['Apple Push', 'push.apple.com', 'H'],
+	['Homebrew', 'brew.sh'], ['Setapp', 'setapp.com'], ['MacPaw', 'macpaw.com'],
+	['Bartender', 'macbartender.com'], ['Alfred', 'alfredapp.com'], ['Sketch', 'sketch.com'],
+	['Pixelmator', 'pixelmator.com'], ['Panic', 'panic.com'], ['Omni Group', 'omnigroup.com'],
+	['Parallels', 'parallels.com'], ['VMware', 'vmware.com'], ['Reeder', 'reederapp.com'],
+	/* --- Global: platforms and services */
+	['Google', 'google.com'], ['Google', 'googleapis.com'], ['Google', 'gstatic.com'],
+	['Google', 'googleusercontent.com'], ['Google', 'googlevideo.com'], ['Google', 'ggpht.com'],
+	['Google', 'withgoogle.com'], ['Google', 'goo.gl'], ['Gmail', 'gmail.com'],
+	['Google Play', 'play.google.com', 'H'], ['Android', 'android.com'],
+	['Microsoft', 'microsoft.com'], ['Microsoft', 'msftconnecttest.com'], ['Microsoft', 'windows.com'],
+	['Microsoft', 'windowsupdate.com'], ['Microsoft', 'live.com'], ['Microsoft', 'msn.com'],
+	['Microsoft', 'bing.com'], ['Microsoft', 'office.com'], ['Microsoft', 'office.net'],
+	['Microsoft 365', 'office365.com'], ['OneDrive', 'onedrive.com'], ['OneDrive', 'sharepoint.com'],
+	['Outlook', 'outlook.com'], ['Microsoft Azure', 'azure.com'], ['Microsoft Azure', 'azurewebsites.net'],
+	['Microsoft Azure', 'windows.net'], ['Microsoft Teams', 'teams.microsoft.com', 'H'],
+	['LinkedIn', 'linkedin.com'], ['LinkedIn', 'licdn.com'], ['Skype', 'skype.com'],
+	['Facebook', 'facebook.com'], ['Facebook', 'fbcdn.net'], ['Facebook', 'fb.com'],
+	['Facebook', 'fbsbx.com'], ['Instagram', 'instagram.com'], ['Instagram', 'cdninstagram.com'],
+	['WhatsApp', 'whatsapp.com'], ['WhatsApp', 'whatsapp.net'], ['Messenger', 'messenger.com'],
+	['X (Twitter)', 'twitter.com'], ['X (Twitter)', 'x.com'], ['X (Twitter)', 'twimg.com'],
+	['X (Twitter)', 't.co'], ['Reddit', 'reddit.com'], ['Reddit', 'redd.it'],
+	['Reddit', 'redditstatic.com'], ['Reddit', 'redditmedia.com'], ['Pinterest', 'pinterest.com'],
+	['Pinterest', 'pinimg.com'], ['Snapchat', 'snapchat.com'], ['Snapchat', 'sc-cdn.net'],
+	['Telegram', 'telegram.org'], ['Telegram', 't.me'], ['Telegram', 'telegram.me'],
+	['Discord', 'discord.com'], ['Discord', 'discordapp.com'], ['Discord', 'discordapp.net'],
+	['Slack', 'slack.com'], ['Slack', 'slack-edge.com'], ['Zoom', 'zoom.us'], ['Zoom', 'zoom.com'],
+	['Netflix', 'netflix.com'], ['Netflix', 'nflxvideo.net'], ['Netflix', 'nflximg.net'],
+	['Netflix', 'nflxext.com'], ['Netflix', 'nflxso.net'], ['Netflix', 'fast.com'],
+	['YouTube', 'youtube.com'], ['YouTube', 'ytimg.com'], ['YouTube', 'youtu.be'],
+	['YouTube', 'googlevideo.com', 'H'],
+	['Amazon', 'amazon.com'], ['Amazon', 'amazonaws.com'], ['Amazon', 'media-amazon.com'],
+	['Amazon', 'ssl-images-amazon.com'], ['Amazon', 'a2z.org'], ['AWS', 'aws.amazon.com', 'H'],
+	['Prime Video', 'primevideo.com'], ['Prime Video', 'aiv-cdn.net'],
+	['Spotify', 'spotify.com'], ['Spotify', 'scdn.co'], ['Spotify', 'spotifycdn.com'],
+	['SoundCloud', 'soundcloud.com'], ['SoundCloud', 'sndcdn.com'], ['Deezer', 'deezer.com'],
+	['Tidal', 'tidal.com'], ['Twitch', 'twitch.tv'], ['Twitch', 'ttvnw.net'],
+	['Vimeo', 'vimeo.com'], ['Vimeo', 'vimeocdn.com'], ['Dailymotion', 'dailymotion.com'],
+	['Hulu', 'hulu.com'], ['Disney+', 'disneyplus.com'], ['Disney+', 'dssott.com'],
+	['HBO Max', 'hbomax.com'], ['HBO', 'hbo.com'], ['Paramount+', 'paramountplus.com'],
+	['Crunchyroll', 'crunchyroll.com'], ['Plex', 'plex.tv'], ['Emby', 'emby.media'],
+	['GitHub', 'github.com'], ['GitHub', 'githubusercontent.com'], ['GitHub', 'githubassets.com'],
+	['GitLab', 'gitlab.com'], ['GitLab', 'gitlab.io'], ['Bitbucket', 'bitbucket.org'],
+	['Docker', 'docker.com'], ['Docker', 'docker.io'], ['Cloudflare', 'cloudflare.com'],
+	['Cloudflare', 'cloudflare-dns.com'], ['Cloudflare', 'workers.dev'],
+	['Akamai', 'akamai.net'], ['Akamai', 'akamaiedge.net'], ['Akamai', 'akamaized.net'],
+	['Fastly', 'fastly.net'], ['Fastly', 'fastlylb.net'], ['jsDelivr', 'jsdelivr.net'],
+	['npm', 'npmjs.org'], ['npm', 'npmjs.com'], ['PyPI', 'pypi.org'], ['Ubuntu', 'ubuntu.com'],
+	['Debian', 'debian.org'], ['OpenWrt', 'openwrt.org'], ['OpenWrt', 'immortalwrt.org'],
+	['OpenAI', 'openai.com'], ['OpenAI', 'oaistatic.com'], ['OpenAI', 'oaiusercontent.com'],
+	['ChatGPT', 'chatgpt.com'], ['Anthropic', 'anthropic.com'], ['Claude', 'claude.ai'],
+	['Hugging Face', 'huggingface.co'], ['Midjourney', 'midjourney.com'],
+	['Dropbox', 'dropbox.com'], ['Dropbox', 'dropboxapi.com'], ['Box', 'box.com'],
+	['Notion', 'notion.so'], ['Notion', 'notion.com'], ['Figma', 'figma.com'],
+	['Canva', 'canva.com'], ['Adobe', 'adobe.com'], ['Adobe', 'adobe.io'],
+	['Adobe', 'typekit.net'], ['Autodesk', 'autodesk.com'], ['JetBrains', 'jetbrains.com'],
+	['JetBrains', 'jetbrains.com.cn'], ['PayPal', 'paypal.com'], ['PayPal', 'paypalobjects.com'],
+	['Stripe', 'stripe.com'], ['Stripe', 'stripe.network'], ['eBay', 'ebay.com'],
+	['eBay', 'ebaystatic.com'], ['Temu', 'temu.com'], ['SHEIN', 'shein.com'],
+	['SHEIN', 'sheincorp.com'], ['Shopify', 'shopify.com'], ['Shopify', 'myshopify.com'],
+	['Booking.com', 'booking.com'], ['Airbnb', 'airbnb.com'], ['Airbnb', 'airbnb.com.cn'],
+	['Uber', 'uber.com'], ['Lyft', 'lyft.com'], ['DoorDash', 'doordash.com'],
+	['Walmart', 'walmart.com'], ['Steam', 'steampowered.com'], ['Steam', 'steamstatic.com'],
+	['Steam', 'steamcontent.com'], ['Steam', 'steamcommunity.com'], ['Steam', 'steam-chat.com'],
+	['Epic Games', 'epicgames.com'], ['Epic Games', 'unrealengine.com'], ['Epic Games', 'epicgames.dev'],
+	['Riot Games', 'riotgames.com'], ['Riot Games', 'leagueoflegends.com'], ['Riot Games', 'riotcdn.net'],
+	['Blizzard', 'blizzard.com'], ['Battle.net', 'battle.net'], ['Call of Duty', 'callofduty.com'],
+	['EA', 'ea.com'], ['EA', 'origin.com'], ['Ubisoft', 'ubisoft.com'], ['Ubisoft', 'ubi.com'],
+	['GOG', 'gog.com'], ['Xbox', 'xbox.com'], ['Xbox', 'xboxlive.com'],
+	['PlayStation', 'playstation.com'], ['PlayStation', 'playstation.net'],
+	['Nintendo', 'nintendo.com'], ['Nintendo', 'nintendo.net'], ['Roblox', 'roblox.com'],
+	['Roblox', 'rbxcdn.com'], ['Minecraft', 'minecraft.net'], ['Mojang', 'mojang.com'],
+	['HoYoverse', 'hoyoverse.com'], ['HoYoverse', 'mihoyo.com'], ['HoYoverse', 'hoyolab.com'],
+	['Genshin Impact', 'genshinimpact.com'], ['Garena', 'garena.com'], ['Garena', 'garenanow.com'],
+	['Supercell', 'supercell.com'], ['King', 'king.com'], ['Zynga', 'zynga.com'],
+	['TapTap', 'taptap.com'], ['TapTap', 'taptap.io'], ['APKPure', 'apkpure.com'],
+	['APKMirror', 'apkmirror.com'], ['F-Droid', 'f-droid.org'], ['Aptoide', 'aptoide.com'],
+	['Samsung Galaxy Store', 'samsungapps.com'], ['Amazon Appstore', 'amazonappstore.com'],
+	['Huawei AppGallery', 'appgallery.huawei.com', 'H'], ['Xiaomi GetApps', 'app.mi.com', 'H'],
+];
+
+/* ------------------------------------------------------------- domain sanity */
+
+const DOMAIN_RE = /^(?!-)[a-z0-9-]{1,63}(?<!-)(\.(?!-)[a-z0-9-]{1,63}(?<!-))+$/;
+
+function validKey(key) {
+	if (!key) return false;
+	key = key.trim().toLowerCase();
+	if (key.length > 253) return false;
+	if (key.includes('*') || key.includes('/') || key.includes(' ')) return false;
+	if (!key.includes('.')) return false;              // TLD-only rows are noise
+	if (!DOMAIN_RE.test(key)) return false;
+	const labels = key.split('.');
+	if (labels.length < 2) return false;
+	if (labels[labels.length - 1].length < 2) return false;   // bogus TLD
+	return true;
+}
+
+/* =========================================================== 1. dlc reading */
+
+const DLC_SKIP = /^(category-|tld-|geolocation-)/;
+/* Not services at all: `cn` is tld-cn + geolocation-cn bundled, `private` is the
+ * reserved/non-routable set (lan, localhost, invalid, example). */
+const DLC_SKIP_EXACT = new Set(['cn', 'private']);
+
+function readDlc(dataDir) {
+	const files = fs.readdirSync(dataDir).filter(f => fs.statSync(path.join(dataDir, f)).isFile());
+	const raw = new Map();          // file -> {suffix:Set, host:Set, include:[], regexp:n}
+
+	for (const name of files) {
+		const suffix = new Set(), host = new Set(), include = [];
+		const text = fs.readFileSync(path.join(dataDir, name), 'utf8');
+		for (let line of text.split('\n')) {
+			line = line.replace(/\r$/, '');
+			const hash = line.indexOf('#');
+			if (hash >= 0) line = line.slice(0, hash);      // inline comments exist upstream
+			line = line.trim();
+			if (!line) continue;
+
+			let kind = 'plain', value = line;
+			const colon = line.indexOf(':');
+			if (colon > 0) { kind = line.slice(0, colon).trim(); value = line.slice(colon + 1).trim(); }
+
+			if (kind === 'include') { if (value) include.push(value); }
+			else if (kind === 'full') { const k = value.toLowerCase(); if (validKey(k)) host.add(k); }
+			else if (kind === 'plain' || kind === 'domain') { const k = value.toLowerCase(); if (validKey(k)) suffix.add(k); }
+			/* keyword:/regexp: need substring matching the collector does not do
+			 * today; they are counted and reported instead of silently dropped. */
+		}
+		raw.set(name, { suffix, host, include });
+	}
+
+	/* Resolve include: edges with memoisation; the graph is acyclic upstream
+	 * (verified) but a cycle guard keeps a future upstream edit harmless. */
+	const memo = new Map();
+	function resolve(name, stack) {
+		if (memo.has(name)) return memo.get(name);
+		if (stack.has(name)) return { suffix: new Set(), host: new Set() };
+		stack.add(name);
+		const own = raw.get(name);
+		const suffix = new Set(own ? own.suffix : []);
+		const host = new Set(own ? own.host : []);
+		for (const inc of (own ? own.include : [])) {
+			if (!raw.has(inc)) continue;
+			const sub = resolve(inc, stack);
+			for (const v of sub.suffix) suffix.add(v);
+			for (const v of sub.host) host.add(v);
+		}
+		stack.delete(name);
+		const out = { suffix, host };
+		memo.set(name, out);
+		return out;
+	}
+	for (const name of files) resolve(name, new Set());
+
+	return { files, raw, resolve };
+}
+
+/* =========================================================== 2. bm7 reading */
+
+/* Directories that are routing bundles ("all of China", "everything else"),
+ * or that are categories rather than a single product.  Putting ChinaMax in
+ * apps.tsv would swallow every Chinese service into one row; the individual
+ * services already cover those domains. */
+const BM7_SKIP = new Set([
+	'China', 'ChinaIPs', 'ChinaIPsBGP', 'ChinaMax', 'ChinaMaxNoIP', 'ChinaMaxNoMedia', 'ChinaNoMedia',
+	'ChinaDNS', 'ChinaTest', 'Direct', 'Global', 'Lan', 'Proxy', 'ProxyLite',
+	/* blocklist bundles: hundreds of thousands of tracker/ads domains that would
+	 * neither fit a router nor read as an application name */
+	'Advertising', 'AdvertisingLite', 'AdvertisingMiTV', 'AdvertisingTest',
+	'EasyPrivacy', 'AdGuardSDNSFilter',
+	/* same kind of bundle, caught by looking at what actually landed in the
+	 * table: Privacy alone claimed 39,896 keys, i.e. over half of the catalogue */
+	'Privacy', 'Hijacking', 'SystemOTA',
+]);
+
+/* Aggregate dirs folded into a category instead of becoming an app row.
+ *
+ * Deliberately absent: the blocklist bundles (Advertising*, EasyPrivacy,
+ * AdGuardSDNSFilter).  They carry six figures of tracker domains and exist to
+ * *block* traffic; the curated provider list in dlc's category-ads gives the
+ * same "Ads"/"Tracker" answer at a thousandth of the size. */
+const BM7_CATEGORY = {
+	'ZhihuAds': 'Ads',
+	'AdColony': 'Ads', 'Addthis': 'Ads', 'AddToAny': 'Ads', 'Marketing': 'Ads',
+	'MIUIPrivacy': 'Tracker',
+	'IPTVOther': 'IPTV', 'IPTVMainland': 'IPTV',
+	'PrivateTracker': 'Torrent',
+	'Game': 'Games', 'Crypto': 'Crypto', 'Cryptocurrency': 'Crypto', 'Mail': 'Email',
+	'Speedtest': 'Speed Test', 'RemoteDesktop': 'Remote Desktop', 'Scholar': 'Education',
+	'GlobalScholar': 'Education', 'GlobalMedia': 'Media', 'ChinaMedia': 'Media', 'ChinaNews': 'News',
+};
+
+async function loadBm7() {
+	const cacheDir = path.join(CACHE_DIR, 'bm7');
+	ensureDir(cacheDir);
+
+	const tree = await ghTree(BM7_TREE, 'bm7-tree.json');
+	const lists = tree.tree
+		.filter(e => e.type === 'blob' && /^rule\/Clash\/[^/]+\/[^/]+\.list$/.test(e.path))
+		.map(e => ({ dir: e.path.split('/')[2], path: e.path }));
+
+	const services = new Map();
+	const keywords = new Map();
+	let downloaded = 0;
+
+	await pool(lists, async entry => {
+		const file = path.join(cacheDir, entry.dir + '.list');
+		let text;
+		if (fs.existsSync(file)) text = fs.readFileSync(file, 'utf8');
+		else {
+			try {
+				text = await httpText('https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/' + entry.path, { tries: 3 });
+				fs.writeFileSync(file, text, 'utf8');
+				downloaded++;
+			} catch (err) {
+				log(`  ! ${entry.dir}: ${err.message}`);
+				return;
+			}
+		}
+		const suffix = new Set(), host = new Set();
+		for (let line of text.split('\n')) {
+			line = line.replace(/\r$/, '').trim();
+			if (!line || line.startsWith('#')) continue;
+			const comma = line.indexOf(',');
+			if (comma < 0) continue;
+			const kind = line.slice(0, comma).trim().toUpperCase();
+			const value = line.slice(comma + 1).trim().split(',')[0].toLowerCase();
+			if (kind === 'DOMAIN') { if (validKey(value)) host.add(value); }
+			else if (kind === 'DOMAIN-SUFFIX') { if (validKey(value)) suffix.add(value); }
+			else if (kind === 'DOMAIN-KEYWORD') { if (value) keywords.set(value, entry.dir); }
+		}
+		services.set(entry.dir, { suffix, host });
+	}, 16);
+
+	log(`  blackmatrix7: ${services.size} 个服务目录（本次下载 ${downloaded}，其余命中缓存），DOMAIN-KEYWORD ${keywords.size} 条`);
+	return { services, keywords };
+}
+
+/* ======================================================= 3. category naming */
+
+const CATEGORY_MAP = {
+	'category-ads': 'Ads', 'category-ads-all': 'Ads', 'category-ads-ir': 'Ads',
+	'category-public-tracker': 'Tracker',
+	'category-cdn-!cn': 'CDN', 'category-cdn-cn': 'CDN',
+	'category-netdisk-!cn': 'Cloud Storage', 'category-netdisk-cn': 'Cloud Storage',
+	'category-social-media-!cn': 'Social', 'category-social-media-cn': 'Social',
+	'category-social-media-ir': 'Social',
+	'category-media': 'Media', 'category-media-cn': 'Media', 'category-media-ir': 'Media',
+	'category-media-ru': 'Media', 'category-media-ru-blocked': 'Media',
+	'category-games': 'Games', 'category-games-!cn': 'Games', 'category-games-cn': 'Games',
+	'category-game-platforms-download': 'Games', 'category-game-accelerator-cn': 'Games',
+	'category-enhance-gaming': 'Games',
+	'category-ai-!cn': 'AI', 'category-ai-chat-!cn': 'AI', 'category-ai-cn': 'AI', 'category-ai-ru': 'AI',
+	'category-communication': 'Communication',
+	'category-ecommerce': 'Shopping', 'category-ecommerce-ru': 'Shopping',
+	'category-shopping-ir': 'Shopping', 'category-retail-ru': 'Shopping',
+	'category-finance': 'Finance', 'category-securities-cn': 'Finance',
+	'category-bourse-ir': 'Finance', 'category-insurance-ir': 'Finance',
+	'category-cryptocurrency': 'Crypto',
+	'category-dev': 'Software', 'category-dev-cn': 'Software', 'category-container': 'Software',
+	'category-antivirus': 'Security', 'category-password-management': 'Security',
+	'category-network-security-cn': 'Security',
+	'category-education-cn': 'Education', 'category-education-ir': 'Education',
+	'category-education-ru': 'Education', 'category-mooc-cn': 'Education',
+	'category-scholar-!cn': 'Education', 'category-scholar-cn': 'Education',
+	'category-scholar-hk': 'Education', 'category-scholar-ir': 'Education',
+	'category-scholar-uk': 'Education', 'category-olympiad-in-informatics': 'Education',
+	'category-travel-ir': 'Travel', 'category-travel-ru': 'Travel',
+	'category-automobile-cn': 'Automotive', 'category-logistics-cn': 'Logistics',
+	'category-food-cn': 'Food', 'category-hospital-cn': 'Health', 'category-medicine-ru': 'Health',
+	'category-vpnservices': 'VPN', 'category-proxy-tunnels': 'Proxy',
+	'category-porn': 'Adult', 'category-pt': 'Torrent', 'category-ipfs': 'Torrent',
+	'category-news-ir': 'News', 'category-tech-media': 'News', 'category-tech-media-ru': 'News',
+	'category-forums': 'Forums', 'category-forums-ir': 'Forums', 'category-forums-ru': 'Forums',
+	'category-blog-cn': 'Blog', 'category-wiki-cn': 'Wiki', 'category-browser-!cn': 'Browser',
+	'category-remote-control': 'Remote Control', 'category-emby': 'Media Server',
+	'category-voip': 'VoIP', 'category-urlshortner': 'URL Shortener', 'category-ddns': 'DDNS',
+	'category-speedtest': 'Speed Test', 'category-ip-geo-detect': 'Geo',
+	'category-doh': 'DNS', 'category-httpdns-cn': 'DNS', 'category-stun': 'STUN',
+	'category-ntp': 'NTP', 'category-ntp-cn': 'NTP', 'category-ntp-jp': 'NTP',
+	'category-bank-cn': 'Finance', 'category-bank-ir': 'Finance', 'category-bank-jp': 'Finance',
+	'category-bank-mm': 'Finance', 'category-bank-ru': 'Finance', 'category-payment-ir': 'Finance',
+	'category-betting-ru': 'Betting',
+	'category-companies': 'Business', 'category-orgs': 'Business',
+	'category-enterprise-query-platform-cn': 'Business', 'category-outsource-cn': 'Business',
+	'category-collaborate-cn': 'Business', 'category-documents-cn': 'Software',
+	'category-web-archive': 'Website', 'category-cas': 'Certificate', 'category-tm': 'Website',
+	'category-consent-management': 'Tracker', 'category-mobile-repair': 'Hardware',
+	'category-electronic-cn': 'Hardware', 'category-number-verification-cn': 'SMS',
+	'category-anticensorship': 'Proxy', 'category-gov-ir': 'Government', 'category-gov-ru': 'Government',
+	'category-hospital-cn': 'Health', 'category-acg': 'Entertainment', 'category-novel': 'Entertainment',
+	'category-entertainment': 'Entertainment', 'category-entertainment-cn': 'Entertainment',
+	'category-entertainment-ru': 'Entertainment', 'category-ir': 'Website', 'category-ru': 'Website',
+};
+
+/** Friendly category name for a `category-*` file, or null to fold it away. */
+function categoryName(file) {
+	if (CATEGORY_MAP[file]) return CATEGORY_MAP[file];
+	/* Generic fallback: strip the prefix and the region suffix, then prettify. */
+	let rest = file.replace(/^category-/, '').replace(/-(cn|ru|ir|jp|hk|uk|mm|us|!cn)$/, '');
+	if (!rest) return null;
+	const name = rest.split(/[-_]+/).filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+	return name.length > 1 ? name : null;
+}
+
+/* ================================================================ 4. icons */
+
+/* Line-art glyphs: protocols (which have no brand) and infrastructure
+ * categories (CDN, Ads, Cloud, ...).  lucide-static is ISC licensed. */
+const GLYPHS = {
+	'ssl-tls': 'shield-check', 'quic': 'zap', 'http': 'globe', 'dns': 'network', 'stun': 'radio',
+	'rtsp': 'video', 'flv': 'clapperboard', 'icmp': 'activity', 'ssh': 'terminal', 'telnet': 'terminal',
+	'ftp': 'folder', 'rdp': 'monitor', 'smb': 'hard-drive', 'mqtt': 'radio-tower', 'radius': 'key-round',
+	'sip': 'phone', 'l2tp': 'shield', 'pptp': 'shield', 'ipsec': 'shield', 'mssql': 'database',
+	'mysql': 'database', 'postgresql': 'database', 'redis': 'database', 'ntp': 'clock', 'snmp': 'gauge',
+	'dhcp': 'router', 'email': 'mail', 'other': 'ellipsis', 'unknown': 'help-circle',
+	'cdn': 'server', 'cloud': 'cloud', 'cloud-storage': 'hard-drive-download', 'ads': 'megaphone',
+	'tracker': 'eye', 'search': 'search', 'social': 'users', 'media': 'film', 'video': 'film',
+	'games': 'gamepad-2', 'music': 'music', 'news': 'newspaper', 'shopping': 'shopping-bag',
+	'finance': 'landmark', 'crypto': 'bitcoin', 'software': 'package', 'security': 'shield-check',
+	'ai': 'sparkles', 'education': 'graduation-cap', 'travel': 'plane', 'automotive': 'car',
+	'logistics': 'truck', 'food': 'utensils', 'health': 'heart-pulse', 'vpn': 'shield',
+	'proxy': 'shuffle', 'adult': 'eye-off', 'torrent': 'download', 'forums': 'messages-square',
+	'blog': 'pen-line', 'wiki': 'book-open', 'browser': 'compass', 'remote-control': 'mouse-pointer-click',
+	'remote-desktop': 'monitor-smartphone', 'media-server': 'server-cog', 'voip': 'phone-call',
+	'url-shortener': 'link', 'ddns': 'refresh-cw', 'speed-test': 'gauge', 'geo': 'map-pin',
+	'phone': 'smartphone', 'business': 'briefcase', 'communication': 'message-circle',
+	'entertainment': 'popcorn', 'betting': 'dices', 'website': 'link', 'certificate': 'badge-check',
+	'hardware': 'cpu', 'sms': 'message-square', 'government': 'building-2', 'isp': 'router',
+	'android-app-download': 'smartphone', 'betting': 'dices', 'iptv': 'tv',
+};
+
+/** Slug for icon lookup: symbols that upstreams spell out are transliterated,
+ *  so "Disney+" becomes disney-plus rather than a bare "disney". */
+function iconSlug(name) {
+	return slug(String(name).replace(/\+/g, ' plus ').replace(/&/g, ' and '));
+}
+
+function iconCandidates(name, sourceSlug) {
+	const out = [];
+	const push = v => { if (v && v.length > 1 && !out.includes(v)) out.push(v); };
+	const s = iconSlug(name);
+	push(s);
+	push(s.replace(/-/g, ''));
+	if (sourceSlug) {
+		push(slug(sourceSlug));
+		push(String(sourceSlug).toLowerCase().replace(/[^a-z0-9]/g, ''));
+	}
+	/* Last resort: the leading word.  "Apple Music" -> apple, "Baidu Tieba" ->
+	 * baidu.  Only reached when nothing more specific matched, and a slightly
+	 * generic logo beats a bare letter in the list. */
+	const words = s.split('-').filter(w => w.length > 2);
+	if (words.length > 1) push(words[0]);
+	return out;
+}
+
+/** Upstream often spells a brand differently than we do: "Sina" is sinaweibo,
+ *  "NetEase" is neteasecloudmusic, "Disney+" is disney-plus.  Rather than
+ *  curating hundreds of aliases, allow a prefix or substring match - prefix
+ *  first, then shortest, and never for very short names where the match would
+ *  be meaningless. */
+function fuzzyIconNames(indexes, cand,   ) {
+	const hits = [];
+	if (cand.length >= 3) {
+		indexes.forEach(({ set, rank }) => {
+			for (const n of set) if (n.startsWith(cand)) hits.push({ n, rank, exact: 1 });
+		});
+	}
+	if (cand.length >= 4 && hits.length === 0) {
+		indexes.forEach(({ set, rank }) => {
+			for (const n of set) if (n.includes(cand)) hits.push({ n, rank, exact: 0 });
+		});
+	}
+	hits.sort((a, b) => b.exact - a.exact || a.n.length - b.n.length || a.rank - b.rank);
+	return hits.slice(0, 4).map(h => h.n);
+}
+
+async function buildIcons(appNames, glyphNames) {
+	ensureDir(ICON_DIR);
+	for (const f of fs.readdirSync(ICON_DIR)) {
+		if (f.endsWith('.svg')) fs.unlinkSync(path.join(ICON_DIR, f));
+	}
+
+	const [dashTree, simpleTree, selfhstTree, iconifyLogos] = await Promise.all([
+		ghTree(DASHBOARD_TREE, 'dashboard-tree.json'),
+		ghTree(SIMPLE_TREE, 'simple-tree.json'),
+		ghTree(SELFHST_TREE, 'selfhst-tree.json').catch(() => ({ tree: [] })),
+		httpText(ICONIFY_LOGOS, { tries: 3 }).then(JSON.parse).catch(() => null),
+	]);
+	const dashboard = new Set(dashTree.tree.filter(e => /^svg\/[^/]+\.svg$/.test(e.path))
+		.map(e => e.path.slice(4, -4)));
+	const simple = new Set(simpleTree.tree.filter(e => /^icons\/[^/]+\.svg$/.test(e.path))
+		.map(e => e.path.slice(6, -4)));
+	const selfhst = new Set(selfhstTree.tree.filter(e => /^svg\/[^/]+\.svg$/.test(e.path))
+		.map(e => e.path.slice(4, -4)));
+	/* The Iconify "logos" collection is gilbarbara/logos: ~1.9k brand marks with
+	 * far better coverage of consumer brands than simple-icons, which has
+	 * withdrawn a number of them. */
+	const logos = new Set();
+	if (iconifyLogos) {
+		for (const n of (iconifyLogos.uncategorized || [])) logos.add(n);
+		for (const arr of Object.values(iconifyLogos.categories || {})) for (const n of arr) logos.add(n);
+		for (const n of Object.keys(iconifyLogos.aliases || {})) logos.add(n);
+	}
+	log(`  图标索引: dashboard-icons ${dashboard.size}，simple-icons ${simple.size}，` +
+		`selfhst ${selfhst.size}，iconify-logos ${logos.size}`);
+
+	const cache = new Map();
+	async function tryFetch(url, { mono = false } = {}) {
+		try {
+			let body = await httpText(url, { tries: 2 });
+			if (!body.includes('<svg')) return null;
+			if (mono && !/fill=/.test(body.slice(0, body.indexOf('>'))))
+				body = body.replace('<svg', '<svg fill="#8b98a5"');
+			return body;
+		} catch (e) {
+			return null;
+		}
+	}
+	/* Ordered by how good the result looks in the list: full-colour brand marks
+	 * first, monochrome last (an <img> cannot inherit the page colour, so those
+	 * are pinned to the muted grey the page uses). */
+	async function fetchBrand(name) {
+		if (cache.has(name)) return cache.get(name);
+		let svg = null;
+		if (dashboard.has(name))
+			svg = await tryFetch(`https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/${name}.svg`);
+		if (!svg && logos.has(name))
+			svg = await tryFetch(`https://api.iconify.design/logos/${name}.svg`);
+		if (!svg && selfhst.has(name))
+			svg = await tryFetch(`https://cdn.jsdelivr.net/gh/selfhst/icons/svg/${name}.svg`);
+		if (!svg && simple.has(name))
+			svg = await tryFetch(`https://cdn.simpleicons.org/${name}`);
+		if (!svg && simple.has(name))
+			svg = await tryFetch(`https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/${name}.svg`, { mono: true });
+		cache.set(name, svg);
+		return svg;
+	}
+
+	const saved = [], missed = [];
+	let limitHit = false;
+	const indexes = [
+		{ set: dashboard, rank: 0 }, { set: logos, rank: 1 },
+		{ set: selfhst, rank: 2 }, { set: simple, rank: 3 },
+	];
+	await pool(appNames, async entry => {
+		if (opt.limitIcons && saved.length >= opt.limitIcons) { limitHit = true; return; }
+		let tried = iconCandidates(entry.name, entry.sourceSlug);
+		/* If nothing matched exactly, let the upstream spelling win. */
+		const fuzzy = [];
+		for (const cand of tried) for (const n of fuzzyIconNames(indexes, cand)) fuzzy.push(n);
+		tried = tried.concat(fuzzy);
+		for (const cand of tried) {
+			const svg = await fetchBrand(cand);
+			if (!svg) continue;
+			/* the page looks the file up by its own slug(), which drops the
+			 * symbols, so the name on disk must follow that - not iconSlug() */
+			const file = slug(entry.name) + '.svg';
+			if (!file) break;
+			fs.writeFileSync(path.join(ICON_DIR, file), svg.trim().replace(/\r/g, ''), 'utf8');
+			saved.push({ name: entry.name, file, from: cand });
+			return;
+		}
+		missed.push(entry.name);
+	}, 10);
+
+	const glyphSaved = [], glyphMissed = [];
+	for (const [key, lucide] of Object.entries(GLYPHS)) {
+		if (!glyphNames.has(key)) continue;
+		try {
+			let svg = await httpText(`https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/${lucide}.svg`);
+			if (!svg.includes('<svg')) throw new Error('no svg');
+			svg = svg.replace(/stroke="currentColor"/g, 'stroke="#8b98a5"')
+				.replace(/(<svg[^>]*?)\s+width="[^"]*"/, '$1')
+				.replace(/(<svg[^>]*?)\s+height="[^"]*"/, '$1');
+			if (!svg.includes('viewBox')) svg = svg.replace('<svg', '<svg viewBox="0 0 24 24"');
+			fs.writeFileSync(path.join(ICON_DIR, key + '.svg'), svg.trim(), 'utf8');
+			glyphSaved.push(key);
+		} catch (err) {
+			glyphMissed.push(key);
+		}
+	}
+
+	const bytes = fs.readdirSync(ICON_DIR).filter(f => f.endsWith('.svg'))
+		.reduce((sum, f) => sum + fs.statSync(path.join(ICON_DIR, f)).size, 0);
+
+	return { saved, missed, glyphSaved, glyphMissed, bytes, dashboard: dashboard.size, simple: simple.size, limitHit };
+}
+
+/* =================================================================== main */
+
+async function main() {
+	ensureDir(CACHE_DIR);
+	ensureDir(DATA_DIR);
+
+	log('[1/5] domain-list-community');
+	const dlcDir = path.join(CACHE_DIR, 'dlc');
+	const dataDir = path.join(dlcDir, 'domain-list-community-master', 'data');
+	if (!fs.existsSync(dataDir)) {
+		const tgz = path.join(CACHE_DIR, 'dlc.tgz');
+		if (!fs.existsSync(tgz)) {
+			const buf = Buffer.from(await (await fetch(DLC_TARBALL)).arrayBuffer());
+			fs.writeFileSync(tgz, buf);
+		}
+		ensureDir(dlcDir);
+		const res = spawnSync('tar', ['-xzf', tgz, '-C', dlcDir], { stdio: 'inherit' });
+		if (res.status !== 0) throw new Error('tar 解压失败');
+	}
+	const dlc = readDlc(dataDir);
+	log(`  ${dlc.files.length} 个服务文件`);
+
+	log('[2/5] blackmatrix7/ios_rule_script');
+	const bm7 = await loadBm7();
+
+	/* ---- apps: name -> keys.  Smaller rule sets are consumed first so that a
+	 *      leaf service (google-play) wins over the umbrella that includes it
+	 *      (google) when both claim a domain. */
+	log('[3/5] 合并应用目录');
+	const appSuffix = new Map();   // key -> name
+	const appHost = new Map();
+	const perName = new Map();     // name -> {sourceSlug, suffix, host}
+	const nameSource = new Map();  // name -> curated|bm7|dlc, for tie-breaking
+
+	function claim(map, key, name, sourceSlug, source) {
+		if (map.has(key)) return false;
+		map.set(key, name);
+		if (!perName.has(name)) perName.set(name, { sourceSlug, suffix: 0, host: 0 });
+		if (source && !nameSource.has(name)) nameSource.set(name, source);
+		return true;
+	}
+
+	const bm7Entries = [...bm7.services.entries()]
+		.filter(([dir]) => !BM7_SKIP.has(dir) && !BM7_CATEGORY[dir])
+		.sort((a, b) => (a[1].suffix.size + a[1].host.size) - (b[1].suffix.size + b[1].host.size) || a[0].localeCompare(b[0]));
+
+	/* The curated layer goes first: it exists exactly for the keys whose
+	 * upstream owner is a bundle (taobao.com is listed under `alibaba` and
+	 * nowhere else).  A more specific exact-host rule still wins at lookup
+	 * time, so claiming here does not flatten Adobe's activation hosts. */
+	let curated = 0;
+	for (const [name, key, kind] of CURATED) {
+		const k = key.toLowerCase();
+		if (!validKey(k)) { log(`  ! 跳过无效的 curated 键: ${key}`); continue; }
+		if (kind === 'H') { if (claim(appHost, k, name, 'curated', 'curated')) curated++; }
+		else if (claim(appSuffix, k, name, 'curated', 'curated')) curated++;
+	}
+	log(`  curated 优先层: ${curated} 个键`);
+
+	for (const [dir, set] of bm7Entries) {
+		const name = prettyName(dir);
+		for (const k of set.host) claim(appHost, k, name, dir, 'bm7');
+		for (const k of set.suffix) claim(appSuffix, k, name, dir, 'bm7');
+	}
+
+	const dlcEntries = dlc.files
+		.filter(f => !DLC_SKIP.test(f) && !DLC_SKIP_EXACT.has(f))
+		.map(f => [f, dlc.resolve(f, new Set())])
+		.sort((a, b) => (a[1].suffix.size + a[1].host.size) - (b[1].suffix.size + b[1].host.size) || a[0].localeCompare(b[0]));
+	for (const [file, set] of dlcEntries) {
+		const name = prettyName(file);
+		for (const k of set.host) claim(appHost, k, name, file, 'dlc');
+		for (const k of set.suffix) claim(appSuffix, k, name, file, 'dlc');
+	}
+
+	/* Two upstreams often carry the same brand spelled differently ("AcFun" in
+	 * blackmatrix7, "Acfun" from the dlc slug).  Left alone that splits one
+	 * service across two rows - and two icons - so names that share a slug are
+	 * folded into the best-spelled variant. */
+	function nameScore(n) {
+		const src = nameSource.get(n) || 'dlc';
+		const rank = src === 'curated' ? 3 : src === 'bm7' ? 2 : 1;
+		const inner = (n.slice(1).match(/[A-Z]/g) || []).length;
+		return rank * 1000 + inner * 10 + n.length;
+	}
+	const bestBySlug = new Map();
+	for (const n of new Set([...appSuffix.values(), ...appHost.values()])) {
+		const s = slug(n);
+		if (!s) continue;
+		const cur = bestBySlug.get(s);
+		if (!cur || nameScore(n) > nameScore(cur)) bestBySlug.set(s, n);
+	}
+	const canonical = new Map();
+	let merged = 0;
+	for (const n of new Set([...appSuffix.values(), ...appHost.values()])) {
+		const best = bestBySlug.get(slug(n));
+		if (best && best !== n) { canonical.set(n, best); merged++; }
+	}
+	if (merged) {
+		for (const [k, v] of appSuffix) if (canonical.has(v)) appSuffix.set(k, canonical.get(v));
+		for (const [k, v] of appHost) if (canonical.has(v)) appHost.set(k, canonical.get(v));
+		log(`  合并同 slug 的不同拼写: ${merged} 个名称 -> ${[...new Set(canonical.values())].length}`);
+	}
+
+	/* ---- categories: only for keys no application claimed (apps come first
+	 *      in the attribution ladder, so anything else would be dead weight). */
+	const catSuffix = new Map();
+	const catHost = new Map();
+	function addCategory(cat, set) {
+		for (const k of set.host) if (!appHost.has(k) && !appSuffix.has(k) && !catHost.has(k)) catHost.set(k, cat);
+		for (const k of set.suffix) if (!appHost.has(k) && !appSuffix.has(k) && !catSuffix.has(k)) catSuffix.set(k, cat);
+	}
+	for (const file of dlc.files) {
+		if (!file.startsWith('category-')) continue;
+		const cat = categoryName(file);
+		if (cat) addCategory(cat, dlc.resolve(file, new Set()));
+	}
+	for (const [dir, cat] of Object.entries(BM7_CATEGORY)) {
+		if (bm7.services.has(dir)) addCategory(cat, bm7.services.get(dir));
+	}
+
+	/* categories.tsv has no kind column: the collector loads every row into one
+	 * suffix table.  A key therefore has to appear exactly once, and an exact
+	 * host rule (more specific) is the one worth keeping. */
+	const catMerged = new Map();
+	for (const [k, c] of catSuffix) catMerged.set(k, c);
+	for (const [k, c] of catHost) catMerged.set(k, c);
+
+	/* Blocklists such as EasyPrivacy carry six figures of tracker domains.  They
+	 * exist to *block* traffic, not to label it, and 300k rows would dwarf the
+	 * application table the collector reloads on every poll.  Keep the shallow
+	 * keys (the registrable-looking ones a reader recognises) and drop the deep
+	 * CDN noise. */
+	const perCategory = new Map();
+	for (const [k, c] of catMerged) {
+		if (!perCategory.has(c)) perCategory.set(c, []);
+		perCategory.get(c).push(k);
+	}
+	const catSizes = [...perCategory.entries()].map(([c, ks]) => [c, ks.length]).sort((a, b) => b[1] - a[1]);
+	log('  类别规模（前 15）: ' + catSizes.slice(0, 15).map(([c, n]) => `${c}=${n}`).join(' '));
+
+	if (opt.maxCategoryKeys > 0) {
+		let dropped = 0;
+		for (const [c, ks] of perCategory) {
+			if (ks.length <= opt.maxCategoryKeys) continue;
+			ks.sort((a, b) => a.split('.').length - b.split('.').length ||
+				a.length - b.length || a.localeCompare(b));
+			for (const k of ks.slice(opt.maxCategoryKeys)) { catMerged.delete(k); dropped++; }
+		}
+		if (dropped) log(`  类别上限 ${opt.maxCategoryKeys}/类：丢弃 ${dropped} 个深层域名`);
+	}
+
+	/* ---- write the tables */
+	const appsRows = [];
+	for (const [k, n] of appSuffix) appsRows.push([n, k, 'S']);
+	for (const [k, n] of appHost) appsRows.push([n, k, 'H']);
+	appsRows.sort((a, b) => a[1].localeCompare(b[1]) || a[0].localeCompare(b[0]));
+
+	const catRows = [];
+	for (const [k, c] of catMerged) catRows.push([c, k]);
+	catRows.sort((a, b) => a[1].localeCompare(b[1]) || a[0].localeCompare(b[0]));
+
+	const header = kind => [
+		`# ${kind} catalogue for luci-app-traffic - generated by tools/build-catalog.js`,
+		'# Do not edit by hand: re-run the generator to refresh it.',
+		'',
+	].join('\n');
+
+	fs.writeFileSync(path.join(DATA_DIR, 'apps.tsv'),
+		header('Application') + appsRows.map(r => r.join('\t')).join('\n') + '\n', 'utf8');
+	fs.writeFileSync(path.join(DATA_DIR, 'categories.tsv'),
+		header('Category') + catRows.map(r => r.join('\t')).join('\n') + '\n', 'utf8');
+
+	const appNames = [...new Set(appsRows.map(r => r[0]))].sort();
+	const catNames = [...new Set(catRows.map(r => r[0]))].sort();
+
+	log(`  应用: ${appNames.length} 个名称 / ${appSuffix.size} 后缀键 + ${appHost.size} 精确主机键`);
+	log(`  类别: ${catNames.length} 个 / ${catMerged.size} 个键`);
+	log(`  categories: ${catNames.join(', ')}`);
+
+	/* The page draws category and protocol rows as "type" rows.  An application
+	 * that shares one of those names would be drawn the same way, so surface it
+	 * here rather than in a screenshot later. */
+	const typeNames = new Set([...catNames, 'SSL/TLS', 'QUIC', 'HTTP', 'DNS', 'STUN', 'RTSP', 'FLV',
+		'Email', 'SSH', 'Telnet', 'FTP', 'RDP', 'SMB', 'MQTT', 'RADIUS', 'SIP', 'L2TP', 'PPTP',
+		'IPSec', 'MSSQL', 'MySQL', 'PostgreSQL', 'Redis', 'NTP', 'SNMP', 'DHCP', 'ICMP', 'Other']);
+	const clashes = appNames.filter(n => typeNames.has(n));
+	if (clashes.length) log(`  ! 名称与类别/协议桶冲突（会在页面上被画成类型行）: ${clashes.join(', ')}`);
+	else log('  名称冲突检查: 无');
+
+	log('[4/5] 图标');
+	let iconInfo = null;
+	if (opt.skipIcons) log('  (--skip-icons)');
+	else {
+		const glyphNeeded = new Set([...Object.keys(GLYPHS)].filter(k => catNames.some(c => slug(c) === k)));
+		for (const b of ['ssl-tls', 'quic', 'http', 'dns', 'stun', 'rtsp', 'flv', 'icmp', 'ssh', 'telnet',
+			'ftp', 'rdp', 'smb', 'mqtt', 'radius', 'sip', 'l2tp', 'pptp', 'ipsec', 'mssql', 'mysql',
+			'postgresql', 'redis', 'ntp', 'snmp', 'dhcp', 'other', 'unknown']) glyphNeeded.add(b);
+		iconInfo = await buildIcons(
+			appNames.map(n => ({ name: n, sourceSlug: (perName.get(n) || {}).sourceSlug })),
+			glyphNeeded);
+		log(`  品牌图标 ${iconInfo.saved.length} 个，字形 ${iconInfo.glyphSaved.length} 个，共 ${(iconInfo.bytes / 1024).toFixed(0)} KiB`);
+		log(`  无上游图标（保留字母头像）: ${iconInfo.missed.length} 个`);
+	}
+
+	log('[5/5] 结果');
+	const sizeOf = f => (fs.statSync(path.join(DATA_DIR, f)).size / 1024).toFixed(0) + ' KiB';
+	log(`  apps.tsv       ${appsRows.length} 行, ${sizeOf('apps.tsv')}`);
+	log(`  categories.tsv ${catRows.length} 行, ${sizeOf('categories.tsv')}`);
+	if (bm7.keywords.size) log(`  未使用: blackmatrix7 DOMAIN-KEYWORD ${bm7.keywords.size} 条（采集器不做子串匹配）`);
+
+	const report = {
+		generated: new Date().toISOString(),
+		apps: { names: appNames.length, suffix: appSuffix.size, host: appHost.size },
+		categories: { names: catNames, keys: catMerged.size },
+		icons: iconInfo ? { brands: iconInfo.saved.length, glyphs: iconInfo.glyphSaved.length, bytes: iconInfo.bytes, missed: iconInfo.missed.length } : null,
+	};
+	fs.writeFileSync(path.join(CACHE_DIR, 'report.json'), JSON.stringify(report, null, 1), 'utf8');
+	log(`  报告: ${path.join(CACHE_DIR, 'report.json')}`);
+}
+
+main().catch(err => { console.error('FAILED:', err && err.stack || err); process.exit(1); });

@@ -16,3 +16,9 @@ config traffic 'settings'
 	option retention_days '7'
 	option top_apps '50'
 	option top_clients '20'
+# minimum seconds between reads of the application catalogue.  Fresh host names
+# keep arriving while someone browses and re-reading the whole catalogue for
+# each of them would cost more than the accounting itself; inside this window
+# they wait, and until then they show as their registrable domain.  A large
+# batch (first start, or a burst) is resolved immediately either way.
+option resolve_interval '30'

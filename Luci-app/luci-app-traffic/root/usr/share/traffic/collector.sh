@@ -10,15 +10,25 @@
 #   2. AdGuard Home's querylog is read incrementally.  Its base64 Answer field
 #      is decoded by ans.lua, which yields (client, domain, resolved IP).
 #      That is what turns a bare destination IP into a name.
-#   3. Every flow is then given a name, in this order:
-#        a. the application table (apps.tsv) - full host name first, then the
-#           registrable domain;
-#        b. the category table (categories.tsv) - longest suffix match, so
-#           hardware and advertising domains read as CDN / Ads / Cloud rather
-#           than as a meaningless host name;
-#        c. the registrable domain itself - a website is identified by its
+#   3. The two catalogues (apps.tsv, categories.tsv) are large - a couple of
+#      thousand applications over ~80k keys.  Reading them on every poll would
+#      cost more than the accounting itself, so they are read ONLY when a host
+#      name is seen for the first time: the answer is cached in
+#      $STATE_DIR/namemap.tsv and the per-poll path reads just that cache.
+#      A catalogue that changed under us (package upgrade) invalidates the
+#      cache and every known host name is resolved again in one batch.
+#   4. A flow is then given a name, in this order:
+#        a. the host name itself, exactly, in the application table (DOMAIN and
+#           full:host rules) - this is what separates music.163.com from 163.com;
+#        b. the longest matching suffix in the application table (DOMAIN-SUFFIX
+#           rules and bare domains) - note this handles multi-label suffixes
+#           like co.uk without needing a public-suffix list;
+#        c. the longest matching suffix in the category table (categories.tsv),
+#           so infrastructure reads as CDN / Ads / Cloud rather than as a
+#           meaningless host name;
+#        d. the registrable domain itself - a website is identified by its
 #           domain, which is what the reader actually recognises;
-#        d. failing all of that (no DNS answer at all), a protocol bucket
+#        e. failing all of that (no DNS answer at all), a protocol bucket
 #           derived from protocol and port: SSL/TLS, QUIC, HTTP, DNS, STUN,
 #           RTSP, Email, Other.  This is why an unnamed encrypted flow shows
 #           up as "SSL/TLS" instead of disappearing into an "unknown" heap.
@@ -50,6 +60,12 @@ CFG_CATEGORIES=$CFG_DATADIR/categories.tsv
 CFG_RETENTION=7
 CFG_TOP_APPS=50
 CFG_TOP_CLIENTS=20
+# Minimum seconds between catalogue reads.  Fresh host names keep arriving while
+# someone browses, and re-reading an 80k-key catalogue for every one of them
+# would cost more than the accounting itself; inside this window they simply
+# wait, and until then they show as their registrable domain.  A large batch
+# (first run, or a burst) is resolved immediately.
+CFG_RESOLVE=30
 
 log() { logger -t traffic "$*"; }
 
@@ -71,6 +87,7 @@ uci_get() {
         retention_days) v=${TRAFFIC_RETENTION_DAYS:-} ;;
         top_apps)       v=${TRAFFIC_TOP_APPS:-} ;;
         top_clients)    v=${TRAFFIC_TOP_CLIENTS:-} ;;
+        resolve_interval) v=${TRAFFIC_RESOLVE:-} ;;
     esac
     if [ -n "$v" ]; then printf '%s\n' "$v"; return 0; fi
 
@@ -139,6 +156,7 @@ load_config() {
     v=$(uci_get retention_days); [ -n "$v" ] && CFG_RETENTION=$v
     v=$(uci_get top_apps);       [ -n "$v" ] && CFG_TOP_APPS=$v
     v=$(uci_get top_clients);    [ -n "$v" ] && CFG_TOP_CLIENTS=$v
+    v=$(uci_get resolve_interval); [ -n "$v" ] && CFG_RESOLVE=$v
 
     # sanity
     case "$CFG_INTERVAL" in ''|*[!0-9]*) CFG_INTERVAL=10 ;; esac
@@ -146,6 +164,7 @@ load_config() {
     case "$CFG_RETENTION" in ''|*[!0-9]*) CFG_RETENTION=7 ;; esac
     case "$CFG_TOP_APPS" in ''|*[!0-9]*) CFG_TOP_APPS=50 ;; esac
     case "$CFG_TOP_CLIENTS" in ''|*[!0-9]*) CFG_TOP_CLIENTS=20 ;; esac
+    case "$CFG_RESOLVE" in ''|*[!0-9]*) CFG_RESOLVE=30 ;; esac
 }
 
 # ---------------------------------------------------------------- state
@@ -158,7 +177,10 @@ init_state() {
     [ -f "$STATE_DIR/router.tsv" ] || : > "$STATE_DIR/router.tsv"
     [ -f "$STATE_DIR/stat.tsv" ] || printf '0\n0\n0\n0\n' > "$STATE_DIR/stat.tsv"
     [ -f "$STATE_DIR/ac.tsv" ] || : > "$STATE_DIR/ac.tsv"
+    [ -f "$STATE_DIR/namemap.tsv" ] || : > "$STATE_DIR/namemap.tsv"
     [ -f "$STATE_DIR/meta" ] || printf '0\n0\n' > "$STATE_DIR/meta"
+    [ -f "$STATE_DIR/nmoff" ] || printf '0\n' > "$STATE_DIR/nmoff"
+    [ -f "$STATE_DIR/nmtime" ] || printf '0\n' > "$STATE_DIR/nmtime"
     [ -f "$CFG_DATADIR/hourly.tsv" ] || : > "$CFG_DATADIR/hourly.tsv"
 }
 
@@ -181,6 +203,141 @@ poll_dns() {
         printf '%s\n' "$size"
         sed -n '2p' "$STATE_DIR/meta" 2>/dev/null || echo 0
     } > "$STATE_DIR/meta.new" && mv -f "$STATE_DIR/meta.new" "$STATE_DIR/meta"
+}
+
+# ---------------------------------------------------------------- name resolution
+# The catalogues are large (apps.tsv is ~80k keys), so they are read only when
+# a host name is seen for the first time.  namemap.tsv then holds the answer:
+#
+#   <host name> <TAB> app|cat|site <TAB> <display name>
+#
+# classify() reads only that file, which is why the poll stays cheap no matter
+# how big the catalogue grows.
+
+# Fingerprint used to notice that the catalogue was replaced under us.
+catalog_fingerprint() {
+    printf '%s:%s\n' \
+        "$(wc -c < "$CFG_APPMAP" 2>/dev/null || echo 0)" \
+        "$(wc -c < "$CFG_CATEGORIES" 2>/dev/null || echo 0)"
+}
+
+# Resolve a batch of host names against the catalogue.  Prints namemap rows.
+resolve_batch() {
+    awk -v appmap="$CFG_APPMAP" -v catmap="$CFG_CATEGORIES" -v hosts="$1" '
+    # The registrable domain: the fallback label when a host name is in neither
+    # table.  A small public-suffix list is enough for that.
+    function app_of(d,   n, p, last2) {
+        if (d == "") return ""
+        n = split(d, p, ".")
+        if (n < 2) return d
+        last2 = p[n-1] "." p[n]
+        if (n >= 3 && (last2 == "com.cn" || last2 == "net.cn" || last2 == "org.cn" ||
+                       last2 == "edu.cn" || last2 == "gov.cn" || last2 == "co.jp" ||
+                       last2 == "co.uk" || last2 == "com.hk" || last2 == "com.tw" ||
+                       last2 == "co.kr"))
+            return p[n-2] "." last2
+        return last2
+    }
+    # Longest suffix that the table knows, walking one label at a time.  This is
+    # what keeps the lookup O(labels) instead of a scan over every key.
+    function longest(h, tab,   s, i) {
+        s = h
+        if (s in tab) return tab[s]
+        while ((i = index(s, ".")) > 0) {
+            s = substr(s, i + 1)
+            if (s in tab) return tab[s]
+        }
+        return ""
+    }
+    BEGIN {
+        while ((getline l < appmap) > 0) {
+            if (l ~ /^#/ || l == "") continue
+            split(l, f, "\t")
+            if (f[1] == "" || f[2] == "") continue
+            if (f[3] == "H") ahost[f[2]] = f[1]
+            else             asuf[f[2]] = f[1]
+        }
+        close(appmap)
+        while ((getline l < catmap) > 0) {
+            if (l ~ /^#/ || l == "") continue
+            split(l, f, "\t")
+            if (f[1] != "" && f[2] != "") csuf[f[2]] = f[1]
+        }
+        close(catmap)
+        while ((getline h < hosts) > 0) {
+            sub(/\r$/, "", h)
+            h = tolower(h)
+            if (h == "") continue
+            if (h in ahost)      { print h "\tapp\t" ahost[h]; continue }
+            n = longest(h, asuf)
+            if (n != "")         { print h "\tapp\t" n; continue }
+            c = longest(h, csuf)
+            if (c != "")         { print h "\tcat\t" c; continue }
+            print h "\tsite\t" app_of(h)
+        }
+        close(hosts)
+    }' /dev/null
+}
+
+# Resolve the host names added since the last call.  Cheap when nothing is new,
+# which is the common case: the catalogue is loaded only for a fresh host name.
+resolve_names() {
+    local off size fp
+    [ -s "$STATE_DIR/dnsmap.tsv" ] || return 0
+
+    # A replaced catalogue invalidates every cached answer, so start over.  The
+    # whole known set is then re-resolved in a single batch.
+    fp=$(catalog_fingerprint)
+    if [ "$(cat "$STATE_DIR/catfp" 2>/dev/null)" != "$fp" ]; then
+        : > "$STATE_DIR/namemap.tsv"
+        printf '0\n' > "$STATE_DIR/nmoff"
+        printf '0\n' > "$STATE_DIR/nmtime"
+        printf '%s\n' "$fp" > "$STATE_DIR/catfp"
+        log "catalogue changed, re-resolving known host names"
+    fi
+
+    size=$(wc -c < "$STATE_DIR/dnsmap.tsv" 2>/dev/null || echo 0)
+    off=$(sed -n '1p' "$STATE_DIR/nmoff" 2>/dev/null)
+    case "$off" in ''|*[!0-9]*) off=0 ;; esac
+    [ "$size" -lt "$off" ] && off=0
+    [ "$size" -gt "$off" ] || return 0
+
+    # Host names we have already answered are dropped here, not inside awk, so
+    # the batch stays proportional to what is genuinely new.
+    tail -c +$((off + 1)) "$STATE_DIR/dnsmap.tsv" 2>/dev/null \
+        | awk -F'\t' -v nm="$STATE_DIR/namemap.tsv" '
+            BEGIN {
+                while ((getline l < nm) > 0) {
+                    split(l, f, "\t")
+                    if (f[1] != "") known[f[1]] = 1
+                }
+                close(nm)
+            }
+            {
+                h = $2
+                sub(/\r$/, "", h)
+                h = tolower(h)
+                if (h != "" && !(h in known) && !(h in got)) { got[h] = 1; print h }
+            }' > "$STATE_DIR/newhosts.txt" 2>/dev/null
+
+    if [ -s "$STATE_DIR/newhosts.txt" ]; then
+        local pending now last
+        pending=$(wc -l < "$STATE_DIR/newhosts.txt" 2>/dev/null || echo 0)
+        now=$(date +%s 2>/dev/null || echo 0)
+        last=$(sed -n '1p' "$STATE_DIR/nmtime" 2>/dev/null)
+        case "$last" in ''|*[!0-9]*) last=0 ;; esac
+        # Throttle: a handful of fresh names is not worth re-reading the whole
+        # catalogue.  Leave the offset where it is so they are picked up on a
+        # later pass - until then they read as their registrable domain.
+        if [ "$pending" -lt 500 ] && [ $((now - last)) -lt "$CFG_RESOLVE" ]; then
+            return 0
+        fi
+        resolve_batch "$STATE_DIR/newhosts.txt" >> "$STATE_DIR/namemap.tsv" 2>/dev/null
+        printf '%s\n' "$now" > "$STATE_DIR/nmtime.new" && mv -f "$STATE_DIR/nmtime.new" "$STATE_DIR/nmtime"
+    fi
+
+    printf '%s\n' "$size" > "$STATE_DIR/nmoff.new" && mv -f "$STATE_DIR/nmoff.new" "$STATE_DIR/nmoff"
+    return 0
 }
 
 # ---------------------------------------------------------------- conntrack deltas
@@ -235,10 +392,11 @@ classify() {
     awk -v dns="$STATE_DIR/dnsmap.tsv" -v tot="$STATE_DIR/totals.tsv" \
         -v cli="$STATE_DIR/clients.tsv" -v rt="$STATE_DIR/router.tsv" -v st="$STATE_DIR/stat.tsv" \
         -v acfile="$STATE_DIR/ac.tsv" -v acnew="$STATE_DIR/ac.new" \
-        -v appmap="$CFG_APPMAP" -v catmap="$CFG_CATEGORIES" \
+        -v nmap="$STATE_DIR/namemap.tsv" \
         -v lan4="$CFG_LAN4" -v lan6="$CFG_LAN6" '
-    # The registrable domain: what conntrack alone can offer when the host name
-    # is not in either table.  A small public-suffix list is enough here.
+    # The registrable domain: what to show when a host name was in neither
+    # catalogue, i.e. an unidentified website.  A small public-suffix list is
+    # enough here.
     function app_of(d,   n, p, last2) {
         if (d == "") return ""
         n = split(d, p, ".")
@@ -250,19 +408,6 @@ classify() {
                        last2 == "co.kr"))
             return p[n-2] "." last2
         return last2
-    }
-    function suffix_match(dom, suf) {
-        return (dom == suf) || (length(dom) > length(suf) &&
-                                substr(dom, length(dom) - length(suf)) == "." suf)
-    }
-    function category_of(dom,   i, best, bestlen) {
-        best = ""; bestlen = -1
-        for (i = 1; i <= ncat; i++) {
-            if (suffix_match(dom, cat_suf[i]) && length(cat_suf[i]) > bestlen) {
-                bestlen = length(cat_suf[i]); best = cat_name[i]
-            }
-        }
-        return best
     }
     # Last resort: what the protocol and port alone say.  This is the layer that
     # turns an unnamed encrypted flow into "SSL/TLS" (or QUIC / HTTP / ...)
@@ -309,18 +454,14 @@ classify() {
             if (f[1] != "" && f[3] != "") { byclient[f[1] "|" f[3]] = f[2]; byip[f[3]] = f[2] }
         }
         close(dns)
-        while ((getline l < appmap) > 0) {
-            if (l ~ /^#/ || l == "") continue
+        # namemap.tsv, not the catalogues: resolve_names() has already turned
+        # every host name we have seen into app|cat|site plus a display name,
+        # so this file stays small and the poll stays cheap.
+        while ((getline l < nmap) > 0) {
             split(l, f, "\t")
-            if (f[1] != "" && f[2] != "") pretty[f[2]] = f[1]
+            if (f[1] != "" && f[3] != "") nm[f[1]] = f[2] "\t" f[3]
         }
-        close(appmap)
-        while ((getline l < catmap) > 0) {
-            if (l ~ /^#/ || l == "") continue
-            split(l, f, "\t")
-            if (f[1] != "" && f[2] != "") { ncat++; cat_name[ncat] = f[1]; cat_suf[ncat] = f[2] }
-        }
-        close(catmap)
+        close(nmap)
         while ((getline l < tot) > 0) { split(l, f, "\t"); up[f[1]] = f[2] + 0; dn[f[1]] = f[3] + 0 }
         close(tot)
         while ((getline l < cli) > 0) { split(l, f, "\t"); cb[f[1]] = f[2] + 0 }
@@ -361,15 +502,16 @@ classify() {
             a = proto_bucket(proto, port)
             k_o += t
         }
-        # 1) application table, full host name first so a rule can separate
-        #    music.163.com from the rest of 163.com
-        else if (dom in pretty)          { a = pretty[dom];               if (via == "exact") m_c += t; else m_g += t }
-        else if (app_of(dom) in pretty)  { a = pretty[app_of(dom)];       if (via == "exact") m_c += t; else m_g += t }
-        # 2) category table, longest suffix wins - hardware and ad domains read
-        #    as CDN / Ads / Cloud instead of a meaningless host name
-        else if (category_of(dom) != "") { a = category_of(dom); k_b += t }
-        # 3) the site itself - a website is identified by its domain
-        else                             { a = app_of(dom);               if (via == "exact") m_c += t; else m_g += t }
+        else {
+            # resolve_names() answered this host name already; the fallback only
+            # covers the first poll of a brand new name.
+            if (tolower(dom) in nm) { split(nm[tolower(dom)], np, "\t"); kind = np[1]; a = np[2] }
+            else                    { kind = "site"; a = app_of(dom) }
+
+            if (kind == "cat") k_b += t
+            else if (via == "exact") m_c += t
+            else m_g += t
+        }
         up[a] += u; dn[a] += d
         ac[a "|" src] += t
     }
@@ -540,6 +682,7 @@ run() {
     last_hour=$(cat "$STATE_DIR/hour" 2>/dev/null)
     while :; do
         poll_dns
+        resolve_names
         poll_ct
         classify
         hour=$(date +%Y-%m-%dT%H 2>/dev/null)

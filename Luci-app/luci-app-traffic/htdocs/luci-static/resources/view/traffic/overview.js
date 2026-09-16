@@ -23,9 +23,23 @@ var ICON = 26;   /* one size everywhere: list rows, donut legend */
  * of traffic" rather than "which product".  Kept in sync with the bucket names
  * the collector produces and with the glyph files shipped for them. */
 var BUCKETS = {
-	'SSL/TLS': 1, 'QUIC': 1, 'HTTP': 1, 'DNS': 1, 'STUN': 1, 'RTSP': 1,
-	'Email': 1, 'CDN': 1, 'Cloud': 1, 'Ads': 1, 'Search': 1, 'Social': 1,
-	'Video': 1, 'Software': 1, 'Other': 1
+	'Ads': 1, 'Adult': 1, 'AI': 1, 'Android App Download': 1,
+	'Automotive': 1, 'Blog': 1, 'Browser': 1, 'Business': 1,
+	'CDN': 1, 'Certificate': 1, 'Cloud Storage': 1, 'Communication': 1,
+	'Crypto': 1, 'DDNS': 1, 'DHCP': 1, 'DNS': 1,
+	'Education': 1, 'Email': 1, 'Entertainment': 1, 'Finance': 1,
+	'FLV': 1, 'Food': 1, 'Forums': 1, 'FTP': 1,
+	'Games': 1, 'Geo': 1, 'Government': 1, 'Hardware': 1,
+	'Health': 1, 'HTTP': 1, 'ICMP': 1, 'IPSec': 1,
+	'IPTV': 1, 'L2TP': 1, 'Logistics': 1, 'Media': 1,
+	'Media Server': 1, 'MQTT': 1, 'MSSQL': 1, 'MySQL': 1,
+	'NTP': 1, 'Other': 1, 'PostgreSQL': 1, 'PPTP': 1,
+	'Proxy': 1, 'QUIC': 1, 'RADIUS': 1, 'RDP': 1,
+	'Redis': 1, 'RTSP': 1, 'Security': 1, 'Shopping': 1,
+	'SIP': 1, 'SMB': 1, 'SMS': 1, 'SNMP': 1,
+	'Social': 1, 'Software': 1, 'Speed Test': 1, 'SSH': 1,
+	'SSL/TLS': 1, 'STUN': 1, 'Telnet': 1, 'Torrent': 1,
+	'Tracker': 1, 'VPN': 1, 'Website': 1, 'Wiki': 1
 };
 
 function isBucket(name) { return BUCKETS[name] === 1; }
