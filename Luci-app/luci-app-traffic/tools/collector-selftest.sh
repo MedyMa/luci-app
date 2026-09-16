@@ -1,9 +1,10 @@
 #!/bin/bash
 # collector-selftest.sh - offline regression for luci-app-traffic's collector.
 #
-# Runs collector.sh against a synthetic conntrack snapshot, a stub lua (real
-# AdGuard Home querylog answers are exercised separately by ans-check.js) and
-# small apps/categories tables, then asserts every attribution path:
+# Runs collector.sh against a synthetic conntrack snapshot, a stub lua standing
+# in for ans.lua (the real one needs a lua interpreter and the router's querylog,
+# so it is exercised on the device) and small apps/categories tables, then
+# asserts every attribution path:
 #
 #   1. exact host name wins over a suffix       (music.163.com not 163.com)
 #   2. plain suffix hit                          (www.taobao.com -> Taobao)
