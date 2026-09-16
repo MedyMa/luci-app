@@ -17,4 +17,11 @@ if [ -z "$(uci -q get traffic.settings.querylog)" ]; then
 fi
 
 uci -q commit traffic
+
+# A procd service is not started, and not even enabled, by being installed.
+# Without the enable the collector would not come up after the reboot either,
+# because the boot sequence only starts what has an /etc/rc.d symlink.  The
+# result is a page that reports "no snapshot yet" forever.
+[ -x /etc/init.d/traffic ] && /etc/init.d/traffic enable >/dev/null 2>&1
+
 exit 0

@@ -34,6 +34,15 @@ if [ -z "$$IPKG_INSTROOT" ]; then
 	rm -rf /tmp/luci-modulecache/ /var/luci-modulecache/
 	rm -f /tmp/luci-indexcache /tmp/luci-indexcache.* /var/luci-indexcache.* 2>/dev/null
 	[ -x /etc/init.d/rpcd ] && /etc/init.d/rpcd reload >/dev/null 2>&1 || true
+	# uci-defaults only run at boot.  Run them here as well, so the querylog
+	# path is filled in before the first page load rather than after a reboot.
+	[ -x /etc/uci-defaults/40_luci-traffic ] && /etc/uci-defaults/40_luci-traffic >/dev/null 2>&1
+	# Installing a procd service neither enables nor starts it, so a fresh
+	# install showed no data at all until someone did it by hand.
+	if [ -x /etc/init.d/traffic ]; then
+		/etc/init.d/traffic enable >/dev/null 2>&1
+		/etc/init.d/traffic restart >/dev/null 2>&1
+	fi
 fi
 exit 0
 endef
