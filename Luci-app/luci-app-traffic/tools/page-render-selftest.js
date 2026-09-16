@@ -161,6 +161,23 @@ chk(!/\.cbi-/.test(css) && !/cbi-button/.test(css), '未提及核心按钮类');
 // inherit one from a core button class
 chk(/\.tf-gran:focus-visible/.test(css) && /outline:2px solid/.test(css),
     '自绘控件保留了键盘焦点环');
+// The same rule as above, enforced over the whole sheet rather than one class:
+// every selector has to be anchored on this page own classes (tf-*), including
+// the dark-mode ones, so no part of the stylesheet can reach core markup.
+const bare=(()=>{
+  const body=css.replace(/\/\*[\s\S]*?\*\//g,'');
+  const out=[];
+  for(const chunk of body.split('}')){
+    const i=chunk.lastIndexOf('{');
+    if(i<0) continue;
+    for(const sel of chunk.slice(0,i).split(',')){
+      const s=sel.trim();
+      if(s && !/\.tf-/.test(s)) out.push(s);
+    }
+  }
+  return out;
+})();
+chk(bare.length===0, `所有选择器都以 tf-* 约束（未约束 ${bare.length} 条${bare.length?': '+bare.slice(0,3).join(' / '):''}）`);
 chk(/appearance:none/.test(css), '下拉框去掉了原生外观（才能自绘圆角箭头）');
 chk(/data:image\/svg\+xml/.test(css), '用了内联 SVG 箭头（无额外请求）');
 const darkRules=(css.match(/\.dark \.tf-page \.tf-range/g)||[]).length;
