@@ -193,9 +193,33 @@ upgrade.
 | `top_apps` / `top_clients` | `50` / `20` | how many entries the snapshot carries |
 | `resolve_interval` | `30` | minimum seconds between catalogue reads (see below) |
 | `dnsmap_max` | `50000` | upper bound on the `(client, host, ip)` map |
+| `purge_size_mb` | `100` | history is dropped when the data directory passes this size (see below) |
 
 Every option can also be set through the environment (`TRAFFIC_INTERVAL`,
 `TRAFFIC_QUERYLOG`, …), which is how the offline tests drive it.
+
+### The history is bounded by the collector, not by a button
+
+There is deliberately no "clear" button on the page. Clearing is housekeeping,
+and a button on a dashboard is an invitation to throw the history away by
+accident; it also cannot be undone, which is a poor fit for a single click next
+to the numbers.
+
+The collector bounds its own store instead:
+
+* once a **calendar month**, on the first start of a new month;
+* whenever `<datadir>` grows past **`purge_size_mb`** (100 MB by default).
+
+`hourly.tsv` is the file that actually grows without bound — an application row
+and a client row per application and client, per hour, kept forever. The two
+series files are already bounded by their point counts, and the name maps live
+in tmpfs and are bounded by `dnsmap_max`; they are cleared too, because they are
+what the purge is meant to reclaim.
+
+**Only history is dropped.** The live counters are the session in progress, and
+clearing them would make the page fall back to zero for traffic that is still on
+the wire — the opposite of what the page is for. Each purge writes one line to
+the log (`logread -e traffic`).
 
 ## The catalogue
 
@@ -317,16 +341,27 @@ colour just because the order moved. Two names that hash to the same slot are
 separated in name order, which is likewise rank-independent.
 
 * **Hero card** — total carried by clients, live down/up rates derived from two
-  consecutive samples, the range selector and the reset button.
-* **Throughput card** — down/up over time, drawn as plain SVG. The collector
-  keeps two tiers, so the card's buttons choose a *granularity*, not a window
-  width: **10 s points for the last hour** (the sharp view — a burst keeps its
-  shape) and **1 min points for the last day** (the context view). The minute
-  tier lives in `<datadir>/series60.tsv` so it survives a reboot; the 10 s tier
-  is session state in `/tmp`. A quiet round is recorded as a zero point rather
-  than skipped, so a gap in the chart always means the collector was not
-  running, never merely "nothing happened".
-* **Donut card** — the ten largest applications with a matching legend.
+  consecutive samples, and the range selector. The range defaults to **one day**,
+  which is the window the total, the donut and the table all describe; "since
+  start" is still there for watching the current session move, and in that mode
+  the live rates are shown instead of a windowed total. There is no reset button
+  (see [above](#the-history-is-bounded-by-the-collector-not-by-a-button)).
+* **Throughput card** — down/up over time, drawn as plain SVG, with the range as a
+  dropdown in the card header. Three tiers exist, so the selector chooses a
+  *granularity*, not a window width: **10 s points for the last hour** (the sharp
+  view — a burst keeps its shape), **1 min points for 12 h and for the last day**
+  (the same file, two lengths), and **1 h points for the last week**. The minute
+  and hour tiers live in `<datadir>` (`series60.tsv`, `series1h.tsv`) so they
+  survive a reboot; the 10 s tier is session state in `/tmp`. A quiet round is
+  recorded as a zero point rather than skipped, so a gap in the chart always means
+  the collector was not running, never merely "nothing happened". A colour key
+  names the two curves under the header, because they often differ by orders of
+  magnitude and a small upload curve would otherwise read as a stray line.
+* **Donut card** — the ten largest applications with a matching legend, as a
+  full-width block above the table. It used to be a second column beside the
+  table, which stacked below the tablet breakpoint anyway and left a band of
+  empty page beside the donut; as a block above, the legend can spread across the
+  width instead of being squeezed into one narrow column.
 * **List card** — application, down, up, total and share, 30 rows.
 * **Footer card** — proxy tunnel total, client total, and the identification
   rate (by the same client's DNS, by any client's DNS, unidentified).
