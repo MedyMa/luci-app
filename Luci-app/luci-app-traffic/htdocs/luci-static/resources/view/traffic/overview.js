@@ -199,10 +199,11 @@ return view.extend({
 					el('table', { 'class': 'table tf-table' }, [
 						el('thead', {}, [ el('tr', {}, [
 							el('th', {}, [ _('Application') ]),
+							el('th', { 'class': 'tf-num' }, [ _('Total') ]),
 							el('th', { 'class': 'tf-num' }, [ _('Down') ]),
 							el('th', { 'class': 'tf-num' }, [ _('Up') ]),
-							el('th', { 'class': 'tf-num' }, [ _('Total') ]),
-							el('th', { 'class': 'tf-num tf-share' }, [ '%' ])
+							el('th', {}, [ _('Top client') ]),
+							el('th', { 'class': 'tf-num' }, [ _('Clients') ])
 						]) ]),
 						this.rowsEl
 					])
@@ -228,7 +229,12 @@ return view.extend({
 	renderLive: function(s) {
 		var items = (s.apps || []).map(function(a) {
 			var down = Number(a.down) || 0, up = Number(a.up) || 0;
-			return { name: a.name, down: down, up: up, bytes: down + up };
+			return {
+				name: a.name, down: down, up: up, bytes: down + up,
+				clients: (a.clients === undefined) ? undefined : Number(a.clients),
+				top: a.top || '',
+				top_bytes: Number(a.top_bytes) || 0
+			};
 		}).filter(hasTraffic);
 
 		var t = s.totals || {};
@@ -246,7 +252,21 @@ return view.extend({
 		dom.content(this.rateDown, fmtRate(this.rate.down));
 		dom.content(this.rateUp, fmtRate(this.rate.up));
 
-		this.draw(items, down + up);
+		/* the grand-total row carries the busiest client overall; down+up is the
+		 * same client-side total the footer breaks down by kind */
+		var clientTotal = down + up;
+		var topClient = (s.clients && s.clients.length) ? s.clients[0] : null;
+		var topText = '—';
+		if (topClient && clientTotal > 0) {
+			topText = (topClient.name || topClient.ip) + ' ' + fmtBytes(topClient.bytes) +
+				' (' + (100 * Number(topClient.bytes) / clientTotal).toFixed(1) + '%)';
+		}
+
+		this.draw(items, {
+			total: clientTotal, down: down, up: up,
+			topText: topText,
+			clientCount: (t.client_count === undefined) ? undefined : Number(t.client_count)
+		});
 
 		/* The three kinds partition the client traffic, so the shares add up to
 		 * 100%.  exact/any only says which client's DNS answer did the naming. */
@@ -301,7 +321,11 @@ return view.extend({
 		  .sort(function(a, b) { return b.bytes - a.bytes; });
 
 		var total = items.reduce(function(s, a) { return s + a.bytes; }, 0);
-		this.draw(items, total);
+		var gd = items.reduce(function(s, a) { return s + a.down; }, 0);
+		var gu = items.reduce(function(s, a) { return s + a.up; }, 0);
+		/* the hourly history keeps application totals only, so the per-client
+		 * columns stay empty here rather than showing something invented */
+		this.draw(items, { total: total, down: gd, up: gu });
 		dom.content(this.rateDown, '—');
 		dom.content(this.rateUp, '—');
 		dom.content(this.metaEl, [
@@ -312,17 +336,18 @@ return view.extend({
 		]);
 	},
 
-	draw: function(items, total) {
+	draw: function(items, stats) {
 		/* one palette assignment for everything drawn this round, so the donut,
 		 * the legend and the table cannot disagree about a colour */
 		colorMap = assignColors(items.slice(0, 30));
 		var top = items.slice(0, 10);
+		var total = stats.total;
 
 		dom.content(this.donutEl, makeDonut(top, total));
 		dom.content(this.totalEl, fmtBytes(total));
 
 		/* legend beside the ring: name, share, one line each so ten entries fit */
-		dom.content(this.legendEl, top.map(function(a, i) {
+		dom.content(this.legendEl, top.map(function(a) {
 			var pct = total ? (100 * a.bytes / total) : 0;
 			return el('div', { 'class': 'tf-legend-row' }, [
 				el('span', { 'class': 'tf-legend-dot', 'style': 'background:' + colorFor(a.name) }),
@@ -331,23 +356,42 @@ return view.extend({
 			]);
 		}));
 
-		var rows = items.slice(0, 30).map(function(a, i) {
-			var pct = total ? (100 * a.bytes / total) : 0;
+		var rows = [];
+
+		/* the grand total leads the table, the way the reference gateway does it */
+		rows.push(el('tr', { 'class': 'tf-grand' }, [
+			el('td', { 'class': 'tf-app' }, [ el('span', { 'class': 'tf-app-name' }, [ _('All traffic') ]) ]),
+			el('td', { 'class': 'tf-num tf-total' }, [ fmtBytes(total) ]),
+			el('td', { 'class': 'tf-num tf-down' }, [ fmtBytes(stats.down) ]),
+			el('td', { 'class': 'tf-num tf-up' }, [ fmtBytes(stats.up) ]),
+			el('td', { 'class': 'tf-top' }, [ stats.topText || '—' ]),
+			el('td', { 'class': 'tf-num' }, [ stats.clientCount === undefined ? '—' : String(stats.clientCount) ])
+		]));
+
+		items.slice(0, 100).forEach(function(a) {
 			var bucket = isBucket(a.name);
-			return el('tr', { 'class': bucket ? 'tf-isbucket' : '' }, [
+			var pct = total ? (100 * a.bytes / total) : 0;
+			var topText = '—';
+			if (a.top) {
+				var share = a.bytes ? (100 * (a.top_bytes || 0) / a.bytes) : 0;
+				topText = a.top + ' ' + fmtBytes(a.top_bytes || 0) + ' (' + share.toFixed(1) + '%)';
+			}
+			rows.push(el('tr', { 'class': bucket ? 'tf-isbucket' : '' }, [
 				el('td', { 'class': 'tf-app' }, [
 					makeIcon(a.name),
 					el('span', { 'class': 'tf-app-name' }, [ a.name ]),
 					bucket ? el('span', { 'class': 'tf-tag' }, [ _('type') ]) : ''
 				]),
+				el('td', { 'class': 'tf-num tf-total' }, [ fmtBytes(a.bytes) + ' (' + pct.toFixed(1) + '%)' ]),
 				el('td', { 'class': 'tf-num tf-down' }, [ fmtBytes(a.down) ]),
 				el('td', { 'class': 'tf-num tf-up' }, [ fmtBytes(a.up) ]),
-				el('td', { 'class': 'tf-num tf-total' }, [ fmtBytes(a.bytes) ]),
-				el('td', { 'class': 'tf-num tf-share' }, [ pct.toFixed(1) + '%' ])
-			]);
+				el('td', { 'class': 'tf-top' }, [ topText ]),
+				el('td', { 'class': 'tf-num' }, [ a.clients === undefined ? '—' : String(a.clients) ])
+			]));
 		});
-		if (!rows.length)
-			rows = [ el('tr', {}, [ el('td', { 'colspan': 5, 'class': 'tf-empty' }, [ _('No traffic recorded yet.') ]) ]) ];
+
+		if (!items.length)
+			rows.push(el('tr', {}, [ el('td', { 'colspan': 6, 'class': 'tf-empty' }, [ _('No traffic recorded yet.') ]) ]));
 		dom.content(this.rowsEl, rows);
 	},
 
@@ -418,7 +462,11 @@ function injectCss() {
 		'.tf-page .tf-down{color:var(--tf-down);}',
 		'.tf-page .tf-up{color:var(--tf-up);}',
 		'.tf-page .tf-total{font-weight:600;}',
-		'.tf-page .tf-share{width:4.5rem;color:var(--tf-dim);}',
+		/* the grand total leads the table, so it is tinted rather than roped off */
+		'.tf-page .tf-grand>td{background:rgba(0,180,255,.07);font-weight:600;',
+		'border-bottom:1px solid rgba(128,150,175,.22)!important;}',
+		'.tf-page .tf-top{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
+		'max-width:14rem;color:var(--tf-dim);font-size:.85rem;}',
 
 		/* app cell + icon: one 26px box for both the avatar and a real SVG */
 		'.tf-page .tf-app{display:flex;align-items:center;gap:.6rem;}',

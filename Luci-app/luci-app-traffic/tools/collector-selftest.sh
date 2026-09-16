@@ -22,7 +22,15 @@ COLLECTOR="$(cd "$SELF/.." && pwd)/root/usr/share/traffic/collector.sh"
 [ -f "$COLLECTOR" ] || { echo "collector.sh not found next to $SELF" >&2; exit 1; }
 
 echo "=== sh -n ==="
-sh -n "$COLLECTOR" && echo "collector syntax OK"
+if ! sh -n "$COLLECTOR"; then
+    # A syntax error makes every later assertion meaningless, so stop here
+    # rather than printing a wall of failures.  This is the check that catches
+    # an apostrophe inside an awk comment, which closes the single-quoted awk
+    # program the shell is already inside.
+    echo "FAIL: collector.sh does not parse - aborting" >&2
+    exit 1
+fi
+echo "collector syntax OK"
 
 T=$(mktemp -d)
 trap 'rm -rf "$T"' EXIT

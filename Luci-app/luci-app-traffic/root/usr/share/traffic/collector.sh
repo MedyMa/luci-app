@@ -157,6 +157,7 @@ init_state() {
     [ -f "$STATE_DIR/clients.tsv" ] || : > "$STATE_DIR/clients.tsv"
     [ -f "$STATE_DIR/router.tsv" ] || : > "$STATE_DIR/router.tsv"
     [ -f "$STATE_DIR/stat.tsv" ] || printf '0\n0\n0\n0\n' > "$STATE_DIR/stat.tsv"
+    [ -f "$STATE_DIR/ac.tsv" ] || : > "$STATE_DIR/ac.tsv"
     [ -f "$STATE_DIR/meta" ] || printf '0\n0\n' > "$STATE_DIR/meta"
     [ -f "$CFG_DATADIR/hourly.tsv" ] || : > "$CFG_DATADIR/hourly.tsv"
 }
@@ -233,6 +234,7 @@ classify() {
     [ -s "$STATE_DIR/flow.delta" ] || return 0
     awk -v dns="$STATE_DIR/dnsmap.tsv" -v tot="$STATE_DIR/totals.tsv" \
         -v cli="$STATE_DIR/clients.tsv" -v rt="$STATE_DIR/router.tsv" -v st="$STATE_DIR/stat.tsv" \
+        -v acfile="$STATE_DIR/ac.tsv" -v acnew="$STATE_DIR/ac.new" \
         -v appmap="$CFG_APPMAP" -v catmap="$CFG_CATEGORIES" \
         -v lan4="$CFG_LAN4" -v lan6="$CFG_LAN6" '
     # The registrable domain: what conntrack alone can offer when the host name
@@ -265,15 +267,40 @@ classify() {
     # Last resort: what the protocol and port alone say.  This is the layer that
     # turns an unnamed encrypted flow into "SSL/TLS" (or QUIC / HTTP / ...)
     # rather than leaving it in an undifferentiated heap.
+    #
+    # Everything here is decidable from the 5-tuple, which is the honest limit
+    # of this design: a gateway that inspects payloads can also name media
+    # containers (FLV, MP4) and obscure protocols, and that is out of reach
+    # without deep packet inspection.
     function proto_bucket(proto, port,   p) {
         p = port + 0
+        if (proto == "icmp" || proto == "icmpv6" || proto == "ipv6-icmp") return "ICMP"
         if (proto == "udp" && p == 443) return "QUIC"
-        if (proto == "tcp" && (p == 443 || p == 8443)) return "SSL/TLS"
-        if (proto == "tcp" && (p == 80 || p == 8080 || p == 8000)) return "HTTP"
-        if (p == 53 || p == 853 || p == 5353) return "DNS"
-        if (proto == "udp" && (p == 3478 || p == 19302 || p == 5349)) return "STUN"
+        if (proto == "tcp" && (p == 443 || p == 8443 || p == 9443)) return "SSL/TLS"
+        if (proto == "tcp" && (p == 80 || p == 8080 || p == 8000 || p == 8880)) return "HTTP"
+        if (p == 53 || p == 853 || p == 5353 || p == 5355) return "DNS"
+        if (proto == "udp" && (p == 3478 || p == 3479 || p == 3480 || p == 19302 || p == 5349)) return "STUN"
         if (proto == "tcp" && (p == 554 || p == 8554)) return "RTSP"
+        if (proto == "tcp" && p == 1935) return "FLV"
         if (p == 25 || p == 110 || p == 143 || p == 465 || p == 587 || p == 993 || p == 995) return "Email"
+        if (p == 22 || p == 2222) return "SSH"
+        if (p == 23) return "Telnet"
+        if (p == 20 || p == 21) return "FTP"
+        if (p == 3389) return "RDP"
+        if (p == 139 || p == 445) return "SMB"
+        if (p == 1883 || p == 8883) return "MQTT"
+        if (p == 1812 || p == 1813 || p == 1645 || p == 1646) return "RADIUS"
+        if (p == 5060 || p == 5061) return "SIP"
+        if (p == 1701) return "L2TP"
+        if (p == 1723) return "PPTP"
+        if (p == 500 || p == 4500) return "IPSec"
+        if (p == 1433) return "MSSQL"
+        if (p == 3306) return "MySQL"
+        if (p == 5432) return "PostgreSQL"
+        if (p == 6379) return "Redis"
+        if (p == 123) return "NTP"
+        if (p == 161 || p == 162) return "SNMP"
+        if (p == 67 || p == 68) return "DHCP"
         return "Other"
     }
     BEGIN {
@@ -302,6 +329,15 @@ classify() {
         close(rt)
         if ((getline l < st) > 0) { split(l, f, "\t"); m_c = f[1] + 0; m_g = f[2] + 0; k_b = f[3] + 0; k_o = f[4] + 0 }
         close(st)
+        # per (application, client) totals, so the page can show which device
+        # drove an application and how many devices used it.
+        # NOTE: no apostrophes in comments inside an awk program - one would
+        # close the single-quoted program the shell is already inside.
+        while ((getline l < acfile) > 0) {
+            split(l, f, "\t")
+            if (f[1] != "" && f[2] != "") ac[f[1] "|" f[2]] = f[3] + 0
+        }
+        close(acfile)
     }
     {
         split($1, k, "|")                 # family|proto|src|sport|dst|dport
@@ -335,13 +371,20 @@ classify() {
         # 3) the site itself - a website is identified by its domain
         else                             { a = app_of(dom);               if (via == "exact") m_c += t; else m_g += t }
         up[a] += u; dn[a] += d
+        ac[a "|" src] += t
     }
     END {
         for (x in up) { if (up[x] + dn[x] > 0) printf "%s\t%d\t%d\n", x, up[x], dn[x] > tot }
         for (y in cb) { if (cb[y] > 0) printf "%s\t%d\n", y, cb[y] > cli }
         printf "%d\n", rb_total + rb["proxy"] > rt
         printf "%d\t%d\t%d\t%d\n", m_c, m_g, k_b, k_o > st
+        for (z in ac) {
+            if (ac[z] <= 0) continue
+            split(z, zp, "|")
+            printf "%s\t%s\t%d\n", zp[1], zp[2], ac[z] > acnew
+        }
     }' "$STATE_DIR/flow.delta"
+    [ -f "$STATE_DIR/ac.new" ] && mv -f "$STATE_DIR/ac.new" "$STATE_DIR/ac.tsv"
     return 0
 }
 
@@ -363,6 +406,7 @@ roll_hour() {
     : > "$STATE_DIR/totals.tsv"
     : > "$STATE_DIR/clients.tsv"
     : > "$STATE_DIR/router.tsv"
+    : > "$STATE_DIR/ac.tsv"
     printf '0\n0\n0\n0\n' > "$STATE_DIR/stat.tsv"
     prune_hourly
     printf '%s\n' "$hour" > "$STATE_DIR/hour"
@@ -403,21 +447,71 @@ json_escape() { printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'; }
 write_summary() {
     local hour flows dnsmap
     hour=$(cat "$STATE_DIR/hour" 2>/dev/null)
-    flows=$(grep -c . "$STATE_DIR/flow.state" 2>/dev/null || echo 0)
-    dnsmap=$(grep -c . "$STATE_DIR/dnsmap.tsv" 2>/dev/null || echo 0)
+    # wc -l, not "grep -c . || echo 0": an empty file makes grep print 0 *and*
+    # exit non-zero, so the fallback would append a second 0 and the "field":
+    # value would end up spanning two lines, which is not valid JSON.
+    flows=$(wc -l < "$STATE_DIR/flow.state" 2>/dev/null || echo 0)
+    dnsmap=$(wc -l < "$STATE_DIR/dnsmap.tsv" 2>/dev/null || echo 0)
 
     {
         printf '{"collected_at":%s,"interval":%s,"hour":"%s","flows":%s,"dnsmap_lines":%s,' \
             "$(date +%s 2>/dev/null || echo 0)" "$CFG_INTERVAL" "$(json_escape "$hour")" "$flows" "$dnsmap"
+        # Per-application client breakdown, rebuilt with every snapshot: how
+        # many devices used an application, and which one carried most of it.
+        # The output is redirected explicitly so it does not land in the
+        # snapshot being assembled around it.
+        awk -F'\t' '
+            { sum[$1] += $3; cnt[$1] += 1
+              if ($3 > best[$1]) { best[$1] = $3; who[$1] = $2 } }
+            END { for (k in sum) printf "%s\t%d\t%d\t%s\n", k, cnt[k], best[k], who[k] }
+        ' "$STATE_DIR/ac.tsv" 2>/dev/null > "$STATE_DIR/ac.agg"
+
         printf '"querylog":"%s","apps":[' "$(json_escape "$CFG_QUERYLOG")"
         awk -F'\t' '{ printf "%d\t%s\t%d\t%d\n", $2 + $3, $1, $2, $3 }' "$STATE_DIR/totals.tsv" 2>/dev/null \
-            | sort -rn | head -n "$CFG_TOP_APPS" | awk -F'\t' '
-            BEGIN { n = 0 }
-            { if (n++) printf ","; printf "{\"name\":\"%s\",\"down\":%d,\"up\":%d}", $2, $4, $3 }'
+            | sort -rn | head -n "$CFG_TOP_APPS" \
+            | awk -F'\t' -v acagg="$STATE_DIR/ac.agg" -v leases="${TRAFFIC_LEASES:-/tmp/dhcp.leases}" '
+              BEGIN {
+                  while ((getline l < acagg) > 0) {
+                      split(l, f, "\t")
+                      if (f[1] == "") continue
+                      acn[f[1]] = f[2] + 0; acb[f[1]] = f[3] + 0; act[f[1]] = f[4]
+                  }
+                  close(acagg)
+                  # a DHCP lease turns a bare address into something readable
+                  while ((getline l < leases) > 0) {
+                      split(l, f, " ")
+                      if (f[3] != "" && f[4] != "") {
+                          nm = f[4]; gsub(/[^A-Za-z0-9._-]/, "_", nm); lname[f[3]] = nm
+                      }
+                  }
+                  close(leases)
+                  n = 0
+              }
+              {
+                  who = act[$2]; wb = acb[$2]
+                  disp = (who in lname) ? lname[who] : who
+                  if (n++) printf ","
+                  printf "{\"name\":\"%s\",\"down\":%d,\"up\":%d,\"clients\":%d,\"top\":\"%s\",\"top_bytes\":%d}",
+                         $2, $4, $3, acn[$2], disp, wb
+              }'
         printf '],"clients":['
-        sort -t"$(printf '\t')" -k2 -rn "$STATE_DIR/clients.tsv" 2>/dev/null | head -n "$CFG_TOP_CLIENTS" | awk -F'\t' '
-            BEGIN { n = 0 }
-            { if (n++) printf ","; printf "{\"ip\":\"%s\",\"bytes\":%d}", $1, $2 }'
+        sort -t"$(printf '\t')" -k2 -rn "$STATE_DIR/clients.tsv" 2>/dev/null | head -n "$CFG_TOP_CLIENTS" \
+            | awk -F'\t' -v leases="${TRAFFIC_LEASES:-/tmp/dhcp.leases}" '
+              BEGIN {
+                  while ((getline l < leases) > 0) {
+                      split(l, f, " ")
+                      if (f[3] != "" && f[4] != "") {
+                          nm = f[4]; gsub(/[^A-Za-z0-9._-]/, "_", nm); lname[f[3]] = nm
+                      }
+                  }
+                  close(leases)
+                  n = 0
+              }
+              {
+                  disp = ($1 in lname) ? lname[$1] : $1
+                  if (n++) printf ","
+                  printf "{\"ip\":\"%s\",\"name\":\"%s\",\"bytes\":%d}", $1, disp, $2
+              }'
         printf '],"totals":{'
         awk -F'\t' '{
             up += $2; down += $3
@@ -426,6 +520,7 @@ write_summary() {
             printf "\"down\":%d,\"up\":%d,\"other\":%d", down, up, ou
         }' "$STATE_DIR/totals.tsv" 2>/dev/null
         printf ',"router":%s' "$(cat "$STATE_DIR/router.tsv" 2>/dev/null || echo 0)"
+        printf ',"client_count":%s' "$(wc -l < "$STATE_DIR/clients.tsv" 2>/dev/null || echo 0)"
         # stat.tsv: <named via same client> <named via any client> <bucket> <other>
         awk -F'\t' '{ printf ",\"exact\":%d,\"any\":%d,\"bucket\":%d,\"residual\":%d", $1, $2, $3, $4 }' \
             "$STATE_DIR/stat.tsv" 2>/dev/null
