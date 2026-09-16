@@ -1,5 +1,5 @@
 {
-	"admin/network/traffic": {
+	"admin/services/traffic": {
 		"title": "流量统计",
 		"order": 60,
 		"action": {

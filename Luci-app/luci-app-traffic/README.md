@@ -303,7 +303,7 @@ round trip was only ever validating a file this package wrote itself.
 
 ## The page
 
-Found under **Network → 流量统计** (`admin/network/traffic`).
+Found under **Services → 流量统计** (`admin/services/traffic`).
 
 The layout follows the Argon theme's card style: translucent blurred panels,
 rounded corners, a soft shadow, and the theme's own primary colour as the
