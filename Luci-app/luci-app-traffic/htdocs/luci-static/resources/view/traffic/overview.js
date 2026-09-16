@@ -915,7 +915,20 @@ return view.extend({
 			this.rateDown.setAttribute('title', tip);
 			this.rateUp.setAttribute('title', tip);
 		}
-		this.drawMeta([ { cap: _('Bucket'), val: String(hours.length) } ]);
+		/* The footer says what the range held, from what the history actually
+		 * keeps: the number of buckets, the client bytes, the tunnel and how many
+		 * devices moved them.  The identification rates below are not here
+		 * because the history does not store them - those counters live in the
+		 * session, and inventing a range figure out of a session one is exactly
+		 * the kind of number this page should not show. */
+		var rt = 0;
+		hours.forEach(function(b) { rt += Number(b.router) || 0; });
+		this.drawMeta([
+			{ cap: _('Bucket'), val: String(hours.length) },
+			{ cap: _('Browser clients'), val: fmtBytes(total) },
+			{ cap: _('Router and tunnel'), val: fmtBytes(rt) },
+			{ cap: _('Client count'), val: String(cl.length) }
+		]);
 	},
 
 	draw: function(items, stats) {

@@ -65,42 +65,78 @@ resolve_now() {
 
 # Aggregate hourly.tsv into per-hour application totals.
 #   hourly.tsv: <hour>\t<app|client|router>\t<name>\t<down>\t<up>
+#
+# One pass over the file, not one pipeline per hour.  The previous shape forked a
+# sort and two awks for each of the three row kinds of every hour, so the day view
+# the page opens on cost roughly 170 processes and 170 full scans of the file -
+# and the page asks for it every five seconds, which is what made the list take
+# seconds to fill in.  Every row of an hour is still returned, not the biggest
+# few: the page sums the hours up to build 12h/24h/7d, so a truncated list would
+# leave the tail of each hour out of that total.  Row order within an hour does
+# not matter, because the page sorts by bytes itself.
 get_hourly() {
-	local hours="$1" f
+	local hours="$1" f list sel
 	case "$hours" in ''|*[!0-9]*) hours=24 ;; esac
 	f="$(datadir)/hourly.tsv"
 	if [ ! -s "$f" ]; then
 		printf '{"hours":[]}\n'
 		return
 	fi
-	# The hour list is small, so a plain sort is clearer than doing JSON in awk.
 	list=$(awk -F'\t' '{ if (!seen[$1]++) print $1 }' "$f" | sort | tail -n "$hours")
-	# Every row of the hour is returned, not the biggest few.  The page sums the
-	# hours up to build a 12h/24h/7d view, so a truncated list would silently
-	# leave the tail of each hour out of that total - the range would report less
-	# traffic than the hour it contains.  The rows are one line per application
-	# that moved bytes and one per client that did, so the whole range is still
-	# tens of kilobytes, and it is the honest total that matters here.
-	printf '{"hours":['
-	first=1
-	for h in $list; do
-		[ "$first" = 1 ] || printf ','
-		first=0
-		printf '{"hour":"%s","apps":[' "$h"
-		awk -F'\t' -v hour="$h" '
-			$1 == hour && $2 == "app" { printf "%d\t%s\t%s\t%s\n", $4 + $5, $3, $4, $5 }' "$f" \
-			| sort -rn \
-			| awk -F'\t' 'BEGIN { n = 0 } { if (n++) printf ","; printf "{\"name\":\"%s\",\"down\":%s,\"up\":%s}", $2, $3, $4 }'
-		printf '],"clients":['
-		awk -F'\t' -v hour="$h" '
-			$1 == hour && $2 == "client" { printf "%d\t%s\n", $4, $3 }' "$f" \
-			| sort -rn \
-			| awk -F'\t' 'BEGIN { n = 0 } { if (n++) printf ","; printf "{\"ip\":\"%s\",\"bytes\":%s}", $2, $1 }'
-		printf '],"router":'
-		awk -F'\t' -v hour="$h" '$1 == hour && $2 == "router" { t += $4 } END { printf "%d", t + 0 }' "$f"
-		printf '}'
-	done
-	printf ']}\n'
+	sel=$(printf '%s ' $list)
+	awk -F'\t' -v sel="$sel" '
+		# Names come from the generated catalogue, so a quote is the only thing
+		# that could break the JSON; the & form is what makes gsub put a real
+		# backslash in front of the match instead of eating it.
+		function esc(s) { gsub(/\\/, "\\\\&", s); gsub(/"/, "\\&", s); return s }
+		BEGIN {
+			n = split(sel, w, " ")
+			for (i = 1; i <= n; i++) { order[i] = w[i]; keep[w[i]] = 1 }
+		}
+		!($1 in keep) { next }
+		$2 == "app" {
+			k = $1 SUBSEP $3
+			if (!(k in seen_a)) { seen_a[k] = 1; names_a[$1] = names_a[$1] $3 "\n" }
+			ad[k] += $4 + 0; au[k] += $5 + 0
+			next
+		}
+		$2 == "client" {
+			k = $1 SUBSEP $3
+			if (!(k in seen_c)) { seen_c[k] = 1; names_c[$1] = names_c[$1] $3 "\n" }
+			cb[k] += $4 + 0
+			next
+		}
+		$2 == "router" { rv[$1] += $4 + 0; next }
+		END {
+			printf "{\"hours\":["
+			for (i = 1; i <= n; i++) {
+				h = order[i]
+				if (i > 1) printf ","
+				printf "{\"hour\":\"%s\",\"apps\":[", esc(h)
+				na = split(names_a[h], nm, "\n")
+				f1 = 1
+				for (j = 1; j <= na; j++) {
+					if (nm[j] == "") continue
+					k = h SUBSEP nm[j]
+					if (!f1) printf ","
+					f1 = 0
+					printf "{\"name\":\"%s\",\"down\":%d,\"up\":%d}", esc(nm[j]), ad[k], au[k]
+				}
+				printf "],\"clients\":["
+				ncl = split(names_c[h], cn, "\n")
+				f2 = 1
+				for (j = 1; j <= ncl; j++) {
+					if (cn[j] == "") continue
+					k = h SUBSEP cn[j]
+					if (!f2) printf ","
+					f2 = 0
+					printf "{\"ip\":\"%s\",\"bytes\":%d}", esc(cn[j]), cb[k]
+				}
+				printf "],\"router\":%d}", rv[h] + 0
+			}
+			printf "]}\n"
+		}
+	' "$f"
 }
 
 get_config() {
