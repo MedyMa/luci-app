@@ -145,11 +145,19 @@ run_collector_at() {
 }
 
 snapshot_at() { sed -n 's/.*"collected_at":\([0-9]*\).*/\1/p' "$1" 2>/dev/null; }
+# Completed rounds, not collected_at: the collector now writes a snapshot as soon
+# as it starts, so collected_at changes before any work is done.  Waiting on the
+# round counter is what "one whole round has finished" actually means.
+rounds_at() { sed -n 's/.*"rounds":\([0-9]*\).*/\1/p' "$1" 2>/dev/null; }
 
 collect() {
     local st="$1" da="$2" ct="$3" ql="$4" cap="$5"; shift 5
     local before pid i at
-    before=$(snapshot_at "$st/summary.json")
+    # Empty means "no snapshot yet", which is round 0, not "a round finished":
+    # the collector publishes a snapshot at startup with rounds=0, so waiting for
+    # the value to merely differ would return before the first round has run.
+    before=$(rounds_at "$st/summary.json")
+    case "$before" in ''|*[!0-9]*) before=0 ;; esac
 
     env "$@" UCI=/bin/true LUA="$T/bin/lua" CT="$ct" TRAFFIC_QUERYLOG="$ql" \
       TRAFFIC_LAN4=192.168.2. TRAFFIC_INTERVAL=2 TRAFFIC_DATADIR="$da" \
@@ -160,8 +168,9 @@ collect() {
 
     i=0
     while [ "$i" -lt $((cap * 5)) ]; do
-        at=$(snapshot_at "$st/summary.json")
-        [ -n "$at" ] && [ "$at" != "$before" ] && break
+        at=$(rounds_at "$st/summary.json")
+        case "$at" in ''|*[!0-9]*) at=0 ;; esac
+        [ "$at" -gt "$before" ] && break
         sleep 0.2
         i=$((i + 1))
     done
@@ -426,8 +435,12 @@ run_collector_at 30 "$T/state5" "$T/data5" "$T/ct2" /nonexistent \
 chk "23 只给真正的 LAN 邻居建计数规则"      "2"                 "$(grep -c 'saddr' "$T/nft5/rules.pre" 2>/dev/null)"
 chk "23a 陈旧的 arp 表项不建规则"           "0"                 "$(grep -c '192.168.2.99' "$T/nft5/rules.pre" 2>/dev/null)"
 chk "23b WAN 网段邻居不建规则"              "0"                 "$(grep -c '192.168.1.7' "$T/nft5/rules.pre" 2>/dev/null)"
-chk "23c 下行按目的地址计（postrouting）"   "10000"             "$(awk -F'\t' '$1=="192.168.2.50"{print $2}' "$T/state5/acct_delta.tsv")"
-chk "23d 上行按源地址计（prerouting）"      "1000"              "$(awk -F'\t' '$1=="192.168.2.50"{print $3}' "$T/state5/acct_delta.tsv")"
+# The cumulative per-client file is asserted rather than the per-round delta:
+# the collector primes its baseline at startup, so by the time the runner has
+# seen a completed round the delta of that first reading is already accounted
+# and the delta file shows the (zero) change of the round itself.
+chk "23c 下行按目的地址计（postrouting）"   "10000"             "$(awk -F'\t' '$1=="192.168.2.50"{print $2}' "$T/state5/acct.tsv")"
+chk "23d 上行按源地址计（prerouting）"      "1000"              "$(awk -F'\t' '$1=="192.168.2.50"{print $3}' "$T/state5/acct.tsv")"
 chk "23e 客户端总量来自计数器"              "11000"             "$(awk -F'\t' '$1=="192.168.2.50"{print $2}' "$T/state5/clients.tsv")"
 chk "23f 快照报告计数层已启用"              "1"                 "$(grep -o '"acct":[0-9]*' "$T/state5/summary.json" | cut -d: -f2)"
 # The Makefile substitutes the package version in at build time; here it is the
@@ -444,6 +457,21 @@ run_collector_at 30 "$T/state5" "$T/data5" "$T/ct2" /nonexistent \
     "PATH=$T/fakebin:$PATH" "NFTS=$T/nft5" "TRAFFIC_ARPFILE=$T/arp5" \
     TRAFFIC_SELF="192.168.2.1" TRAFFIC_LAN6=fdc8:64ed:f962:
 chk "23h 增量累加而不是重复计入绝对值"      "3000"              "$(awk -F'\t' '$1=="192.168.2.50"{print $3}' "$T/state5/acct.tsv")"
+# A new client must not reset the counters that are already running: flushing
+# and rebuilding the rule set on any neighbour change would throw away the
+# traffic of the interval the rebuild happened in, and neighbour entries expire
+# and come back all the time.
+cat >> "$T/arp5" <<'EOF'
+192.168.2.52     0x1         0x2         aa:bb:cc:dd:ee:04     *        br-lan
+EOF
+printf '192.168.2.50 13000\n192.168.2.51 0\n192.168.2.52 700\n' > "$T/nft5/counters.pre"
+printf '192.168.2.50 35000\n192.168.2.51 0\n192.168.2.52 900\n' > "$T/nft5/counters.post"
+run_collector_at 30 "$T/state5" "$T/data5" "$T/ct2" /nonexistent \
+    "PATH=$T/fakebin:$PATH" "NFTS=$T/nft5" "TRAFFIC_ARPFILE=$T/arp5" \
+    TRAFFIC_SELF="192.168.2.1" TRAFFIC_LAN6=fdc8:64ed:f962:
+chk "23h2 新增客户端不重置已有计数器"       "13000"             "$(awk -F'\t' '$1=="192.168.2.50"{print $3}' "$T/state5/acct.tsv")"
+chk "23h3 新增客户端立刻开始计数"           "700"               "$(awk -F'\t' '$1=="192.168.2.52"{print $3}' "$T/state5/acct.tsv")"
+chk "23h4 新客户端也建了规则"               "3"                 "$(grep -c 'saddr' "$T/nft5/rules.pre" 2>/dev/null)"
 # a firewall reload flushes the whole ruleset, ours included: the chains have to
 # come back, and the counters restart from a lower value
 rm -f "$T/nft5/rules.pre" "$T/nft5/rules.post"
@@ -452,9 +480,9 @@ printf '192.168.2.50 500\n192.168.2.51 0\n' > "$T/nft5/counters.post"
 run_collector_at 30 "$T/state5" "$T/data5" "$T/ct2" /nonexistent \
     "PATH=$T/fakebin:$PATH" "NFTS=$T/nft5" "TRAFFIC_ARPFILE=$T/arp5" \
     TRAFFIC_SELF="192.168.2.1" TRAFFIC_LAN6=fdc8:64ed:f962:
-chk "23i 防火墙重载后计数规则自愈"          "2"                 "$(grep -c 'saddr' "$T/nft5/rules.pre" 2>/dev/null)"
-chk "23j 计数器归零后按新绝对值计增量"      "200"               "$(awk -F'\t' '$1=="192.168.2.50"{print $3}' "$T/state5/acct_delta.tsv")"
-chk "23k 累计值在前两轮基础上继续"          "3200"              "$(awk -F'\t' '$1=="192.168.2.50"{print $3}' "$T/state5/acct.tsv")"
+chk "23i 防火墙重载后计数规则自愈"          "3"                 "$(grep -c 'saddr' "$T/nft5/rules.pre" 2>/dev/null)"
+chk "23j 计数器归零后按新绝对值计增量"      "35500"             "$(awk -F'\t' '$1=="192.168.2.50"{print $2}' "$T/state5/acct.tsv")"
+chk "23k 累计值在之前各轮基础上继续"        "13200"             "$(awk -F'\t' '$1=="192.168.2.50"{print $3}' "$T/state5/acct.tsv")"
 # without nft the client totals fall back to conntrack, and the snapshot says so
 run_collector_at 30 "$T/state6" "$T/data6" "$T/ct" "$T/ql" TRAFFIC_SELF="192.168.2.1"
 chk "23l 无 nft 时降级并如实上报"           "0"                 "$(grep -o '"acct":[0-9]*' "$T/state6/summary.json" | cut -d: -f2)"
@@ -482,6 +510,25 @@ chk "25f 元数据没有混进 totals"             "0"                 "$(sed -n
 # a snapshot that does not parse is worse than one that is empty, and node is
 # not available on the target, so balance is checked the cheap way
 chk "25g 引号成对（偶数个双引号）"          "0"                 "$(( $(tr -cd '"' < "$T/state5/summary.json" | wc -c) % 2 ))"
+# A snapshot written before the first round means "no snapshot" can only mean
+# the service is not running; without it, a collector stuck in round one looks
+# exactly like one that never started.
+chk "25h 轮次计数器在快照里"                "1"                 "$(grep -c '"rounds":[0-9]' "$T/state5/summary.json")"
+mkdir -p "$T/state8" "$T/data8"
+( UCI=/bin/true LUA="$T/bin/lua" CT="$T/ct" TRAFFIC_QUERYLOG="$T/ql" TRAFFIC_LAN4=192.168.2. \
+  TRAFFIC_INTERVAL=30 TRAFFIC_DATADIR="$T/data8" TRAFFIC_APPMAP="$T/apps.tsv" \
+  TRAFFIC_CATEGORIES="$T/categories.tsv" STATE_DIR="$T/state8" \
+  SELF_DIR="$(cd "$SELF/../root/usr/share/traffic" && pwd)" \
+  timeout 8 sh "$COLLECTOR" >/dev/null 2>&1 ) &
+stpid=$!
+i=0
+while [ "$i" -lt 40 ]; do
+  [ -s "$T/state8/summary.json" ] && break
+  sleep 0.2; i=$((i + 1))
+done
+chk "25i 启动即写出快照（第一轮之前）"      "0"                 "$(rounds_at "$T/state8/summary.json")"
+chk "25j 启动快照已带版本与自身地址"        "yes"               "$(grep -q '"version":"' "$T/state8/summary.json" && grep -q '"self":"' "$T/state8/summary.json" && echo yes || echo no)"
+kill $stpid 2>/dev/null; wait $stpid 2>/dev/null
 
 echo
 echo "=== dnsmasq 查询日志作为第二域名来源 ==="

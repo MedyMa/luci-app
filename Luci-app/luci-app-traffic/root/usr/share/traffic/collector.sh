@@ -305,6 +305,10 @@ init_state() {
     [ -f "$STATE_DIR/nmoff" ] || printf '0\n' > "$STATE_DIR/nmoff"
     [ -f "$STATE_DIR/nmtime" ] || printf '0\n' > "$STATE_DIR/nmtime"
     [ -f "$STATE_DIR/dnslog.off" ] || printf '0\n' > "$STATE_DIR/dnslog.off"
+    # completed rounds: a snapshot written at startup means collected_at alone no
+    # longer says whether a full round has run, and this is what both the page
+    # and the offline suite use to tell "started" from "working"
+    [ -f "$STATE_DIR/rounds" ] || printf '0\n' > "$STATE_DIR/rounds"
     [ -f "$STATE_DIR/pending" ] || printf '0\n' > "$STATE_DIR/pending"
     # the current hour bucket, written here so the page can always say which one
     # it is showing (roll_hour rewrites it when the hour turns over)
@@ -675,40 +679,63 @@ acct_hosts() {
     fi
 }
 
-# Rebuild the counting rules when the client set or the LAN device changed, and
-# also whenever the chains are gone: a firewall reload flushes the whole
-# ruleset, ours included, and without this check the counters would stop for
-# good while every number on the page stayed plausible.
+# Keep the counting rules in step with the clients, without rebuilding them.
+#
+# A rule is added for a client that does not have one yet, and rules are left
+# alone otherwise.  The earlier version flushed and rebuilt the whole set
+# whenever the neighbour list changed, and that is expensive in a way that is
+# easy to miss: flushing resets every counter, so the traffic of the interval in
+# which the rebuild happens is not counted at all.  Neighbour entries expire
+# when a device goes quiet and come back when it speaks again, so on any real
+# network that rebuild happened often, and each one silently dropped one sample
+# worth of traffic for every client.
+#
+# Not deleting rules for hosts that have gone quiet is deliberate: the counters
+# stay where they were, so a device that returns continues from its old value
+# instead of starting over.
+#
+# The set is rebuilt from scratch only when it has to be - the table is gone (a
+# firewall reload flushes the whole ruleset), the LAN device changed, or the
+# rule set has grown past what a home network can plausibly need.
+ACCT_MAX_HOSTS=${ACCT_MAX_HOSTS:-300}
+
 acct_sync() {
-    local lan hosts cur
+    local lan hosts known h n
     lan=$(detect_lan_dev)
     [ -n "$lan" ] || return 1
     hosts=$(acct_hosts | sort -u | tr '\n' ' ')
-    cur=$(cat "$STATE_DIR/acct.hosts" 2>/dev/null)
-    if [ "$hosts" = "$cur" ] && [ "$lan" = "$(cat "$STATE_DIR/acct.dev" 2>/dev/null)" ] &&
-       nft_run list chain $ACCT_TABLE pre >/dev/null 2>&1 && nft_run list chain $ACCT_TABLE post >/dev/null 2>&1; then
-        return 0
+    known=$(cat "$STATE_DIR/acct.hosts" 2>/dev/null)
+
+    # shellcheck disable=SC2086
+    n=$(printf '%s' $known | wc -w)
+    if [ "$lan" != "$(cat "$STATE_DIR/acct.dev" 2>/dev/null)" ] ||
+       [ "$n" -gt "$ACCT_MAX_HOSTS" ] ||
+       ! nft_run list chain $ACCT_TABLE pre >/dev/null 2>&1 ||
+       ! nft_run list chain $ACCT_TABLE post >/dev/null 2>&1; then
+        known=""
+        nft_run add table $ACCT_TABLE 2>/dev/null
+        nft_run add chain $ACCT_TABLE pre '{ type filter hook prerouting priority raw; policy accept; }' 2>/dev/null
+        nft_run add chain $ACCT_TABLE post '{ type filter hook postrouting priority 101; policy accept; }' 2>/dev/null
+        nft_run list chain $ACCT_TABLE pre >/dev/null 2>&1 || return 1
+        nft_run list chain $ACCT_TABLE post >/dev/null 2>&1 || return 1
+        nft_run flush chain $ACCT_TABLE pre 2>/dev/null
+        nft_run flush chain $ACCT_TABLE post 2>/dev/null
+        # the counters just went back to zero, so the baseline has to go too
+        rm -f "$STATE_DIR/acct.abs"
+        printf '%s\n' "$lan" > "$STATE_DIR/acct.dev"
     fi
 
-    nft_run add table $ACCT_TABLE 2>/dev/null
-    nft_run add chain $ACCT_TABLE pre '{ type filter hook prerouting priority raw; policy accept; }' 2>/dev/null
-    nft_run add chain $ACCT_TABLE post '{ type filter hook postrouting priority 101; policy accept; }' 2>/dev/null
-    nft_run list chain $ACCT_TABLE pre >/dev/null 2>&1 || return 1
-    nft_run list chain $ACCT_TABLE post >/dev/null 2>&1 || return 1
-    nft_run flush chain $ACCT_TABLE pre 2>/dev/null
-    nft_run flush chain $ACCT_TABLE post 2>/dev/null
-
-    local h
     for h in $hosts; do
+        case " $known " in *" $h "*) continue ;; esac
         case "$h" in
             *:*) nft_run add rule $ACCT_TABLE pre  iifname "$lan" ip6 saddr "$h" counter 2>/dev/null
                  nft_run add rule $ACCT_TABLE post oifname "$lan" ip6 daddr "$h" counter 2>/dev/null ;;
             *)   nft_run add rule $ACCT_TABLE pre  iifname "$lan" ip saddr "$h" counter 2>/dev/null
                  nft_run add rule $ACCT_TABLE post oifname "$lan" ip daddr "$h" counter 2>/dev/null ;;
         esac
+        known="$known $h"
     done
-    printf '%s\n' "$hosts" > "$STATE_DIR/acct.hosts"
-    printf '%s\n' "$lan" > "$STATE_DIR/acct.dev"
+    printf '%s\n' "$known" > "$STATE_DIR/acct.hosts"
     return 0
 }
 
@@ -1119,6 +1146,7 @@ write_summary() {
         fi
         [ -s "$STATE_DIR/acct.off" ] && printf ',"acct_error":"%s"' "$(json_escape "$(sed -n '1p' "$STATE_DIR/acct.off")")"
         printf ',"pending":%s' "$(sed -n '1p' "$STATE_DIR/pending" 2>/dev/null || echo 0)"
+        printf ',"rounds":%s' "$(sed -n '1p' "$STATE_DIR/rounds" 2>/dev/null || echo 0)"
         # which addresses count as the box itself: shown by the page, and the
         # first thing to look at when a client list seems to have the box in it
         printf ',"self":"%s"' "$(printf '%s' "$CFG_SELF" | tr ' ' '\n' | grep -v '^$' | head -4 | tr '\n' ' ' | sed -e 's/ *$//' -e 's/\\/\\\\/g' -e 's/"/\\"/g')"
@@ -1233,6 +1261,15 @@ run() {
     init_state
     log "started: interval=${CFG_INTERVAL}s lan4=$CFG_LAN4 lan6=$CFG_LAN6 querylog=$CFG_QUERYLOG"
 
+    # Publish a snapshot before doing any real work, so that the page reflects
+    # the collector starting rather than staying empty until the first round
+    # finishes.  This also makes "no snapshot at all" mean exactly one thing:
+    # the service is not running.  Without it, a collector that starts and then
+    # stalls in its first round looks identical to one that never started, which
+    # is the state that is hardest to tell apart from the outside.
+    account_clients
+    write_summary
+
     local hour last_hour now
     last_hour=$(cat "$STATE_DIR/hour" 2>/dev/null)
     while :; do
@@ -1253,6 +1290,8 @@ run() {
             roll_hour
         fi
         [ -n "$hour" ] && last_hour=$hour
+        ROUNDS=$(( ${ROUNDS:-0} + 1 ))
+        printf '%s\n' "$ROUNDS" > "$STATE_DIR/rounds"
         write_summary
         sleep "$CFG_INTERVAL"
     done

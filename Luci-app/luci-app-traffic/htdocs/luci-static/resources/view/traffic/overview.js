@@ -625,13 +625,6 @@ return view.extend({
 		var t = s.totals || {};
 		var down = Number(t.down) || 0, up = Number(t.up) || 0;
 
-		/* The collector writes a snapshot every interval while the page polls
-		 * twice as often, so half the refreshes have nothing new in them: skip
-		 * those without touching the DOM at all. */
-		var sig = [ Number(s.collected_at) || 0, down, up, (s.apps || []).length ].join('|');
-		if (sig === this.lastSig) return;
-		this.lastSig = sig;
-
 		var items = (s.apps || []).map(function(a) {
 			var d = Number(a.down) || 0, u = Number(a.up) || 0;
 			return {
@@ -642,7 +635,19 @@ return view.extend({
 			};
 		}).filter(hasTraffic);
 
+		/* The status strip is drawn before the early return below, on purpose.
+		 * Its whole job is to say when the snapshot stopped arriving, and the
+		 * signature does not change while the collector is stuck - so skipping
+		 * it would mean the page never gets to say "stale", and a dead collector
+		 * would look exactly like a quiet network. */
 		this.drawStatus(s, items);
+
+		/* The collector writes a snapshot every interval while the page polls
+		 * twice as often, so half the refreshes have nothing new in them: skip
+		 * the table and the chart without touching the DOM. */
+		var sig = [ Number(s.collected_at) || 0, down, up, items.length ].join('|');
+		if (sig === this.lastSig) return;
+		this.lastSig = sig;
 
 		/* rates come from the difference between two snapshots */
 		if (this.prev) {
