@@ -135,5 +135,31 @@ chk "7g 12h 与 24h 读同一文件"             "1"     "$(ser 12h | grep -c '"
 chk "7h 未知档位回落 1h"                   "1h"    "$(rng "$(ser nonsense)")"
 
 echo
+echo "=== 范围聚合不丢行 ==="
+# The page builds its 12h/24h/7d totals by summing the hours it is given, so an
+# hour that comes back in part makes the range report less traffic than it
+# contains - the total silently drops the tail of every hour.  Both lists are
+# therefore asserted whole, with more rows than the caps they used to carry.
+{
+    awk 'BEGIN { for (i = 1; i <= 25; i++) printf "h1\tapp\tApp%02d\t%d\t%d\n", i, i * 100, i * 10 }'
+    awk 'BEGIN { for (i = 1; i <= 15; i++) printf "h1\tclient\t10.0.0.%d\t%d\t0\n", i, i * 50 }'
+    printf 'h1\trouter\tproxy\t999\t0\n'
+} > "$T/data/hourly.tsv"
+hr() { PATH="$T:$PATH" STATE_DIR="$T/state" STUB_hours="$1" sh "$T/lt.sh" call getHourly < /dev/null; }
+out=$(hr 24)
+chk "8 getHourly 返回全部应用行（旧上限 20）" "25" \
+    "$(printf '%s' "$out" | grep -o '"name":"App' | wc -l | tr -d ' ')"
+chk "8a getHourly 返回全部客户端行（旧上限 10）" "15" \
+    "$(printf '%s' "$out" | grep -o '"ip":"10\.0\.0\.' | wc -l | tr -d ' ')"
+chk "8b getHourly 隧道行仍在"               "999" "$(printf '%s' "$out" | sed -n 's/.*"router":\([0-9]*\).*/\1/p')"
+chk "8c 只列出被请求的小时"                 "1"   "$(printf '%s' "$out" | grep -c '"hour":"h1"')"
+# A second, older hour: the window must take the newest one and leave the other
+# out of the totals entirely.
+printf 'h0\tapp\tOld\t7\t7\n' >> "$T/data/hourly.tsv"
+out1=$(hr 1)
+chk "8d 只取最新小时"                       "0"   "$(printf '%s' "$out1" | grep -c 'Old')"
+chk "8e 最新小时仍然完整"                   "25"  "$(printf '%s' "$out1" | grep -o '"name":"App' | wc -l | tr -d ' ')"
+
+echo
 if [ "$fail" = 0 ]; then echo "=== 全部通过 ==="; else echo "=== 有失败 ==="; fi
 exit "$fail"
