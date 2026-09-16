@@ -11,7 +11,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-traffic
-PKG_VERSION:=0.1.10
+PKG_VERSION:=0.1.11
 PKG_RELEASE:=1
 PKG_LICENSE:=Apache-2.0
 LUCI_PKGARCH:=all
@@ -36,9 +36,12 @@ define Build/Prepare/$(PKG_NAME)
 	# 0, so opkg never treats a newer catalogue as an upgrade and a message added
 	# after the first install stays missing on the router forever - which is how
 	# the range dropdown ended up with one option in Chinese and the next in
-	# English.  po2lmo is the same tool the generated package is built with.
+	# English.  po2lmo is the same tool the generated package is built with, and
+	# the source is read from ${CURDIR} for the same reason luci.mk does it: po/
+	# is not part of what gets prepared into the build directory, and po2lmo
+	# reports an unreadable input as a usage error rather than as a missing file.
 	$(INSTALL_DIR) $(PKG_BUILD_DIR)/root/usr/lib/lua/luci/i18n
-	po2lmo $(PKG_BUILD_DIR)/po/zh_Hans/traffic.po \
+	po2lmo ${CURDIR}/po/zh_Hans/traffic.po \
 		$(PKG_BUILD_DIR)/root/usr/lib/lua/luci/i18n/traffic.zh-cn.lmo
 endef
 
