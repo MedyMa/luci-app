@@ -159,11 +159,18 @@ collect() {
     before=$(rounds_at "$st/summary.json")
     case "$before" in ''|*[!0-9]*) before=0 ;; esac
 
+    # Started directly rather than under timeout.  Wrapping it meant killing a
+    # wrapper and hoping the signal reached the collector; when it did not, the
+    # survivor kept collecting in the same state directory, advanced the round
+    # counter by itself, and the next phase saw "a round finished" that its own
+    # collector had not run - so that run was killed before doing any work.  That
+    # is what made phases 15 to 19 fail intermittently for so long.  The bound on
+    # the wait below is what timeout used to provide.
     env "$@" UCI=/bin/true LUA="$T/bin/lua" CT="$ct" TRAFFIC_QUERYLOG="$ql" \
       TRAFFIC_LAN4=192.168.2. TRAFFIC_INTERVAL=2 TRAFFIC_DATADIR="$da" \
       TRAFFIC_APPMAP="$T/apps.tsv" TRAFFIC_CATEGORIES="$T/categories.tsv" \
       STATE_DIR="$st" SELF_DIR="$(cd "$SELF/../root/usr/share/traffic" && pwd)" \
-      timeout "$cap" sh "$COLLECTOR" >/dev/null 2>&1 &
+      sh "$COLLECTOR" >/dev/null 2>&1 &
     pid=$!
 
     i=0
@@ -174,8 +181,20 @@ collect() {
         sleep 0.2
         i=$((i + 1))
     done
+
+    # Stop it for real before the next phase touches the same state: signal it,
+    # wait for it to go, and then pause briefly, because a command it had already
+    # started (the resolver appends to the name map) outlives the shell and would
+    # otherwise still be writing while the next phase reads.
     kill "$pid" 2>/dev/null
+    i=0
+    while kill -0 "$pid" 2>/dev/null && [ "$i" -lt 60 ]; do
+        sleep 0.1
+        i=$((i + 1))
+    done
+    kill -9 "$pid" 2>/dev/null
     wait "$pid" 2>/dev/null
+    sleep 0.3
     return 0
 }
 

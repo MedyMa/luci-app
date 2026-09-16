@@ -59,6 +59,23 @@ function isBucket(name) { return BUCKETS[name] === 1; }
 /* A row is only worth drawing when something was actually measured. */
 function hasTraffic(item) { return (item.down + item.up) > 0; }
 
+/* Status strip values are read at a glance, so the two that are naturally long
+ * are shortened here and keep their exact value in the tooltip: the last three
+ * segments of a path, and the first address plus how many others there are. */
+function shortPath(p) {
+	if (!p) return '—';
+	var seg = String(p).split('/').filter(function(s) { return s.length > 0; });
+	if (seg.length <= 3) return p;
+	return '\u2026/' + seg.slice(-3).join('/');
+}
+
+function shortAddrs(v) {
+	var a = String(v || '').split(/\s+/).filter(function(s) { return s.length > 0; });
+	if (!a.length) return '—';
+	if (a.length === 1) return a[0];
+	return a[0] + ' +' + (a.length - 1);
+}
+
 function fmtBytes(n) {
 	n = Number(n) || 0;
 	var units = [ 'B', 'KiB', 'MiB', 'GiB', 'TiB' ], i = 0;
@@ -581,7 +598,10 @@ return view.extend({
 		bits.push({ k: _('Flows'), v: String(Number(s.flows) || 0) });
 		bits.push({ k: _('Host names'), v: String(Number(s.dnsmap_lines) || 0) });
 		if (Number(s.pending) > 0) bits.push({ k: _('Waiting to resolve'), v: String(Number(s.pending)), warn: true });
-		bits.push({ k: _('Query log'), v: s.querylog || '—', mono: true });
+		// A full path and a full address list are not things anyone reads in a
+		// status strip, so both are shortened and the exact value is left a hover
+		// away.  Wrapping them onto a second line only made the row taller.
+		bits.push({ k: _('Query log'), v: shortPath(s.querylog), title: s.querylog || '', mono: true });
 		/* which layer is producing the client totals: the nft counters see every
 		   packet, the conntrack fallback only what the connection table knows.
 		   A fallback is not an error, but it must not look like one and the
@@ -594,7 +614,7 @@ return view.extend({
 		if (s.version) bits.push({ k: _('Collector version'), v: s.version, mono: true });
 		/* what the collector treats as the box itself: the first thing to check
 		   when a client list looks like it has the router in it */
-		if (s.self) bits.push({ k: _('Router addresses'), v: s.self, mono: true });
+		if (s.self) bits.push({ k: _('Router addresses'), v: shortAddrs(s.self), title: s.self, mono: true });
 		if (s.hour) bits.push({ k: _('Bucket'), v: s.hour });
 
 		if (!this.statusEl) return;
@@ -612,6 +632,10 @@ return view.extend({
 			}
 			setText(r.k, b.k);
 			setText(r.v, b.v);
+			/* the shortened value keeps its exact form in the tooltip, so nothing
+			 * is lost by showing it short */
+			var tip = b.title || '';
+			if (r.tip !== tip) { r.tip = tip; r.row.setAttribute('title', tip); }
 			var cls = 'tf-stat-val' + (b.warn ? ' tf-warn' : '') + (b.mono ? ' tf-mono' : '');
 			if (r.cls !== cls) { r.cls = cls; r.v.className = cls; }
 		});
@@ -783,7 +807,6 @@ return view.extend({
 			if (!lr) {
 				lr = makeLegendRow(a.name);
 				self.legendCache[a.name] = lr;
-				self.legendEl.appendChild(lr.row);
 			}
 			setText(lr.pct, (total ? (100 * a.bytes / total) : 0).toFixed(1) + '%');
 		});
@@ -792,6 +815,16 @@ return view.extend({
 			var lr = self.legendCache[n];
 			if (lr.row.parentNode) lr.row.parentNode.removeChild(lr.row);
 			delete self.legendCache[n];
+		});
+		/* Re-append in the order of the list, not in the order the rows were
+		 * first created.  Only appending new rows (which is what this did) left
+		 * the legend in first-seen order, so a slice that had grown to 11% could
+		 * still sit below one at 2% - the table reordered, the legend did not,
+		 * and the two disagreed about the same list.  Appending an attached node
+		 * moves it, which is all that is needed. */
+		top.forEach(function(a) {
+			var lr = self.legendCache[a.name];
+			if (lr) self.legendEl.appendChild(lr.row);
 		});
 
 		/* grand total row, built once */
@@ -936,18 +969,24 @@ function injectCss() {
 
 		/* collector state strip: makes an empty page self-explanatory */
 		'.tf-page .tf-status-card{display:flex;gap:1.6rem;flex-wrap:wrap;padding:.7rem 1.15rem;}',
-		'.tf-page .tf-status{display:flex;gap:1.6rem;flex-wrap:wrap;align-items:baseline;}',
-		'.tf-page .tf-stat{display:flex;flex-direction:column;gap:.05rem;min-width:0;}',
-		'.tf-page .tf-stat-cap{font-size:.7rem;color:var(--tf-dim);text-transform:uppercase;letter-spacing:.06em;}',
+		'.tf-page .tf-status{display:flex;gap:1.4rem 1.8rem;flex-wrap:wrap;align-items:baseline;}',
+		'.tf-page .tf-stat{display:flex;flex-direction:column;gap:.05rem;min-width:0;max-width:100%;}',
+		/* No text-transform: the labels are mostly Chinese, which it cannot touch
+		 * anyway, so forcing upper case only made the few English ones (the
+		 * collector version among them) look like a different kind of label. */
+		'.tf-page .tf-stat-cap{font-size:.7rem;color:var(--tf-dim);letter-spacing:.04em;}',
 		'.tf-page .tf-stat-val{font-size:.86rem;font-weight:600;font-variant-numeric:tabular-nums;',
-		'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:22rem;}',
-		'.tf-page .tf-mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:400;font-size:.8rem;}',
+		'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}',
+		/* Long values (a query log path, the box own addresses) are normal text,
+		 * not code: monospace here made two entries of one row look like they
+		 * came from a different font, and read worse at this size. */
+		'.tf-page .tf-mono{font-family:inherit;font-weight:600;font-size:.86rem;}',
 
 		/* layout */
 		'.tf-page .tf-grid{display:flex;gap:1rem;flex-wrap:wrap;align-items:stretch;}',
-		'.tf-page .tf-donut-card{flex:0 0 auto;width:20rem;}',
-		'.tf-page .tf-list-card{flex:1 1 30rem;min-width:22rem;padding-bottom:.4rem;}',
-		'.tf-page .tf-donut-wrap{display:flex;align-items:center;gap:1rem;}',
+		'.tf-page .tf-donut-card{flex:0 1 24rem;min-width:19rem;}',
+		'.tf-page .tf-list-card{flex:1 1 30rem;min-width:0;padding-bottom:.4rem;}',
+		'.tf-page .tf-donut-wrap{display:flex;align-items:center;gap:1.1rem;}',
 		'.tf-page .tf-donut-svg{flex:0 0 168px;width:168px;height:168px;}',
 		'.tf-page .tf-donut-empty{font-size:11px;fill:var(--tf-dim);}',
 
@@ -955,17 +994,28 @@ function injectCss() {
 		'.tf-page .tf-legend{display:flex;flex-direction:column;gap:.3rem;min-width:9.5rem;}',
 		'.tf-page .tf-legend-row{display:flex;align-items:center;gap:.45rem;font-size:.82rem;}',
 		'.tf-page .tf-legend-dot{width:9px;height:9px;border-radius:50%;flex:0 0 9px;}',
-		'.tf-page .tf-legend-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:8.5rem;}',
+		'.tf-page .tf-legend-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;max-width:12rem;}',
 		'.tf-page .tf-legend-pct{color:var(--tf-dim);font-variant-numeric:tabular-nums;}',
 
 		/* table */
-		'.tf-page .tf-table{margin:0;background:transparent;}',
+		/* table-layout:fixed with explicit widths.  With the automatic layout the
+		 * numeric columns are sized by their content and a long application name
+		 * pushes them past the card, so the bytes columns collided with each
+		 * other and the table scrolled sideways.  Fixed widths cannot do that,
+		 * and the one column that can be long is the one allowed to ellipsize. */
+		'.tf-page .tf-table{margin:0;background:transparent;table-layout:fixed;width:100%;}',
 		'.tf-page .tf-table>thead>tr>th{border-bottom:1px solid rgba(128,150,175,.18);',
-		'font-size:.78rem;font-weight:600;color:var(--tf-dim);text-transform:uppercase;letter-spacing:.06em;padding:.35rem .5rem;}',
-		'.tf-page .tf-table>tbody>tr>td{border-bottom:1px solid rgba(128,150,175,.10);padding:.42rem .5rem;vertical-align:middle;}',
+		'font-size:.78rem;font-weight:600;color:var(--tf-dim);letter-spacing:.04em;padding:.35rem .5rem;}',
+		'.tf-page .tf-table>thead>tr>th:nth-child(1),.tf-page .tf-table>tbody>tr>td:nth-child(1){width:26%;}',
+		'.tf-page .tf-table>thead>tr>th:nth-child(2),.tf-page .tf-table>tbody>tr>td:nth-child(2){width:14%;}',
+		'.tf-page .tf-table>thead>tr>th:nth-child(3),.tf-page .tf-table>tbody>tr>td:nth-child(3){width:14%;}',
+		'.tf-page .tf-table>thead>tr>th:nth-child(4),.tf-page .tf-table>tbody>tr>td:nth-child(4){width:14%;}',
+		'.tf-page .tf-table>thead>tr>th:nth-child(5),.tf-page .tf-table>tbody>tr>td:nth-child(5){width:24%;}',
+		'.tf-page .tf-table>thead>tr>th:nth-child(6),.tf-page .tf-table>tbody>tr>td:nth-child(6){width:8%;}',
+		'.tf-page .tf-table>tbody>tr>td{border-bottom:1px solid rgba(128,150,175,.10);padding:.42rem .5rem;vertical-align:middle;overflow:hidden;}',
 		'.tf-page .tf-table>tbody>tr:last-child>td{border-bottom:none;}',
 		'.tf-page .tf-table>tbody>tr:hover>td{background:rgba(0,180,255,.06);}',
-		'.tf-page .tf-num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;}',
+		'.tf-page .tf-num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;}',
 		'.tf-page .tf-down{color:var(--tf-down);}',
 		'.tf-page .tf-up{color:var(--tf-up);}',
 		'.tf-page .tf-total{font-weight:600;}',
@@ -1044,8 +1094,27 @@ function injectCss() {
 		'--tf-down:#4dd2ff;--tf-up:#3ddc97;}',
 		darkOf('.tf-range') + '{background-image:url("' + CHEVRON('#a9b6c2') + '");}',
 		darkOf('.tf-clear') + '{box-shadow:none;}',
-		'@media (max-width:52rem){.tf-page .tf-list-card{min-width:0;flex-basis:100%;}',
-		'.tf-page .tf-donut-card{flex-basis:100%;}.tf-page .tf-hero-ctl{margin-left:0;}}'
+		/* Layout by width rather than by device: the cards stack as soon as they
+		 * cannot both fit, and the two columns a phone cannot spare (the busiest
+		 * client and the device count) drop out there instead of squeezing the
+		 * numbers nobody can read at 320px. */
+		'@media (max-width:64rem){.tf-page .tf-donut-card{flex:1 1 100%;}',
+		'.tf-page .tf-list-card{flex:1 1 100%;}}',
+		'@media (max-width:52rem){.tf-page .tf-hero{flex-wrap:wrap;gap:.6rem;}',
+		'.tf-page .tf-hero-ctl{margin-left:0;width:100%;justify-content:flex-start;}',
+		'.tf-page .tf-donut-wrap{flex-wrap:wrap;justify-content:center;}',
+		'.tf-page .tf-legend{min-width:0;flex:1 1 11rem;}',
+		'.tf-page .tf-legend-name{max-width:none;}',
+		'.tf-page .tf-status{gap:.7rem 1.2rem;}}',
+		'@media (max-width:34rem){.tf-page .tf-hero-rates{gap:.7rem;flex-wrap:wrap;}',
+		'.tf-page .tf-table{font-size:.86rem;}',
+		'.tf-page .tf-table>thead>tr>th,.tf-page .tf-table>tbody>tr>td{padding:.35rem .3rem;}',
+		'.tf-page .tf-table>thead>tr>th:nth-child(1),.tf-page .tf-table>tbody>tr>td:nth-child(1){width:34%;}',
+		'.tf-page .tf-table>thead>tr>th:nth-child(2),.tf-page .tf-table>tbody>tr>td:nth-child(2){width:22%;}',
+		'.tf-page .tf-table>thead>tr>th:nth-child(3),.tf-page .tf-table>tbody>tr>td:nth-child(3){width:22%;}',
+		'.tf-page .tf-table>thead>tr>th:nth-child(4),.tf-page .tf-table>tbody>tr>td:nth-child(4){width:22%;}',
+		'.tf-page .tf-table>thead>tr>th:nth-child(5),.tf-page .tf-table>tbody>tr>td:nth-child(5){display:none;}',
+		'.tf-page .tf-table>thead>tr>th:nth-child(6),.tf-page .tf-table>tbody>tr>td:nth-child(6){display:none;}}'
 	].join('');
 
 	var st = document.createElement('style');
