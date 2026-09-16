@@ -364,7 +364,9 @@ separated in name order, which is likewise rank-independent.
 * **Throughput card** — down/up over time, drawn as plain SVG. Its tier is not a
   second choice: the curve is the selected range at a coarser granularity, so the
   page carries **one** range control instead of two that could be set to
-  disagree. **10 s points for the last hour** (the sharp view — a burst keeps its
+  disagree. The page opens on the day tier, and "since start" — which is not a
+  window at all — keeps it, so the curve does not shrink to an hour when the
+  table is switched to the session. **10 s points for the last hour** (the sharp view — a burst keeps its
   shape), **1 min points for 12 h and for the last day** (the same file, two
   lengths), and **1 h points for the last week**. The minute
   and hour tiers live in `<datadir>` (`series60.tsv`, `series1h.tsv`) so they

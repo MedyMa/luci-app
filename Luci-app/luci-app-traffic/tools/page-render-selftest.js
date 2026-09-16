@@ -188,6 +188,22 @@ chk(/listbox/.test(String((ddBtn[0]&&ddBtn[0].attrs||{}).role||'')+String((ddBtn
 const ddItems=[]; walk(page,n=>{ if(/tf-dd-item/.test((n.attrs||{}).class||'')) ddItems.push(n); });
 chk(ddItems.length===5, `下拉有 5 个区间选项（${ddItems.length}）`);
 
+console.log('=== 档位跟随范围，默认一天 ===');
+const pv=Object.assign(Object.create(view),freshView());
+view.render.call(pv,{});
+chk(pv.range==='24', `默认范围是一天（${pv.range}）`);
+chk(pv.seriesRange==='24h', `曲线默认读 24 小时档（${pv.seriesRange}）`);
+// 每一个窗口档都要落到它自己的粒度
+for(const [r,want] of [['1','1h'],['12','12h'],['24','24h'],['168','7d']]){
+  pv.setSeriesRange('1h');
+  pv.setRange(r);
+  chk(pv.seriesRange===want, `范围 ${r} → 档位 ${want}（${pv.seriesRange}）`);
+}
+// "本次启动以来"不是窗口：曲线保持一天，不缩成 1 小时
+pv.setSeriesRange('1h');
+pv.setRange('session');
+chk(pv.seriesRange==='24h', `会话档的曲线仍是 24 小时（${pv.seriesRange}）`);
+
 console.log('=== 注入的 CSS：括号平衡与圆润控件 ===');
 global.__injectCss();
 const css=global.__capturedCss||'';

@@ -34,7 +34,10 @@ var SERIES_RANGES = {
  * used to carry two dropdowns for this - one in the hero for the table and one on
  * the chart for the tier - and they could be set to disagree. */
 var RANGE_OPTIONS = [
-	{ value: 'session', label: 'Since start',   tier: '1h'  },
+	/* "Since start" is not a window, so the curve cannot follow it: it keeps the
+	 * day tier, which is what the page opens on.  Every other choice is a window
+	 * and the curve shows exactly that window. */
+	{ value: 'session', label: 'Since start',   tier: '24h' },
 	{ value: '1',       label: 'Last hour',     tier: '1h'  },
 	{ value: '12',      label: 'Last 12 hours', tier: '12h' },
 	{ value: '24',      label: 'Last 24 hours', tier: '24h' },
@@ -469,11 +472,7 @@ return view.extend({
 		this.rangePicker = makeRangePicker(
 			RANGE_OPTIONS.map(function(o) { return { value: o.value, label: _(o.label) }; }),
 			this.range,
-			L.bind(function(v) {
-				this.range = v;
-				this.setSeriesRange(tierOfRange(v));
-				this.refresh(true);
-			}, this));
+			L.bind(this.setRange, this));
 
 		var node = el('div', { 'class': 'tf-page' }, [
 			el('div', { 'class': 'tf-card tf-hero' }, [
@@ -558,6 +557,15 @@ return view.extend({
 			return this.refresh(false);
 		}, this), 5);
 		return node;
+	},
+
+	/* The picker calls this.  It is a method rather than a closure so that the
+	 * two things a range change does - which window the table aggregates and
+	 * which tier the curve reads - can be driven and checked as one step. */
+	setRange: function(v) {
+		this.range = v;
+		this.setSeriesRange(tierOfRange(v));
+		this.refresh(true);
 	},
 
 	setSeriesRange: function(range) {
