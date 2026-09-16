@@ -1,0 +1,94 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: luci-app-traffic\n"
+"PO-Revision-Date: 2026-09-16 00:00+0000\n"
+"Last-Translator: MedyMa\n"
+"Language-Team: zh_Hans\n"
+"Language: zh_Hans\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Traffic"
+msgstr "流量统计"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Per-application traffic, measured on this router: byte counters from conntrack joined with the domain names AdGuard Home resolved. Traffic that the proxy carries is listed separately, so it is not counted twice."
+msgstr "按应用统计的流量，全部在本机测量：conntrack 的字节计数与 AdGuard Home 解析出的域名关联。代理隧道承载的流量单独列出，不会重复计入。"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Since start"
+msgstr "本次启动以来"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Last 24 hours"
+msgstr "最近 24 小时"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Last 7 days"
+msgstr "最近 7 天"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Application"
+msgstr "应用"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Down"
+msgstr "下行"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Up"
+msgstr "上行"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Total"
+msgstr "合计"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "total"
+msgstr "总计"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Rate"
+msgstr "速率"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Clear"
+msgstr "清空"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Clear the counters collected so far?"
+msgstr "确定清空已统计的流量数据？"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Proxy tunnel"
+msgstr "代理隧道"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Browser clients"
+msgstr "客户端合计"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Bucket"
+msgstr "统计周期"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "No traffic recorded yet."
+msgstr "暂无流量记录。"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "by client DNS"
+msgstr "同客户端 DNS 识别"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "by any client DNS"
+msgstr "任意客户端 DNS 识别"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "unidentified"
+msgstr "未识别"
+
+#: root/usr/share/rpcd/acl.d/luci-app-traffic.json:3
+msgid "Grant access to the per-application traffic statistics"
+msgstr "授予访问按应用流量统计的权限"

@@ -1,0 +1,20 @@
+#!/bin/sh
+# First-install defaults for luci-app-traffic.
+
+[ -f /etc/config/traffic ] || exit 0
+
+# The collector needs somewhere to keep the hourly history.  This is on the
+# writable root (the overlay), so it survives a reboot but not a sysupgrade
+# unless the user keeps it.
+mkdir -p /etc/traffic
+
+# Fill in the AdGuard Home querylog path once, so the settings page shows the
+# path actually in use instead of an empty field.
+if [ -z "$(uci -q get traffic.settings.querylog)" ]; then
+	wl=$(uci -q get AdGuardHome.AdGuardHome.workdir)
+	[ -n "$wl" ] || wl='/etc/config/adGuardConfig/workspace'
+	uci -q set traffic.settings.querylog="$wl/data/querylog.json"
+fi
+
+uci -q commit traffic
+exit 0

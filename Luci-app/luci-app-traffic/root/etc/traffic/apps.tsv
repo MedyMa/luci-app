@@ -1,0 +1,75 @@
+# Friendly names for registrable domains, used by the traffic page.
+#
+#   <display name><TAB><registrable domain>
+#
+# Keys must be the registrable domain (the last two labels, with the public
+# suffixes the collector knows about), not a host name: "youtube.com", never
+# "www.youtube.com".  Anything not listed here is displayed as its bare
+# registrable domain, which is what the upstream gateway does for unknown
+# applications too.  Edit freely; the file is read on every sampling round.
+
+# --- global ---
+YouTube	youtube.com
+Google	google.com
+Google	googleapis.com
+Gmail	gmail.com
+Apple	apple.com
+iCloud	icloud.com
+Microsoft	microsoft.com
+Outlook	live.com
+GitHub	github.com
+GitLab	gitlab.com
+Cloudflare	cloudflare.com
+Amazon	amazon.com
+Netflix	netflix.com
+Spotify	spotify.com
+Telegram	telegram.org
+Discord	discord.com
+WhatsApp	whatsapp.net
+Facebook	facebook.com
+Instagram	instagram.com
+X	x.com
+Twitter	twitter.com
+Wikipedia	wikipedia.org
+Steam	steampowered.com
+Epic Games	epicgames.com
+OpenAI	openai.com
+Anthropic	anthropic.com
+Docker	docker.com
+Ubuntu	ubuntu.com
+Debian	debian.org
+OpenWrt	openwrt.org
+
+# --- China ---
+Taobao	taobao.com
+Tmall	tmall.com
+Alipay	alipay.com
+Alibaba	alibaba.com
+Alibaba	alicdn.com
+Tencent	qq.com
+WeChat	weixin.qq.com
+Tencent Cloud	tencentcloudapi.com
+Bilibili	bilibili.com
+iQIYI	iqiyi.com
+Youku	youku.com
+NetEase	163.com
+NetEase Music	music.163.com
+NetEase Mail	126.com
+Baidu	baidu.com
+JD	jd.com
+Xiaomi	mi.com
+Huawei	huawei.com
+Douyin	douyin.com
+ByteDance	bytedance.com
+Toutiao	toutiao.com
+Zhihu	zhihu.com
+Sina	sina.com.cn
+Weibo	weibo.com
+Didi	didi.com
+Meituan	meituan.com
+Pinduoduo	pinduoduo.com
+Kuaishou	kuaishou.com
+China Mobile	10086.cn
+China Telecom	189.cn
+China Unicom	10010.com
+Alibaba Cloud	aliyuncs.com

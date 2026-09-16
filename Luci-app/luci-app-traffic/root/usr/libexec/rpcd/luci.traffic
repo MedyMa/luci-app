@@ -1,0 +1,125 @@
+#!/bin/sh
+# rpcd backend for luci-app-traffic.
+#
+# The collector already writes everything the UI needs into
+# /tmp/traffic/summary.json, so this backend stays thin: it re-emits that
+# snapshot (which also validates it, because jshn has to parse it), aggregates
+# the hourly history on demand, and exposes the effective settings.
+
+. /usr/share/libubox/jshn.sh
+
+STATE_DIR=${STATE_DIR:-/tmp/traffic}
+
+datadir() {
+	local d
+	d=$(uci -q get traffic.settings.datadir 2>/dev/null)
+	[ -n "$d" ] || d=/etc/traffic
+	printf '%s\n' "$d"
+}
+
+empty_summary() {
+	printf '{"collected_at":0,"interval":0,"flows":0,"dnsmap_lines":0,"apps":[],"clients":[],'
+	printf '"totals":{"apps":0,"unknown":0,"router":0,"matched":0,"fallback":0,"unmatched":0}}\n'
+}
+
+# Re-emit the snapshot through jshn.  A truncated or half-written file fails to
+# parse and we answer with an empty document instead of breaking the page.
+get_summary() {
+	local f="$STATE_DIR/summary.json"
+	if [ -s "$f" ] && json_load "$(cat "$f" 2>/dev/null)" 2>/dev/null; then
+		json_dump
+	else
+		empty_summary
+	fi
+}
+
+# Aggregate hourly.tsv into per-hour application totals.
+#   hourly.tsv: <hour>\t<app|client|router>\t<name>\t<down>\t<up>
+get_hourly() {
+	local hours="$1" f
+	case "$hours" in ''|*[!0-9]*) hours=24 ;; esac
+	f="$(datadir)/hourly.tsv"
+	if [ ! -s "$f" ]; then
+		printf '{"hours":[]}\n'
+		return
+	fi
+	# The hour list is small, so a plain sort is clearer than doing JSON in awk.
+	list=$(awk -F'\t' '{ if (!seen[$1]++) print $1 }' "$f" | sort | tail -n "$hours")
+	printf '{"hours":['
+	first=1
+	for h in $list; do
+		[ "$first" = 1 ] || printf ','
+		first=0
+		printf '{"hour":"%s","apps":[' "$h"
+		awk -F'\t' -v hour="$h" '
+			$1 == hour && $2 == "app" { printf "%d\t%s\t%s\t%s\n", $4 + $5, $3, $4, $5 }' "$f" \
+			| sort -rn | head -n 20 \
+			| awk -F'\t' 'BEGIN { n = 0 } { if (n++) printf ","; printf "{\"name\":\"%s\",\"down\":%s,\"up\":%s}", $2, $3, $4 }'
+		printf '],"clients":['
+		awk -F'\t' -v hour="$h" '
+			$1 == hour && $2 == "client" { printf "%d\t%s\n", $4, $3 }' "$f" \
+			| sort -rn | head -n 10 \
+			| awk -F'\t' 'BEGIN { n = 0 } { if (n++) printf ","; printf "{\"ip\":\"%s\",\"bytes\":%s}", $2, $1 }'
+		printf '],"router":'
+		awk -F'\t' -v hour="$h" '$1 == hour && $2 == "router" { t += $4 } END { printf "%d", t + 0 }' "$f"
+		printf '}'
+	done
+	printf ']}\n'
+}
+
+get_config() {
+	json_init
+	json_add_boolean enabled "$(uci -q get traffic.settings.enabled)"
+	json_add_string interval "$(uci -q get traffic.settings.interval)"
+	json_add_string datadir "$(datadir)"
+	json_add_string querylog "$(uci -q get traffic.settings.querylog)"
+	json_add_string lan4 "$(uci -q get traffic.settings.lan4)"
+	json_add_string lan6 "$(uci -q get traffic.settings.lan6)"
+	json_add_string appmap "$(uci -q get traffic.settings.appmap)"
+	json_add_string retention_days "$(uci -q get traffic.settings.retention_days)"
+	json_add_string top_apps "$(uci -q get traffic.settings.top_apps)"
+	json_add_string top_clients "$(uci -q get traffic.settings.top_clients)"
+	json_dump
+}
+
+reset_stats() {
+	local what="$1"
+	rm -f "$STATE_DIR/totals.tsv" "$STATE_DIR/clients.tsv" "$STATE_DIR/router.tsv" "$STATE_DIR/stat.tsv"
+	: > "$STATE_DIR/totals.tsv"
+	: > "$STATE_DIR/clients.tsv"
+	: > "$STATE_DIR/router.tsv"
+	printf '0\n0\n0\n' > "$STATE_DIR/stat.tsv"
+	[ "$what" = "history" ] && rm -f "$(datadir)/hourly.tsv"
+	json_init
+	json_add_boolean result 1
+	json_dump
+}
+
+case "$1" in
+	list)
+		json_init
+		json_add_object "getSummary"; json_close_object
+		json_add_object "getHourly"
+		json_add_string "hours" "integer"
+		json_close_object
+		json_add_object "getConfig"; json_close_object
+		json_add_object "resetStats"
+		json_add_string "what" "string"
+		json_close_object
+		json_dump
+		;;
+	call)
+		read -r input
+		json_load "$input" 2>/dev/null
+		json_get_var method method
+		json_get_var arg_hours hours
+		json_get_var arg_what what
+		case "$method" in
+			getSummary) get_summary ;;
+			getHourly)  get_hourly "$arg_hours" ;;
+			getConfig)  get_config ;;
+			resetStats) reset_stats "$arg_what" ;;
+			*) json_init; json_add_string "error" "unknown method"; json_dump ;;
+		esac
+		;;
+esac

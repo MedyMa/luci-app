@@ -1,0 +1,18 @@
+
+config traffic 'settings'
+	option enabled '1'
+	# sampling interval in seconds
+	option interval '10'
+	# where the hourly history is kept (the live counters stay in /tmp)
+	option datadir '/etc/traffic'
+	# leave empty to auto-detect from AdGuard Home's workdir
+	option querylog ''
+	# leave empty to auto-detect from the LAN interface
+	option lan4 ''
+	option lan6 ''
+	# optional: map a registrable domain to a friendlier application name
+	option appmap '/etc/traffic/apps.tsv'
+	# how many days of hourly history to keep
+	option retention_days '7'
+	option top_apps '50'
+	option top_clients '20'

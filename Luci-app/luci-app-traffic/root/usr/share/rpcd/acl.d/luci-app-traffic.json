@@ -1,0 +1,17 @@
+{
+	"luci-app-traffic": {
+		"description": "Grant access to the per-application traffic statistics",
+		"read": {
+			"uci": [ "traffic" ],
+			"ubus": {
+				"luci.traffic": [ "getSummary", "getHourly", "getConfig" ]
+			}
+		},
+		"write": {
+			"uci": [ "traffic" ],
+			"ubus": {
+				"luci.traffic": [ "resetStats" ]
+			}
+		}
+	}
+}
