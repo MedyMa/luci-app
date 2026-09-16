@@ -3,26 +3,6 @@ name: Build luci-app-traffic
 on:
   workflow_dispatch:
     inputs:
-      sdk_distribution:
-        description: SDK distribution
-        required: false
-        default: 'immortalwrt'
-        type: choice
-        options:
-          - openwrt
-          - immortalwrt
-      openwrt_version:
-        description: OpenWrt / ImmortalWrt release version
-        required: false
-        default: '25.12-SNAPSHOT'
-      pkg_format:
-        description: Package output format
-        required: false
-        default: 'apk'
-        type: choice
-        options:
-          - apk
-          - ipk
       openwrt_target:
         description: OpenWrt target
         required: false
@@ -32,7 +12,7 @@ on:
         required: false
         default: 'filogic'
       publish_release:
-        description: Publish the built ipk to GitHub Releases
+        description: Publish built packages to GitHub Releases
         required: false
         default: false
         type: boolean
@@ -44,12 +24,12 @@ on:
     tags:
       - 'traffic-v*'
     paths:
-      - '.github/workflows/main.yml'
+      - '.github/workflows/build-luci-app-traffic.yml'
       - 'luci-app-traffic/**'
       - 'Luci-app/luci-app-traffic/**'
   pull_request:
     paths:
-      - '.github/workflows/main.yml'
+      - '.github/workflows/build-luci-app-traffic.yml'
       - 'luci-app-traffic/**'
       - 'Luci-app/luci-app-traffic/**'
 
@@ -59,17 +39,30 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - build_profile: 24.10-ipk
+            sdk_distribution: immortalwrt
+            openwrt_version: 24.10.6
+            pkg_format: ipk
+          - build_profile: 25.12-apk
+            sdk_distribution: immortalwrt
+            openwrt_version: 25.12-SNAPSHOT
+            pkg_format: apk
 
     env:
-      SDK_DISTRIBUTION: ${{ inputs.sdk_distribution || 'immortalwrt' }}
-      OPENWRT_VERSION: ${{ inputs.openwrt_version || '25.12-SNAPSHOT' }}
+      BUILD_PROFILE: ${{ matrix.build_profile }}
+      SDK_DISTRIBUTION: ${{ matrix.sdk_distribution }}
+      OPENWRT_VERSION: ${{ matrix.openwrt_version }}
       OPENWRT_TARGET: ${{ inputs.openwrt_target || 'mediatek' }}
       OPENWRT_SUBTARGET: ${{ inputs.openwrt_subtarget || 'filogic' }}
-      PKG_FORMAT: ${{ inputs.pkg_format || 'apk' }}
+      PKG_FORMAT: ${{ matrix.pkg_format }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6.0.2
 
       - name: Install build dependencies
         run: |
@@ -124,12 +117,38 @@ jobs:
           esac
 
           sdk_target_id="${OPENWRT_TARGET}-${OPENWRT_SUBTARGET}"
-          sdk_file="$(curl -fsSL "$sdk_base_url/" | grep -oE "${sdk_prefix}-${OPENWRT_VERSION}-${sdk_target_id}_[^\"[:space:]]+${sdk_ext}" | head -n1)"
-          if [ -z "$sdk_file" ]; then
-            sdk_file="$(curl -fsSL "$sdk_base_url/" | grep -oE "${sdk_prefix}-${sdk_target_id}_[^\"[:space:]]+${sdk_ext}" | head -n1)"
-          fi
+
+          _find_sdk() {
+            local base_url="$1" prefix="$2" ver="$3" tid="$4" ext="$5"
+            local page sdk_fname gcc_ver
+
+            # Strategy 1: scrape directory listing (fastest when CDN cooperates)
+            page="$(curl -sSL --retry 2 --retry-delay 5 --max-time 30 "$base_url/" 2>/dev/null || true)"
+            if [ -n "$page" ]; then
+              sdk_fname="$(printf '%s\n' "$page" | grep -oE "${prefix}-${ver}-${tid}_[^\"]+${ext}" | head -n1)"
+              [ -z "$sdk_fname" ] && sdk_fname="$(printf '%s\n' "$page" | grep -oE "${prefix}-${tid}_[^\"]+${ext}" | head -n1)"
+              [ -n "$sdk_fname" ] && printf '%s\n' "$sdk_fname" && return 0
+            fi
+
+            # Strategy 2: probe common GCC versions (bypasses CDN listing issues)
+            for gcc_ver in 14.3.0 14.2.0 14.1.0 13.3.0 13.2.0 12.3.0 12.2.0 11.4.0 11.3.0; do
+              sdk_fname="${prefix}-${ver}-${tid}_gcc-${gcc_ver}_musl.Linux-x86_64${ext}"
+              if wget --spider -q --timeout=10 "$base_url/$sdk_fname" 2>/dev/null; then
+                printf '%s\n' "$sdk_fname" && return 0
+              fi
+              sdk_fname="${prefix}-${tid}_gcc-${gcc_ver}_musl.Linux-x86_64${ext}"
+              if wget --spider -q --timeout=10 "$base_url/$sdk_fname" 2>/dev/null; then
+                printf '%s\n' "$sdk_fname" && return 0
+              fi
+            done
+
+            return 1
+          }
+
+          sdk_file="$(_find_sdk "$sdk_base_url" "$sdk_prefix" "$OPENWRT_VERSION" "$sdk_target_id" "$sdk_ext")"
           test -n "$sdk_file"
-          wget -q "$sdk_base_url/$sdk_file" -O sdk.tar.zst
+          echo "Found SDK: $sdk_file"
+          wget -q --timeout=30 --tries=5 "$sdk_base_url/$sdk_file" -O sdk.tar.zst
           tar --zstd -xf sdk.tar.zst
           sdk_dir="$(find . -maxdepth 1 -type d -name "${sdk_prefix}-*" | head -n1)"
           test -n "$sdk_dir"
@@ -217,7 +236,7 @@ jobs:
           make defconfig
 
           {
-            echo 'traffic_I18N_LANGS<<EOF'
+            echo 'TRAFFIC_I18N_LANGS<<EOF'
             printf '%s\n' "$traffic_i18n_langs"
             echo 'EOF'
           } >> "$GITHUB_ENV"
@@ -251,8 +270,8 @@ jobs:
             exit 1
           fi
 
-          if [ -n "${traffic_I18N_LANGS:-}" ]; then
-            for lang in $traffic_I18N_LANGS; do
+          if [ -n "${TRAFFIC_I18N_LANGS:-}" ]; then
+            for lang in $TRAFFIC_I18N_LANGS; do
               if ! find "$artifact_dir" -maxdepth 1 -type f -name "luci-i18n-traffic-${lang}_*.${pkg_ext}" | grep -q .; then
                 echo "No luci-i18n-traffic-${lang} ${pkg_ext} was produced by the build." >&2
                 find "$SDK_DIR/bin/packages" -maxdepth 4 -type f | sort >&2
@@ -264,9 +283,9 @@ jobs:
           echo "ARTIFACT_DIR=$artifact_dir" >> "$GITHUB_ENV"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.1
         with:
-          name: luci-app-traffic-${{ env.SDK_DISTRIBUTION }}-${{ env.OPENWRT_TARGET }}-${{ env.OPENWRT_SUBTARGET }}-${{ env.PKG_FORMAT }}
+          name: luci-app-traffic-${{ env.BUILD_PROFILE }}-${{ env.SDK_DISTRIBUTION }}-${{ env.OPENWRT_TARGET }}-${{ env.OPENWRT_SUBTARGET }}
           path: ${{ env.ARTIFACT_DIR }}/
           if-no-files-found: error
 
@@ -275,26 +294,19 @@ jobs:
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/traffic-v') || (github.event_name == 'workflow_dispatch' && inputs.publish_release)
 
-    env:
-      SDK_DISTRIBUTION: ${{ inputs.sdk_distribution || 'immortalwrt' }}
-      OPENWRT_VERSION: ${{ inputs.openwrt_version || '25.12-SNAPSHOT' }}
-      OPENWRT_TARGET: ${{ inputs.openwrt_target || 'mediatek' }}
-      OPENWRT_SUBTARGET: ${{ inputs.openwrt_subtarget || 'filogic' }}
-      PKG_FORMAT: ${{ inputs.pkg_format || 'apk' }}
-
     steps:
       - name: Determine release metadata
         id: meta
         run: |
           set -eu
-          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
-            tag="${{ inputs.release_tag }}"
+          if [ "$GITHUB_EVENT_NAME" = 'workflow_dispatch' ]; then
+            tag='${{ inputs.release_tag }}'
           else
-            tag="${GITHUB_REF_NAME}"
+            tag="$GITHUB_REF_NAME"
           fi
 
           if [ -z "$tag" ]; then
-            echo "release_tag is required when publishing from workflow_dispatch" >&2
+            echo 'release_tag is required when publishing from workflow_dispatch' >&2
             exit 1
           fi
 
@@ -309,13 +321,16 @@ jobs:
           echo "name=luci-app-traffic $display_tag" >> "$GITHUB_OUTPUT"
 
       - name: Download build artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8.0.1
         with:
-          name: luci-app-traffic-${{ env.SDK_DISTRIBUTION }}-${{ env.OPENWRT_TARGET }}-${{ env.OPENWRT_SUBTARGET }}-${{ env.PKG_FORMAT }}
+          pattern: luci-app-traffic-*
           path: release-assets
 
+      - name: List release assets
+        run: find release-assets -type f | sort
+
       - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.meta.outputs.tag }}
           name: ${{ steps.meta.outputs.name }}
@@ -324,8 +339,10 @@ jobs:
           files: release-assets/**/*
           fail_on_unmatched_files: true
           body: |
-            SDK distribution: ${{ env.SDK_DISTRIBUTION }}
-            SDK release: ${{ env.OPENWRT_VERSION }}
-            Target: ${{ env.OPENWRT_TARGET }}/${{ env.OPENWRT_SUBTARGET }}
-            Package format: ${{ env.PKG_FORMAT }}
+            Build outputs:
+            - ImmortalWrt 24.10.2 ipk
+            - ImmortalWrt 25.12-SNAPSHOT apk
+
+            Target: ${{ inputs.openwrt_target || 'mediatek' }}/${{ inputs.openwrt_subtarget || 'filogic' }}
             Package architecture: all
+
