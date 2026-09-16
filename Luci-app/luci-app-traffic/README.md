@@ -106,12 +106,12 @@ separated in name order, which is likewise rank-independent.
 
 ## Icons
 
-The package ships **64 icons** in two clearly different kinds:
+The package ships **84 icons** in two clearly different kinds:
 
 | Kind | Count | Source | Rendered as |
 |---|---|---|---|
 | Brand logos | 47 | [simple-icons](https://simpleicons.org) (brand colour) and [dashboard-icons](https://github.com/homarr-labs/dashboard-icons) | the product mark |
-| Category / protocol glyphs | 17 | [lucide-static](https://lucide.dev) (ISC) | line art in muted grey, plus a `TYPE` tag in the list |
+| Category / protocol glyphs | 37 | [lucide-static](https://lucide.dev) (ISC) | line art in muted grey, plus a `TYPE` tag in the list |
 
 The two kinds are deliberately not interchangeable. A brand logo answers *which
 product*, a glyph answers *what kind of traffic* — SSL/TLS, QUIC, HTTP, DNS,
@@ -125,7 +125,7 @@ non-alphanumerics turned into dashes (`YouTube` → `youtube.svg`, `China Mobile
 `/luci-static/resources/traffic/icons/<name>.svg` and keeps its coloured letter
 avatar until that file has actually loaded, so a missing icon is invisible
 rather than broken. Both the image and the avatar occupy the same 26 px box, so
-row rhythm never shifts. 15 of the 62 names in `apps.tsv` have no upstream match
+row rhythm never shifts. 13 of the 62 names in `apps.tsv` have no upstream match
 (Tmall, iQIYI, Youku, JD, Didi, Pinduoduo, Toutiao, China Mobile/Telecom/Unicom,
 Tencent Cloud, NetEase, NetEase Mail) and keep their avatar — the open sets
 carry very little of the Chinese app landscape, so those are best added by hand.

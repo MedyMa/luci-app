@@ -340,7 +340,7 @@ jobs:
           fail_on_unmatched_files: true
           body: |
             Build outputs:
-            - ImmortalWrt 24.10.2 ipk
+            - ImmortalWrt 24.10.6 ipk
             - ImmortalWrt 25.12-SNAPSHOT apk
 
             Target: ${{ inputs.openwrt_target || 'mediatek' }}/${{ inputs.openwrt_subtarget || 'filogic' }}
