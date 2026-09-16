@@ -390,9 +390,9 @@ return view.extend({
 					el('h3', {}, [ _('Throughput') ]),
 					this.chartNote,
 					el('div', { 'class': 'tf-chart-ctl' }, [
-						el('button', { 'class': 'cbi-button tf-gran tf-gran-on', 'data-range': '1h',
+						el('button', { 'class': 'tf-gran tf-gran-on', 'data-range': '1h',
 							'click': function(ev) { self.setSeriesRange('1h', ev.target); } }, [ _('Last hour') ]),
-						el('button', { 'class': 'cbi-button tf-gran', 'data-range': '24h',
+						el('button', { 'class': 'tf-gran', 'data-range': '24h',
 							'click': function(ev) { self.setSeriesRange('24h', ev.target); } }, [ _('Last 24 hours') ])
 					])
 				]),
@@ -972,8 +972,15 @@ function injectCss() {
 		'.tf-page .tf-empty{text-align:center;color:var(--tf-dim);padding:1.2rem 0;}',
 		/* controls: every chip and field is a pill, so the toolbar reads as one
 		 * row of soft shapes rather than as mismatched theme widgets.
-		 * border-radius carries !important because themes also style
-		 * .cbi-button and can otherwise win the tie on specificity. */
+		 *
+		 * Every selector below names a class of this page own (tf-*); none of
+		 * them rewrites a LuCI core class, so nothing here can leak into the
+		 * core view action buttons on other pages.  The toolbar buttons carry
+		 * no core button class either - they are described in full below,
+		 * light and dark - so their look is this app business alone.
+		 *
+		 * border-radius carries !important only because themes style bare
+		 * button elements too; the selectors match nothing but these controls. */
 		'.tf-page .tf-range{-webkit-appearance:none;appearance:none;min-width:9.5rem;',
 		'height:2.05rem;padding:0 2.05rem 0 .9rem;font-size:.82rem;line-height:2.05rem;',
 		'color:var(--tf-fg);background-color:rgba(140,160,180,.14);',
@@ -988,11 +995,16 @@ function injectCss() {
 		'border-radius:999px!important;border:none;box-shadow:none;cursor:pointer;',
 		'transition:filter .15s,box-shadow .15s;}',
 		'.tf-page .tf-clear:hover{filter:brightness(1.07);box-shadow:0 3px 10px rgba(224,60,60,.25);}',
-		'.tf-page .tf-chart-ctl .cbi-button{font-size:.76rem;height:1.8rem;padding:0 .9rem;',
+		'.tf-page .tf-chart-ctl .tf-gran{font-size:.76rem;height:1.8rem;padding:0 .9rem;',
 		'line-height:1.8rem;border-radius:999px!important;background:rgba(140,160,180,.14);',
 		'border:1px solid transparent;color:var(--tf-fg);cursor:pointer;box-shadow:none;',
 		'transition:background-color .15s,border-color .15s,color .15s;}',
-		'.tf-page .tf-chart-ctl .cbi-button:hover{background:rgba(140,160,180,.24);}',
+		'.tf-page .tf-chart-ctl .tf-gran:hover{background:rgba(140,160,180,.24);}',
+		/* The toolbar chips carry no core button class, so the focus ring they
+		 * used to inherit from one is spelled out here.  :focus-visible keeps it
+		 * off a mouse click, which matters because these are toggle chips. */
+		'.tf-page .tf-gran:focus-visible,.tf-page .tf-clear:focus-visible,',
+		'.tf-page .tf-range:focus-visible{outline:2px solid var(--tf-accent);outline-offset:2px;}',
 		'.tf-page .tf-hero-ctl{gap:.7rem;}',
 
 		/* dark: Argon sets .dark on <body> when its dark mode is on */

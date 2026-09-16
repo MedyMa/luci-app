@@ -146,12 +146,21 @@ chk(css.length>1500, `样式表已注入（${css.length} 字符）`);
 const open=(css.match(/\{/g)||[]).length, close=(css.match(/\}/g)||[]).length;
 chk(open===close, `大括号平衡（{ ${open} / } ${close}）`);
 chk(!/;\s*;/.test(css), '没有连续分号（空声明）');
-for(const sel of ['.tf-page .tf-range','.tf-page .tf-clear','.tf-page .tf-chart-ctl .cbi-button']){
+for(const sel of ['.tf-page .tf-range','.tf-page .tf-clear','.tf-page .tf-chart-ctl .tf-gran']){
   const re=new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\{([^}]*)\\}');
   const m=css.match(re);
   chk(!!m, `有 ${sel} 规则`);
   if(m) chk(/border-radius:999px/.test(m[1]), `  ${sel} 是圆角（999px 药丸形）`);
 }
+// The page must style its own controls and nothing else: a rule against a LuCI
+// core class would restyle the core view action buttons on every other page.
+// The buttons here therefore carry app classes (tf-*) rather than core ones.
+chk(css.indexOf('.cbi-')===-1, '样式表没有改写任何 LuCI 核心类选择器');
+chk(!/\.cbi-/.test(css) && !/cbi-button/.test(css), '未提及核心按钮类');
+// keyboard users still need a visible focus ring on the chips that no longer
+// inherit one from a core button class
+chk(/\.tf-gran:focus-visible/.test(css) && /outline:2px solid/.test(css),
+    '自绘控件保留了键盘焦点环');
 chk(/appearance:none/.test(css), '下拉框去掉了原生外观（才能自绘圆角箭头）');
 chk(/data:image\/svg\+xml/.test(css), '用了内联 SVG 箭头（无额外请求）');
 const darkRules=(css.match(/\.dark \.tf-page \.tf-range/g)||[]).length;
