@@ -582,6 +582,9 @@ return view.extend({
 		bits.push({ k: _('Host names'), v: String(Number(s.dnsmap_lines) || 0) });
 		if (Number(s.pending) > 0) bits.push({ k: _('Waiting to resolve'), v: String(Number(s.pending)), warn: true });
 		bits.push({ k: _('Query log'), v: s.querylog || '—', mono: true });
+		/* what the collector treats as the box itself: the first thing to check
+		   when a client list looks like it has the router in it */
+		if (s.self) bits.push({ k: _('Router addresses'), v: s.self, mono: true });
 		if (s.hour) bits.push({ k: _('Bucket'), v: s.hour });
 
 		if (!this.statusEl) return;
@@ -668,7 +671,7 @@ return view.extend({
 		var pct = function(v) { return all ? (100 * v / all).toFixed(1) + '%' : '—'; };
 
 		this.drawMeta([
-			{ cap: _('Proxy tunnel'), val: fmtBytes(t.router) },
+			{ cap: _('Router and tunnel'), val: fmtBytes(t.router) },
 			{ cap: _('Browser clients'), val: fmtBytes(all) },
 			{ cap: _('Domain identified'), val: pct(named),
 			  title: _('by client DNS') + ': ' + pct(namedE) + ', ' + _('by any client DNS') + ': ' + pct(namedA) },

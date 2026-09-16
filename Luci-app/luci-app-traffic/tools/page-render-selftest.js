@@ -119,13 +119,21 @@ chk(count(v4.chartEl,'div')>=1, `并有"暂无采样"提示（${count(v4.chartEl
 
 console.log('=== 状态条（信息展示）===');
 const v5=freshView();
-view.drawStatus.call(v5,{collected_at:Math.floor(Date.now()/1000),interval:10,flows:1234,dnsmap_lines:5678,pending:3,querylog:'/etc/config/adGuardConfig/workspace/data/querylog.json'},items);
+view.drawStatus.call(v5,{collected_at:Math.floor(Date.now()/1000),interval:10,flows:1234,dnsmap_lines:5678,pending:3,querylog:'/etc/config/adGuardConfig/workspace/data/querylog.json',self:'192.168.2.1 fdc8:64ed:f962:0000:0000:0000:0000:0001'},items);
 const stats5=[]; walk(v5.statusEl,n=>{ if(n.tag==='span') stats5.push(n._text); });
-chk(stats5.length>=12, `状态条内容项 ${stats5.length} 个（应为 6 项×2）`);
+chk(stats5.length>=14, `状态条内容项 ${stats5.length} 个（应为 7 项×2）`);
 chk(stats5.some(t=>t==='Running'), `含运行状态（${stats5.slice(0,4).join(' | ')}）`);
 chk(stats5.some(t=>t==='1234'), '含 conntrack 条目数');
 chk(stats5.some(t=>t==='5678'), '含已解析主机名数');
 chk(stats5.some(t=>t==='3'), '含待解析数');
+// the addresses the collector treats as the box itself: the row has to be there
+// when the collector reports them, and absent when it does not
+chk(stats5.some(t=>t==='Router addresses'), '含"路由器自身地址"标题');
+chk(stats5.some(t=>t==='192.168.2.1 fdc8:64ed:f962:0000:0000:0000:0000:0001'), '含自身地址取值');
+const v7=freshView();
+view.drawStatus.call(v7,{collected_at:Math.floor(Date.now()/1000),interval:10,flows:1,dnsmap_lines:1,pending:0,querylog:''},items);
+const s7=[]; walk(v7.statusEl,n=>{ if(n.tag==='span') s7.push(n._text); });
+chk(!s7.some(t=>t==='Router addresses'), '未上报自身地址时不显示该行');
 const v6=freshView();
 view.drawStatus.call(v6,{collected_at:0,interval:0,flows:0,dnsmap_lines:0,pending:0,querylog:''},[]);
 const s6=[]; walk(v6.statusEl,n=>{ if(n.tag==='span') s6.push(n._text); });

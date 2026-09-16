@@ -55,6 +55,9 @@ CFG_DATADIR=/etc/traffic
 CFG_QUERYLOG=
 CFG_LAN4=
 CFG_LAN6=
+# the router's own LAN addresses, space separated; a source matching one of
+# these is the router, not a client
+CFG_SELF=
 CFG_APPMAP=$CFG_DATADIR/apps.tsv
 CFG_CATEGORIES=$CFG_DATADIR/categories.tsv
 CFG_RETENTION=7
@@ -77,6 +80,15 @@ CFG_SERIES_COLD=86400
 SERIES10_MAX=360
 SERIES60_MAX=1440
 
+# Bumped whenever a change alters what the live counters mean.  They are running
+# totals, so a change of meaning cannot be applied retroactively: after the fix
+# that stopped the box's own LAN address from being a client, an upgraded router
+# would otherwise keep showing "192.168.2.1" with tens of megabytes against it
+# forever, because that row is already in clients.tsv and is only ever added to.
+# On a mismatch the live counters are dropped and rebuilt; the history in
+# <datadir> (series60, hourly) is left alone.
+STATE_VERSION=1
+
 log() { logger -t traffic "$*"; }
 
 # ---------------------------------------------------------------- configuration
@@ -92,6 +104,7 @@ uci_get() {
         querylog)       v=${TRAFFIC_QUERYLOG:-} ;;
         lan4)           v=${TRAFFIC_LAN4:-} ;;
         lan6)           v=${TRAFFIC_LAN6:-} ;;
+        self)           v=${TRAFFIC_SELF:-} ;;
         appmap)         v=${TRAFFIC_APPMAP:-} ;;
         categories)     v=${TRAFFIC_CATEGORIES:-} ;;
         retention_days) v=${TRAFFIC_RETENTION_DAYS:-} ;;
@@ -134,8 +147,47 @@ detect_lan6() {
     printf 'fd00::\n'
 }
 
-detect_querylog() {
-    local wl
+# Expand an IPv6 address to the eight-group form the kernel writes into
+# /proc/net/nf_conntrack.  "ip -6 addr" prints the compressed form, so a plain
+# string comparison against a conntrack address would never match.
+expand6() {
+    awk -v a="$1" '
+    function pad(s) { while (length(s) < 4) s = "0" s; return s }
+    BEGIN {
+        if (a == "") { print ""; exit }
+        if (a !~ /:/) { print a; exit }              # not IPv6
+        n = split(a, half, "::")
+        if (n == 1) {
+            m = split(a, g, ":")
+            out = ""
+            for (i = 1; i <= m; i++) out = out (i > 1 ? ":" : "") pad(g[i])
+            print out
+            exit
+        }
+        nl = (half[1] == "") ? 0 : split(half[1], L, ":")
+        nr = (half[2] == "") ? 0 : split(half[2], R, ":")
+        out = ""
+        for (i = 1; i <= nl; i++) out = out (out == "" ? "" : ":") pad(L[i])
+        for (i = nl + 1; i <= 8 - nr; i++) out = out (out == "" ? "" : ":") "0000"
+        for (i = 1; i <= nr; i++) out = out ":" pad(R[i])
+        print out
+    }'
+}
+
+# The addresses of the router itself on the LAN.  Traffic whose source is one of
+# these is the router talking, not a client: on a box that runs its own proxy it
+# is the outbound connections of that proxy, and counting them as a client put
+# "192.168.2.1" at the top of the client list with 40 MB against it.
+detect_self() {
+    local br a
+    br=$($UCI -q get network.lan.device 2>/dev/null)
+    [ -n "$br" ] || br=br-lan
+    ip -4 addr show dev "$br" 2>/dev/null | awk '/inet /{ sub(/\/.*/, "", $2); print $2 }'
+    ip -6 addr show dev "$br" 2>/dev/null | awk '/inet6 /{ sub(/\/.*/, "", $2); print $2 }' \
+        | while read -r a; do expand6 "$a"; done
+}
+
+detect_querylog() {    local wl
     wl=$($UCI -q get AdGuardHome.AdGuardHome.workdir 2>/dev/null)
     if [ -n "$wl" ] && [ -r "$wl/data/querylog.json" ]; then
         printf '%s/data/querylog.json\n' "$wl"
@@ -158,6 +210,8 @@ load_config() {
     [ -n "$CFG_LAN4" ] || CFG_LAN4=$(detect_lan)
     v=$(uci_get lan6);         [ -n "$v" ] && CFG_LAN6=$v
     [ -n "$CFG_LAN6" ] || CFG_LAN6=$(detect_lan6)
+    v=$(uci_get self);         [ -n "$v" ] && CFG_SELF=$v
+    [ -n "$CFG_SELF" ] || CFG_SELF=$(detect_self | tr '\n' ' ')
     v=$(uci_get appmap);       [ -n "$v" ] && CFG_APPMAP=$v
     [ -n "$CFG_APPMAP" ] || CFG_APPMAP=$CFG_DATADIR/apps.tsv
     # the category table sits next to the application table, so relocating one
@@ -189,7 +243,20 @@ load_config() {
 
 # ---------------------------------------------------------------- state
 init_state() {
+    local v
     mkdir -p "$STATE_DIR" "$CFG_DATADIR" || exit 1
+    v=$(sed -n '1p' "$STATE_DIR/version" 2>/dev/null)
+    if [ "$v" != "$STATE_VERSION" ]; then
+        # The live counters are running totals, so a change in what they mean
+        # cannot be applied to the existing numbers - they have to be rebuilt.
+        # flow.state is kept on purpose: it is the conntrack baseline the next
+        # delta is measured against, and clearing it would count every open
+        # flow from zero once.
+        rm -f "$STATE_DIR/totals.tsv" "$STATE_DIR/clients.tsv" "$STATE_DIR/router.tsv" \
+              "$STATE_DIR/stat.tsv" "$STATE_DIR/ac.tsv"
+        printf '%s\n' "$STATE_VERSION" > "$STATE_DIR/version"
+        [ -n "$v" ] && log "state schema $v -> $STATE_VERSION: live counters reset"
+    fi
     [ -f "$STATE_DIR/flow.state" ] || : > "$STATE_DIR/flow.state"
     [ -f "$STATE_DIR/dnsmap.tsv" ] || : > "$STATE_DIR/dnsmap.tsv"
     [ -f "$STATE_DIR/totals.tsv" ] || : > "$STATE_DIR/totals.tsv"
@@ -205,6 +272,9 @@ init_state() {
     [ -f "$STATE_DIR/nmoff" ] || printf '0\n' > "$STATE_DIR/nmoff"
     [ -f "$STATE_DIR/nmtime" ] || printf '0\n' > "$STATE_DIR/nmtime"
     [ -f "$STATE_DIR/pending" ] || printf '0\n' > "$STATE_DIR/pending"
+    # the current hour bucket, written here so the page can always say which one
+    # it is showing (roll_hour rewrites it when the hour turns over)
+    [ -f "$STATE_DIR/hour" ] || date +%Y-%m-%dT%H > "$STATE_DIR/hour" 2>/dev/null
     [ -f "$CFG_DATADIR/hourly.tsv" ] || : > "$CFG_DATADIR/hourly.tsv"
 }
 
@@ -432,7 +502,7 @@ classify() {
         -v cli="$STATE_DIR/clients.tsv" -v rt="$STATE_DIR/router.tsv" -v st="$STATE_DIR/stat.tsv" \
         -v acfile="$STATE_DIR/ac.tsv" -v acnew="$STATE_DIR/ac.new" \
         -v nmap="$STATE_DIR/namemap.tsv" -v smp="$STATE_DIR/sample.new" \
-        -v lan4="$CFG_LAN4" -v lan6="$CFG_LAN6" '
+        -v lan4="$CFG_LAN4" -v lan6="$CFG_LAN6" -v self="$CFG_SELF" '
     # The registrable domain: what to show when a host name was in neither
     # catalogue, i.e. an unidentified website.  A small public-suffix list is
     # enough here.
@@ -488,6 +558,11 @@ classify() {
         return "Other"
     }
     BEGIN {
+        # the router own LAN addresses: a flow sourced by one of them is the
+        # box talking (mostly the outbound connections of a local proxy), not a
+        # client, so it belongs with the tunnel rather than in the client list
+        nself = split(self, slf, " ")
+        for (i = 1; i <= nself; i++) if (slf[i] != "") isself[slf[i]] = 1
         while ((getline l < dns) > 0) {
             split(l, f, "\t")
             if (f[1] != "" && f[3] != "") { byclient[f[1] "|" f[3]] = f[2]; byip[f[3]] = f[2] }
@@ -524,7 +599,10 @@ classify() {
         proto = k[2]; src = k[3]; dst = k[5]; port = k[6]
         u = $2 + 0; d = $3 + 0; t = u + d
         if (t <= 0) next
-        if (!(index(src, lan4) == 1 || index(src, lan6) == 1)) {
+        # Not a client when the source is the router itself: either it is one of
+        # the box own addresses, or it is outside the LAN prefix (a WAN-sourced
+        # flow is the far end of the tunnel).
+        if ((src in isself) || !(index(src, lan4) == 1 || index(src, lan6) == 1)) {
             rb["proxy"] += t
             next
         }
@@ -621,12 +699,20 @@ record_sample() {
         # carried nothing: the chart spaces its points by index, so a skipped
         # idle minute would silently compress the time axis.  A gap in the
         # series therefore means the collector was not running - nothing else.
-        printf '%s\t%s\t%s\n' "$cur_m" "$cd" "$cu" >> "$CFG_DATADIR/series60.tsv"
-        n=$(wc -l < "$CFG_DATADIR/series60.tsv" 2>/dev/null || echo 0)
-        if [ "$n" -gt "$SERIES60_MAX" ]; then
-            tail -n "$SERIES60_MAX" "$CFG_DATADIR/series60.tsv" > "$CFG_DATADIR/.series60.new" 2>/dev/null \
-                && mv -f "$CFG_DATADIR/.series60.new" "$CFG_DATADIR/series60.tsv"
-        fi
+        #
+        # Trimming and appending happen in one rewrite and one rename, so the
+        # ring is never over its cap and never half-written: a collector killed
+        # mid-round leaves either the old file or the new one, both of them
+        # within the window.
+        awk -F'\t' -v keep="$((SERIES60_MAX - 1))" -v p="$cur_m" -v d="$cd" -v u="$cu" '
+            { line[NR] = $0 }
+            END {
+                start = NR - keep + 1
+                if (start < 1) start = 1
+                for (i = start; i <= NR; i++) print line[i]
+                printf "%s\t%s\t%s\n", p, d, u
+            }' "$CFG_DATADIR/series60.tsv" > "$CFG_DATADIR/.series60.new" 2>/dev/null \
+            && mv -f "$CFG_DATADIR/.series60.new" "$CFG_DATADIR/series60.tsv"
         cd=0; cu=0; cur_m=$m
     fi
     [ "$cur_m" -gt 0 ] || cur_m=$m
@@ -818,6 +904,9 @@ write_summary() {
         # host names still waiting for the resolver: the page asks for them to
         # be resolved at once while it is open, and does nothing when it is not
         printf ',"pending":%s' "$(sed -n '1p' "$STATE_DIR/pending" 2>/dev/null || echo 0)"
+        # which addresses count as "the router itself" - shown by the page, and
+        # the first thing to look at when a client list seems to have the box in it
+        printf ',"self":"%s"' "$(printf '%s' "$CFG_SELF" | tr ' ' '\n' | grep -v '^$' | head -4 | tr '\n' ' ' | sed -e 's/ *$//' -e 's/\\/\\\\/g' -e 's/"/\\"/g')"
         # stat.tsv: <named via same client> <named via any client> <bucket> <other>
         awk -F'\t' '{ printf ",\"exact\":%d,\"any\":%d,\"bucket\":%d,\"residual\":%d", $1, $2, $3, $4 }' \
             "$STATE_DIR/stat.tsv" 2>/dev/null

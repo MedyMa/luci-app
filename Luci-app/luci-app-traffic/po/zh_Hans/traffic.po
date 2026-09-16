@@ -41,8 +41,8 @@ msgid "Clear the counters collected so far?"
 msgstr "确定清空已统计的流量数据？"
 
 #: htdocs/luci-static/resources/view/traffic/overview.js
-msgid "Proxy tunnel"
-msgstr "代理隧道"
+msgid "Router and tunnel"
+msgstr "路由器与隧道"
 
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "Browser clients"
@@ -176,6 +176,10 @@ msgstr "待解析"
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "Query log"
 msgstr "查询日志"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Router addresses"
+msgstr "路由器自身地址"
 
 # Small-case variants: "Total"/"Up" are translated by luci-base, so the page
 # uses its own caption strings where the wording has to be exact.

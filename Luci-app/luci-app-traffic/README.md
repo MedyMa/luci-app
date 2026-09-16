@@ -36,7 +36,13 @@ AGH querylog     ─┘
    `(client, domain, resolved IP)`.
 3. **Attribution** matches a flow's `(source, destination)` against those
    mappings. A flow whose source is the router itself is the proxy tunnel and
-   is reported separately, so the traffic it carries is not counted twice.
+   is reported separately, so the traffic it carries is not counted twice. "The
+   router itself" means two things: a source outside the LAN prefixes (the far
+   end of a tunnel), and a source that *is* one of the box's own LAN addresses
+   (`self`, auto-detected on the LAN interface, v4 and v6). The second case
+   matters on a box that runs its own proxy: those connections are sourced from
+   the LAN address, and counting them as a client put `192.168.2.1` at the top
+   of the client list with 39 MB against it.
 4. **Names** — every flow gets a name, in this order:
    1. `/etc/traffic/apps.tsv`, matched against the **host name exactly** first
       (AdGuard Home reports `music.163.com`, so sub-domain rules work) and then
@@ -82,6 +88,7 @@ Home's workdir. Both are shown on the page and can be overridden.
 | `datadir` | `/etc/traffic` | where `hourly.tsv` (the history) is kept |
 | `querylog` | auto | AdGuard Home's `querylog.json` |
 | `lan4` / `lan6` | auto | client prefixes; anything else is "the router itself" |
+| `self` | auto | the box's own LAN addresses (space-separated); their flows are tunnel traffic, not a client |
 | `appmap` | `/etc/traffic/apps.tsv` | the application catalogue |
 | `retention_days` | `7` | how much hourly history to keep |
 | `top_apps` / `top_clients` | `50` / `20` | how many entries the snapshot carries |
@@ -301,11 +308,20 @@ the corresponding service; check the upstream licences before redistributing.
 | `/etc/traffic/series60.tsv` | 1-minute throughput for the last 24 h |
 | `/tmp/traffic/series10.tsv` | 10-second throughput for the last hour |
 | `/tmp/traffic/namemap.tsv` | host name → resolved name (the catalogue cache) |
+| `/tmp/traffic/version` | state schema; a change rebuilds the live counters (see below) |
+
+The live counters in `/tmp/traffic` are running totals, so a change in what they
+mean cannot be applied to numbers already accumulated. `version` records the
+schema they were built with: when it does not match the collector, the client,
+application, router and attribution counters are dropped and rebuilt on the next
+sample. The history in `<datadir>` (`hourly.tsv`, `series60.tsv`) and the
+conntrack baseline (`flow.state`) are left alone, so the change costs the
+session's totals, not the day's chart.
 
 Not installed, but shipped in the repository for regeneration and verification:
 
 | Path | Purpose |
 |---|---|
 | `tools/build-catalog.js` | rebuild both catalogues and the icon set from upstream |
-| `tools/collector-selftest.sh` | offline regression: every attribution path |
+| `tools/collector-selftest.sh` | offline regression: every attribution path, the box's own addresses, the state schema |
 | `tools/page-render-selftest.js` | offline rendering check (SVG namespace, chart, status strip) |

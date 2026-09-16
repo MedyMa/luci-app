@@ -132,10 +132,12 @@ get_series() {
 
 reset_stats() {
 	local what="$1"
-	rm -f "$STATE_DIR/totals.tsv" "$STATE_DIR/clients.tsv" "$STATE_DIR/router.tsv" "$STATE_DIR/stat.tsv"
+	rm -f "$STATE_DIR/totals.tsv" "$STATE_DIR/clients.tsv" "$STATE_DIR/router.tsv" "$STATE_DIR/stat.tsv" \
+	      "$STATE_DIR/ac.tsv"
 	: > "$STATE_DIR/totals.tsv"
 	: > "$STATE_DIR/clients.tsv"
 	: > "$STATE_DIR/router.tsv"
+	: > "$STATE_DIR/ac.tsv"
 	printf '0\n0\n0\n' > "$STATE_DIR/stat.tsv"
 	# the sharp tier belongs to the session, the coarse one to the history
 	: > "$STATE_DIR/series10.tsv"

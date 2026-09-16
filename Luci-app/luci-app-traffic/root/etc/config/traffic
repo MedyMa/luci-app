@@ -10,6 +10,12 @@ config traffic 'settings'
 	# leave empty to auto-detect from the LAN interface
 	option lan4 ''
 	option lan6 ''
+	# addresses of the box itself on the LAN, separated by spaces.  Traffic they
+	# source is the router talking (mostly the outbound connections of a local
+	# proxy), not a client, so it is counted as tunnel traffic instead of being
+	# listed as a device.  Leave empty to auto-detect every address on the LAN
+	# interface.
+	option self ''
 	# optional: map a registrable domain to a friendlier application name
 	option appmap '/etc/traffic/apps.tsv'
 	# how many days of hourly history to keep

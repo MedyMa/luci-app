@@ -20,6 +20,10 @@
 #  10. router-originated traffic kept out of the application list
 #  11. the catalogue is read only for new host names, and a changed catalogue
 #      invalidates the cached name map
+#  12. the box's own LAN addresses are not clients, whether v4 or v6, while a
+#      real client on the same prefixes still is
+#  13. an older state schema rebuilds the running totals instead of keeping a
+#      row that must no longer exist, and a matching one does not
 #
 #   bash collector-selftest.sh
 set -u
@@ -29,6 +33,26 @@ COLLECTOR="$(cd "$SELF/.." && pwd)/root/usr/share/traffic/collector.sh"
 [ -f "$COLLECTOR" ] || { echo "collector.sh not found next to $SELF" >&2; exit 1; }
 
 echo "=== sh -n ==="
+# An apostrophe inside an awk comment closes the single-quoted program the shell
+# is already inside - the awk program ends early, the rest of it is parsed as
+# shell, and sh -n reports a syntax error far from the real cause.  It has been
+# written three times in this file's history, so it gets its own check that
+# names the offending line.
+apostrophes=$(awk '
+    /awk[[:space:]].*-v |awk -F.*\x27$/ { inawk = 1 }
+    inawk && /^[[:space:]]*#/ {
+        line = $0
+        if (gsub(/\x27/, "\x27", line) > 0) { printf "  line %d: %s\n", NR, $0; hits++ }
+    }
+    inawk && /^(    )?.\x27 / { inawk = 0 }
+    END { exit (hits > 0 ? 1 : 0) }
+' "$COLLECTOR")
+if [ -n "$apostrophes" ]; then
+    echo "FAIL: apostrophe inside an awk comment closes the program early:" >&2
+    echo "$apostrophes" >&2
+    exit 1
+fi
+echo "no apostrophes inside awk programs"
 if ! sh -n "$COLLECTOR"; then
     # A syntax error makes every later assertion meaningless, so stop here
     # rather than printing a wall of failures.  This is the check that catches
@@ -94,16 +118,56 @@ ipv4 2 tcp 6 119 ESTABLISHED src=192.168.2.138 dst=10.10.10.10 sport=1011 dport=
 ipv4 2 tcp 6 119 ESTABLISHED src=192.168.1.6 dst=45.149.157.234 sport=1012 dport=443 packets=1 bytes=800 tos=0 src=45.149.157.234 dst=192.168.1.6 sport=443 dport=1012 packets=1 bytes=8000 tos=0 [ASSURED] mark=0 zone=0 use=2
 EOF
 
+# Run the collector until it has finished one whole round, then stop it.
+#
+# A fixed timeout cannot express this.  A round costs a handful of forks per
+# stage, so on a slow or loaded host a single round can outlast any budget worth
+# writing - and when it does, the collector is killed halfway through and the
+# assertion fails for a reason that has nothing to do with the code.  That is
+# exactly what made phases 15, 17, 18 and 19 fail intermittently here.
+#
+# collected_at is written by the last stage of a round, so a change in it means
+# the round is complete.  The timeout stays as a safety net for a collector that
+# wedges before writing anything.
 run_collector() {
-    local t="$1"; shift
-    env "$@" UCI=/bin/true LUA="$T/bin/lua" CT="$T/ct" TRAFFIC_QUERYLOG="$T/ql" TRAFFIC_LAN4=192.168.2. \
-      TRAFFIC_INTERVAL=2 TRAFFIC_DATADIR="$T/data" \
-      TRAFFIC_APPMAP="$T/apps.tsv" TRAFFIC_CATEGORIES="$T/categories.tsv" \
-      STATE_DIR="$T/state" SELF_DIR="$(cd "$SELF/../root/usr/share/traffic" && pwd)" \
-      timeout "$t" sh "$COLLECTOR" >/dev/null 2>&1
+    local cap="${1:-30}"; shift
+    collect "$T/state" "$T/data" "$T/ct" "$T/ql" "$cap" "$@"
 }
 
-run_collector 8
+# The same, against a state directory of its own, so a phase that needs a clean
+# slate does not have to disturb the one the earlier assertions built up.
+run_collector_at() {
+    local cap="${1:-30}" st="$2" da="$3" ct="$4" ql="$5"; shift 5
+    collect "$st" "$da" "$ct" "$ql" "$cap" "$@"
+}
+
+snapshot_at() { sed -n 's/.*"collected_at":\([0-9]*\).*/\1/p' "$1" 2>/dev/null; }
+
+collect() {
+    local st="$1" da="$2" ct="$3" ql="$4" cap="$5"; shift 5
+    local before pid i at
+    before=$(snapshot_at "$st/summary.json")
+
+    env "$@" UCI=/bin/true LUA="$T/bin/lua" CT="$ct" TRAFFIC_QUERYLOG="$ql" \
+      TRAFFIC_LAN4=192.168.2. TRAFFIC_INTERVAL=2 TRAFFIC_DATADIR="$da" \
+      TRAFFIC_APPMAP="$T/apps.tsv" TRAFFIC_CATEGORIES="$T/categories.tsv" \
+      STATE_DIR="$st" SELF_DIR="$(cd "$SELF/../root/usr/share/traffic" && pwd)" \
+      timeout "$cap" sh "$COLLECTOR" >/dev/null 2>&1 &
+    pid=$!
+
+    i=0
+    while [ "$i" -lt $((cap * 5)) ]; do
+        at=$(snapshot_at "$st/summary.json")
+        [ -n "$at" ] && [ "$at" != "$before" ] && break
+        sleep 0.2
+        i=$((i + 1))
+    done
+    kill "$pid" 2>/dev/null
+    wait "$pid" 2>/dev/null
+    return 0
+}
+
+run_collector 30
 
 echo
 echo "--- totals ---"
@@ -182,7 +246,7 @@ echo "=== 目录变更必须让缓存失效 ==="
 } > "$T/apps.tsv"
 # also stage a finished minute, so the next run has to fold it into the day tier
 printf '%s\n%s\n%s\n' "$(( $(date +%s) / 60 * 60 - 60 ))" 4242 424 > "$T/state/minute.tsv"
-run_collector 5
+run_collector 30
 chk "15 目录变更后 namemap 重新解析"       "app Fastly"        "$(nm 'x.fastly.net')"
 chk "15a 目录变更后长后缀重新解析"         "app Deep CDN"      "$(nm 'deep.cdn.example.com')"
 chk "15b 缓存未被重复追加"                 "$nm_before"        "$(grep -c . "$T/state/namemap.tsv")"
@@ -198,14 +262,16 @@ echo "=== 冷数据窗口上限 ==="
 # shrink the day tier to 3 points and pre-fill it: the oldest must be dropped
 printf '1\t1\t1\n2\t2\t2\n3\t3\t3\n4\t4\t4\n5\t5\t5\n' > "$T/data/series60.tsv"
 printf '%s\n%s\n%s\n' "$(( $(date +%s) / 60 * 60 - 60 ))" 77 7 > "$T/state/minute.tsv"
-run_collector 4 TRAFFIC_SERIES_COLD=180
+run_collector 30 TRAFFIC_SERIES_COLD=180
 chk "18 series60 裁剪到上限（3 点）"       "3"                 "$(grep -c . "$T/data/series60.tsv")"
 chk "18a 保留的是最新点而非最旧点"         "77/7"              "$(awk -F'\t' 'END{print $2"/"$3}' "$T/data/series60.tsv")"
 
 # an idle minute is data too: skipping it would compress the chart's time axis,
-# because the points are spaced by index
-printf '%s\n%s\n%s\n' "$(( $(date +%s) / 60 * 60 - 60 ))" 0 0 > "$T/state/minute.tsv"
-run_collector 4 TRAFFIC_SERIES_COLD=180
+# because the points are spaced by index.  A minute of its own (-120) keeps the
+# point distinct from the one phase 18 wrote when both runs happen inside the
+# same wall-clock minute.
+printf '%s\n%s\n%s\n' "$(( $(date +%s) / 60 * 60 - 120 ))" 0 0 > "$T/state/minute.tsv"
+run_collector 30 TRAFFIC_SERIES_COLD=180
 chk "18b 空闲的一分钟仍会落盘"             "0/0"               "$(awk -F'\t' 'END{print $2"/"$3}' "$T/data/series60.tsv")"
 chk "18c 空闲点也受窗口上限约束"           "3"                 "$(grep -c . "$T/data/series60.tsv")"
 
@@ -216,14 +282,60 @@ echo "=== 按需解析（页面打开时不等节流窗口）==="
 printf '%s\n' "$(date +%s)" > "$T/state/nmtime"
 printf '192.168.2.138\tnewhost.meituan.com\t10.20.30.40\n' >> "$T/state/dnsmap.tsv"
 printf '1\n' > "$T/state/pending"
-run_collector 4
+run_collector 30
 chk "19 节流生效：新主机名暂不解析"        ""                  "$(nm 'newhost.meituan.com')"
 chk "19a 待解析数量会上报"                 "1"                 "$(sed -n '1p' "$T/state/pending")"
 : > "$T/state/resolve.now"
-run_collector 4
+run_collector 30
 chk "19b resolveNow 让页面立刻拿到名称"    "app Meituan"       "$(nm 'newhost.meituan.com')"
 chk "19c 标记被消费后清除"                 "no"                "$( [ -f "$T/state/resolve.now" ] && echo yes || echo no )"
 chk "19d 解析完成后待解析归零"             "0"                 "$(sed -n '1p' "$T/state/pending")"
+
+echo
+echo "=== 路由器自身地址不计入客户端 ==="
+# The box runs a proxy, so its own LAN address sources a pile of outbound
+# connections.  Counted as a client, "192.168.2.1" sat at the top of the list
+# with 39 MB against it, and the same for its v6 address.  A real v6 client is
+# in the fixture too, so passing here cannot be explained by the LAN-prefix rule
+# rather than by the self set: .0050 must be counted, .0001 must not.
+mkdir -p "$T/state2" "$T/data2"
+cat > "$T/ct2" <<'EOF'
+ipv4 2 tcp 6 119 ESTABLISHED src=192.168.2.50 dst=1.1.1.1 sport=2001 dport=443 packets=1 bytes=100 tos=0 src=1.1.1.1 dst=192.168.2.50 sport=443 dport=2001 packets=1 bytes=1000 tos=0 [ASSURED] mark=0 zone=0 use=2
+ipv4 2 tcp 6 119 ESTABLISHED src=192.168.2.1 dst=2.2.2.2 sport=2002 dport=443 packets=1 bytes=200 tos=0 src=2.2.2.2 dst=192.168.2.1 sport=443 dport=2002 packets=1 bytes=2000 tos=0 [ASSURED] mark=0 zone=0 use=2
+ipv6 2 tcp 6 119 ESTABLISHED src=fdc8:64ed:f962:0000:0000:0000:0000:0001 dst=2400:3200:0000:0000:0000:0000:0000:0001 sport=2003 dport=443 packets=1 bytes=300 tos=0 src=2400:3200:0000:0000:0000:0000:0000:0001 dst=fdc8:64ed:f962:0000:0000:0000:0000:0001 sport=443 dport=2003 packets=1 bytes=3000 tos=0 [ASSURED] mark=0 use=1
+ipv6 2 tcp 6 119 ESTABLISHED src=fdc8:64ed:f962:0000:0000:0000:0000:0050 dst=2400:3200:0000:0000:0000:0000:0000:0002 sport=2004 dport=443 packets=1 bytes=400 tos=0 src=2400:3200:0000:0000:0000:0000:0000:0002 dst=fdc8:64ed:f962:0000:0000:0000:0000:0050 sport=443 dport=2004 packets=1 bytes=4000 tos=0 [ASSURED] mark=0 use=1
+EOF
+run_collector_at 30 "$T/state2" "$T/data2" "$T/ct2" /nonexistent \
+    TRAFFIC_SELF="192.168.2.1 fdc8:64ed:f962:0000:0000:0000:0000:0001" \
+    TRAFFIC_LAN6=fdc8:64ed:f962:
+c2() { awk -F'\t' -v ip="$1" '$1==ip {print $2}' "$T/state2/clients.tsv"; }
+chk "20 路由器自身 v4 地址不计入客户端"     ""                  "$(c2 '192.168.2.1')"
+chk "20a 路由器自身 v6 地址不计入客户端"    ""                  "$(c2 'fdc8:64ed:f962:0000:0000:0000:0000:0001')"
+chk "20b v6 客户端仍被统计"                 "4400"              "$(c2 'fdc8:64ed:f962:0000:0000:0000:0000:0050')"
+chk "20c v4 客户端仍被统计"                 "1100"              "$(c2 '192.168.2.50')"
+chk "20d 客户端恰好两台"                    "2"                 "$(grep -c . "$T/state2/clients.tsv")"
+chk "20e 自身流量归入 router 而非客户端"    "5500"              "$(cat "$T/state2/router.tsv")"
+chk "20f 快照不把自身地址列为客户端"        "0"                 "$(grep -o '"ip":"192.168.2.1"' "$T/state2/summary.json" 2>/dev/null | wc -l | tr -d ' ')"
+chk "20g 快照报告自身地址（页面可见）"      "192.168.2.1 fdc8:64ed:f962:0000:0000:0000:0000:0001" \
+    "$(grep -o '"self":"[^"]*"' "$T/state2/summary.json" 2>/dev/null | cut -d'"' -f4)"
+
+echo
+echo "=== 状态版本变更后重建存量计数器 ==="
+# /tmp/traffic survives an upgrade, so the row that used to be the box's own
+# address is already in clients.tsv - and a running total is only ever added to,
+# so it would sit at the top of the client list forever.  An older schema forces
+# a rebuild; the same schema must not, or every restart would wipe the counters.
+mkdir -p "$T/state3" "$T/data3"
+printf '192.168.2.1\t39587169\n' > "$T/state3/clients.tsv"
+printf '999\n' > "$T/state3/version"
+run_collector_at 30 "$T/state3" "$T/data3" "$T/ct" "$T/ql"
+c3() { awk -F'\t' -v ip="$1" '$1==ip {print $2}' "$T/state3/clients.tsv"; }
+chk "21 旧版本的存量客户端行被清除"         ""                  "$(c3 '192.168.2.1')"
+chk "21a 新版本号已写入"                    "1"                 "$(sed -n '1p' "$T/state3/version")"
+chk "21b 计数器是从新数据重建的"            "72600"             "$(c3 '192.168.2.138')"
+# second run: the schema now matches, so the totals must survive it untouched
+run_collector_at 30 "$T/state3" "$T/data3" "$T/ct" "$T/ql"
+chk "21c 版本未变时不会清空计数器"          "72600"             "$(c3 '192.168.2.138')"
 
 echo
 if [ "$fail" = 0 ]; then echo "=== 全部通过 ==="; else echo "=== 有失败 ==="; fi
