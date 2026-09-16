@@ -343,8 +343,10 @@ return view.extend({
 		poll.add(L.bind(function() {
 			this.ticks = (this.ticks || 0) + 1;
 			/* the chart moves on a slower clock than the counters: a redraw
-			 * every 5 s of 360 points is work nobody can see */
-			if (this.ticks % 6 === 0) this.loadSeries();
+			 * every 5 s of 360 points is work nobody can see.  A tab that was
+			 * hidden is refreshed at once, though, so it never shows stale
+			 * numbers after being brought back. */
+			if (this.seriesStale || this.ticks % 6 === 0) this.loadSeries();
 			return this.refresh(false);
 		}, this), 5);
 		return node;
@@ -365,6 +367,14 @@ return view.extend({
 
 	loadSeries: function() {
 		var self = this;
+		/* a hidden tab has nobody looking at it: skip the RPC and the redraw
+		 * until it comes back, then draw immediately (the poll below keeps
+		 * running, so the first visible tick refreshes it) */
+		if (document.hidden) {
+			this.seriesStale = true;
+			return Promise.resolve();
+		}
+		this.seriesStale = false;
 		return callSeries(this.seriesRange).then(function(s) {
 			self.series = s || null;
 			self.drawSeries();
