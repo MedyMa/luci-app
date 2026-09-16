@@ -57,6 +57,7 @@ printf '192.168.2.138\tx.fastly.net\t3.3.3.3\n'
 printf '192.168.2.138\tdeep.cdn.example.com\t4.4.4.4\n'
 printf '192.168.2.138\ta.bar.co.uk\t7.7.7.7\n'
 printf '192.168.2.138\tshop.unknownsite.org\t8.8.8.8\n'
+printf '192.168.2.138\tWWW.MEITUAN.COM\t10.10.10.10\n'
 printf '192.168.2.139\texample.org\t9.9.9.9\n'
 exit 0
 EOF
@@ -71,6 +72,7 @@ chmod +x "$T/bin/lua"
     printf 'Example\texample.com\tS\n'
     printf 'Foo Bar UK\tbar.co.uk\tS\n'
     printf 'Example Org\texample.org\tS\n'
+    printf 'Meituan\tmeituan.com\tS\n'
 } > "$T/apps.tsv"
 printf '# category<TAB>suffix\nCDN\tfastly.net\nAds\tdoubleclick.net\n' > "$T/categories.tsv"
 printf '{"IP":"192.168.2.138","QH":"x","Answer":"y"}\n'  > "$T/ql"
@@ -88,7 +90,8 @@ ipv4 2 tcp 6 119 ESTABLISHED src=192.168.2.138 dst=6.6.6.6 sport=1007 dport=554 
 ipv4 2 tcp 6 119 ESTABLISHED src=192.168.2.138 dst=7.7.7.7 sport=1008 dport=443 packets=1 bytes=800 tos=0 src=7.7.7.7 dst=192.168.2.138 sport=443 dport=1008 packets=1 bytes=8000 tos=0 [ASSURED] mark=0 zone=0 use=2
 ipv4 2 tcp 6 119 ESTABLISHED src=192.168.2.138 dst=8.8.8.8 sport=1009 dport=443 packets=1 bytes=900 tos=0 src=8.8.8.8 dst=192.168.2.138 sport=443 dport=1009 packets=1 bytes=9000 tos=0 [ASSURED] mark=0 zone=0 use=2
 ipv4 2 tcp 6 119 ESTABLISHED src=192.168.2.138 dst=9.9.9.9 sport=1010 dport=443 packets=1 bytes=1000 tos=0 src=9.9.9.9 dst=192.168.2.138 sport=443 dport=1010 packets=1 bytes=10000 tos=0 [ASSURED] mark=0 zone=0 use=2
-ipv4 2 tcp 6 119 ESTABLISHED src=192.168.1.6 dst=45.149.157.234 sport=1011 dport=443 packets=1 bytes=800 tos=0 src=45.149.157.234 dst=192.168.1.6 sport=443 dport=1011 packets=1 bytes=8000 tos=0 [ASSURED] mark=0 zone=0 use=2
+ipv4 2 tcp 6 119 ESTABLISHED src=192.168.2.138 dst=10.10.10.10 sport=1011 dport=443 packets=1 bytes=1100 tos=0 src=10.10.10.10 dst=192.168.2.138 sport=443 dport=1011 packets=1 bytes=11000 tos=0 [ASSURED] mark=0 zone=0 use=2
+ipv4 2 tcp 6 119 ESTABLISHED src=192.168.1.6 dst=45.149.157.234 sport=1012 dport=443 packets=1 bytes=800 tos=0 src=45.149.157.234 dst=192.168.1.6 sport=443 dport=1012 packets=1 bytes=8000 tos=0 [ASSURED] mark=0 zone=0 use=2
 EOF
 
 run_collector() {
@@ -124,21 +127,22 @@ chk "4  多标签后缀 (bar.co.uk)"          "800/8000"   "$(row 'Foo Bar UK')"
 chk "5  类别后缀命中 -> CDN"             "300/3000"   "$(row 'CDN')"
 chk "6  无表项 -> 站点自身域名"           "900/9000"   "$(row 'unknownsite.org')"
 chk "7  其他客户端解析过该地址 -> 命中"    "1000/10000" "$(row 'Example Org')"
+chk "7b 大写主机名归一化后仍命中"          "1100/11000" "$(row 'Meituan')"
 chk "8a 无 DNS + tcp/443 -> SSL/TLS"     "500/5000"   "$(row 'SSL/TLS')"
 chk "8b 无 DNS + udp/443 -> QUIC"        "600/6000"   "$(row 'QUIC')"
 chk "8c 无 DNS + tcp/554 -> RTSP"        "700/7000"   "$(row 'RTSP')"
 chk "10 隧道流单独统计"                   "8800"       "$(cat "$T/state/router.tsv")"
-chk "11 三类计数合计 = 客户端总量"         "60500"      "$(awk -F'\t' '{s+=$1+$2+$3+$4} END{print s+0}' "$T/state/stat.tsv")"
-chk "11a 命名(同客户端 DNS)"              "26400"      "$(cut -f1 "$T/state/stat.tsv")"
+chk "11 三类计数合计 = 客户端总量"         "72600"      "$(awk -F'\t' '{s+=$1+$2+$3+$4} END{print s+0}' "$T/state/stat.tsv")"
+chk "11a 命名(同客户端 DNS)"              "38500"      "$(cut -f1 "$T/state/stat.tsv")"
 chk "11b 命名(任意客户端 DNS)"            "11000"      "$(cut -f2 "$T/state/stat.tsv")"
 chk "11c 分类归入"                        "3300"       "$(cut -f3 "$T/state/stat.tsv")"
 chk "11d 其他（协议桶）"                  "19800"      "$(cut -f4 "$T/state/stat.tsv")"
-chk "12 隧道未混入应用列表"               "10"         "$(grep -c . "$T/state/totals.tsv")"
+chk "12 隧道未混入应用列表"               "11"         "$(grep -c . "$T/state/totals.tsv")"
 # read a field out of the snapshot's totals object only - a bare grep for
 # "down": would also match every per-application entry
 tot() { grep -o '"totals":{[^}]*}' "$T/state/summary.json" | grep -o "\"$1\":[0-9]*" | cut -d: -f2; }
-chk "13 快照 totals.down"                 "55000"      "$(tot down)"
-chk "13a 快照 totals.up"                  "5500"       "$(tot up)"
+chk "13 快照 totals.down"                 "66000"      "$(tot down)"
+chk "13a 快照 totals.up"                  "6600"       "$(tot up)"
 chk "13b 快照 totals.router"              "8800"       "$(tot router)"
 
 echo
@@ -148,6 +152,7 @@ chk "14a namemap 记录最长后缀命中"         "app Deep"          "$(nm 'de
 chk "14b namemap 记录类别归入"             "cat CDN"           "$(nm 'x.fastly.net')"
 chk "14c namemap 记录站点兜底"             "site unknownsite.org" "$(nm 'shop.unknownsite.org')"
 chk "14d namemap 未收录无关主机"           ""                  "$(nm 'not.in.the.map')"
+chk "14e namemap 键已归一化为小写"         "app Meituan"       "$(nm 'www.meituan.com')"
 # the catalogue was already read once; without new host names it must not grow
 nm_before=$(grep -c . "$T/state/namemap.tsv")
 
@@ -163,6 +168,7 @@ echo "=== 目录变更必须让缓存失效 ==="
     printf 'Example\texample.com\tS\n'
     printf 'Foo Bar UK\tbar.co.uk\tS\n'
     printf 'Example Org\texample.org\tS\n'
+    printf 'Meituan\tmeituan.com\tS\n'
     printf 'Fastly\tfastly.net\tS\n'
 } > "$T/apps.tsv"
 run_collector 5

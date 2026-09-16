@@ -79,6 +79,8 @@ get_config() {
 	json_add_string retention_days "$(uci -q get traffic.settings.retention_days)"
 	json_add_string top_apps "$(uci -q get traffic.settings.top_apps)"
 	json_add_string top_clients "$(uci -q get traffic.settings.top_clients)"
+	json_add_string resolve_interval "$(uci -q get traffic.settings.resolve_interval)"
+	json_add_string dnsmap_max "$(uci -q get traffic.settings.dnsmap_max)"
 	json_dump
 }
 

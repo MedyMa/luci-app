@@ -86,6 +86,7 @@ Home's workdir. Both are shown on the page and can be overridden.
 | `retention_days` | `7` | how much hourly history to keep |
 | `top_apps` / `top_clients` | `50` / `20` | how many entries the snapshot carries |
 | `resolve_interval` | `30` | minimum seconds between catalogue reads (see below) |
+| `dnsmap_max` | `50000` | upper bound on the `(client, host, ip)` map |
 
 Every option can also be set through the environment (`TRAFFIC_INTERVAL`,
 `TRAFFIC_QUERYLOG`, …), which is how the offline tests drive it.

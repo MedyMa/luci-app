@@ -66,6 +66,9 @@ CFG_TOP_CLIENTS=20
 # wait, and until then they show as their registrable domain.  A large batch
 # (first run, or a burst) is resolved immediately.
 CFG_RESOLVE=30
+# Upper bound on the (client, host, ip) map; older entries are dropped once an
+# hour.  Names already resolved are kept separately, so this only bounds memory.
+CFG_DNSMAP_MAX=50000
 
 log() { logger -t traffic "$*"; }
 
@@ -88,6 +91,7 @@ uci_get() {
         top_apps)       v=${TRAFFIC_TOP_APPS:-} ;;
         top_clients)    v=${TRAFFIC_TOP_CLIENTS:-} ;;
         resolve_interval) v=${TRAFFIC_RESOLVE:-} ;;
+        dnsmap_max)     v=${TRAFFIC_DNSMAP_MAX:-} ;;
     esac
     if [ -n "$v" ]; then printf '%s\n' "$v"; return 0; fi
 
@@ -157,6 +161,7 @@ load_config() {
     v=$(uci_get top_apps);       [ -n "$v" ] && CFG_TOP_APPS=$v
     v=$(uci_get top_clients);    [ -n "$v" ] && CFG_TOP_CLIENTS=$v
     v=$(uci_get resolve_interval); [ -n "$v" ] && CFG_RESOLVE=$v
+    v=$(uci_get dnsmap_max);     [ -n "$v" ] && CFG_DNSMAP_MAX=$v
 
     # sanity
     case "$CFG_INTERVAL" in ''|*[!0-9]*) CFG_INTERVAL=10 ;; esac
@@ -165,6 +170,7 @@ load_config() {
     case "$CFG_TOP_APPS" in ''|*[!0-9]*) CFG_TOP_APPS=50 ;; esac
     case "$CFG_TOP_CLIENTS" in ''|*[!0-9]*) CFG_TOP_CLIENTS=20 ;; esac
     case "$CFG_RESOLVE" in ''|*[!0-9]*) CFG_RESOLVE=30 ;; esac
+    case "$CFG_DNSMAP_MAX" in ''|*[!0-9]*) CFG_DNSMAP_MAX=50000 ;; esac
 }
 
 # ---------------------------------------------------------------- state
@@ -194,8 +200,14 @@ poll_dns() {
     # a rotated (smaller) file means we start over
     [ "$size" -lt "$off" ] && off=0
     if [ "$size" -gt "$off" ]; then
+        # Lower-cased on the way in: DNS names are case-insensitive, and a
+        # client that shouts must not miss the catalogue.  It also makes IPv6
+        # literals agree with the way conntrack writes them.  Doing it here
+        # keeps tolower() out of every awk program - busybox awk is not
+        # guaranteed to have it.
         tail -c +$((off + 1)) "$CFG_QUERYLOG" 2>/dev/null \
-            | "$LUA" "$SELF_DIR/ans.lua" 2>/dev/null >> "$STATE_DIR/dnsmap.tsv"
+            | "$LUA" "$SELF_DIR/ans.lua" 2>/dev/null \
+            | tr 'A-Z' 'a-z' >> "$STATE_DIR/dnsmap.tsv"
     fi
     # Remember where we stopped.  A line still being written may be skipped;
     # at one line per round that is not worth the complexity of buffering.
@@ -266,7 +278,6 @@ resolve_batch() {
         close(catmap)
         while ((getline h < hosts) > 0) {
             sub(/\r$/, "", h)
-            h = tolower(h)
             if (h == "") continue
             if (h in ahost)      { print h "\tapp\t" ahost[h]; continue }
             n = longest(h, asuf)
@@ -316,7 +327,6 @@ resolve_names() {
             {
                 h = $2
                 sub(/\r$/, "", h)
-                h = tolower(h)
                 if (h != "" && !(h in known) && !(h in got)) { got[h] = 1; print h }
             }' > "$STATE_DIR/newhosts.txt" 2>/dev/null
 
@@ -505,8 +515,8 @@ classify() {
         else {
             # resolve_names() answered this host name already; the fallback only
             # covers the first poll of a brand new name.
-            if (tolower(dom) in nm) { split(nm[tolower(dom)], np, "\t"); kind = np[1]; a = np[2] }
-            else                    { kind = "site"; a = app_of(dom) }
+            if (dom in nm) { split(nm[dom], np, "\t"); kind = np[1]; a = np[2] }
+            else           { kind = "site"; a = app_of(dom) }
 
             if (kind == "cat") k_b += t
             else if (via == "exact") m_c += t
@@ -551,8 +561,25 @@ roll_hour() {
     : > "$STATE_DIR/ac.tsv"
     printf '0\n0\n0\n0\n' > "$STATE_DIR/stat.tsv"
     prune_hourly
+    prune_dnsmap
     printf '%s\n' "$hour" > "$STATE_DIR/hour"
     log "hourly bucket $hour written"
+}
+
+# Bound the (client, host, ip) map.  It only grows while the box is up, and
+# classify() reads it on every poll, so a busy network would slowly make every
+# poll more expensive.  Names already resolved live in namemap.tsv and survive
+# this, so a pruned entry degrades to "no DNS answer" for that address only.
+prune_dnsmap() {
+    local max=$CFG_DNSMAP_MAX n
+    [ "$max" -gt 0 ] || return 0
+    n=$(wc -l < "$STATE_DIR/dnsmap.tsv" 2>/dev/null || echo 0)
+    [ "$n" -gt "$max" ] || return 0
+    tail -n "$max" "$STATE_DIR/dnsmap.tsv" > "$STATE_DIR/dnsmap.new" 2>/dev/null \
+        && mv -f "$STATE_DIR/dnsmap.new" "$STATE_DIR/dnsmap.tsv"
+    # byte offsets into the file are meaningless after a rewrite
+    printf '0\n' > "$STATE_DIR/nmoff"
+    log "dnsmap pruned: $n -> $max entries"
 }
 
 # Keep only the newest $CFG_RETENTION*24 distinct hours.

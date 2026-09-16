@@ -22,3 +22,7 @@ config traffic 'settings'
 # they wait, and until then they show as their registrable domain.  A large
 # batch (first start, or a burst) is resolved immediately either way.
 option resolve_interval '30'
+# upper bound on the (client, host, ip) map; older entries are dropped once an
+# hour.  Names already resolved are cached separately, so this bounds memory
+# without losing the catalogue's answers.
+option dnsmap_max '50000'
