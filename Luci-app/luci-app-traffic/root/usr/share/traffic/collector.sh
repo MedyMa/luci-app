@@ -621,6 +621,20 @@ COLLECTOR_VERSION=dev
 
 acct_available() { command -v nft >/dev/null 2>&1; }
 
+# Every nft call is bounded.  nft takes the nftables lock, and any other writer
+# holding it - a firewall reload, passwall reconfiguring itself - would otherwise
+# block this call forever and freeze the whole collector loop with it.  That
+# failure looks like a page that never updates, with nothing in the log, which is
+# the worst way to fail; a bounded call turns it into a plain failure that the
+# fallback already handles.
+nft_run() {
+    if command -v timeout >/dev/null 2>&1; then
+        timeout "${NFT_TIMEOUT:-5}" nft "$@"
+    else
+        nft "$@"
+    fi
+}
+
 # The LAN device: what separates client traffic from the proxy own.
 detect_lan_dev() {
     local br
@@ -672,25 +686,25 @@ acct_sync() {
     hosts=$(acct_hosts | sort -u | tr '\n' ' ')
     cur=$(cat "$STATE_DIR/acct.hosts" 2>/dev/null)
     if [ "$hosts" = "$cur" ] && [ "$lan" = "$(cat "$STATE_DIR/acct.dev" 2>/dev/null)" ] &&
-       nft list chain $ACCT_TABLE pre >/dev/null 2>&1 && nft list chain $ACCT_TABLE post >/dev/null 2>&1; then
+       nft_run list chain $ACCT_TABLE pre >/dev/null 2>&1 && nft_run list chain $ACCT_TABLE post >/dev/null 2>&1; then
         return 0
     fi
 
-    nft add table $ACCT_TABLE 2>/dev/null
-    nft add chain $ACCT_TABLE pre '{ type filter hook prerouting priority raw; policy accept; }' 2>/dev/null
-    nft add chain $ACCT_TABLE post '{ type filter hook postrouting priority 101; policy accept; }' 2>/dev/null
-    nft list chain $ACCT_TABLE pre >/dev/null 2>&1 || return 1
-    nft list chain $ACCT_TABLE post >/dev/null 2>&1 || return 1
-    nft flush chain $ACCT_TABLE pre 2>/dev/null
-    nft flush chain $ACCT_TABLE post 2>/dev/null
+    nft_run add table $ACCT_TABLE 2>/dev/null
+    nft_run add chain $ACCT_TABLE pre '{ type filter hook prerouting priority raw; policy accept; }' 2>/dev/null
+    nft_run add chain $ACCT_TABLE post '{ type filter hook postrouting priority 101; policy accept; }' 2>/dev/null
+    nft_run list chain $ACCT_TABLE pre >/dev/null 2>&1 || return 1
+    nft_run list chain $ACCT_TABLE post >/dev/null 2>&1 || return 1
+    nft_run flush chain $ACCT_TABLE pre 2>/dev/null
+    nft_run flush chain $ACCT_TABLE post 2>/dev/null
 
     local h
     for h in $hosts; do
         case "$h" in
-            *:*) nft add rule $ACCT_TABLE pre  iifname "$lan" ip6 saddr "$h" counter 2>/dev/null
-                 nft add rule $ACCT_TABLE post oifname "$lan" ip6 daddr "$h" counter 2>/dev/null ;;
-            *)   nft add rule $ACCT_TABLE pre  iifname "$lan" ip saddr "$h" counter 2>/dev/null
-                 nft add rule $ACCT_TABLE post oifname "$lan" ip daddr "$h" counter 2>/dev/null ;;
+            *:*) nft_run add rule $ACCT_TABLE pre  iifname "$lan" ip6 saddr "$h" counter 2>/dev/null
+                 nft_run add rule $ACCT_TABLE post oifname "$lan" ip6 daddr "$h" counter 2>/dev/null ;;
+            *)   nft_run add rule $ACCT_TABLE pre  iifname "$lan" ip saddr "$h" counter 2>/dev/null
+                 nft_run add rule $ACCT_TABLE post oifname "$lan" ip daddr "$h" counter 2>/dev/null ;;
         esac
     done
     printf '%s\n' "$hosts" > "$STATE_DIR/acct.hosts"
@@ -701,7 +715,7 @@ acct_sync() {
 # Print "<address> <TAB> <bytes>" for every counting rule in one chain.  The
 # field order is searched rather than assumed, so it survives nft print changes.
 acct_read() {
-    nft list chain $ACCT_TABLE "$1" 2>/dev/null | awk '
+    nft_run list chain $ACCT_TABLE "$1" 2>/dev/null | awk '
         {
             a = ""; b = ""
             for (i = 1; i <= NF; i++) {
@@ -1090,6 +1104,24 @@ write_summary() {
     {
         printf '{"collected_at":%s,"interval":%s,"hour":"%s","flows":%s,"dnsmap_lines":%s,' \
             "$(date +%s 2>/dev/null || echo 0)" "$CFG_INTERVAL" "$(json_escape "$hour")" "$flows" "$dnsmap"
+        # Collector metadata, at the top level of the snapshot because that is
+        # where the page reads it from: which build is running, whether the
+        # per-host counters are behind the client totals, how many host names are
+        # still waiting, and which addresses count as the box itself.  These are
+        # not totals and must not be nested inside "totals", or the page would
+        # silently render none of them.
+        printf '"version":"%s"' "$COLLECTOR_VERSION"
+        printf ',"acct":%s' "$ACCT_ON"
+        if [ "$ACCT_ON" = "1" ]; then
+            printf ',"accounted":{'
+            awk -F'\t' '{ d += $2; u += $3 } END { printf "\"down\":%d,\"up\":%d}", d + 0, u + 0 }' \
+                "$STATE_DIR/acct.tsv" 2>/dev/null || printf '"down":0,"up":0}'
+        fi
+        [ -s "$STATE_DIR/acct.off" ] && printf ',"acct_error":"%s"' "$(json_escape "$(sed -n '1p' "$STATE_DIR/acct.off")")"
+        printf ',"pending":%s' "$(sed -n '1p' "$STATE_DIR/pending" 2>/dev/null || echo 0)"
+        # which addresses count as the box itself: shown by the page, and the
+        # first thing to look at when a client list seems to have the box in it
+        printf ',"self":"%s"' "$(printf '%s' "$CFG_SELF" | tr ' ' '\n' | grep -v '^$' | head -4 | tr '\n' ' ' | sed -e 's/ *$//' -e 's/\\/\\\\/g' -e 's/"/\\"/g')"
         # Per-application client breakdown, rebuilt with every snapshot: how
         # many devices used an application, and which one carried most of it.
         # The output is redirected explicitly so it does not land in the
@@ -1100,7 +1132,7 @@ write_summary() {
             END { for (k in sum) printf "%s\t%d\t%d\t%s\n", k, cnt[k], best[k], who[k] }
         ' "$STATE_DIR/ac.tsv" 2>/dev/null > "$STATE_DIR/ac.agg"
 
-        printf '"querylog":"%s","apps":[' "$(json_escape "$CFG_QUERYLOG")"
+        printf ',"querylog":"%s","apps":[' "$(json_escape "$CFG_QUERYLOG")"
         # The heaviest N applications are picked inside awk instead of by a
         # "sort | head | awk" pipeline: the table is small but the pipeline cost
         # three processes on every snapshot, and a snapshot is written on every
@@ -1186,24 +1218,6 @@ write_summary() {
         }' "$STATE_DIR/totals.tsv" 2>/dev/null
         printf ',"router":%s' "$(cat "$STATE_DIR/router.tsv" 2>/dev/null || echo 0)"
         printf ',"client_count":%s' "$(wc -l < "$STATE_DIR/clients.tsv" 2>/dev/null || echo 0)"
-        printf ',"version":"%s"' "$COLLECTOR_VERSION"
-        # the per-host counters: how much every LAN client really moved, which is
-        # the denominator the application breakdown is measured against.  When
-        # they are not running (no nft, or the table could not be created) the
-        # page is told, instead of being handed suspiciously small numbers.
-        printf ',"acct":%s' "$ACCT_ON"
-        if [ "$ACCT_ON" = "1" ]; then
-            printf ',"accounted":{'
-            awk -F'\t' '{ d += $2; u += $3 } END { printf "\"down\":%d,\"up\":%d}", d + 0, u + 0 }' \
-                "$STATE_DIR/acct.tsv" 2>/dev/null || printf '"down":0,"up":0}'
-        fi
-        [ -s "$STATE_DIR/acct.off" ] && printf ',"acct_error":"%s"' "$(json_escape "$(sed -n '1p' "$STATE_DIR/acct.off")")"
-        # host names still waiting for the resolver: the page asks for them to
-        # be resolved at once while it is open, and does nothing when it is not
-        printf ',"pending":%s' "$(sed -n '1p' "$STATE_DIR/pending" 2>/dev/null || echo 0)"
-        # which addresses count as "the router itself" - shown by the page, and
-        # the first thing to look at when a client list seems to have the box in it
-        printf ',"self":"%s"' "$(printf '%s' "$CFG_SELF" | tr ' ' '\n' | grep -v '^$' | head -4 | tr '\n' ' ' | sed -e 's/ *$//' -e 's/\\/\\\\/g' -e 's/"/\\"/g')"
         # stat.tsv: <named via same client> <named via any client> <bucket> <other>
         awk -F'\t' '{ printf ",\"exact\":%d,\"any\":%d,\"bucket\":%d,\"residual\":%d", $1, $2, $3, $4 }' \
             "$STATE_DIR/stat.tsv" 2>/dev/null

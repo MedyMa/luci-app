@@ -26,7 +26,12 @@ interval() {
 }
 
 empty_summary() {
+	# Same shape as the collector's snapshot, so the page reads one schema
+	# whether the collector has produced anything yet or not.  acct is 0 here
+	# because no counters can be running before the first round; version is
+	# empty because this script does not know which build is installed.
 	printf '{"collected_at":0,"interval":0,"hour":"","flows":0,"dnsmap_lines":0,"pending":0,'
+	printf '"version":"","acct":0,'
 	printf '"querylog":"","apps":[],"clients":[],'
 	printf '"totals":{"down":0,"up":0,"other":0,"router":0,"client_count":0,'
 	printf '"exact":0,"any":0,"bucket":0,"residual":0}}\n'

@@ -462,6 +462,28 @@ chk "23m 降级原因写入快照"                  "nft is not installed" "$(gr
 chk "23n 降级时客户端总量仍由 conntrack 给出" "72600"           "$(awk -F'\t' '$1=="192.168.2.138"{print $2}' "$T/state6/clients.tsv")"
 
 echo
+echo "=== 快照结构（页面读取的字段必须在这一层）==="
+# A field written into the wrong nesting level is invisible: rpcd only checks
+# that the file starts with a brace, and the page simply reads undefined.  The
+# whole status strip lost its rows that way once, so the shape is asserted
+# rather than assumed.  awk is used so the suite keeps working without node.
+shape() {
+    # top-level keys only: strip everything inside the nested objects/arrays
+    sed -e 's/,"apps":\[.*$//' -e 's/^[^{]*{//' "$1" \
+        | tr ',' '\n' | sed -n 's/^"\([a-z_]*\)":.*/\1/p'
+}
+chk "25 快照是合法 JSON（首字符）"          "{"                 "$(head -c 1 "$T/state5/summary.json")"
+chk "25a 元数据在顶层：version"             "version"           "$(shape "$T/state5/summary.json" | grep -x version)"
+chk "25b 元数据在顶层：acct"                "acct"              "$(shape "$T/state5/summary.json" | grep -x acct)"
+chk "25c 元数据在顶层：self"                "self"              "$(shape "$T/state5/summary.json" | grep -x self)"
+chk "25d 元数据在顶层：pending"             "pending"           "$(shape "$T/state5/summary.json" | grep -x pending)"
+chk "25e 总量仍在 totals 内"                "1"                 "$(grep -c '"totals":{"down"' "$T/state5/summary.json")"
+chk "25f 元数据没有混进 totals"             "0"                 "$(sed -n 's/.*"totals":{\([^}]*\)}.*/\1/p' "$T/state5/summary.json" | grep -c '"version"')"
+# a snapshot that does not parse is worse than one that is empty, and node is
+# not available on the target, so balance is checked the cheap way
+chk "25g 引号成对（偶数个双引号）"          "0"                 "$(( $(tr -cd '"' < "$T/state5/summary.json" | wc -c) % 2 ))"
+
+echo
 echo "=== dnsmasq 查询日志作为第二域名来源 ==="
 # On a router where passwall has taken dnsmasq over, the proxied domains are
 # answered by passwall and never reach AdGuard Home, and the queries AdGuard
