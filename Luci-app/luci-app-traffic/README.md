@@ -151,6 +151,14 @@ separated in name order, which is likewise rank-independent.
 
 * **Hero card** — total carried by clients, live down/up rates derived from two
   consecutive samples, the range selector and the reset button.
+* **Throughput card** — down/up over time, drawn as plain SVG. The collector
+  keeps two tiers, so the card's buttons choose a *granularity*, not a window
+  width: **10 s points for the last hour** (the sharp view — a burst keeps its
+  shape) and **1 min points for the last day** (the context view). The minute
+  tier lives in `<datadir>/series60.tsv` so it survives a reboot; the 10 s tier
+  is session state in `/tmp`. A quiet round is recorded as a zero point rather
+  than skipped, so a gap in the chart always means the collector was not
+  running, never merely "nothing happened".
 * **Donut card** — the ten largest applications with a matching legend.
 * **List card** — application, down, up, total and share, 30 rows.
 * **Footer card** — proxy tunnel total, client total, and the identification
@@ -222,6 +230,10 @@ the corresponding service; check the upstream licences before redistributing.
 | `/etc/config/traffic` | settings |
 | `/etc/traffic/apps.tsv` | application catalogue (`name`, `key`, `H\|S`) |
 | `/etc/traffic/categories.tsv` | domain suffix → category (CDN, Games, Ads, …) |
+| `/etc/traffic/hourly.tsv` | per-hour history (the persistent totals) |
+| `/etc/traffic/series60.tsv` | 1-minute throughput for the last 24 h |
+| `/tmp/traffic/series10.tsv` | 10-second throughput for the last hour |
+| `/tmp/traffic/namemap.tsv` | host name → resolved name (the catalogue cache) |
 
 Not installed, but shipped in the repository for regeneration and verification:
 

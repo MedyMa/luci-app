@@ -95,11 +95,12 @@ ipv4 2 tcp 6 119 ESTABLISHED src=192.168.1.6 dst=45.149.157.234 sport=1012 dport
 EOF
 
 run_collector() {
-    UCI=/bin/true LUA="$T/bin/lua" CT="$T/ct" TRAFFIC_QUERYLOG="$T/ql" TRAFFIC_LAN4=192.168.2. \
+    local t="$1"; shift
+    env "$@" UCI=/bin/true LUA="$T/bin/lua" CT="$T/ct" TRAFFIC_QUERYLOG="$T/ql" TRAFFIC_LAN4=192.168.2. \
       TRAFFIC_INTERVAL=2 TRAFFIC_DATADIR="$T/data" \
       TRAFFIC_APPMAP="$T/apps.tsv" TRAFFIC_CATEGORIES="$T/categories.tsv" \
       STATE_DIR="$T/state" SELF_DIR="$(cd "$SELF/../root/usr/share/traffic" && pwd)" \
-      timeout "$1" sh "$COLLECTOR" >/dev/null 2>&1
+      timeout "$t" sh "$COLLECTOR" >/dev/null 2>&1
 }
 
 run_collector 8
@@ -157,6 +158,14 @@ chk "14e namemap 键已归一化为小写"         "app Meituan"       "$(nm 'ww
 nm_before=$(grep -c . "$T/state/namemap.tsv")
 
 echo
+echo "=== 吞吐时间序列（两级粒度）==="
+# every round records one point, so the two tiers must agree with the totals
+chk "16 series10 点与 totals 自洽（下行）"  "66000" "$(awk -F'\t' '{s+=$2} END{print s+0}' "$T/state/series10.tsv")"
+chk "16a series10 点与 totals 自洽（上行）" "6600"  "$(awk -F'\t' '{s+=$3} END{print s+0}' "$T/state/series10.tsv")"
+chk "16b 至少记录了 1 个采样点"             "yes"   "$(awk 'END{print (NR>=1)?"yes":"no"}' "$T/state/series10.tsv")"
+chk "16c minute 累加器对齐整分钟"           "0"     "$(( $(sed -n '1p' "$T/state/minute.tsv") % 60 ))"
+
+echo
 echo "=== 目录变更必须让缓存失效 ==="
 # Rewrite the application table (a different size, as a real upgrade would be)
 # and point the suffix at a new name: the cached answer has to be replaced.
@@ -171,10 +180,27 @@ echo "=== 目录变更必须让缓存失效 ==="
     printf 'Meituan\tmeituan.com\tS\n'
     printf 'Fastly\tfastly.net\tS\n'
 } > "$T/apps.tsv"
+# also stage a finished minute, so the next run has to fold it into the day tier
+printf '%s\n%s\n%s\n' "$(( $(date +%s) / 60 * 60 - 60 ))" 4242 424 > "$T/state/minute.tsv"
 run_collector 5
 chk "15 目录变更后 namemap 重新解析"       "app Fastly"        "$(nm 'x.fastly.net')"
 chk "15a 目录变更后长后缀重新解析"         "app Deep CDN"      "$(nm 'deep.cdn.example.com')"
 chk "15b 缓存未被重复追加"                 "$nm_before"        "$(grep -c . "$T/state/namemap.tsv")"
+chk "17 跨分钟后上一分钟落盘 series60"     "4242/424"          "$(awk -F'\t' 'END{print $2"/"$3}' "$T/data/series60.tsv")"
+chk "17a series60 只保留完整分钟"          "0"                 "$(( $(awk -F'\t' 'END{print $1}' "$T/data/series60.tsv") % 60 ))"
+# the conntrack snapshot is unchanged since the first run, so these rounds carry
+# no traffic at all - and a quiet round must still get a point, otherwise the
+# chart would show a hole instead of zero
+chk "17b 无流量轮次记录为 0 点"            "yes"               "$(awk -F'\t' '$2=="0" && $3=="0" {print "yes"; exit}' "$T/state/series10.tsv" | grep -q . && echo yes || echo no)"
+
+echo
+echo "=== 冷数据窗口上限 ==="
+# shrink the day tier to 3 points and pre-fill it: the oldest must be dropped
+printf '1\t1\t1\n2\t2\t2\n3\t3\t3\n4\t4\t4\n5\t5\t5\n' > "$T/data/series60.tsv"
+printf '%s\n%s\n%s\n' "$(( $(date +%s) / 60 * 60 - 60 ))" 77 7 > "$T/state/minute.tsv"
+run_collector 4 TRAFFIC_SERIES_COLD=180
+chk "18 series60 裁剪到上限（3 点）"       "3"                 "$(grep -c . "$T/data/series60.tsv")"
+chk "18a 保留的是最新点而非最旧点"         "77/7"              "$(awk -F'\t' 'END{print $2"/"$3}' "$T/data/series60.tsv")"
 
 echo
 if [ "$fail" = 0 ]; then echo "=== 全部通过 ==="; else echo "=== 有失败 ==="; fi

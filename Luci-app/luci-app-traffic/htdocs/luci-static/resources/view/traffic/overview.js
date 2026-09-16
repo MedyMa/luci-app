@@ -7,6 +7,7 @@
 var callSummary = rpc.declare({ object: 'luci.traffic', method: 'getSummary' });
 var callHourly  = rpc.declare({ object: 'luci.traffic', method: 'getHourly', params: [ 'hours' ] });
 var callReset   = rpc.declare({ object: 'luci.traffic', method: 'resetStats', params: [ 'what' ] });
+var callSeries  = rpc.declare({ object: 'luci.traffic', method: 'getSeries', params: [ 'range' ] });
 
 /* Vivid, evenly spaced hues: bright enough to read on a light card and to keep
  * their identity on a dark one. */
@@ -16,6 +17,16 @@ var PALETTE = [
 ];
 
 var ICON = 26;   /* one size everywhere: list rows, donut legend */
+
+/* Throughput history.  The collector keeps two tiers, so the range selector on
+ * the chart is a choice of granularity, not of window width: 10 s points for
+ * the last hour, 1 min points for the last day.  A point is [epoch, down, up]
+ * in bytes, and the rate is bytes divided by the tier's interval. */
+var SERIES_RANGES = {
+	'1h':  { label: 'Last hour',      interval: 10 },
+	'24h': { label: 'Last 24 hours',  interval: 60 }
+};
+var CHART_W = 720, CHART_H = 190, CHART_PAD = { l: 10, r: 10, t: 14, b: 22 };
 
 /* Names that are not an application or a website but a bucket: a protocol
  * (SSL/TLS, QUIC, ...) or an infrastructure category (CDN, Ads, ...).  They are
@@ -146,6 +157,87 @@ function makeDonut(items, total) {
 
 function el(tag, attrs, children) { return E(tag, attrs || {}, children || []); }
 
+/* "14:05" for the axis labels, from an epoch in seconds. */
+function hhmm(t) {
+	var d = new Date((Number(t) || 0) * 1000);
+	function p(n) { return (n < 10 ? '0' : '') + n; }
+	return p(d.getHours()) + ':' + p(d.getMinutes());
+}
+
+/* Round the top of the axis to a value that also reads well: the ladder is
+ * binary because fmtRate() labels in KiB/MiB, so 1.5 MiB/s is a nicer gridline
+ * than 1.91 MiB/s. */
+function niceTop(peak) {
+	if (!(peak > 0)) return 1;
+	var k = Math.floor(Math.log(peak) / Math.log(1024));
+	if (k < 0) k = 0;
+	var base = Math.pow(1024, k), m = peak / base;
+	var ladder = [ 1, 1.5, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256, 384, 512, 768, 1024 ];
+	for (var i = 0; i < ladder.length; i++)
+		if (m <= ladder[i] + 1e-9) return ladder[i] * base;
+	return 1024 * base;
+}
+
+/* The throughput chart: one stroked polyline per direction over a translucent
+ * area, drawn by hand so it needs no chart library and inherits the page's
+ * colours.  A flat zero reads as a line on the floor rather than as a gap. */
+function makeChart(series) {
+	var pad = CHART_PAD, W = CHART_W, H = CHART_H;
+	var iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
+	var n = series.length;
+
+	var peak = 0;
+	for (var i = 0; i < n; i++) {
+		if (series[i].down > peak) peak = series[i].down;
+		if (series[i].up > peak) peak = series[i].up;
+	}
+	var top = niceTop(peak);
+
+	var x = function(k) { return pad.l + (n < 2 ? iw / 2 : (k * iw) / (n - 1)); };
+	var y = function(v) { return pad.t + ih - (Math.max(0, Math.min(1, v / top)) * ih); };
+
+	var svg = E('svg', {
+		'class': 'tf-chart-svg', 'viewBox': '0 0 ' + W + ' ' + H, 'role': 'img'
+	});
+
+	/* horizontal grid, with the value on each line */
+	for (var gi = 0; gi <= 2; gi++) {
+		var gv = top * (gi / 2), gy = y(gv);
+		svg.appendChild(E('line', {
+			'x1': pad.l, 'x2': W - pad.r, 'y1': gy, 'y2': gy,
+			'stroke': 'rgba(140,160,180,.20)', 'stroke-width': 1,
+			'stroke-dasharray': gi === 0 ? '' : '3 4'
+		}));
+		svg.appendChild(E('text', {
+			'x': W - pad.r - 2, 'y': gy - 3, 'text-anchor': 'end',
+			'class': 'tf-chart-tick'
+		}, [ fmtRate(gv) ]));
+	}
+
+	function path(key, fill) {
+		var d = '', area = '';
+		for (var k = 0; k < n; k++) {
+			d += (k ? 'L' : 'M') + x(k).toFixed(1) + ' ' + y(series[k][key]).toFixed(1) + ' ';
+		}
+		area = d + 'L' + x(n - 1).toFixed(1) + ' ' + (pad.t + ih) + ' L' + x(0).toFixed(1) + ' ' + (pad.t + ih) + ' Z';
+		if (fill) svg.appendChild(E('path', { 'd': area, 'fill': fill, 'stroke': 'none' }));
+		svg.appendChild(E('path', {
+			'd': d, 'fill': 'none', 'stroke': key === 'down' ? '#00a8e8' : '#26c281',
+			'stroke-width': 1.6, 'stroke-linejoin': 'round', 'stroke-linecap': 'round'
+		}));
+	}
+
+	path('down', 'rgba(0,168,232,.13)');
+	path('up', 'rgba(38,194,129,.11)');
+
+	/* first and last timestamp, so the window is unambiguous */
+	svg.appendChild(E('text', { 'x': pad.l, 'y': H - 6, 'class': 'tf-chart-tick' }, [ hhmm(series[0].t) ]));
+	svg.appendChild(E('text', { 'x': W - pad.r, 'y': H - 6, 'text-anchor': 'end', 'class': 'tf-chart-tick' },
+		[ hhmm(series[n - 1].t) ]));
+
+	return svg;
+}
+
 return view.extend({
 	summary: null,
 	prev: null,
@@ -165,6 +257,10 @@ return view.extend({
 		this.legendEl = el('div', { 'class': 'tf-legend' });
 		this.rowsEl   = el('tbody');
 		this.metaEl   = el('div', { 'class': 'tf-meta' });
+		this.chartEl  = el('div', { 'class': 'tf-chart' });
+		this.chartNote = el('span', { 'class': 'tf-chart-note' });
+		this.seriesRange = '1h';
+		this.series = null;
 
 		var rangeSel = el('select', { 'class': 'cbi-input-select tf-range', 'change': function(ev) {
 			self.range = ev.target.value;
@@ -205,6 +301,20 @@ return view.extend({
 				el('div', { 'class': 'tf-hero-ctl' }, [ rangeSel, clearBtn ])
 			]),
 
+			el('div', { 'class': 'tf-card tf-chart-card' }, [
+				el('div', { 'class': 'tf-chart-head' }, [
+					el('h3', {}, [ _('Throughput') ]),
+					this.chartNote,
+					el('div', { 'class': 'tf-chart-ctl' }, [
+						el('button', { 'class': 'cbi-button tf-gran tf-gran-on', 'data-range': '1h',
+							'click': function(ev) { self.setSeriesRange('1h', ev.target); } }, [ _('Last hour') ]),
+						el('button', { 'class': 'cbi-button tf-gran', 'data-range': '24h',
+							'click': function(ev) { self.setSeriesRange('24h', ev.target); } }, [ _('Last 24 hours') ])
+					])
+				]),
+				this.chartEl
+			]),
+
 			el('div', { 'class': 'tf-grid' }, [
 				el('div', { 'class': 'tf-card tf-donut-card' }, [
 					el('div', { 'class': 'tf-donut-wrap' }, [ this.donutEl, this.legendEl ])
@@ -229,8 +339,72 @@ return view.extend({
 
 		injectCss();
 		this.refresh(false);
-		poll.add(L.bind(function() { return this.refresh(false); }, this), 5);
+		this.loadSeries();
+		poll.add(L.bind(function() {
+			this.ticks = (this.ticks || 0) + 1;
+			/* the chart moves on a slower clock than the counters: a redraw
+			 * every 5 s of 360 points is work nobody can see */
+			if (this.ticks % 6 === 0) this.loadSeries();
+			return this.refresh(false);
+		}, this), 5);
 		return node;
+	},
+
+	setSeriesRange: function(range, btn) {
+		if (!SERIES_RANGES[range] || this.seriesRange === range) return;
+		this.seriesRange = range;
+		var bar = btn && btn.parentNode;
+		if (bar) {
+			for (var i = 0; i < bar.childNodes.length; i++) {
+				var b = bar.childNodes[i];
+				if (b.classList) b.classList[b === btn ? 'add' : 'remove']('tf-gran-on');
+			}
+		}
+		this.loadSeries();
+	},
+
+	loadSeries: function() {
+		var self = this;
+		return callSeries(this.seriesRange).then(function(s) {
+			self.series = s || null;
+			self.drawSeries();
+		}).catch(function() {
+			self.series = null;
+			self.drawSeries();
+		});
+	},
+
+	drawSeries: function() {
+		var s = this.series, pts = (s && s.points) || [];
+		var meta = SERIES_RANGES[(s && s.range) || this.seriesRange] || SERIES_RANGES['1h'];
+		var iv = Number(s && s.interval) || meta.interval;
+
+		while (this.chartEl.firstChild) this.chartEl.removeChild(this.chartEl.firstChild);
+
+		if (!pts.length) {
+			this.chartNote.textContent = '';
+			this.chartEl.appendChild(el('div', { 'class': 'tf-chart-empty' }, [ _('No traffic recorded yet.') ]));
+			return;
+		}
+
+		/* bytes in a bucket -> bytes per second, so the axis reads in the same
+		 * unit as the live rates in the hero card */
+		var series = pts.map(function(p) {
+			return { t: Number(p[0]) || 0, down: (Number(p[1]) || 0) / iv, up: (Number(p[2]) || 0) / iv };
+		});
+		this.chartEl.appendChild(makeChart(series));
+
+		var peak = 0, sumD = 0, sumU = 0;
+		series.forEach(function(p) {
+			if (p.down > peak) peak = p.down;
+			if (p.up > peak) peak = p.up;
+			sumD += p.down; sumU += p.up;
+		});
+		var first = series[0].t, last = series[series.length - 1].t;
+		this.chartNote.textContent = _('Peak') + ' ' + fmtRate(peak) +
+			' · ' + _('avg down') + ' ' + fmtRate(sumD / series.length) +
+			' / ' + _('up') + ' ' + fmtRate(sumU / series.length) +
+			' · ' + hhmm(first) + '–' + hhmm(last);
 	},
 
 	refresh: function() {
@@ -451,6 +625,19 @@ function injectCss() {
 		'.tf-page .tf-rate-up .tf-rate-arrow,.tf-page .tf-rate-up b{color:var(--tf-up);}',
 		'.tf-page .tf-rate-cap{font-size:.75rem;color:var(--tf-dim);}',
 		'.tf-page .tf-hero-ctl{margin-left:auto;display:flex;gap:.6rem;align-items:center;}',
+
+		/* throughput chart */
+		'.tf-page .tf-chart-head{display:flex;align-items:baseline;gap:.7rem;flex-wrap:wrap;margin-bottom:.35rem;}',
+		'.tf-page .tf-chart-head h3{margin:0;font-size:.95rem;font-weight:600;}',
+		'.tf-page .tf-chart-note{font-size:.76rem;color:var(--tf-dim);font-variant-numeric:tabular-nums;}',
+		'.tf-page .tf-chart-ctl{margin-left:auto;display:flex;gap:.35rem;}',
+		'.tf-page .tf-chart-ctl .cbi-button{font-size:.74rem;padding:.2rem .6rem;border-radius:8px;',
+		'background:rgba(140,160,180,.14);border:1px solid transparent;color:var(--tf-fg);cursor:pointer;}',
+		'.tf-page .tf-chart-ctl .tf-gran-on{background:rgba(0,168,232,.16);border-color:rgba(0,168,232,.45);',
+		'color:var(--tf-fg);font-weight:600;}',
+		'.tf-page .tf-chart-svg{display:block;width:100%;height:auto;}',
+		'.tf-page .tf-chart-tick{font-size:9px;fill:var(--tf-dim);}',
+		'.tf-page .tf-chart-empty{padding:2.2rem 0;text-align:center;color:var(--tf-dim);font-size:.85rem;}',
 
 		/* layout */
 		'.tf-page .tf-grid{display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-start;}',

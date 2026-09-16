@@ -4,7 +4,7 @@
 		"read": {
 			"uci": [ "traffic" ],
 			"ubus": {
-				"luci.traffic": [ "getSummary", "getHourly", "getConfig" ]
+				"luci.traffic": [ "getSummary", "getHourly", "getConfig", "getSeries" ]
 			}
 		},
 		"write": {

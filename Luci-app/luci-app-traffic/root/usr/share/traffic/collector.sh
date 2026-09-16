@@ -69,6 +69,13 @@ CFG_RESOLVE=30
 # Upper bound on the (client, host, ip) map; older entries are dropped once an
 # hour.  Names already resolved are kept separately, so this only bounds memory.
 CFG_DNSMAP_MAX=50000
+# Two-tier throughput history: a sharp recent window and a coarse long one.
+# 10 s / 1 h keeps the shape of a burst, 1 min / 24 h gives the day's context;
+# the point counts follow from these and the sampling interval.
+CFG_SERIES_HOT=3600
+CFG_SERIES_COLD=86400
+SERIES10_MAX=360
+SERIES60_MAX=1440
 
 log() { logger -t traffic "$*"; }
 
@@ -171,6 +178,13 @@ load_config() {
     case "$CFG_TOP_CLIENTS" in ''|*[!0-9]*) CFG_TOP_CLIENTS=20 ;; esac
     case "$CFG_RESOLVE" in ''|*[!0-9]*) CFG_RESOLVE=30 ;; esac
     case "$CFG_DNSMAP_MAX" in ''|*[!0-9]*) CFG_DNSMAP_MAX=50000 ;; esac
+    # how many samples each tier keeps, from the configured interval
+    case "${TRAFFIC_SERIES_HOT:-}" in ''|*[!0-9]*) ;; *) CFG_SERIES_HOT=$TRAFFIC_SERIES_HOT ;; esac
+    case "${TRAFFIC_SERIES_COLD:-}" in ''|*[!0-9]*) ;; *) CFG_SERIES_COLD=$TRAFFIC_SERIES_COLD ;; esac
+    SERIES10_MAX=$((CFG_SERIES_HOT / CFG_INTERVAL))
+    [ "$SERIES10_MAX" -lt 2 ] && SERIES10_MAX=2
+    SERIES60_MAX=$((CFG_SERIES_COLD / 60))
+    [ "$SERIES60_MAX" -lt 2 ] && SERIES60_MAX=2
 }
 
 # ---------------------------------------------------------------- state
@@ -184,6 +198,9 @@ init_state() {
     [ -f "$STATE_DIR/stat.tsv" ] || printf '0\n0\n0\n0\n' > "$STATE_DIR/stat.tsv"
     [ -f "$STATE_DIR/ac.tsv" ] || : > "$STATE_DIR/ac.tsv"
     [ -f "$STATE_DIR/namemap.tsv" ] || : > "$STATE_DIR/namemap.tsv"
+    [ -f "$STATE_DIR/series10.tsv" ] || : > "$STATE_DIR/series10.tsv"
+    [ -f "$STATE_DIR/minute.tsv" ] || printf '0\n0\n0\n' > "$STATE_DIR/minute.tsv"
+    [ -f "$CFG_DATADIR/series60.tsv" ] || : > "$CFG_DATADIR/series60.tsv"
     [ -f "$STATE_DIR/meta" ] || printf '0\n0\n' > "$STATE_DIR/meta"
     [ -f "$STATE_DIR/nmoff" ] || printf '0\n' > "$STATE_DIR/nmoff"
     [ -f "$STATE_DIR/nmtime" ] || printf '0\n' > "$STATE_DIR/nmtime"
@@ -398,11 +415,16 @@ poll_ct() {
 
 # ---------------------------------------------------------------- attribution
 classify() {
-    [ -s "$STATE_DIR/flow.delta" ] || return 0
+    if [ ! -s "$STATE_DIR/flow.delta" ]; then
+        # No traffic this round is a fact worth recording: the series keeps a
+        # point for it, so a quiet spell reads as zero rather than as a gap.
+        printf '0\n0\n' > "$STATE_DIR/sample.new" && mv -f "$STATE_DIR/sample.new" "$STATE_DIR/sample.tsv"
+        return 0
+    fi
     awk -v dns="$STATE_DIR/dnsmap.tsv" -v tot="$STATE_DIR/totals.tsv" \
         -v cli="$STATE_DIR/clients.tsv" -v rt="$STATE_DIR/router.tsv" -v st="$STATE_DIR/stat.tsv" \
         -v acfile="$STATE_DIR/ac.tsv" -v acnew="$STATE_DIR/ac.new" \
-        -v nmap="$STATE_DIR/namemap.tsv" \
+        -v nmap="$STATE_DIR/namemap.tsv" -v smp="$STATE_DIR/sample.new" \
         -v lan4="$CFG_LAN4" -v lan6="$CFG_LAN6" '
     # The registrable domain: what to show when a host name was in neither
     # catalogue, i.e. an unidentified website.  A small public-suffix list is
@@ -524,12 +546,17 @@ classify() {
         }
         up[a] += u; dn[a] += d
         ac[a "|" src] += t
+        # client-side throughput of this round, for the two-tier series; the
+        # proxy tunnel is excluded because what it carries is already counted
+        # on the client side of the flow
+        sd += d; su += u
     }
     END {
         for (x in up) { if (up[x] + dn[x] > 0) printf "%s\t%d\t%d\n", x, up[x], dn[x] > tot }
         for (y in cb) { if (cb[y] > 0) printf "%s\t%d\n", y, cb[y] > cli }
         printf "%d\n", rb_total + rb["proxy"] > rt
         printf "%d\t%d\t%d\t%d\n", m_c, m_g, k_b, k_o > st
+        printf "%d\n%d\n", sd, su > smp
         for (z in ac) {
             if (ac[z] <= 0) continue
             split(z, zp, "|")
@@ -537,6 +564,60 @@ classify() {
         }
     }' "$STATE_DIR/flow.delta"
     [ -f "$STATE_DIR/ac.new" ] && mv -f "$STATE_DIR/ac.new" "$STATE_DIR/ac.tsv"
+    [ -f "$STATE_DIR/sample.new" ] && mv -f "$STATE_DIR/sample.new" "$STATE_DIR/sample.tsv"
+    return 0
+}
+
+# ---------------------------------------------------------------- throughput series
+# One point per poll, in two tiers:
+#
+#   series10.tsv   10 s (or whatever interval is) for the last hour - sharp
+#   series60.tsv   1 minute for the last day, and it persists in <datadir> so
+#                  the day's context survives a reboot
+#
+# A point is <epoch> <TAB> <down bytes> <TAB> <up bytes> in that round.  The
+# minute tier is the sum of the 10 s points inside it, flushed when the minute
+# rolls over.
+record_sample() {
+    local ts d u m cur_m cd cu n
+    ts=$(date +%s 2>/dev/null || echo 0)
+    d=0; u=0
+    if [ -s "$STATE_DIR/sample.tsv" ]; then
+        { read -r d; read -r u; } < "$STATE_DIR/sample.tsv"
+    fi
+    case "$d" in ''|*[!0-9]*) d=0 ;; esac
+    case "$u" in ''|*[!0-9]*) u=0 ;; esac
+
+    printf '%s\t%s\t%s\n' "$ts" "$d" "$u" >> "$STATE_DIR/series10.tsv"
+    n=$(wc -l < "$STATE_DIR/series10.tsv" 2>/dev/null || echo 0)
+    if [ "$n" -gt "$SERIES10_MAX" ]; then
+        tail -n "$SERIES10_MAX" "$STATE_DIR/series10.tsv" > "$STATE_DIR/series10.new" 2>/dev/null \
+            && mv -f "$STATE_DIR/series10.new" "$STATE_DIR/series10.tsv"
+    fi
+
+    m=$((ts / 60 * 60))
+    cur_m=0; cd=0; cu=0
+    if [ -s "$STATE_DIR/minute.tsv" ]; then
+        { read -r cur_m; read -r cd; read -r cu; } < "$STATE_DIR/minute.tsv"
+    fi
+    case "$cur_m" in ''|*[!0-9]*) cur_m=0 ;; esac
+    case "$cd" in ''|*[!0-9]*) cd=0 ;; esac
+    case "$cu" in ''|*[!0-9]*) cu=0 ;; esac
+
+    if [ "$cur_m" -gt 0 ] && [ "$cur_m" != "$m" ]; then
+        # the minute that just ended is complete: fold it into the day's tier
+        if [ $((cd + cu)) -gt 0 ]; then
+            printf '%s\t%s\t%s\n' "$cur_m" "$cd" "$cu" >> "$CFG_DATADIR/series60.tsv"
+            n=$(wc -l < "$CFG_DATADIR/series60.tsv" 2>/dev/null || echo 0)
+            if [ "$n" -gt "$SERIES60_MAX" ]; then
+                tail -n "$SERIES60_MAX" "$CFG_DATADIR/series60.tsv" > "$CFG_DATADIR/.series60.new" 2>/dev/null \
+                    && mv -f "$CFG_DATADIR/.series60.new" "$CFG_DATADIR/series60.tsv"
+            fi
+        fi
+        cd=0; cu=0; cur_m=$m
+    fi
+    [ "$cur_m" -gt 0 ] || cur_m=$m
+    printf '%s\n%s\n%s\n' "$cur_m" "$((cd + d))" "$((cu + u))" > "$STATE_DIR/minute.tsv"
     return 0
 }
 
@@ -712,6 +793,7 @@ run() {
         resolve_names
         poll_ct
         classify
+        record_sample
         hour=$(date +%Y-%m-%dT%H 2>/dev/null)
         if [ -n "$last_hour" ] && [ "$hour" != "$last_hour" ]; then
             roll_hour

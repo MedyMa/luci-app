@@ -17,6 +17,14 @@ datadir() {
 	printf '%s\n' "$d"
 }
 
+interval() {
+	local i
+	i=$(uci -q get traffic.settings.interval 2>/dev/null)
+	case "$i" in ''|*[!0-9]*) i=10 ;; esac
+	[ "$i" -lt 2 ] && i=2
+	printf '%s\n' "$i"
+}
+
 empty_summary() {
 	printf '{"collected_at":0,"interval":0,"flows":0,"dnsmap_lines":0,"apps":[],"clients":[],'
 	printf '"totals":{"apps":0,"unknown":0,"router":0,"matched":0,"fallback":0,"unmatched":0}}\n'
@@ -84,6 +92,27 @@ get_config() {
 	json_dump
 }
 
+# Throughput history, in the two tiers the collector maintains:
+#   1h  - one point per sampling interval (10 s by default), sharp
+#   24h - one point per minute, kept in the datadir so it survives a reboot
+# Each point is [epoch, down bytes, up bytes]; the page turns bytes into rates.
+get_series() {
+	local range="$1" f iv max
+	case "$range" in
+		24h|24|day)
+			range=24h; f="$(datadir)/series60.tsv"; iv=60; max=1440 ;;
+		*)
+			range=1h;  f="$STATE_DIR/series10.tsv"; iv=$(interval)
+			max=$((3600 / iv)); [ "$max" -lt 10 ] && max=10 ;;
+	esac
+
+	printf '{"range":"%s","interval":%s,"points":[' "$range" "$iv"
+	awk -F'\t' 'NF >= 3 && $1 != "" && $1 ~ /^[0-9]+$/ { print }' "$f" 2>/dev/null \
+		| tail -n "$max" \
+		| awk -F'\t' 'BEGIN { n = 0 } { if (n++) printf ","; printf "[%s,%s,%s]", $1, $2 + 0, $3 + 0 }'
+	printf ']}\n'
+}
+
 reset_stats() {
 	local what="$1"
 	rm -f "$STATE_DIR/totals.tsv" "$STATE_DIR/clients.tsv" "$STATE_DIR/router.tsv" "$STATE_DIR/stat.tsv"
@@ -91,7 +120,13 @@ reset_stats() {
 	: > "$STATE_DIR/clients.tsv"
 	: > "$STATE_DIR/router.tsv"
 	printf '0\n0\n0\n' > "$STATE_DIR/stat.tsv"
-	[ "$what" = "history" ] && rm -f "$(datadir)/hourly.tsv"
+	# the sharp tier belongs to the session, the coarse one to the history
+	: > "$STATE_DIR/series10.tsv"
+	printf '0\n0\n0\n' > "$STATE_DIR/minute.tsv"
+	if [ "$what" = "history" ]; then
+		rm -f "$(datadir)/hourly.tsv"
+		: > "$(datadir)/series60.tsv"
+	fi
 	json_init
 	json_add_boolean result 1
 	json_dump
@@ -105,6 +140,9 @@ case "$1" in
 		json_add_string "hours" "integer"
 		json_close_object
 		json_add_object "getConfig"; json_close_object
+		json_add_object "getSeries"
+		json_add_string "range" "string"
+		json_close_object
 		json_add_object "resetStats"
 		json_add_string "what" "string"
 		json_close_object
@@ -116,10 +154,12 @@ case "$1" in
 		json_get_var method method
 		json_get_var arg_hours hours
 		json_get_var arg_what what
+		json_get_var arg_range range
 		case "$method" in
 			getSummary) get_summary ;;
 			getHourly)  get_hourly "$arg_hours" ;;
 			getConfig)  get_config ;;
+			getSeries)  get_series "$arg_range" ;;
 			resetStats) reset_stats "$arg_what" ;;
 			*) json_init; json_add_string "error" "unknown method"; json_dump ;;
 		esac

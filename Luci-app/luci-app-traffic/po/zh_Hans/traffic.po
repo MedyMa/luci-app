@@ -116,3 +116,20 @@ msgstr "客户端"
 #: root/usr/share/rpcd/acl.d/luci-app-traffic.json:3
 msgid "Grant access to the per-application traffic statistics"
 msgstr "授予访问按应用流量统计的权限"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Throughput"
+msgstr "吞吐速率"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Last hour"
+msgstr "最近 1 小时"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Peak"
+msgstr "峰值"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "avg down"
+msgstr "下行均值"
+
