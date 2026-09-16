@@ -385,8 +385,12 @@ separated in name order, which is likewise rank-independent.
   overridden by the theme, which collapsed the name column to its own ellipsis
   while the byte columns — the widest of which holds "528 KiB (32.4%)" — took the
   rest of the card. The name now takes whatever the icon and the `TYPE` tag leave,
-  the tag never wraps into two stacked characters, and the row backgrounds are set
-  explicitly so the theme's stripes cannot show through the tinted total row.
+  the tag never wraps into two stacked characters, the row backgrounds are set
+  explicitly so the theme's stripes cannot show through the tinted total row, and
+  each column's caption is aligned with its own data — the theme centres every
+  cell, which left "总量" in the middle of its column while the figure under it
+  hugged the right edge. Numbers are centred, the two text columns are left
+  aligned, and every cell carries the same padding.
   Below the tablet width the list scrolls sideways rather than squeezing the names;
   on a phone the busiest-client and device-count columns drop out.
 * **Footer card** — proxy tunnel total, client total, and the identification

@@ -1170,16 +1170,20 @@ function injectCss() {
 		'.tf-page .tf-col-top{width:20%;}',
 		'.tf-page .tf-col-clients{width:8%;}',
 		'.tf-page .tf-table>thead>tr>th{border-bottom:1px solid rgba(128,150,175,.18);',
-		'font-size:.78rem;font-weight:600;color:var(--tf-dim);letter-spacing:.04em;padding:.4rem .5rem;',
+		'font-size:.78rem;font-weight:600;color:var(--tf-dim);letter-spacing:.04em;padding:.5rem .6rem;',
 		'white-space:nowrap;background:transparent;}',
-		/* centring is what the theme does to a .table; spelled out here with the
-		 * weight to beat it, so headers and values line up column for column */
+		/* Alignment is per kind of column, and the header follows its own data:
+		 * the theme centres every .table cell, which is what left the caption
+		 * "总量" sitting in the middle of its column while the figure under it
+		 * hugged the right edge - the two never lined up.  Numbers are centred
+		 * (matching what the captions already did), the two text columns are
+		 * left-aligned with their captions, so each column reads as one thing. */
 		'.tf-page .tf-table>thead>tr>th.tf-app,.tf-page .tf-table>tbody>tr>td.tf-app,',
-		'.tf-page .tf-table>thead>tr>th.tf-top-h{text-align:left;}',
-		'.tf-page .tf-table>thead>tr>th.tf-num,.tf-page .tf-table>tbody>tr>td.tf-num{text-align:right;}',
+		'.tf-page .tf-table>thead>tr>th.tf-top-h,.tf-page .tf-table>tbody>tr>td.tf-top{text-align:left;}',
+		'.tf-page .tf-table>thead>tr>th.tf-num,.tf-page .tf-table>tbody>tr>td.tf-num{text-align:center;}',
 		'.tf-page .tf-table>tbody>tr{background:transparent;}',
 		'.tf-page .tf-table>tbody>tr>td{border-bottom:1px solid rgba(128,150,175,.10);',
-		'padding:.45rem .5rem;vertical-align:middle;overflow:hidden;background:transparent;}',
+		'padding:.5rem .6rem;vertical-align:middle;overflow:hidden;background:transparent;}',
 		'.tf-page .tf-table>tbody>tr:last-child>td{border-bottom:none;}',
 		'.tf-page .tf-table>tbody>tr:hover>td{background:rgba(0,180,255,.07);}',
 		'.tf-page .tf-num{white-space:nowrap;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;}',
