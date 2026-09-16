@@ -458,5 +458,43 @@ chk "23m 降级原因写入快照"                  "nft is not installed" "$(gr
 chk "23n 降级时客户端总量仍由 conntrack 给出" "72600"           "$(awk -F'\t' '$1=="192.168.2.138"{print $2}' "$T/state6/clients.tsv")"
 
 echo
+echo "=== dnsmasq 查询日志作为第二域名来源 ==="
+# On a router where passwall has taken dnsmasq over, the proxied domains are
+# answered by passwall and never reach AdGuard Home, and the queries AdGuard
+# does see arrive from dnsmasq instead of from the device.  dnsmasq's own log has
+# both the device address and those domains.
+mkdir -p "$T/state7" "$T/data7"
+cat > "$T/dnsmasq.log" <<'EOF'
+Aug 10 12:00:00 router daemon.info dnsmasq[1234]: query[A] www.youtube.com from 192.168.2.50
+Aug 10 12:00:00 router daemon.info dnsmasq[1234]: reply www.youtube.com is 142.250.185.78
+Aug 10 12:00:01 router daemon.info dnsmasq[1234]: query[AAAA] www.youtube.com from 192.168.2.50
+Aug 10 12:00:01 router daemon.info dnsmasq[1234]: reply www.youtube.com is <CNAME>
+Aug 10 12:00:02 router daemon.info dnsmasq[1234]: query[A] cdn.example.net from 192.168.2.51
+Aug 10 12:00:02 router daemon.info dnsmasq[1234]: forwarded cdn.example.net to 127.0.0.1
+Aug 10 12:00:03 router daemon.info dnsmasq[1234]: cached cdn.example.net is 203.0.113.9
+Aug 10 12:00:04 router daemon.info dnsmasq[1234]: query[A] bad.example.org from 192.168.2.50
+Aug 10 12:00:04 router daemon.info dnsmasq[1234]: reply bad.example.org is NODATA
+EOF
+run_collector_at 30 "$T/state7" "$T/data7" "$T/ct2" /nonexistent \
+    "TRAFFIC_DNSLOG=$T/dnsmasq.log" TRAFFIC_SELF="192.168.2.1" TRAFFIC_LAN6=fdc8:64ed:f962:
+d7() { awk -F'\t' -v d="$1" '$2==d {print $1" "$3}' "$T/state7/dnsmap.tsv"; }
+chk "24 从 dnsmasq 日志取得客户端与域名"    "192.168.2.50 142.250.185.78" "$(d7 'www.youtube.com')"
+chk "24a cached 行同样算作应答"             "192.168.2.51 203.0.113.9"   "$(d7 'cdn.example.net')"
+chk "24b CNAME 行不算地址"                  "0"                 "$(grep -c 'CNAME' "$T/state7/dnsmap.tsv" 2>/dev/null)"
+chk "24c NODATA 行不算地址"                 "0"                 "$(grep -c 'NODATA' "$T/state7/dnsmap.tsv" 2>/dev/null)"
+chk "24d forwarded 行（上游地址）不算应答"  "0"                 "$(grep -c '	127.0.0.1$' "$T/state7/dnsmap.tsv" 2>/dev/null)"
+chk "24e 域名已归一化为小写"                "192.168.2.50 142.250.185.78" "$(d7 'www.youtube.com')"
+# incremental: only what is new is read, so a repeated run must not duplicate
+before=$(grep -c . "$T/state7/dnsmap.tsv")
+cat >> "$T/dnsmasq.log" <<'EOF'
+Aug 10 12:00:09 router daemon.info dnsmasq[1234]: query[A] news.example.com from 192.168.2.51
+Aug 10 12:00:09 router daemon.info dnsmasq[1234]: reply news.example.com is 198.51.100.7
+EOF
+run_collector_at 30 "$T/state7" "$T/data7" "$T/ct2" /nonexistent \
+    "TRAFFIC_DNSLOG=$T/dnsmasq.log" TRAFFIC_SELF="192.168.2.1" TRAFFIC_LAN6=fdc8:64ed:f962:
+chk "24f 只读取新增部分"                    "$((before + 1))"  "$(grep -c . "$T/state7/dnsmap.tsv")"
+chk "24g 新增段的域名也拿到了"              "192.168.2.51 198.51.100.7" "$(d7 'news.example.com')"
+
+echo
 if [ "$fail" = 0 ]; then echo "=== 全部通过 ==="; else echo "=== 有失败 ==="; fi
 exit "$fail"

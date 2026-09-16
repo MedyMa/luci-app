@@ -7,6 +7,16 @@ config traffic 'settings'
 	option datadir '/etc/traffic'
 	# leave empty to auto-detect from AdGuard Home's workdir
 	option querylog ''
+	# dnsmasq's own query log, read as a second name source.  On a router where
+	# passwall has taken dnsmasq over, the proxied domains are answered by
+	# passwall and never reach AdGuard Home, and the queries AdGuard does see
+	# come from dnsmasq rather than from the device.  dnsmasq's log has both.
+	# Leave empty to use it if it exists.  It needs dnsmasq log-queries plus a
+	# file log-facility:
+	#   uci set dhcp.@dnsmasq[0].logqueries='1'
+	#   uci set dhcp.@dnsmasq[0].logfacility='/tmp/dnsmasq.log'
+	#   uci commit dhcp && /etc/init.d/dnsmasq restart
+	option dnsmasq_log ''
 	# leave empty to auto-detect from the LAN interface
 	option lan4 ''
 	option lan6 ''

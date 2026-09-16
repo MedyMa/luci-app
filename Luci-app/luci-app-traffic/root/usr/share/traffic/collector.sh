@@ -66,6 +66,11 @@ CFG_SELF=
 # do not depend on nf_conntrack_acct or on the connection table having room, and
 # they are what makes the client totals authoritative
 CFG_ACCT=1
+# dnsmasq own query log, a second name source.  On a router where passwall has
+# taken dnsmasq over, the client talks to dnsmasq and only part of the traffic
+# reaches AdGuard Home, so this is often the only place both the device address
+# and the proxied domains appear.  Empty means: use it if it exists.
+CFG_DNSLOG=
 # set once per round by account_clients(): 1 when the nft counters are running
 # and own the client totals, 0 when the conntrack totals stand in for them
 ACCT_ON=0
@@ -117,6 +122,7 @@ uci_get() {
         lan6)           v=${TRAFFIC_LAN6:-} ;;
         self)           v=${TRAFFIC_SELF:-} ;;
         accounting)     v=${TRAFFIC_ACCOUNTING:-} ;;
+        dnsmasq_log)    v=${TRAFFIC_DNSLOG:-} ;;
         appmap)         v=${TRAFFIC_APPMAP:-} ;;
         categories)     v=${TRAFFIC_CATEGORIES:-} ;;
         retention_days) v=${TRAFFIC_RETENTION_DAYS:-} ;;
@@ -199,7 +205,8 @@ detect_self() {
         | while read -r a; do expand6 "$a"; done
 }
 
-detect_querylog() {    local wl
+detect_querylog() {
+    local wl
     wl=$($UCI -q get AdGuardHome.AdGuardHome.workdir 2>/dev/null)
     if [ -n "$wl" ] && [ -r "$wl/data/querylog.json" ]; then
         printf '%s/data/querylog.json\n' "$wl"
@@ -211,6 +218,16 @@ detect_querylog() {    local wl
     printf '/etc/config/adGuardConfig/workspace/data/querylog.json\n'
 }
 
+# The dnsmasq query log, if one has been configured.  It is only written when
+# dnsmasq has both log-queries and a file log-facility, so the usual case is
+# "not there" and that is not an error.
+detect_dnslog() {
+    local f
+    for f in /tmp/dnsmasq.log /var/log/dnsmasq.log /tmp/dnsmasq/dnsmasq.log; do
+        [ -r "$f" ] && { printf '%s\n' "$f"; return; }
+    done
+}
+
 load_config() {
     local v
     v=$(uci_get enabled);      [ -n "$v" ] && CFG_ENABLED=$v
@@ -218,6 +235,8 @@ load_config() {
     v=$(uci_get datadir);      [ -n "$v" ] && CFG_DATADIR=$v
     v=$(uci_get querylog);     [ -n "$v" ] && CFG_QUERYLOG=$v
     [ -n "$CFG_QUERYLOG" ] || CFG_QUERYLOG=$(detect_querylog)
+    v=$(uci_get dnsmasq_log);  [ -n "$v" ] && CFG_DNSLOG=$v
+    [ -n "$CFG_DNSLOG" ] || CFG_DNSLOG=$(detect_dnslog)
     v=$(uci_get lan4);         [ -n "$v" ] && CFG_LAN4=$v
     [ -n "$CFG_LAN4" ] || CFG_LAN4=$(detect_lan)
     v=$(uci_get lan6);         [ -n "$v" ] && CFG_LAN6=$v
@@ -285,6 +304,7 @@ init_state() {
     [ -f "$STATE_DIR/meta" ] || printf '0\n0\n' > "$STATE_DIR/meta"
     [ -f "$STATE_DIR/nmoff" ] || printf '0\n' > "$STATE_DIR/nmoff"
     [ -f "$STATE_DIR/nmtime" ] || printf '0\n' > "$STATE_DIR/nmtime"
+    [ -f "$STATE_DIR/dnslog.off" ] || printf '0\n' > "$STATE_DIR/dnslog.off"
     [ -f "$STATE_DIR/pending" ] || printf '0\n' > "$STATE_DIR/pending"
     # the current hour bucket, written here so the page can always say which one
     # it is showing (roll_hour rewrites it when the hour turns over)
@@ -317,6 +337,62 @@ poll_dns() {
         printf '%s\n' "$size"
         sed -n '2p' "$STATE_DIR/meta" 2>/dev/null || echo 0
     } > "$STATE_DIR/meta.new" && mv -f "$STATE_DIR/meta.new" "$STATE_DIR/meta"
+}
+
+# Read the dnsmasq query log as a second name source.
+#
+# AdGuard Home is not necessarily the resolver a client query reaches.  When
+# passwall has taken the system dnsmasq over (its helper_dnsmasq.lua "stretches"
+# dhcp.@dnsmasq[0] and installs its own conf-dir), the client talks to dnsmasq,
+# dnsmasq steers the proxied domains to the passwall DNS front-end, and only
+# the rest is forwarded on - by default to AdGuard Home, whose redirect mode is
+# literally named dnsmasq-upstream.  Two consequences for naming:
+#
+#   * a proxied domain is answered by passwall, so AdGuard never sees the query
+#     and its log cannot name that flow at all;
+#   * for the queries AdGuard does see, the client field is dnsmasq (127.0.0.1),
+#     not the device, so an exact client-to-name match is impossible.
+#
+# The dnsmasq log has both the real client address and the domains that never
+# reach AdGuard, so it is worth reading when it exists.  A query and its answer
+# are separate lines and the answer carries no client, so the client of the most
+# recent query for that name is used; interleaved queries for the same name from
+# two devices can therefore be attributed to the wrong one.  That is a rare case
+# and it still beats having no name at all.
+poll_dnsmasq() {
+    local size off
+    [ -n "$CFG_DNSLOG" ] || return 0
+    [ -r "$CFG_DNSLOG" ] || return 0
+    size=$(wc -c < "$CFG_DNSLOG" 2>/dev/null || echo 0)
+    off=$(sed -n '1p' "$STATE_DIR/dnslog.off" 2>/dev/null)
+    case "$off" in ''|*[!0-9]*) off=0 ;; esac
+    # a rotated (smaller) file means we start over
+    [ "$size" -lt "$off" ] && off=0
+    if [ "$size" -gt "$off" ]; then
+        tail -c +$((off + 1)) "$CFG_DNSLOG" 2>/dev/null | awk '
+            function isip(s) {
+                if (s ~ /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/) return 1
+                if (s ~ /:/ && s ~ /^[0-9a-fA-F:]+$/) return 1
+                return 0
+            }
+            {
+                for (i = 1; i <= NF; i++) {
+                    if ($i ~ /^query\[/) {
+                        d = $(i + 1)
+                        for (j = i; j <= NF; j++) if ($j == "from") c = $(j + 1)
+                        if (d != "" && c != "") who[d] = c
+                        next
+                    }
+                    if (($i == "reply" || $i == "cached") && $(i + 2) == "is") {
+                        d = $(i + 1); a = $(i + 3)
+                        if (d != "" && isip(a) && (d in who)) print who[d] "\t" d "\t" a
+                        next
+                    }
+                }
+            }' | tr 'A-Z' 'a-z' >> "$STATE_DIR/dnsmap.tsv"
+    fi
+    printf '%s\n' "$size" > "$STATE_DIR/dnslog.off.new" \
+        && mv -f "$STATE_DIR/dnslog.off.new" "$STATE_DIR/dnslog.off"
 }
 
 # ---------------------------------------------------------------- name resolution
@@ -1142,6 +1218,7 @@ run() {
     last_hour=$(cat "$STATE_DIR/hour" 2>/dev/null)
     while :; do
         poll_dns
+        poll_dnsmasq
         resolve_names
         poll_ct
         # the counters are read before classify(): they are what the client

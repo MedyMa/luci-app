@@ -108,6 +108,51 @@ AGH querylog     ─┘
    offloaded flow stops traversing the hooks after its first packets. For exact
    totals, leave `option flow_offloading` off in `/etc/config/firewall`.
 
+### Where the names come from, and where they cannot
+
+Naming a flow needs a `(client, domain, resolved IP)` triple. On this kind of
+router the client query does not necessarily reach AdGuard Home, because
+passwall reshapes DNS:
+
+* passwall's `helper_dnsmasq.lua` **stretches** the system dnsmasq — it takes
+  over `dhcp.@dnsmasq[0].server` and installs its own conf-dir — so the client
+  talks to dnsmasq and dnsmasq decides which domains go where;
+* passwall's default `dns_shunt` is `chinadns-ng`, and its default
+  `dns_redirect` is `1`, so proxied domains are answered by passwall itself;
+* AdGuard Home's default redirect mode is literally `dnsmasq-upstream`: it sits
+  *behind* dnsmasq, not in front of the clients.
+
+Two consequences, both visible on a real router as a large unattributed share:
+
+1. **A proxied domain is answered by passwall, so AdGuard never sees the query.**
+   Its log cannot name that flow, and no local DNS answer exists to match the
+   flow destination against.
+2. **For the queries AdGuard does see, the client field is dnsmasq
+   (`127.0.0.1`), not the device**, so an exact client-to-name match is
+   impossible and the flow can only be named through the "any client resolved
+   this address" path — or not at all.
+
+The `dnsmasq_log` option closes both gaps where a log file exists, because
+dnsmasq's own query log carries the real client address *and* the domains that
+never reach AdGuard:
+
+```
+uci set dhcp.@dnsmasq[0].logqueries='1'
+uci set dhcp.@dnsmasq[0].logfacility='/tmp/dnsmasq.log'
+uci commit dhcp && /etc/init.d/dnsmasq restart
+```
+
+Reading that file is off unless it exists; `traffic.settings.dnsmasq_log` can
+also point at it explicitly. It is read incrementally, and a query and its
+answer are paired by name (the answer line carries no client), so two devices
+asking for the same name at the same moment can be attributed to the wrong one —
+rare, and still better than no name.
+
+What remains unnameable by design: a domain the **proxy node resolves
+remotely**. Nothing on the router ever sees that answer, so no counter, log or
+catalogue here can name it; such flows stay in the protocol bucket. Naming them
+needs the proxy's own logs, which is a different integration.
+
 Flow state lives in `/tmp/traffic`. Once an hour the counters are appended to
 `<datadir>/hourly.tsv` and reset, which is the persistent history.
 
@@ -131,6 +176,7 @@ Home's workdir. Both are shown on the page and can be overridden.
 | `interval` | `10` | seconds between samples (minimum 2) |
 | `datadir` | `/etc/traffic` | where `hourly.tsv` (the history) is kept |
 | `querylog` | auto | AdGuard Home's `querylog.json` |
+| `dnsmasq_log` | auto | dnsmasq's query log, a second name source (see below) |
 | `lan4` / `lan6` | auto | client prefixes; anything else is "the router itself" |
 | `self` | auto | the box's own LAN addresses (space-separated); their flows are tunnel traffic, not a client |
 | `accounting` | `1` | per-host nftables counters for the client totals; `0` falls back to conntrack alone |
