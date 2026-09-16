@@ -605,14 +605,15 @@ record_sample() {
     case "$cu" in ''|*[!0-9]*) cu=0 ;; esac
 
     if [ "$cur_m" -gt 0 ] && [ "$cur_m" != "$m" ]; then
-        # the minute that just ended is complete: fold it into the day's tier
-        if [ $((cd + cu)) -gt 0 ]; then
-            printf '%s\t%s\t%s\n' "$cur_m" "$cd" "$cu" >> "$CFG_DATADIR/series60.tsv"
-            n=$(wc -l < "$CFG_DATADIR/series60.tsv" 2>/dev/null || echo 0)
-            if [ "$n" -gt "$SERIES60_MAX" ]; then
-                tail -n "$SERIES60_MAX" "$CFG_DATADIR/series60.tsv" > "$CFG_DATADIR/.series60.new" 2>/dev/null \
-                    && mv -f "$CFG_DATADIR/.series60.new" "$CFG_DATADIR/series60.tsv"
-            fi
+        # The minute that just ended is complete.  It is written even when it
+        # carried nothing: the chart spaces its points by index, so a skipped
+        # idle minute would silently compress the time axis.  A gap in the
+        # series therefore means the collector was not running - nothing else.
+        printf '%s\t%s\t%s\n' "$cur_m" "$cd" "$cu" >> "$CFG_DATADIR/series60.tsv"
+        n=$(wc -l < "$CFG_DATADIR/series60.tsv" 2>/dev/null || echo 0)
+        if [ "$n" -gt "$SERIES60_MAX" ]; then
+            tail -n "$SERIES60_MAX" "$CFG_DATADIR/series60.tsv" > "$CFG_DATADIR/.series60.new" 2>/dev/null \
+                && mv -f "$CFG_DATADIR/.series60.new" "$CFG_DATADIR/series60.tsv"
         fi
         cd=0; cu=0; cur_m=$m
     fi

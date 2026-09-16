@@ -202,6 +202,13 @@ run_collector 4 TRAFFIC_SERIES_COLD=180
 chk "18 series60 裁剪到上限（3 点）"       "3"                 "$(grep -c . "$T/data/series60.tsv")"
 chk "18a 保留的是最新点而非最旧点"         "77/7"              "$(awk -F'\t' 'END{print $2"/"$3}' "$T/data/series60.tsv")"
 
+# an idle minute is data too: skipping it would compress the chart's time axis,
+# because the points are spaced by index
+printf '%s\n%s\n%s\n' "$(( $(date +%s) / 60 * 60 - 60 ))" 0 0 > "$T/state/minute.tsv"
+run_collector 4 TRAFFIC_SERIES_COLD=180
+chk "18b 空闲的一分钟仍会落盘"             "0/0"               "$(awk -F'\t' 'END{print $2"/"$3}' "$T/data/series60.tsv")"
+chk "18c 空闲点也受窗口上限约束"           "3"                 "$(grep -c . "$T/data/series60.tsv")"
+
 echo
 if [ "$fail" = 0 ]; then echo "=== 全部通过 ==="; else echo "=== 有失败 ==="; fi
 exit "$fail"
