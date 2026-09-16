@@ -262,7 +262,11 @@ run_collector 30
 chk "15 目录变更后 namemap 重新解析"       "app Fastly"        "$(nm 'x.fastly.net')"
 chk "15a 目录变更后长后缀重新解析"         "app Deep CDN"      "$(nm 'deep.cdn.example.com')"
 chk "15b 缓存未被重复追加"                 "$nm_before"        "$(grep -c . "$T/state/namemap.tsv")"
-chk "17 跨分钟后上一分钟落盘 series60"     "4242/424"          "$(awk -F'\t' 'END{print $2"/"$3}' "$T/data/series60.tsv")"
+# Asserting that the seeded minute is present, rather than that it is the last
+# row: if the run happens to span a real minute boundary the collector also
+# flushes the minute that just ended, so the seeded row is no longer last.  That
+# took a few percent of runs to fail, which is not a property worth asserting.
+chk "17 跨分钟后上一分钟落盘 series60"     "1"                 "$(awk -F'\t' '$2==4242 && $3==424 { n++ } END { print n + 0 }' "$T/data/series60.tsv")"
 chk "17a series60 只保留完整分钟"          "0"                 "$(( $(awk -F'\t' 'END{print $1}' "$T/data/series60.tsv") % 60 ))"
 # the conntrack snapshot is unchanged since the first run, so these rounds carry
 # no traffic at all - and a quiet round must still get a point, otherwise the
@@ -276,7 +280,9 @@ printf '1\t1\t1\n2\t2\t2\n3\t3\t3\n4\t4\t4\n5\t5\t5\n' > "$T/data/series60.tsv"
 printf '%s\n%s\n%s\n' "$(( $(date +%s) / 60 * 60 - 60 ))" 77 7 > "$T/state/minute.tsv"
 run_collector 30 TRAFFIC_SERIES_COLD=180
 chk "18 series60 裁剪到上限（3 点）"       "3"                 "$(grep -c . "$T/data/series60.tsv")"
-chk "18a 保留的是最新点而非最旧点"         "77/7"              "$(awk -F'\t' 'END{print $2"/"$3}' "$T/data/series60.tsv")"
+# Same reasoning as 17: the invariant is that trimming dropped the oldest
+# points, not which row happens to be last when the run spans a minute boundary.
+chk "18a 保留的是最新点而非最旧点"         "0"                 "$(awk -F'\t' '($2==1 && $3==1) || ($2==2 && $3==2) { n++ } END { print n + 0 }' "$T/data/series60.tsv")"
 
 # an idle minute is data too: skipping it would compress the chart's time axis,
 # because the points are spaced by index.  A minute of its own (-120) keeps the

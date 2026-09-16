@@ -181,18 +181,23 @@ case "$1" in
 	call)
 		read -r input
 		json_load "$input" 2>/dev/null
-		json_get_var method method
 		json_get_var arg_hours hours
 		json_get_var arg_what what
 		json_get_var arg_range range
-		case "$method" in
+		# rpcd invokes a plugin as "<script> call <method>" and passes the
+		# arguments as a JSON object on stdin, so the method is $2 - it is not
+		# part of that object.  Reading it out of the stdin JSON instead (which
+		# is what this did) matches nothing, because the caller only sends the
+		# parameters, and every call then answers "unknown method" while looking
+		# like a healthy object.
+		case "$2" in
 			getSummary) get_summary ;;
 			getHourly)  get_hourly "$arg_hours" ;;
 			getConfig)  get_config ;;
 			getSeries)  get_series "$arg_range" ;;
 			resolveNow) resolve_now ;;
 			resetStats) reset_stats "$arg_what" ;;
-			*) json_init; json_add_string "error" "unknown method"; json_dump ;;
+			*) json_init; json_add_string "error" "unknown method" ; json_dump ;;
 		esac
 		;;
 esac
