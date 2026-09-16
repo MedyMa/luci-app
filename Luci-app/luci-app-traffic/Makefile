@@ -11,7 +11,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-traffic
-PKG_VERSION:=0.1.8
+PKG_VERSION:=0.1.9
 PKG_RELEASE:=1
 PKG_LICENSE:=Apache-2.0
 LUCI_PKGARCH:=all
@@ -31,6 +31,15 @@ define Build/Prepare/$(PKG_NAME)
 	# Makefile the only place the version is written down.
 	$(SED) 's|^COLLECTOR_VERSION=.*|COLLECTOR_VERSION=$(PKG_VERSION)-r$(PKG_RELEASE)|' \
 		$(PKG_BUILD_DIR)/root/usr/share/traffic/collector.sh
+	# Carry the translation in this package as well as in the generated
+	# luci-i18n-<name>-<lang> one.  That package is published with a version of
+	# 0, so opkg never treats a newer catalogue as an upgrade and a message added
+	# after the first install stays missing on the router forever - which is how
+	# the range dropdown ended up with one option in Chinese and the next in
+	# English.  po2lmo is the same tool the generated package is built with.
+	$(INSTALL_DIR) $(PKG_BUILD_DIR)/root/usr/lib/lua/luci/i18n
+	po2lmo $(PKG_BUILD_DIR)/po/zh_Hans/traffic.po \
+		$(PKG_BUILD_DIR)/root/usr/lib/lua/luci/i18n/traffic.zh-cn.lmo
 endef
 
 define Package/$(PKG_NAME)/conffiles

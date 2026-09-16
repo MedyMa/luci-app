@@ -26,6 +26,7 @@ function mk(ns,tag,attrs,children){
   if(ns===XHTML && ['svg','g','circle','path','line','text'].includes(tag)) seen.wrongNs.push(tag);
   const n={tag,ns,attrs:{},children:[],parentNode:null,_text:'',
     setAttribute(k,v){ this.attrs[k]=v; }, removeAttribute(k){ delete this.attrs[k]; },
+    addEventListener(){}, removeEventListener(){}, focus(){},
     appendChild(c){ if(c.parentNode)c.parentNode.removeChild(c); c.parentNode=this; this.children.push(c); return c; },
     removeChild(c){ const i=this.children.indexOf(c); if(i>=0)this.children.splice(i,1); c.parentNode=null; return c; },
     get firstChild(){ return this.children[0]||null; },
@@ -50,6 +51,7 @@ const documentStub={
   createElementNS(ns,t){ return mk(ns,t); },
   createTextNode(t){ const n=mk(null,'#text'); n._text=String(t); return n; },
   getElementById(){ return null; },
+  addEventListener(){}, removeEventListener(){},
   head:{ appendChild(n){ if(n && n.id==='tf-css') global.__capturedCss=global.__capturedCss||''; } },
   hidden:false
 };
@@ -121,7 +123,7 @@ console.log('=== 状态条（信息展示）===');
 const v5=freshView();
 view.drawStatus.call(v5,{collected_at:Math.floor(Date.now()/1000),interval:10,flows:1234,dnsmap_lines:5678,pending:3,querylog:'/etc/config/adGuardConfig/workspace/data/querylog.json',self:'192.168.2.1 fdc8:64ed:f962:0000:0000:0000:0000:0001',acct:1},items);
 const stats5=[]; walk(v5.statusEl,n=>{ if(n.tag==='span') stats5.push(n._text); });
-chk(stats5.length>=16, `状态条内容项 ${stats5.length} 个（应为 8 项×2）`);
+chk(stats5.length>=14, `状态条内容项 ${stats5.length} 个（应为 7 项×2）`);
 chk(stats5.some(t=>t==='Running'), `含运行状态（${stats5.slice(0,4).join(' | ')}）`);
 chk(stats5.some(t=>t==='1234'), '含 conntrack 条目数');
 chk(stats5.some(t=>t==='5678'), '含已解析主机名数');
@@ -153,6 +155,39 @@ view.drawStatus.call(v6,{collected_at:0,interval:0,flows:0,dnsmap_lines:0,pendin
 const s6=[]; walk(v6.statusEl,n=>{ if(n.tag==='span') s6.push(n._text); });
 chk(s6.some(t=>t==='Collector has not produced a snapshot yet'), `无快照时明确提示（${s6.slice(0,4).join(' | ')}）`);
 
+console.log('=== 范围视图：速率按区间取平均 ===');
+// A rate needs a window.  In the ranged view the window is the range itself, so
+// the two figures are averages over it - and they used to be a dash, which next
+// to a card full of bytes read as "nothing is happening".
+// renderHourly reaches for the view own draw()/drawMeta(), so the fake object
+// takes the view as its prototype and overrides only the element handles.
+const flat=n=>{ let s=''; (function go(x){ if(typeof x==='string'){ s+=x; return; } if(x&&x._text)s+=x._text; ((x&&x.children)||[]).forEach(go); })(n); return s; };
+const rateOf=(hours)=>{ const v=Object.assign(Object.create(view),freshView()); view.renderHourly.call(v,{hours:hours}); return v; };
+const one=rateOf([{hour:'h0',apps:[{name:'YouTube',down:36000,up:18000}],clients:[],router:0}]);
+chk(flat(one.rateDown)!=='—', `下行给区间均速而不是破折号（${flat(one.rateDown)}）`);
+chk(flat(one.rateUp)!=='—', `上行给区间均速（${flat(one.rateUp)}）`);
+chk(/average/.test(String((one.rateDown.attrs||{}).title||'')), '均速在提示里说明是区间平均');
+const ten=rateOf(Array.from({length:10},(_,i)=>({hour:'h'+i,
+  apps:i?[]:[{name:'YouTube',down:36000,up:18000}],clients:[],router:0})));
+chk(flat(ten.rateDown)!==flat(one.rateDown),
+    `同一批字节摊到更长窗口，均速变小（1h ${flat(one.rateDown)} → 10h ${flat(ten.rateDown)}）`);
+
+console.log('=== 页面结构：一个下拉、列宽在 colgroup ===');
+const page=view.render.call(Object.assign(Object.create(view),freshView()),{});
+const colClasses=[]; walk(page,n=>{ if(n.tag==='col') colClasses.push((n.attrs||{}).class); });
+chk(colClasses.length===6, `表格有 6 个 <col>（${colClasses.length}）`);
+chk(colClasses[0]==='tf-col-app', `首个 <col> 是名称列（${colClasses[0]}）`);
+// 固定布局下 col 才是浏览器真正采用的宽度，主题对 th/td 的规则够不到它，
+// 名称列不会又被压成省略号而字节列占掉整张卡片
+const selects=[]; walk(page,n=>{ if(n.tag==='select') selects.push(n); });
+chk(selects.length===0, `页面不再有原生 <select>（${selects.length} 个）`);
+const ddBtn=[]; walk(page,n=>{ if(n.tag==='button'&&/tf-dd-btn/.test((n.attrs||{}).class||'')) ddBtn.push(n); });
+chk(ddBtn.length===1, `范围控件是自绘按钮（${ddBtn.length} 个）`);
+chk(/listbox/.test(String((ddBtn[0]&&ddBtn[0].attrs||{}).role||'')+String((ddBtn[0]&&ddBtn[0].attrs||{})['aria-haspopup']||'')),
+    '自绘下拉带 listbox 语义');
+const ddItems=[]; walk(page,n=>{ if(/tf-dd-item/.test((n.attrs||{}).class||'')) ddItems.push(n); });
+chk(ddItems.length===5, `下拉有 5 个区间选项（${ddItems.length}）`);
+
 console.log('=== 注入的 CSS：括号平衡与圆润控件 ===');
 global.__injectCss();
 const css=global.__capturedCss||'';
@@ -160,10 +195,13 @@ chk(css.length>1500, `样式表已注入（${css.length} 字符）`);
 const open=(css.match(/\{/g)||[]).length, close=(css.match(/\}/g)||[]).length;
 chk(open===close, `大括号平衡（{ ${open} / } ${close}）`);
 chk(!/;\s*;/.test(css), '没有连续分号（空声明）');
-for(const sel of ['.tf-page .tf-range','.tf-page .tf-chart-ctl .tf-range']){
+// The page carries one range control, not two: the chart tier is derived from
+// the range, so the only dropdown on the page is the picker in the hero.
+for(const sel of ['.tf-page .tf-range','.tf-page .tf-dd-menu','.tf-page .tf-col-app']){
   const re=new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\{([^}]*)\\}');
   chk(re.test(css), `有 ${sel} 规则`);
 }
+chk(!/\.tf-chart-ctl/.test(css), '图表上重复的档位控件已移除');
 // The pill shape comes from the .tf-range rule that both dropdowns share, which
 // is what makes the chart control read as the same control as the one in the
 // hero rather than a second, differently-styled select.

@@ -324,9 +324,14 @@ of bug shows up off-device.
 
 **A status strip explains the state of the collector** — running or not, how old
 the snapshot is, the interval, how many conntrack entries and host names it has,
-how many names are waiting to be resolved, and which query log it is reading.
-An empty page is otherwise a dead end: "no traffic yet", "the service is not
-running" and "the query log path is wrong" all look identical.
+how many names are waiting to be resolved, which layer produced the client
+totals and which collector build is running. Each reading is its own soft grey
+chip, so a label and its value read as one item instead of a long row where the
+eye has to work out which caption belongs to which number. An empty page is
+otherwise a dead end: "no traffic yet", "the service is not running" and "the
+counters are not available" all look identical. The query log path is not shown:
+it is a configuration detail the page acts on, not something a reader can use,
+and it crowded out the readings that do say what is wrong.
 
 **On the RPC path**, `getSummary` hands the snapshot file straight to the caller
 instead of parsing it with jshn and serialising it again. The collector writes
@@ -348,17 +353,20 @@ rank, so the donut, the legend and the table always agree and nothing changes
 colour just because the order moved. Two names that hash to the same slot are
 separated in name order, which is likewise rank-independent.
 
-* **Hero card** — total carried by clients, live down/up rates derived from two
-  consecutive samples, and the range selector. The range defaults to **one day**,
-  which is the window the total, the donut and the table all describe; "since
-  start" is still there for watching the current session move, and in that mode
-  the live rates are shown instead of a windowed total. There is no reset button
-  (see [above](#the-history-is-bounded-by-the-collector-not-by-a-button)).
-* **Throughput card** — down/up over time, drawn as plain SVG, with the range as a
-  dropdown in the card header. Three tiers exist, so the selector chooses a
-  *granularity*, not a window width: **10 s points for the last hour** (the sharp
-  view — a burst keeps its shape), **1 min points for 12 h and for the last day**
-  (the same file, two lengths), and **1 h points for the last week**. The minute
+* **Hero card** — total carried by clients, down/up rates, and the range
+  selector. The range defaults to **one day**, which is the window the total, the
+  donut, the table and the chart all describe. In "since start" the two rates are
+  the live ones, derived from two consecutive samples; over a range they are the
+  averages for that range, which is what a rate means once there is a window to
+  divide by — the tooltip says so, because a dash in that position read as "no
+  traffic" instead of "measured differently here". There is no reset button (see
+  [above](#the-history-is-bounded-by-the-collector-not-by-a-button)).
+* **Throughput card** — down/up over time, drawn as plain SVG. Its tier is not a
+  second choice: the curve is the selected range at a coarser granularity, so the
+  page carries **one** range control instead of two that could be set to
+  disagree. **10 s points for the last hour** (the sharp view — a burst keeps its
+  shape), **1 min points for 12 h and for the last day** (the same file, two
+  lengths), and **1 h points for the last week**. The minute
   and hour tiers live in `<datadir>` (`series60.tsv`, `series1h.tsv`) so they
   survive a reboot; the 10 s tier is session state in `/tmp`. A quiet round is
   recorded as a zero point rather than skipped, so a gap in the chart always means
@@ -370,7 +378,17 @@ separated in name order, which is likewise rank-independent.
   table, which stacked below the tablet breakpoint anyway and left a band of
   empty page beside the donut; as a block above, the legend can spread across the
   width instead of being squeezed into one narrow column.
-* **List card** — application, down, up, total and share, 30 rows.
+* **List card** — application, total and share, received, sent, busiest client,
+  device count; 100 rows kept in the DOM, so a page left open all day does not
+  grow. The column widths live in a `<colgroup>`: under `table-layout:fixed` those
+  are the widths the browser actually uses, and a percentage on the cells could be
+  overridden by the theme, which collapsed the name column to its own ellipsis
+  while the byte columns — the widest of which holds "528 KiB (32.4%)" — took the
+  rest of the card. The name now takes whatever the icon and the `TYPE` tag leave,
+  the tag never wraps into two stacked characters, and the row backgrounds are set
+  explicitly so the theme's stripes cannot show through the tinted total row.
+  Below the tablet width the list scrolls sideways rather than squeezing the names;
+  on a phone the busiest-client and device-count columns drop out.
 * **Footer card** — proxy tunnel total, client total, and the identification
   rate (by the same client's DNS, by any client's DNS, unidentified).
 

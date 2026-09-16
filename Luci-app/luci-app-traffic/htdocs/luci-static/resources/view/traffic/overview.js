@@ -28,6 +28,25 @@ var SERIES_RANGES = {
 	'24h': { label: 'Last 24 hours',  interval: 60 },
 	'7d':  { label: 'Last 7 days',    interval: 3600 }
 };
+/* The one range control on the page.  It picks the window the application table
+ * aggregates over, and because the throughput curve is that same window drawn at
+ * a coarser granularity, it picks the tier the curve is read from too.  The page
+ * used to carry two dropdowns for this - one in the hero for the table and one on
+ * the chart for the tier - and they could be set to disagree. */
+var RANGE_OPTIONS = [
+	{ value: 'session', label: 'Since start',   tier: '1h'  },
+	{ value: '1',       label: 'Last hour',     tier: '1h'  },
+	{ value: '12',      label: 'Last 12 hours', tier: '12h' },
+	{ value: '24',      label: 'Last 24 hours', tier: '24h' },
+	{ value: '168',     label: 'Last 7 days',   tier: '7d'  }
+];
+
+function tierOfRange(v) {
+	for (var i = 0; i < RANGE_OPTIONS.length; i++)
+		if (RANGE_OPTIONS[i].value === v) return RANGE_OPTIONS[i].tier;
+	return '1h';
+}
+
 var CHART_W = 720, CHART_H = 190, CHART_PAD = { l: 10, r: 10, t: 14, b: 22 };
 
 /* Names that are not an application or a website but a bucket: a protocol
@@ -60,16 +79,9 @@ function isBucket(name) { return BUCKETS[name] === 1; }
 /* A row is only worth drawing when something was actually measured. */
 function hasTraffic(item) { return (item.down + item.up) > 0; }
 
-/* Status strip values are read at a glance, so the two that are naturally long
- * are shortened here and keep their exact value in the tooltip: the last three
- * segments of a path, and the first address plus how many others there are. */
-function shortPath(p) {
-	if (!p) return '—';
-	var seg = String(p).split('/').filter(function(s) { return s.length > 0; });
-	if (seg.length <= 3) return p;
-	return '\u2026/' + seg.slice(-3).join('/');
-}
-
+/* The address list is the one status value that is naturally long, so it is
+ * shortened here and keeps its exact value in the tooltip: the first address
+ * plus how many others there are. */
 function shortAddrs(v) {
 	var a = String(v || '').split(/\s+/).filter(function(s) { return s.length > 0; });
 	if (!a.length) return '—';
@@ -209,12 +221,89 @@ function setText(node, text) {
 	node.textContent = text;
 }
 
+/* A range picker drawn by this page instead of by the browser.  A native
+ * <select> can only be styled while it is closed: the list that opens is the
+ * operating system's, so it keeps square corners and the system highlight while
+ * every other control here is a rounded chip - which is exactly how it looked on
+ * the router.  This is the same control built from elements the page owns, and
+ * it keeps the keyboard behaviour a select has (Enter/Space opens, the arrows
+ * move, Escape closes), so nothing is given up by not using one. */
+function makeRangePicker(options, value, onChange) {
+	var current = value, open = false;
+	var label = el('span', { 'class': 'tf-dd-label' });
+	var btn = el('button', { 'class': 'tf-range tf-dd-btn', 'type': 'button',
+		'aria-haspopup': 'listbox', 'aria-expanded': 'false' }, [ label ]);
+	var menu = el('div', { 'class': 'tf-dd-menu', 'role': 'listbox' });
+	var wrap = el('div', { 'class': 'tf-dd' }, [ btn, menu ]);
+
+	var rows = options.map(function(o) {
+		var row = el('button', { 'class': 'tf-dd-item', 'type': 'button', 'role': 'option',
+			'click': function(ev) { ev.stopPropagation(); pick(o.value); } }, [ o.label ]);
+		menu.appendChild(row);
+		return { value: o.value, label: o.label, row: row, cls: '' };
+	});
+
+	function paint() {
+		var chosen = null;
+		rows.forEach(function(r) {
+			if (r.value === current) chosen = r;
+			var on = (r.value === current);
+			r.row.setAttribute('aria-selected', on ? 'true' : 'false');
+			var cls = 'tf-dd-item' + (on ? ' tf-dd-on' : '');
+			if (r.cls !== cls) { r.cls = cls; r.row.className = cls; }
+		});
+		setText(label, chosen ? chosen.label : '');
+	}
+
+	function show(on) {
+		if (on === open) return;
+		open = on;
+		btn.setAttribute('aria-expanded', on ? 'true' : 'false');
+		wrap.className = 'tf-dd' + (on ? ' tf-dd-open' : '');
+	}
+
+	function pick(v) {
+		show(false);
+		if (v === current) return;
+		current = v;
+		paint();
+		onChange(v);
+	}
+
+	btn.addEventListener('click', function(ev) { ev.stopPropagation(); show(!open); });
+	btn.addEventListener('keydown', function(ev) {
+		var k = ev.key;
+		if (k === 'Escape') { show(false); return; }
+		if (k !== 'ArrowDown' && k !== 'ArrowUp' && k !== 'Enter' && k !== ' ') return;
+		ev.preventDefault();
+		if (!open) { show(true); return; }
+		var at = -1;
+		rows.forEach(function(r, i) { if (r.value === current) at = i; });
+		var n = rows.length;
+		var next = (k === 'ArrowUp') ? (at <= 0 ? n - 1 : at - 1) : (at >= n - 1 ? 0 : at + 1);
+		if (rows[next]) pick(rows[next].value);
+	});
+	/* the menu must not close itself through the document handler below */
+	menu.addEventListener('click', function(ev) { ev.stopPropagation(); });
+	menu.addEventListener('keydown', function(ev) {
+		if (ev.key === 'Escape') { show(false); btn.focus(); }
+	});
+	/* clicking anywhere else on the page closes it, the way a select does */
+	document.addEventListener('click', function() { show(false); });
+
+	paint();
+	return {
+		node: wrap,
+		set: function(v) { if (v !== current) { current = v; paint(); } }
+	};
+}
+
 /* A row is remembered by application name so a refresh can update the numbers
  * in place.  Rebuilding instead would recreate ~12 nodes, a letter avatar and
  * an <img> per row every 5 s - and the <img> would be decoded again each time. */
 function makeRow(name, bucket) {
 	var icon = makeIcon(name);
-	var nameEl = el('span', { 'class': 'tf-app-name' }, [ name ]);
+	var nameEl = el('span', { 'class': 'tf-app-name', 'title': name }, [ name ]);
 	var cells = {
 		total: el('td', { 'class': 'tf-num tf-total' }),
 		down:  el('td', { 'class': 'tf-num tf-down' }),
@@ -373,28 +462,18 @@ return view.extend({
 		this.statusEl = el('div', { 'class': 'tf-status' });
 		/* One day by default: it is the window that answers "what has been
 		 * happening", where the hour view is mostly the last few minutes. */
-		this.seriesRange = '24h';
-
-		var granSel = el('select', { 'class': 'cbi-input-select tf-range tf-gran-sel',
-			'change': function(ev) { self.setSeriesRange(ev.target.value); } },
-			Object.keys(SERIES_RANGES).map(function(k) {
-				return el('option', { 'value': k }, [ _(SERIES_RANGES[k].label) ]);
-			}));
-		granSel.value = this.seriesRange;
+		/* the chart tier is derived from the range, never chosen separately */
+		this.seriesRange = tierOfRange(this.range);
 		this.series = null;
 
-		var rangeSel = el('select', { 'class': 'cbi-input-select tf-range', 'change': function(ev) {
-			self.range = ev.target.value;
-			self.refresh(true);
-		} }, [
-			el('option', { 'value': 'session' }, [ _('Since start') ]),
-			el('option', { 'value': '1' }, [ _('Last hour') ]),
-			el('option', { 'value': '12' }, [ _('Last 12 hours') ]),
-			el('option', { 'value': '24' }, [ _('Last 24 hours') ]),
-			el('option', { 'value': '168' }, [ _('Last 7 days') ])
-		]);
-		/* the dropdown has to show what the page is actually displaying */
-		rangeSel.value = this.range;
+		this.rangePicker = makeRangePicker(
+			RANGE_OPTIONS.map(function(o) { return { value: o.value, label: _(o.label) }; }),
+			this.range,
+			L.bind(function(v) {
+				this.range = v;
+				this.setSeriesRange(tierOfRange(v));
+				this.refresh(true);
+			}, this));
 
 		var node = el('div', { 'class': 'tf-page' }, [
 			el('div', { 'class': 'tf-card tf-hero' }, [
@@ -412,13 +491,12 @@ return view.extend({
 						el('span', { 'class': 'tf-rate-cap' }, [ _('Sent') ])
 					])
 				]),
-				el('div', { 'class': 'tf-hero-ctl' }, [ rangeSel ])
+				el('div', { 'class': 'tf-hero-ctl' }, [ this.rangePicker.node ])
 			]),
 
 			el('div', { 'class': 'tf-card tf-chart-card' }, [
 				el('div', { 'class': 'tf-chart-head' }, [
-					el('h3', {}, [ _('Throughput') ]),
-					el('div', { 'class': 'tf-chart-ctl' }, [ granSel ])
+					el('h3', {}, [ _('Throughput') ])
 				]),
 				el('div', { 'class': 'tf-chart-sub' }, [
 					this.chartNote,
@@ -441,12 +519,23 @@ return view.extend({
 
 			el('div', { 'class': 'tf-card tf-list-card' }, [
 				el('table', { 'class': 'table tf-table' }, [
+					/* the column widths: under fixed layout these are what the
+					 * browser actually uses, and no theme rule on th/td can
+					 * override them */
+					el('colgroup', {}, [
+						el('col', { 'class': 'tf-col-app' }),
+						el('col', { 'class': 'tf-col-total' }),
+						el('col', { 'class': 'tf-col-down' }),
+						el('col', { 'class': 'tf-col-up' }),
+						el('col', { 'class': 'tf-col-top' }),
+						el('col', { 'class': 'tf-col-clients' })
+					]),
 					el('thead', {}, [ el('tr', {}, [
-						el('th', {}, [ _('Application name') ]),
+						el('th', { 'class': 'tf-app' }, [ _('Application name') ]),
 						el('th', { 'class': 'tf-num' }, [ _('Total traffic') ]),
 						el('th', { 'class': 'tf-num' }, [ _('Received') ]),
 						el('th', { 'class': 'tf-num' }, [ _('Sent') ]),
-						el('th', {}, [ _('Top client') ]),
+						el('th', { 'class': 'tf-top-h' }, [ _('Top client') ]),
 						el('th', { 'class': 'tf-num' }, [ _('Client count') ])
 					]) ]),
 					this.rowsEl
@@ -608,10 +697,6 @@ return view.extend({
 		bits.push({ k: _('Flows'), v: String(Number(s.flows) || 0) });
 		bits.push({ k: _('Host names'), v: String(Number(s.dnsmap_lines) || 0) });
 		if (Number(s.pending) > 0) bits.push({ k: _('Waiting to resolve'), v: String(Number(s.pending)), warn: true });
-		// A full path and a full address list are not things anyone reads in a
-		// status strip, so both are shortened and the exact value is left a hover
-		// away.  Wrapping them onto a second line only made the row taller.
-		bits.push({ k: _('Query log'), v: shortPath(s.querylog), title: s.querylog || '', mono: true });
 		/* which layer is producing the client totals: the nft counters see every
 		   packet, the conntrack fallback only what the connection table knows.
 		   A fallback is not an error, but it must not look like one and the
@@ -623,7 +708,9 @@ return view.extend({
 		   does not seem to be in effect after installing the package */
 		if (s.version) bits.push({ k: _('Collector version'), v: s.version, mono: true });
 		/* what the collector treats as the box itself: the first thing to check
-		   when a client list looks like it has the router in it */
+		   when a client list looks like it has the router in it.  The full list
+		   is not something anyone reads in a strip, so it is shortened and the
+		   exact value left a hover away. */
 		if (s.self) bits.push({ k: _('Router addresses'), v: shortAddrs(s.self), title: s.self, mono: true });
 		if (s.hour) bits.push({ k: _('Bucket'), v: s.hour });
 
@@ -692,6 +779,13 @@ return view.extend({
 		}
 		this.prev = s;
 
+		/* these two are the live sampling deltas again, not the range averages
+		 * the ranged view leaves behind, so the tooltip goes with them */
+		if (this.rateAvg !== false) {
+			this.rateAvg = false;
+			this.rateDown.removeAttribute('title');
+			this.rateUp.removeAttribute('title');
+		}
 		dom.content(this.rateDown, fmtRate(this.rate.down));
 		dom.content(this.rateUp, fmtRate(this.rate.up));
 
@@ -799,8 +893,20 @@ return view.extend({
 			total: total, down: gd, up: gu,
 			topText: topText, clientCount: cl.length
 		});
-		dom.content(this.rateDown, '—');
-		dom.content(this.rateUp, '—');
+		/* A rate needs a window to divide by, and in this view the window is the
+		 * range itself: these are the averages over it, not the last sampling
+		 * interval.  They were left as a dash before, which next to a card full
+		 * of bytes reads as "nothing is happening" rather than "this figure is
+		 * not measured that way here", so the tooltip says which one it is. */
+		var win = Math.max(1, hours.length) * 3600;
+		dom.content(this.rateDown, fmtRate(gd / win));
+		dom.content(this.rateUp, fmtRate(gu / win));
+		if (this.rateAvg !== true) {
+			this.rateAvg = true;
+			var tip = _('average over the selected range');
+			this.rateDown.setAttribute('title', tip);
+			this.rateUp.setAttribute('title', tip);
+		}
 		this.drawMeta([ { cap: _('Bucket'), val: String(hours.length) } ]);
 	},
 
@@ -957,6 +1063,7 @@ function injectCss() {
 	var css = [
 		'.tf-page{--tf-accent:var(--primary,#00b4ff);--tf-accent2:#7c5cff;',
 		'--tf-card:rgba(255,255,255,.72);--tf-card-brd:rgba(255,255,255,.75);',
+		'--tf-chip:rgba(140,160,180,.16);--tf-menu:rgba(255,255,255,.99);',
 		'--tf-fg:var(--font-color,#20303d);--tf-dim:rgba(32,48,61,.55);',
 		'--tf-shadow:0 6px 22px rgba(31,66,102,.10);',
 		'--tf-down:#00a8e8;--tf-up:#26c281;',
@@ -991,7 +1098,6 @@ function injectCss() {
 		'.tf-page .tf-chart-head h3{margin:0;font-size:.95rem;font-weight:600;}',
 		'.tf-page .tf-chart-sub{display:flex;align-items:center;gap:.6rem 1rem;flex-wrap:wrap;margin-bottom:.45rem;}',
 		'.tf-page .tf-chart-note{font-size:.76rem;color:var(--tf-dim);font-variant-numeric:tabular-nums;}',
-		'.tf-page .tf-chart-ctl{margin-left:auto;display:flex;gap:.4rem;}',
 		/* the colour key: the two curves are the same shape at different
 		 * magnitudes, so without a key a small upload reads as a stray line */
 		'.tf-page .tf-chart-legend{display:flex;gap:.9rem;margin-left:auto;font-size:.76rem;color:var(--tf-dim);}',
@@ -1005,10 +1111,14 @@ function injectCss() {
 		'.tf-page .tf-chart-empty{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);',
 		'text-align:center;color:var(--tf-dim);font-size:.85rem;pointer-events:none;}',
 
-		/* collector state strip: makes an empty page self-explanatory */
-		'.tf-page .tf-status-card{display:flex;gap:1.6rem;flex-wrap:wrap;padding:.7rem 1.15rem;}',
-		'.tf-page .tf-status{display:flex;gap:1.4rem 1.8rem;flex-wrap:wrap;align-items:baseline;}',
-		'.tf-page .tf-stat{display:flex;flex-direction:column;gap:.05rem;min-width:0;max-width:100%;}',
+		/* collector state strip: makes an empty page self-explanatory.  Each
+		 * reading is its own soft grey chip: as a bare caption over a value in a
+		 * long wrapping row the eye has to work out which label belongs to which
+		 * number, and the chips settle that grouping at a glance. */
+		'.tf-page .tf-status-card{display:flex;gap:1.6rem;flex-wrap:wrap;padding:.85rem 1.15rem;}',
+		'.tf-page .tf-status{display:flex;gap:.55rem;flex-wrap:wrap;align-items:stretch;}',
+		'.tf-page .tf-stat{display:flex;flex-direction:column;gap:.05rem;min-width:0;max-width:100%;',
+		'padding:.38rem .72rem;background:var(--tf-chip);border-radius:12px;}',
 		/* No text-transform: the labels are mostly Chinese, which it cannot touch
 		 * anyway, so forcing upper case only made the few English ones (the
 		 * collector version among them) look like a different kind of label. */
@@ -1022,7 +1132,7 @@ function injectCss() {
 
 		/* layout: the donut card is a full-width block above the table, so these
 		 * are ordinary cards rather than the two flexible columns they used to be */
-		'.tf-page .tf-list-card{min-width:0;padding-bottom:.4rem;}',
+		'.tf-page .tf-list-card{min-width:0;padding-bottom:.4rem;overflow-x:auto;}',
 		'.tf-page .tf-donut-wrap{display:flex;align-items:center;gap:1.1rem 1.6rem;flex-wrap:wrap;}',
 		'.tf-page .tf-donut-svg{flex:0 0 168px;width:168px;height:168px;}',
 		'.tf-page .tf-donut-empty{font-size:11px;fill:var(--tf-dim);}',
@@ -1036,42 +1146,66 @@ function injectCss() {
 		'.tf-page .tf-legend-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}',
 		'.tf-page .tf-legend-pct{color:var(--tf-dim);font-variant-numeric:tabular-nums;}',
 
-		/* table */
-		/* table-layout:fixed with explicit widths.  With the automatic layout the
-		 * numeric columns are sized by their content and a long application name
-		 * pushes them past the card, so the bytes columns collided with each
-		 * other and the table scrolled sideways.  Fixed widths cannot do that,
-		 * and the one column that can be long is the one allowed to ellipsize. */
-		'.tf-page .tf-table{margin:0;background:transparent;table-layout:fixed;width:100%;}',
+		/* table
+		 *
+		 * The widths live in a <colgroup> in the markup, not in rules on the
+		 * cells.  Fixed layout takes its column widths from the first row, and
+		 * the theme styles these cells too, so a percentage on a cell could be
+		 * overridden and the name column collapsed to the width of its own
+		 * ellipsis while the byte columns took the rest of the card.  A col is
+		 * not something a theme rule on th/td can reach.
+		 *
+		 * The row backgrounds are set explicitly as well.  The theme stripes
+		 * every second row of a .table, and the stripes came through behind the
+		 * row that is tinted and the row under the pointer, which is what made
+		 * the list look like it had bands in the wrong places. */
+		'.tf-page .tf-table{margin:0;background:transparent;table-layout:fixed;',
+		'width:100%;min-width:40rem;border-collapse:collapse;}',
+		/* the name gets the room the numbers do not need: "528 KiB (32.4%)" is
+		 * the widest figure in the table and it is nowhere near a third of it */
+		'.tf-page .tf-col-app{width:30%;}',
+		'.tf-page .tf-col-total{width:16%;}',
+		'.tf-page .tf-col-down{width:13%;}',
+		'.tf-page .tf-col-up{width:13%;}',
+		'.tf-page .tf-col-top{width:20%;}',
+		'.tf-page .tf-col-clients{width:8%;}',
 		'.tf-page .tf-table>thead>tr>th{border-bottom:1px solid rgba(128,150,175,.18);',
-		'font-size:.78rem;font-weight:600;color:var(--tf-dim);letter-spacing:.04em;padding:.35rem .5rem;}',
-		'.tf-page .tf-table>thead>tr>th:nth-child(1),.tf-page .tf-table>tbody>tr>td:nth-child(1){width:26%;}',
-		'.tf-page .tf-table>thead>tr>th:nth-child(2),.tf-page .tf-table>tbody>tr>td:nth-child(2){width:14%;}',
-		'.tf-page .tf-table>thead>tr>th:nth-child(3),.tf-page .tf-table>tbody>tr>td:nth-child(3){width:14%;}',
-		'.tf-page .tf-table>thead>tr>th:nth-child(4),.tf-page .tf-table>tbody>tr>td:nth-child(4){width:14%;}',
-		'.tf-page .tf-table>thead>tr>th:nth-child(5),.tf-page .tf-table>tbody>tr>td:nth-child(5){width:24%;}',
-		'.tf-page .tf-table>thead>tr>th:nth-child(6),.tf-page .tf-table>tbody>tr>td:nth-child(6){width:8%;}',
-		'.tf-page .tf-table>tbody>tr>td{border-bottom:1px solid rgba(128,150,175,.10);padding:.42rem .5rem;vertical-align:middle;overflow:hidden;}',
+		'font-size:.78rem;font-weight:600;color:var(--tf-dim);letter-spacing:.04em;padding:.4rem .5rem;',
+		'white-space:nowrap;background:transparent;}',
+		/* centring is what the theme does to a .table; spelled out here with the
+		 * weight to beat it, so headers and values line up column for column */
+		'.tf-page .tf-table>thead>tr>th.tf-app,.tf-page .tf-table>tbody>tr>td.tf-app,',
+		'.tf-page .tf-table>thead>tr>th.tf-top-h{text-align:left;}',
+		'.tf-page .tf-table>thead>tr>th.tf-num,.tf-page .tf-table>tbody>tr>td.tf-num{text-align:right;}',
+		'.tf-page .tf-table>tbody>tr{background:transparent;}',
+		'.tf-page .tf-table>tbody>tr>td{border-bottom:1px solid rgba(128,150,175,.10);',
+		'padding:.45rem .5rem;vertical-align:middle;overflow:hidden;background:transparent;}',
 		'.tf-page .tf-table>tbody>tr:last-child>td{border-bottom:none;}',
-		'.tf-page .tf-table>tbody>tr:hover>td{background:rgba(0,180,255,.06);}',
-		'.tf-page .tf-num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;}',
+		'.tf-page .tf-table>tbody>tr:hover>td{background:rgba(0,180,255,.07);}',
+		'.tf-page .tf-num{white-space:nowrap;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;}',
 		'.tf-page .tf-down{color:var(--tf-down);}',
 		'.tf-page .tf-up{color:var(--tf-up);}',
 		'.tf-page .tf-total{font-weight:600;}',
 		/* the grand total leads the table, so it is tinted rather than roped off */
-		'.tf-page .tf-grand>td{background:rgba(0,180,255,.07);font-weight:600;',
+		'.tf-page .tf-table>tbody>tr.tf-grand>td{background:rgba(0,180,255,.08);font-weight:600;',
 		'border-bottom:1px solid rgba(128,150,175,.22)!important;}',
 		'.tf-page .tf-top{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
-		'max-width:14rem;color:var(--tf-dim);font-size:.85rem;}',
+		'color:var(--tf-dim);font-size:.85rem;}',
 
 		/* app cell + icon: one 26px box for both the avatar and a real SVG */
-		'.tf-page .tf-app{display:flex;align-items:center;gap:.6rem;}',
-		'.tf-page .tf-app-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:16rem;}',
+		'.tf-page .tf-app{display:flex;align-items:center;gap:.55rem;min-width:0;}',
+		/* the name takes whatever the icon and the tag leave behind.  A fixed max
+		 * width truncated it while the byte columns sat half empty, which is
+		 * what "NetEase…" next to a wide 总量 column was. */
+		'.tf-page .tf-app-name{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
 		/* a bucket is a kind of traffic, not a product: muted name plus a tag,
 		 * so it never reads as if it were an application */
 		'.tf-page .tf-isbucket .tf-app-name{color:var(--tf-dim);font-style:italic;}',
 		'.tf-page .tf-isbucket .tf-total{font-weight:400;color:var(--tf-dim);}',
-		'.tf-page .tf-tag{margin-left:.15rem;padding:.05rem .34rem;border-radius:6px;font-size:.62rem;',
+		/* nowrap on both axes: the tag is two characters wide, and letting it
+		 * wrap is what stacked it as 类 over 型 in a narrow row */
+		'.tf-page .tf-tag{flex:0 0 auto;white-space:nowrap;margin-left:.15rem;padding:.05rem .34rem;',
+		'border-radius:6px;font-size:.62rem;line-height:1.5;',
 		'letter-spacing:.04em;color:var(--tf-dim);background:rgba(128,150,175,.16);text-transform:uppercase;}',
 		'.tf-page .tf-icon{width:' + ICON + 'px;height:' + ICON + 'px;flex:0 0 ' + ICON + 'px;',
 		'border-radius:8px;display:inline-flex;align-items:center;justify-content:center;',
@@ -1082,10 +1216,11 @@ function injectCss() {
 		/* footer stats + misc.  .tf-meta is the flex row - styling the card
 		 * instead left the five items stacked in a column and the card grew to
 		 * the height of the page. */
-		'.tf-page .tf-meta-card{padding:.8rem 1.15rem;}',
-		'.tf-page .tf-meta{display:flex;gap:2rem;flex-wrap:wrap;align-items:baseline;}',
-		'.tf-page .tf-meta-item{display:flex;flex-direction:column;gap:.1rem;}',
-		'.tf-page .tf-meta-cap{font-size:.72rem;color:var(--tf-dim);text-transform:uppercase;letter-spacing:.06em;}',
+		'.tf-page .tf-meta-card{padding:.85rem 1.15rem;}',
+		'.tf-page .tf-meta{display:flex;gap:.55rem;flex-wrap:wrap;align-items:stretch;}',
+		'.tf-page .tf-meta-item{display:flex;flex-direction:column;gap:.1rem;min-width:0;',
+		'padding:.38rem .72rem;background:var(--tf-chip);border-radius:12px;}',
+		'.tf-page .tf-meta-cap{font-size:.72rem;color:var(--tf-dim);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;}',
 		'.tf-page .tf-meta-val{font-size:.95rem;font-weight:600;font-variant-numeric:tabular-nums;}',
 		'.tf-page .tf-warn{color:#ff8f1f;}',
 		'.tf-page .tf-empty{text-align:center;color:var(--tf-dim);padding:1.2rem 0;}',
@@ -1100,19 +1235,36 @@ function injectCss() {
 		 *
 		 * border-radius carries !important only because themes style bare
 		 * button elements too; the selectors match nothing but these controls. */
-		'.tf-page .tf-range{-webkit-appearance:none;appearance:none;min-width:9.5rem;',
+		/* The range picker, drawn here rather than by the browser: a native
+		 * select can be styled only while closed, so its list kept square corners
+		 * and the system highlight on a page where everything else is rounded.
+		 * The button reuses .tf-range, so the pill, the chevron and the focus
+		 * ring are the same ones the rest of the page uses. */
+		'.tf-page .tf-range{display:inline-flex;align-items:center;font-family:inherit;',
+		'text-align:left;',
+		'-webkit-appearance:none;appearance:none;min-width:9.5rem;',
 		'height:2.05rem;padding:0 2.05rem 0 .9rem;font-size:.82rem;line-height:2.05rem;',
-		'color:var(--tf-fg);background-color:rgba(140,160,180,.14);',
+		'color:var(--tf-fg);background-color:var(--tf-chip);',
 		'background-image:url("' + CHEVRON('#6b7c8c') + '");',
 		'background-repeat:no-repeat;background-position:right .72rem center;background-size:.95rem;',
 		'border:1px solid rgba(128,150,175,.22);border-radius:999px!important;box-shadow:none;cursor:pointer;',
 		'transition:background-color .15s,border-color .15s,box-shadow .15s;}',
+		'.tf-page .tf-dd{position:relative;display:inline-flex;}',
+		'.tf-page .tf-dd-label{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+		'.tf-page .tf-dd-menu{display:none;position:absolute;right:0;top:calc(100% + .35rem);z-index:30;',
+		'min-width:100%;padding:.3rem;',
+		'background:var(--tf-menu);border:1px solid rgba(128,150,175,.24);border-radius:14px;',
+		'box-shadow:var(--tf-shadow);}',
+		'.tf-page .tf-dd-open .tf-dd-menu{display:block;}',
+		'.tf-page .tf-dd-item{display:block;width:100%;margin:0;text-align:left;',
+		'border:1px solid transparent;border-radius:10px;background:transparent;box-shadow:none;',
+		'color:var(--tf-fg);font-family:inherit;font-size:.82rem;line-height:1.95;',
+		'padding:0 .7rem;cursor:pointer;white-space:nowrap;}',
+		'.tf-page .tf-dd-item:hover{background:rgba(140,160,180,.18);}',
+		'.tf-page .tf-dd-on{background:rgba(0,168,232,.14);color:var(--tf-accent);font-weight:600;}',
 		'.tf-page .tf-range:hover{background-color:rgba(140,160,180,.22);}',
 		'.tf-page .tf-range:focus{outline:none;border-color:var(--tf-accent);',
 		'box-shadow:0 0 0 3px rgba(0,168,232,.18);}',
-		/* The chart range control is the same rounded dropdown as the one in the
-		 * hero, only smaller, so the two read as one kind of control. */
-		'.tf-page .tf-chart-ctl .tf-range{height:1.9rem;font-size:.78rem;padding:0 1.7rem 0 .85rem;}',
 		/* The dropdown carries no core control class, so the focus ring it used to
 		 * inherit from one is spelled out here. */
 		'.tf-page .tf-range:focus-visible{outline:2px solid var(--tf-accent);outline-offset:2px;}',
@@ -1120,6 +1272,7 @@ function injectCss() {
 
 		/* dark: Argon sets .dark on <body> when its dark mode is on */
 		DARK + '{--tf-card:rgba(30,38,48,.66);--tf-card-brd:rgba(255,255,255,.08);',
+		'--tf-chip:rgba(255,255,255,.08);--tf-menu:rgba(36,45,57,.99);',
 		'--tf-fg:#e6edf3;--tf-dim:rgba(230,237,243,.55);',
 		'--tf-shadow:0 6px 22px rgba(0,0,0,.35);',
 		'--tf-down:#4dd2ff;--tf-up:#3ddc97;}',
@@ -1131,16 +1284,19 @@ function injectCss() {
 		'@media (max-width:52rem){.tf-page .tf-hero{flex-wrap:wrap;gap:.6rem;}',
 		'.tf-page .tf-hero-ctl{margin-left:0;width:100%;justify-content:flex-start;}',
 		'.tf-page .tf-donut-wrap{justify-content:center;}',
-		'.tf-page .tf-status{gap:.7rem 1.2rem;}}',
+		'.tf-page .tf-status{gap:.45rem;}',
+		/* the list scrolls sideways here instead of squeezing the name column:
+		 * every column stays readable and nothing wraps into a second line */
+		'.tf-page .tf-table{min-width:34rem;}}',
 		'@media (max-width:34rem){.tf-page .tf-hero-rates{gap:.7rem;flex-wrap:wrap;}',
-		'.tf-page .tf-table{font-size:.86rem;}',
+		'.tf-page .tf-table{font-size:.86rem;min-width:0;}',
 		'.tf-page .tf-table>thead>tr>th,.tf-page .tf-table>tbody>tr>td{padding:.35rem .3rem;}',
-		'.tf-page .tf-table>thead>tr>th:nth-child(1),.tf-page .tf-table>tbody>tr>td:nth-child(1){width:34%;}',
-		'.tf-page .tf-table>thead>tr>th:nth-child(2),.tf-page .tf-table>tbody>tr>td:nth-child(2){width:22%;}',
-		'.tf-page .tf-table>thead>tr>th:nth-child(3),.tf-page .tf-table>tbody>tr>td:nth-child(3){width:22%;}',
-		'.tf-page .tf-table>thead>tr>th:nth-child(4),.tf-page .tf-table>tbody>tr>td:nth-child(4){width:22%;}',
-		'.tf-page .tf-table>thead>tr>th:nth-child(5),.tf-page .tf-table>tbody>tr>td:nth-child(5){display:none;}',
-		'.tf-page .tf-table>thead>tr>th:nth-child(6),.tf-page .tf-table>tbody>tr>td:nth-child(6){display:none;}}'
+		/* the two columns a phone cannot spare drop out, and the four that stay
+		 * take the whole width */
+		'.tf-page .tf-table>thead>tr>th:nth-child(5),.tf-page .tf-table>tbody>tr>td:nth-child(5),',
+		'.tf-page .tf-table>thead>tr>th:nth-child(6),.tf-page .tf-table>tbody>tr>td:nth-child(6){display:none;}',
+		'.tf-page .tf-col-app{width:46%;}.tf-page .tf-col-total{width:24%;}',
+		'.tf-page .tf-col-down{width:15%;}.tf-page .tf-col-up{width:15%;}}'
 	].join('');
 
 	var st = document.createElement('style');

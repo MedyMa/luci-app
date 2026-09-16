@@ -100,6 +100,14 @@ msgid "Last hour"
 msgstr "最近 1 小时"
 
 #: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Last 12 hours"
+msgstr "最近 12 小时"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "average over the selected range"
+msgstr "所选时间范围内的平均值"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "Peak"
 msgstr "峰值"
 
