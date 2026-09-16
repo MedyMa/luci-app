@@ -153,8 +153,13 @@ remotely**. Nothing on the router ever sees that answer, so no counter, log or
 catalogue here can name it; such flows stay in the protocol bucket. Naming them
 needs the proxy's own logs, which is a different integration.
 
-Flow state lives in `/tmp/traffic`. Once an hour the counters are appended to
-`<datadir>/hourly.tsv` and reset, which is the persistent history.
+Flow state lives in `/tmp/traffic`. Once an hour the traffic of that hour is
+appended to `<datadir>/hourly.tsv`, which is the persistent history. The live
+counters are **not** reset by that: the page shows the session, and a session
+that fell back to zero at the top of every hour read as traffic going missing.
+The hour is worked out as the difference between the live counters and a
+snapshot taken at the previous roll (in `/tmp/traffic/arch`), so each row in the
+history still holds exactly one hour.
 
 ## Installation
 
@@ -247,13 +252,16 @@ node tools/build-catalog.js          # re-download, regenerate tables and icons
 node tools/build-catalog.js --skip-icons
 ```
 
-It also copies the icons: **580 brand logos** from
+It also copies the icons: **662 brand logos** from
 [dashboard-icons](https://github.com/homarr-labs/dashboard-icons),
 [Iconify's logos collection](https://iconify.design),
 [selfhst/icons](https://github.com/selfhst/icons) and
 [simple-icons](https://simpleicons.org), matched by slug and, when that fails,
-by prefix or substring so that `Sina` finds `sinaweibo`. The remaining names
-keep their letter avatar — a logo is never invented.
+by prefix or substring so that `Sina` finds `sinaweibo`. Anything still missing
+gets one more attempt through [Iconify's search
+API](https://iconify.design/docs/api/search.html), accepted only when the icon it
+returns actually names the application. The remaining names keep their letter
+avatar — a logo is never invented.
 
 Two rules keep the tables readable rather than merely large. Sources that are
 *routing bundles* rather than products (`ChinaMax`, `Global`, `Proxy`, the
@@ -374,11 +382,11 @@ a list of apps.
 
 ## Icons
 
-The package ships **649 icons** in two clearly different kinds:
+The package ships **731 icons** in two clearly different kinds:
 
 | Kind | Count | Source | Rendered as |
 |---|---|---|---|
-| Brand logos | 580 | [dashboard-icons](https://github.com/homarr-labs/dashboard-icons), [Iconify logos](https://iconify.design), [selfhst/icons](https://github.com/selfhst/icons) and [simple-icons](https://simpleicons.org) | the product mark |
+| Brand logos | 662 | [dashboard-icons](https://github.com/homarr-labs/dashboard-icons), [Iconify logos](https://iconify.design), [selfhst/icons](https://github.com/selfhst/icons) and [simple-icons](https://simpleicons.org) | the product mark |
 | Category / protocol glyphs | 69 | [lucide-static](https://lucide.dev) (ISC) | line art in muted grey, plus a `TYPE` tag in the list |
 
 The two kinds are deliberately not interchangeable. A brand logo answers *which
@@ -395,7 +403,7 @@ avatar until that file has actually loaded, so a missing icon is invisible
 rather than broken. Both the image and the avatar occupy the same 26 px box, so
 row rhythm never shifts.
 
-**580 of 1,631 names** have an upstream logo — 64 of the 100 that carry the most
+**644 of 1,631 names** have an upstream logo — 64 of the 100 that carry the most
 domains. The rest keep their avatar; the open sets carry comparatively little of
 the Chinese app landscape and no logo is invented for a name that none of them
 knows. To add one by hand, drop an SVG into

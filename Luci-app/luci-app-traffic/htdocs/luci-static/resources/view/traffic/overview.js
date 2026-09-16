@@ -758,13 +758,17 @@ return view.extend({
 
 	renderHourly: function(h) {
 		var hours = (h && h.hours) || [];
-		var agg = {};
+		var agg = {}, clAgg = {};
 		hours.forEach(function(b) {
 			(b.apps || []).forEach(function(a) {
 				var k = a.name;
 				if (!agg[k]) agg[k] = { name: k, down: 0, up: 0 };
 				agg[k].down += Number(a.down) || 0;
 				agg[k].up += Number(a.up) || 0;
+			});
+			(b.clients || []).forEach(function(c) {
+				var ip = c.ip || '?';
+				clAgg[ip] = (clAgg[ip] || 0) + (Number(c.bytes) || 0);
 			});
 		});
 		var items = Object.keys(agg).map(function(k) {
@@ -776,9 +780,25 @@ return view.extend({
 		var total = items.reduce(function(s, a) { return s + a.bytes; }, 0);
 		var gd = items.reduce(function(s, a) { return s + a.down; }, 0);
 		var gu = items.reduce(function(s, a) { return s + a.up; }, 0);
-		/* the hourly history keeps application totals only, so the per-client
-		 * columns stay empty here rather than showing something invented */
-		this.draw(items, { total: total, down: gd, up: gu });
+
+		/* The clients are summed across the hours the same way the applications
+		 * are, so the two grand-total columns mean here what they mean in the
+		 * session view: the busiest device of the range and how many devices
+		 * moved anything in it.  The per-application columns stay empty on
+		 * purpose - "which client drove this application" is not a question an
+		 * hour's totals can answer, and a guess would be worse than the dash. */
+		var cl = Object.keys(clAgg).map(function(ip) {
+			return { ip: ip, bytes: clAgg[ip] };
+		}).sort(function(a, b) { return b.bytes - a.bytes; });
+		var topText = '—';
+		if (cl.length && total > 0) {
+			topText = cl[0].ip + ' ' + fmtBytes(cl[0].bytes) +
+				' (' + (100 * cl[0].bytes / total).toFixed(1) + '%)';
+		}
+		this.draw(items, {
+			total: total, down: gd, up: gu,
+			topText: topText, clientCount: cl.length
+		});
 		dom.content(this.rateDown, '—');
 		dom.content(this.rateUp, '—');
 		this.drawMeta([ { cap: _('Bucket'), val: String(hours.length) } ]);

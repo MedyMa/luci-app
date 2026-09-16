@@ -639,6 +639,12 @@ hpid=$!
 wait_rounds "$T/state9" 1
 printf 'h1\n' > "$T/fakehour"
 wait_rounds "$T/state9" 3
+# A second rollover with no traffic in between.  The history has to gain its
+# point but not a second copy of the bytes the first roll already archived, and
+# the live counters have to survive it untouched - that difference is the whole
+# point of snapshotting and differencing instead of resetting.
+printf 'h2\n' > "$T/fakehour"
+wait_rounds "$T/state9" 5
 kill "$hpid" 2>/dev/null
 wait "$hpid" 2>/dev/null
 sleep 0.3
@@ -654,9 +660,16 @@ chk "26c 整点只归档一次"                    "1"         "$(awk -F'\t' '$2
 chk "26d 归档行数 = 三类各一行"             "3"         "$(grep -c . "$h9")"
 # The week tier is one point per hour, and its down column carries the router
 # total as well, because the box's own traffic belongs to the hour too.
-chk "26e series1h 下行含路由器流量"         "5777"      "$(cut -f2 "$T/data9/series1h.tsv")"
-chk "26f series1h 上行"                     "1000"      "$(cut -f3 "$T/data9/series1h.tsv")"
-chk "26g series1h 每次滚动一个点"           "1"         "$(grep -c . "$T/data9/series1h.tsv")"
+chk "26e series1h 下行含路由器流量"         "5777"      "$(cut -f2 "$T/data9/series1h.tsv" | head -n 1)"
+chk "26f series1h 上行"                     "1000"      "$(cut -f3 "$T/data9/series1h.tsv" | head -n 1)"
+chk "26g series1h 每次滚动一个点"           "2"         "$(grep -c . "$T/data9/series1h.tsv")"
+chk "26h series1h 无流量的小时为 0"         "0/0"       "$(sed -n '2p' "$T/data9/series1h.tsv" | cut -f2,3 | tr '\t' '/')"
+# The second roll had nothing new to archive, and the live counters it measured
+# against are still there: zeroing them here is what used to make the page lose
+# the session's traffic at the top of every hour.
+chk "26i 第二次滚动不重复归档"              "3"         "$(grep -c . "$h9")"
+chk "26j 整点不再清空应用累计"              "5000"      "$(awk -F'\t' '$1=="YouTube"{print $3}' "$T/state9/totals.tsv")"
+chk "26k 整点不再清空路由器累计"            "777"       "$(sed -n '1p' "$T/state9/router.tsv")"
 
 echo
 if [ "$fail" = 0 ]; then echo "=== 全部通过 ==="; else echo "=== 有失败 ==="; fi

@@ -325,6 +325,10 @@ auto_purge() {
         : > "$CFG_DATADIR/series1h.tsv"
         : > "$STATE_DIR/namemap.tsv"
         : > "$STATE_DIR/dnsmap.tsv"
+        # The roll snapshot goes with the history it measured: it exists to say
+        # "everything up to here is already archived", and after this the whole
+        # session is unarchived again, so the next roll has to archive all of it.
+        rm -rf "$STATE_DIR/arch"
         log "purged traffic history ($why)"
     fi
     [ -n "$month" ] && printf '%s\n' "$month" > "$STATE_DIR/purge.month"
@@ -334,7 +338,7 @@ auto_purge() {
 # ---------------------------------------------------------------- state
 init_state() {
     local v
-    mkdir -p "$STATE_DIR" "$CFG_DATADIR" || exit 1
+    mkdir -p "$STATE_DIR" "$CFG_DATADIR" "$STATE_DIR/arch" || exit 1
     v=$(sed -n '1p' "$STATE_DIR/version" 2>/dev/null)
     if [ "$v" != "$STATE_VERSION" ]; then
         # The live counters are running totals, so a change in what they mean
@@ -345,6 +349,10 @@ init_state() {
         rm -f "$STATE_DIR/totals.tsv" "$STATE_DIR/clients.tsv" "$STATE_DIR/router.tsv" \
               "$STATE_DIR/stat.tsv" "$STATE_DIR/ac.tsv" \
               "$STATE_DIR/acct.tsv" "$STATE_DIR/acct.abs" "$STATE_DIR/acct.hosts"
+        # the counters these snapshots were taken from are gone, so they would
+        # only produce a clamped-to-zero delta for the hour they are lost in
+        rm -rf "$STATE_DIR/arch"
+        mkdir -p "$STATE_DIR/arch"
         printf '%s\n' "$STATE_VERSION" > "$STATE_DIR/version"
         [ -n "$v" ] && log "state schema $v -> $STATE_VERSION: live counters reset"
     fi
@@ -1102,24 +1110,43 @@ record_sample() {
 }
 
 # ---------------------------------------------------------------- hour rollover
-# Append the session totals to the persistent history and start a new hour.
+# Close the hour: append what the last hour carried to the persistent history.
+#
+# The live counters are deliberately NOT reset here.  They are the session the
+# page shows, and zeroing them is what made the table appear to lose traffic on
+# its own: the page reads the live totals, so at the top of every hour they fell
+# back to whatever had arrived since that moment.  The history still has to hold
+# one hour of bytes per row, so instead of resetting, this takes the difference
+# between the live counters and a snapshot written at the previous roll.  Each
+# hour records only its own traffic and the session total keeps growing, which is
+# what the page implies it does.
+#
+# The snapshot lives in $STATE_DIR/arch and is only ever compared against, never
+# shown.  A counter that went backwards - the rules were rebuilt, or the state
+# directory was reset while the snapshot stayed on disk - is clamped to zero
+# rather than archived as a negative or a wrapped number.
 roll_hour() {
-    local hour now
+    local hour now hr shr dhr n arch="$STATE_DIR/arch"
     now=$(date +%s 2>/dev/null || echo 0)
     hour=$(date +%Y-%m-%dT%H 2>/dev/null)
     [ -n "$hour" ] || hour="h$now"
-    [ -s "$STATE_DIR/totals.tsv" ] || return 0
+    mkdir -p "$arch" 2>/dev/null
+
+    # router.tsv is a single running total, so a plain subtraction is the delta.
+    hr=$(sed -n '1p' "$STATE_DIR/router.tsv" 2>/dev/null)
+    case "$hr" in ''|*[!0-9]*) hr=0 ;; esac
+    shr=$(sed -n '1p' "$arch/router" 2>/dev/null)
+    case "$shr" in ''|*[!0-9]*) shr=0 ;; esac
+    dhr=$((hr - shr))
+    [ "$dhr" -ge 0 ] || dhr=0
+
+    # The applications, and the week-tier point, in one pass over the totals.
+    #
     # totals.tsv is <name>\t<up>\t<down>, while hourly.tsv - and everything that
     # reads it - is <hour>\t<kind>\t<name>\t<down>\t<up>.  The two columns are
     # therefore written in the opposite order here on purpose: copying them
     # straight across swaps download and upload in the hourly view.
-    awk -F'\t' -v h="$hour" '{ printf "%s\tapp\t%s\t%d\t%d\n", h, $1, $3, $2 }' \
-        "$STATE_DIR/totals.tsv" >> "$CFG_DATADIR/hourly.tsv"
-    awk -F'\t' -v h="$hour" '{ printf "%s\tclient\t%s\t%d\t0\n", h, $1, $2 }' \
-        "$STATE_DIR/clients.tsv" >> "$CFG_DATADIR/hourly.tsv"
-    if [ -s "$STATE_DIR/router.tsv" ]; then
-        printf '%s\trouter\tproxy\t%d\t0\n' "$hour" "$(cat "$STATE_DIR/router.tsv")" >> "$CFG_DATADIR/hourly.tsv"
-    fi
+    #
     # One throughput point per hour, for the week-long view.  The app rows are
     # the classified client traffic and the router total is what the box itself
     # carried; together they are the hour.  The client rows are a breakdown of
@@ -1127,25 +1154,86 @@ roll_hour() {
     # Stored as a point rather than aggregated from hourly.tsv on demand, because
     # that file keys hours by a timestamp string, and turning "2026-09-16T16"
     # back into an epoch needs a date parser the week view should not depend on.
-    hr=$(cat "$STATE_DIR/router.tsv" 2>/dev/null || echo 0)
-    awk -F'\t' -v t="$now" -v rt="$hr" '
-        { d += $3; u += $2 }
-        END { printf "%s\t%d\t%d\n", t, d + rt, u }
-    ' "$STATE_DIR/totals.tsv" >> "$CFG_DATADIR/series1h.tsv"
+    #
+    # A row with no traffic this hour is left out rather than archived as a zero:
+    # the hour is reconstructed by summing what is there, and a name that was
+    # idle for an hour does not need a line saying so.
+    : > "$arch/point"
+    awk -F'\t' -v h="$hour" -v snap="$arch/totals.tsv" -v rt="$dhr" \
+        -v t="$now" -v pt="$arch/point" '
+        BEGIN {
+            while ((getline l < snap) > 0) {
+                split(l, f, "\t")
+                su[f[1]] = f[2] + 0; sd[f[1]] = f[3] + 0
+            }
+            close(snap)
+        }
+        {
+            u = $2 - su[$1]; d = $3 - sd[$1]
+            if (u < 0) u = 0
+            if (d < 0) d = 0
+            if (u + d <= 0) next
+            printf "%s\tapp\t%s\t%d\t%d\n", h, $1, d, u
+            td += d; tu += u
+        }
+        END { printf "%s\t%d\t%d\n", t, td + rt, tu > pt }
+    ' "$STATE_DIR/totals.tsv" >> "$CFG_DATADIR/hourly.tsv"
+    cat "$arch/point" >> "$CFG_DATADIR/series1h.tsv" 2>/dev/null
     n=$(wc -l < "$CFG_DATADIR/series1h.tsv" 2>/dev/null || echo 0)
     if [ "$n" -gt "$SERIES1H_MAX" ]; then
         tail -n "$SERIES1H_MAX" "$CFG_DATADIR/series1h.tsv" > "$CFG_DATADIR/.series1h.new" 2>/dev/null \
             && mv -f "$CFG_DATADIR/.series1h.new" "$CFG_DATADIR/series1h.tsv"
     fi
-    : > "$STATE_DIR/totals.tsv"
-    : > "$STATE_DIR/clients.tsv"
-    : > "$STATE_DIR/router.tsv"
-    : > "$STATE_DIR/ac.tsv"
-    # the session part of the per-client counters starts over with the bucket.
-    # acct.abs is kept on purpose: it is the absolute baseline the next delta is
-    # measured against, so clearing it would count every counter from zero once.
-    : > "$STATE_DIR/acct.tsv"
-    printf '0\n0\n0\n0\n' > "$STATE_DIR/stat.tsv"
+
+    # Clients.  With the per-host counters running, acct.tsv is the same kind of
+    # running total as totals.tsv and is differenced the same way - clients.tsv
+    # is only its rendering for the live table, and re-differencing that would
+    # compare a derived file with itself.  Without the counters, the conntrack
+    # column in clients.tsv is all there is.
+    if [ -s "$STATE_DIR/acct.tsv" ]; then
+        awk -F'\t' -v h="$hour" -v snap="$arch/acct.tsv" '
+            BEGIN {
+                while ((getline l < snap) > 0) {
+                    split(l, f, "\t")
+                    sd[f[1]] = f[2] + 0; su[f[1]] = f[3] + 0
+                }
+                close(snap)
+            }
+            {
+                d = $2 - sd[$1]; u = $3 - su[$1]
+                if (d < 0) d = 0
+                if (u < 0) u = 0
+                if (d + u <= 0) next
+                # the reader of these rows only ever uses the down column, so the
+                # two directions go there as one figure
+                printf "%s\tclient\t%s\t%d\t0\n", h, $1, d + u
+            }
+        ' "$STATE_DIR/acct.tsv" >> "$CFG_DATADIR/hourly.tsv"
+    elif [ -s "$STATE_DIR/clients.tsv" ]; then
+        awk -F'\t' -v h="$hour" -v snap="$arch/clients.tsv" '
+            BEGIN {
+                while ((getline l < snap) > 0) { split(l, f, "\t"); sb[f[1]] = f[2] + 0 }
+                close(snap)
+            }
+            {
+                b = $2 - sb[$1]
+                if (b < 0) b = 0
+                if (b > 0) printf "%s\tclient\t%s\t%d\t0\n", h, $1, b
+            }
+        ' "$STATE_DIR/clients.tsv" >> "$CFG_DATADIR/hourly.tsv"
+    fi
+
+    if [ "$dhr" -gt 0 ]; then
+        printf '%s\trouter\tproxy\t%d\t0\n' "$hour" "$dhr" >> "$CFG_DATADIR/hourly.tsv"
+    fi
+
+    # The snapshot is taken after the history has been appended, so a failure to
+    # write cannot also lose the bytes it was about to record.
+    cp -f "$STATE_DIR/totals.tsv"  "$arch/totals.tsv"  2>/dev/null
+    cp -f "$STATE_DIR/acct.tsv"    "$arch/acct.tsv"    2>/dev/null
+    cp -f "$STATE_DIR/clients.tsv" "$arch/clients.tsv" 2>/dev/null
+    printf '%s\n' "$hr" > "$arch/router" 2>/dev/null
+
     prune_hourly
     prune_dnsmap
     printf '%s\n' "$hour" > "$STATE_DIR/hour"

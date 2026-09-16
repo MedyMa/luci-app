@@ -75,6 +75,12 @@ get_hourly() {
 	fi
 	# The hour list is small, so a plain sort is clearer than doing JSON in awk.
 	list=$(awk -F'\t' '{ if (!seen[$1]++) print $1 }' "$f" | sort | tail -n "$hours")
+	# Every row of the hour is returned, not the biggest few.  The page sums the
+	# hours up to build a 12h/24h/7d view, so a truncated list would silently
+	# leave the tail of each hour out of that total - the range would report less
+	# traffic than the hour it contains.  The rows are one line per application
+	# that moved bytes and one per client that did, so the whole range is still
+	# tens of kilobytes, and it is the honest total that matters here.
 	printf '{"hours":['
 	first=1
 	for h in $list; do
@@ -83,12 +89,12 @@ get_hourly() {
 		printf '{"hour":"%s","apps":[' "$h"
 		awk -F'\t' -v hour="$h" '
 			$1 == hour && $2 == "app" { printf "%d\t%s\t%s\t%s\n", $4 + $5, $3, $4, $5 }' "$f" \
-			| sort -rn | head -n 20 \
+			| sort -rn \
 			| awk -F'\t' 'BEGIN { n = 0 } { if (n++) printf ","; printf "{\"name\":\"%s\",\"down\":%s,\"up\":%s}", $2, $3, $4 }'
 		printf '],"clients":['
 		awk -F'\t' -v hour="$h" '
 			$1 == hour && $2 == "client" { printf "%d\t%s\n", $4, $3 }' "$f" \
-			| sort -rn | head -n 10 \
+			| sort -rn \
 			| awk -F'\t' 'BEGIN { n = 0 } { if (n++) printf ","; printf "{\"ip\":\"%s\",\"bytes\":%s}", $2, $1 }'
 		printf '],"router":'
 		awk -F'\t' -v hour="$h" '$1 == hour && $2 == "router" { t += $4 } END { printf "%d", t + 0 }' "$f"
@@ -114,15 +120,21 @@ get_config() {
 	json_dump
 }
 
-# Throughput history, in the two tiers the collector maintains:
+# Throughput history, in the three tiers the collector maintains:
 #   1h  - one point per sampling interval (10 s by default), sharp
+#   12h - one point per minute, half of the day tier
 #   24h - one point per minute, kept in the datadir so it survives a reboot
+#   7d  - one point per hour, covering a week
 # Each point is [epoch, down bytes, up bytes]; the page turns bytes into rates.
 get_series() {
 	local range="$1" f iv max
 	case "$range" in
+		7d|week|w)
+			range=7d;  f="$(datadir)/series1h.tsv"; iv=3600; max=168 ;;
 		24h|24|day)
 			range=24h; f="$(datadir)/series60.tsv"; iv=60; max=1440 ;;
+		12h|12)
+			range=12h; f="$(datadir)/series60.tsv"; iv=60; max=720 ;;
 		*)
 			range=1h;  f="$STATE_DIR/series10.tsv"; iv=$(interval)
 			max=$((3600 / iv)); [ "$max" -lt 10 ] && max=10 ;;
