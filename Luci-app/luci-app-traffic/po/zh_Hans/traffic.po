@@ -209,6 +209,10 @@ msgstr "连接跟踪"
 msgid "Counter error"
 msgstr "计数器错误"
 
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Collector version"
+msgstr "采集器版本"
+
 # Small-case variants: "Total"/"Up" are translated by luci-base, so the page
 # uses its own caption strings where the wording has to be exact.
 #: htdocs/luci-static/resources/view/traffic/overview.js

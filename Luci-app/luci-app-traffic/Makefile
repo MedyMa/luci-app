@@ -1,9 +1,17 @@
 # This is free software, licensed under the Apache License, Version 2.0.
+#
+# Versioning rule for this package: every change bumps PKG_VERSION by one patch
+# level and resets PKG_RELEASE to 1.  A package that keeps the same version
+# across changes cannot be told apart after installation - opkg will not even
+# treat it as an upgrade - and this package has already been through several
+# rounds where the only way to see which collector was running was to read the
+# file on the router.  PKG_VERSION is also substituted into the collector at
+# build time, so the running version is reported by the page.
 
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-traffic
-PKG_VERSION:=0.1.0
+PKG_VERSION:=0.1.1
 PKG_RELEASE:=1
 PKG_LICENSE:=Apache-2.0
 LUCI_PKGARCH:=all
@@ -18,6 +26,11 @@ define Build/Prepare/$(PKG_NAME)
 	chmod 0755 $(PKG_BUILD_DIR)/root/etc/init.d/traffic
 	chmod 0755 $(PKG_BUILD_DIR)/root/usr/libexec/rpcd/luci.traffic
 	chmod 0755 $(PKG_BUILD_DIR)/root/usr/share/traffic/collector.sh
+	# The collector reports the version it was built as, so the page can show
+	# which collector is actually running.  Substituting it here keeps the
+	# Makefile the only place the version is written down.
+	$(SED) 's|^COLLECTOR_VERSION=.*|COLLECTOR_VERSION=$(PKG_VERSION)-r$(PKG_RELEASE)|' \
+		$(PKG_BUILD_DIR)/root/usr/share/traffic/collector.sh
 endef
 
 define Package/$(PKG_NAME)/conffiles

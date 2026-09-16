@@ -615,6 +615,10 @@ poll_ct() {
 # before any rebuild, so rebuilding does not lose the round.
 ACCT_TABLE=${ACCT_TABLE:-inet traffic_acct}
 
+# replaced by the Makefile at build time, so the page can show which collector
+# is running rather than making someone read the file on the router
+COLLECTOR_VERSION=dev
+
 acct_available() { command -v nft >/dev/null 2>&1; }
 
 # The LAN device: what separates client traffic from the proxy own.
@@ -1182,6 +1186,7 @@ write_summary() {
         }' "$STATE_DIR/totals.tsv" 2>/dev/null
         printf ',"router":%s' "$(cat "$STATE_DIR/router.tsv" 2>/dev/null || echo 0)"
         printf ',"client_count":%s' "$(wc -l < "$STATE_DIR/clients.tsv" 2>/dev/null || echo 0)"
+        printf ',"version":"%s"' "$COLLECTOR_VERSION"
         # the per-host counters: how much every LAN client really moved, which is
         # the denominator the application breakdown is measured against.  When
         # they are not running (no nft, or the table could not be created) the

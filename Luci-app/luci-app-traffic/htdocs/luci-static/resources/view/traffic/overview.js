@@ -589,6 +589,9 @@ return view.extend({
 		bits.push({ k: _('Client totals'), v: s.acct ? _('nft counters') : _('conntrack'),
 			warn: !s.acct && !!s.acct_error });
 		if (!s.acct && s.acct_error) bits.push({ k: _('Counter error'), v: s.acct_error, warn: true });
+		/* which collector build is running: the first thing to check when a fix
+		   does not seem to be in effect after installing the package */
+		if (s.version) bits.push({ k: _('Collector version'), v: s.version, mono: true });
 		/* what the collector treats as the box itself: the first thing to check
 		   when a client list looks like it has the router in it */
 		if (s.self) bits.push({ k: _('Router addresses'), v: s.self, mono: true });

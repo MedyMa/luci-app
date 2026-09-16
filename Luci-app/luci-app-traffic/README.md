@@ -168,8 +168,16 @@ and runs after the network is up. Nothing else needs configuring: the LAN
 prefix is detected from the LAN interface and the querylog path from AdGuard
 Home's workdir. Both are shown on the page and can be overridden.
 
-## Configuration
+## Versioning
 
+**Every change bumps `PKG_VERSION` by one patch level and resets `PKG_RELEASE`
+to 1.** The version is substituted into the collector at build time and the page
+shows it in the status strip, so the build that is actually running can be told
+from the one that was installed. Without this, two different collectors look
+identical after installation and opkg does not even treat the second as an
+upgrade.
+
+## Configuration
 | Option | Default | Meaning |
 |---|---|---|
 | `enabled` | `1` | run the collector |

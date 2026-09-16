@@ -430,6 +430,10 @@ chk "23c 下行按目的地址计（postrouting）"   "10000"             "$(awk
 chk "23d 上行按源地址计（prerouting）"      "1000"              "$(awk -F'\t' '$1=="192.168.2.50"{print $3}' "$T/state5/acct_delta.tsv")"
 chk "23e 客户端总量来自计数器"              "11000"             "$(awk -F'\t' '$1=="192.168.2.50"{print $2}' "$T/state5/clients.tsv")"
 chk "23f 快照报告计数层已启用"              "1"                 "$(grep -o '"acct":[0-9]*' "$T/state5/summary.json" | cut -d: -f2)"
+# The Makefile substitutes the package version in at build time; here it is the
+# unsubstituted placeholder, and that it is present at all is what matters: the
+# page shows it so an installed fix can be told from one that is not running.
+chk "23f2 快照报告采集器版本"               "dev"               "$(grep -o '"version":"[^"]*"' "$T/state5/summary.json" | cut -d'"' -f4)"
 acctf() { grep -o '"accounted":{[^}]*}' "$1" | sed -n "s/.*\"$2\":\([0-9]*\).*/\1/p"; }
 chk "23g 快照报告计数器总量（下行）"        "10000"             "$(acctf "$T/state5/summary.json" down)"
 chk "23g2 快照报告计数器总量（上行）"       "1000"              "$(acctf "$T/state5/summary.json" up)"
