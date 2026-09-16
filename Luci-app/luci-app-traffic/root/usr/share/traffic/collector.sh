@@ -95,6 +95,15 @@ CFG_SERIES_HOT=3600
 CFG_SERIES_COLD=86400
 SERIES10_MAX=360
 SERIES60_MAX=1440
+# one point per hour, a week of them: the third tier the week view reads
+SERIES1H_MAX=168
+# Automatic maintenance, which is why the page has no "clear" button: clearing is
+# housekeeping, and a button on a dashboard is an invitation to throw the history
+# away by accident.  The collector bounds its own store instead - the history is
+# dropped once a calendar month, and again whenever <datadir> passes this many
+# megabytes.  Only history is dropped; the live counters are the session in
+# progress and are kept, so a purge never blanks what the page is showing.
+CFG_PURGE_MB=100
 
 # Bumped whenever a change alters what the live counters mean.  They are running
 # totals, so a change of meaning cannot be applied retroactively: after the fix
@@ -130,6 +139,7 @@ uci_get() {
         top_clients)    v=${TRAFFIC_TOP_CLIENTS:-} ;;
         resolve_interval) v=${TRAFFIC_RESOLVE:-} ;;
         dnsmap_max)     v=${TRAFFIC_DNSMAP_MAX:-} ;;
+        purge_size_mb)  v=${TRAFFIC_PURGE_MB:-} ;;
     esac
     if [ -n "$v" ]; then printf '%s\n' "$v"; return 0; fi
 
@@ -255,6 +265,7 @@ load_config() {
     v=$(uci_get top_clients);    [ -n "$v" ] && CFG_TOP_CLIENTS=$v
     v=$(uci_get resolve_interval); [ -n "$v" ] && CFG_RESOLVE=$v
     v=$(uci_get dnsmap_max);     [ -n "$v" ] && CFG_DNSMAP_MAX=$v
+    v=$(uci_get purge_size_mb);  [ -n "$v" ] && CFG_PURGE_MB=$v
 
     # sanity
     case "$CFG_INTERVAL" in ''|*[!0-9]*) CFG_INTERVAL=10 ;; esac
@@ -264,6 +275,7 @@ load_config() {
     case "$CFG_TOP_CLIENTS" in ''|*[!0-9]*) CFG_TOP_CLIENTS=20 ;; esac
     case "$CFG_RESOLVE" in ''|*[!0-9]*) CFG_RESOLVE=30 ;; esac
     case "$CFG_DNSMAP_MAX" in ''|*[!0-9]*) CFG_DNSMAP_MAX=50000 ;; esac
+    case "$CFG_PURGE_MB" in ''|*[!0-9]*) CFG_PURGE_MB=100 ;; esac
     # how many samples each tier keeps, from the configured interval
     case "${TRAFFIC_SERIES_HOT:-}" in ''|*[!0-9]*) ;; *) CFG_SERIES_HOT=$TRAFFIC_SERIES_HOT ;; esac
     case "${TRAFFIC_SERIES_COLD:-}" in ''|*[!0-9]*) ;; *) CFG_SERIES_COLD=$TRAFFIC_SERIES_COLD ;; esac
@@ -271,6 +283,52 @@ load_config() {
     [ "$SERIES10_MAX" -lt 2 ] && SERIES10_MAX=2
     SERIES60_MAX=$((CFG_SERIES_COLD / 60))
     [ "$SERIES60_MAX" -lt 2 ] && SERIES60_MAX=2
+}
+
+# ------------------------------------------------------------- maintenance
+# Drop the history once a month, and again when <datadir> grows past the limit.
+#
+# hourly.tsv is the file that actually grows without bound: an app row and a
+# client row per application and client, per hour, kept forever.  The two series
+# files are already bounded by their point counts, and the name maps live in
+# tmpfs and are bounded by dnsmap_max; they are cleared here too because they are
+# what the purge is meant to reclaim.
+#
+# Nothing in the live counters is touched.  They are the session in progress, and
+# dropping them would make the page fall back to zero for traffic that is still
+# on the wire - the opposite of what the page is for.
+auto_purge() {
+    local month kb limit why=
+
+    month=$(date +%Y-%m 2>/dev/null)
+    case "$month" in ''|*[!0-9-]*) month= ;; esac
+
+    kb=$(du -sk "$CFG_DATADIR" 2>/dev/null | awk '{ print $1 }')
+    case "$kb" in ''|*[!0-9]*) kb=0 ;; esac
+
+    # A missing marker is a fresh install, not a month boundary: writing it and
+    # doing nothing keeps the first run from wiping a store it never filled.
+    if [ -n "$month" ] && [ -s "$STATE_DIR/purge.month" ] &&
+       [ "$(cat "$STATE_DIR/purge.month" 2>/dev/null)" != "$month" ]; then
+        why="month"
+    fi
+    limit=$((CFG_PURGE_MB * 1024))
+    if [ "$limit" -gt 0 ] && [ "$kb" -ge "$limit" ]; then
+        # the size reason outranks the month one when both are true, because it is
+        # the one that needs the space back
+        why="size ${kb}KB"
+    fi
+
+    if [ -n "$why" ]; then
+        : > "$CFG_DATADIR/hourly.tsv"
+        : > "$CFG_DATADIR/series60.tsv"
+        : > "$CFG_DATADIR/series1h.tsv"
+        : > "$STATE_DIR/namemap.tsv"
+        : > "$STATE_DIR/dnsmap.tsv"
+        log "purged traffic history ($why)"
+    fi
+    [ -n "$month" ] && printf '%s\n' "$month" > "$STATE_DIR/purge.month"
+    return 0
 }
 
 # ---------------------------------------------------------------- state
@@ -301,6 +359,7 @@ init_state() {
     [ -f "$STATE_DIR/series10.tsv" ] || : > "$STATE_DIR/series10.tsv"
     [ -f "$STATE_DIR/minute.tsv" ] || printf '0\n0\n0\n' > "$STATE_DIR/minute.tsv"
     [ -f "$CFG_DATADIR/series60.tsv" ] || : > "$CFG_DATADIR/series60.tsv"
+    [ -f "$CFG_DATADIR/series1h.tsv" ] || : > "$CFG_DATADIR/series1h.tsv"
     [ -f "$STATE_DIR/meta" ] || printf '0\n0\n' > "$STATE_DIR/meta"
     [ -f "$STATE_DIR/nmoff" ] || printf '0\n' > "$STATE_DIR/nmoff"
     [ -f "$STATE_DIR/nmtime" ] || printf '0\n' > "$STATE_DIR/nmtime"
@@ -1050,12 +1109,33 @@ roll_hour() {
     hour=$(date +%Y-%m-%dT%H 2>/dev/null)
     [ -n "$hour" ] || hour="h$now"
     [ -s "$STATE_DIR/totals.tsv" ] || return 0
-    awk -F'\t' -v h="$hour" '{ printf "%s\tapp\t%s\t%d\t%d\n", h, $1, $2, $3 }' \
+    # totals.tsv is <name>\t<up>\t<down>, while hourly.tsv - and everything that
+    # reads it - is <hour>\t<kind>\t<name>\t<down>\t<up>.  The two columns are
+    # therefore written in the opposite order here on purpose: copying them
+    # straight across swaps download and upload in the hourly view.
+    awk -F'\t' -v h="$hour" '{ printf "%s\tapp\t%s\t%d\t%d\n", h, $1, $3, $2 }' \
         "$STATE_DIR/totals.tsv" >> "$CFG_DATADIR/hourly.tsv"
     awk -F'\t' -v h="$hour" '{ printf "%s\tclient\t%s\t%d\t0\n", h, $1, $2 }' \
         "$STATE_DIR/clients.tsv" >> "$CFG_DATADIR/hourly.tsv"
     if [ -s "$STATE_DIR/router.tsv" ]; then
         printf '%s\trouter\tproxy\t%d\t0\n' "$hour" "$(cat "$STATE_DIR/router.tsv")" >> "$CFG_DATADIR/hourly.tsv"
+    fi
+    # One throughput point per hour, for the week-long view.  The app rows are
+    # the classified client traffic and the router total is what the box itself
+    # carried; together they are the hour.  The client rows are a breakdown of
+    # the app rows, so adding those as well would count the same bytes twice.
+    # Stored as a point rather than aggregated from hourly.tsv on demand, because
+    # that file keys hours by a timestamp string, and turning "2026-09-16T16"
+    # back into an epoch needs a date parser the week view should not depend on.
+    hr=$(cat "$STATE_DIR/router.tsv" 2>/dev/null || echo 0)
+    awk -F'\t' -v t="$now" -v rt="$hr" '
+        { d += $3; u += $2 }
+        END { printf "%s\t%d\t%d\n", t, d + rt, u }
+    ' "$STATE_DIR/totals.tsv" >> "$CFG_DATADIR/series1h.tsv"
+    n=$(wc -l < "$CFG_DATADIR/series1h.tsv" 2>/dev/null || echo 0)
+    if [ "$n" -gt "$SERIES1H_MAX" ]; then
+        tail -n "$SERIES1H_MAX" "$CFG_DATADIR/series1h.tsv" > "$CFG_DATADIR/.series1h.new" 2>/dev/null \
+            && mv -f "$CFG_DATADIR/.series1h.new" "$CFG_DATADIR/series1h.tsv"
     fi
     : > "$STATE_DIR/totals.tsv"
     : > "$STATE_DIR/clients.tsv"
@@ -1259,6 +1339,7 @@ run() {
     load_config
     [ "$CFG_ENABLED" = "1" ] || { log "disabled by uci"; return 0; }
     init_state
+    auto_purge
     log "started: interval=${CFG_INTERVAL}s lan4=$CFG_LAN4 lan6=$CFG_LAN6 querylog=$CFG_QUERYLOG"
 
     # Publish a snapshot before doing any real work, so that the page reflects

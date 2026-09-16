@@ -48,3 +48,9 @@ option resolve_interval '30'
 # hour.  Names already resolved are cached separately, so this bounds memory
 # without losing the catalogue's answers.
 option dnsmap_max '50000'
+# The page has no clear button: the collector bounds its own history instead,
+# dropping it once a calendar month and again whenever the data directory passes
+# this many megabytes.  Only history goes (the hourly archive, the two series and
+# the name maps); the live counters are the session in progress and are kept, so
+# a purge never blanks what the page is showing.
+option purge_size_mb '100'

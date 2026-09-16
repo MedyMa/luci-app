@@ -34,12 +34,17 @@ T=$(mktemp -d)
 trap 'rm -rf "$T"' EXIT
 
 # A minimal jshn stand-in.  json_add_string prints what it was given, which is
-# enough to tell which branch of the dispatch ran, and json_get_var assigns the
-# value it is asked for so the argument plumbing is exercised too.
+# enough to tell which branch of the dispatch ran.  json_get_var answers from
+# STUB_<key> so the test can feed a parameter in without a JSON parser, which is
+# how the range and hour plumbing gets exercised.
 cat > "$T/jshn.sh" <<'EOF'
 json_init() { :; }
 json_load() { :; }
-json_get_var() { eval "$1=\"\$2\""; }
+json_get_var() {
+	local v
+	eval "v=\${STUB_$2:-}"
+	eval "$1=\$v"
+}
 json_add_object() { :; }
 json_close_object() { :; }
 json_add_boolean() { :; }
@@ -92,6 +97,42 @@ for k in collected_at interval hour flows dnsmap_lines pending rounds version ac
     chk "6 空快照含字段 $k"                "1"     "$(printf '%s' "$got" | grep -c "\"$k\":")"
 done
 chk "6a 空快照是合法 JSON 形状"            "{"     "$(printf '%s' "$got" | head -c 1)"
+
+echo
+echo "=== 吞吐档位 ==="
+# Every tier must resolve to its own file and interval.  If a tier reads the
+# wrong file the page is not empty and not broken - it just plots the wrong
+# history - so the file binding is asserted, not only the echoed range name.
+cat > "$T/uci" <<EOF
+#!/bin/sh
+case "\$*" in
+	*traffic.settings.datadir*)  echo "$T/data"; exit 0 ;;
+	*traffic.settings.interval*) echo 10;       exit 0 ;;
+esac
+exit 1
+EOF
+chmod +x "$T/uci"
+mkdir -p "$T/data"
+printf '1000\t100\t10\n2000\t200\t20\n' > "$T/data/series1h.tsv"
+# 800 minute points, so the 12h cap (720) is distinguishable from the 24h one.
+awk 'BEGIN { for (i = 1; i <= 800; i++) printf "%d\t%d\t%d\n", i, i * 2, i }' > "$T/data/series60.tsv"
+
+ser() { PATH="$T:$PATH" STATE_DIR="$T/state" STUB_range="$1" sh "$T/lt.sh" call getSeries < /dev/null; }
+rng() { printf '%s' "$1" | sed -n 's/^{"range":"\([^"]*\)".*/\1/p'; }
+npts() { printf '%s' "$1" | tr -cd '[' | wc -c | tr -d ' '; }
+
+for r in 1h 12h 24h 7d; do
+    chk "7 getSeries $r 回显档位"          "$r"    "$(rng "$(ser "$r")")"
+done
+chk "7a 未指定档位默认 1h"                 "1h"    "$(rng "$(PATH="$T:$PATH" STATE_DIR="$T/state" sh "$T/lt.sh" call getSeries < /dev/null)")"
+chk "7b 7d 读取 series1h.tsv"             "[[1000,100,10],[2000,200,20]]" \
+    "$(ser 7d | sed -n 's/.*"points":\(.*\)}$/\1/p')"
+chk "7c 12h 间隔 60 秒"                    "60"    "$(ser 12h | sed -n 's/.*"interval":\([0-9]*\).*/\1/p')"
+chk "7d 7d 间隔 3600 秒"                   "3600"  "$(ser 7d | sed -n 's/.*"interval":\([0-9]*\).*/\1/p')"
+chk "7e 12h 截断到 720 点"                 "720"   "$(( $(npts "$(ser 12h)") - 1 ))"
+chk "7f 24h 保留 800 点"                   "800"   "$(( $(npts "$(ser 24h)") - 1 ))"
+chk "7g 12h 与 24h 读同一文件"             "1"     "$(ser 12h | grep -c '"interval":60')"
+chk "7h 未知档位回落 1h"                   "1h"    "$(rng "$(ser nonsense)")"
 
 echo
 if [ "$fail" = 0 ]; then echo "=== 全部通过 ==="; else echo "=== 有失败 ==="; fi

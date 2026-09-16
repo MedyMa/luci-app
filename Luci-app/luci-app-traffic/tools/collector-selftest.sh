@@ -594,5 +594,70 @@ chk "24f 只读取新增部分"                    "$((before + 1))"  "$(grep -c
 chk "24g 新增段的域名也拿到了"              "192.168.2.51 198.51.100.7" "$(d7 'news.example.com')"
 
 echo
+echo "=== 整点滚动：hourly.tsv 与 series1h.tsv ==="
+# roll_hour is the only writer of both files, and it runs when the hour string
+# changes - which a test cannot wait for.  A date stub that serves the hour from
+# a file makes the rollover happen on demand while every other date call (the
+# epoch a sample is stamped with) still goes to the real clock.
+REALDATE=$(command -v date)
+mkdir -p "$T/bin" "$T/state9" "$T/data9"
+printf '1\n' > "$T/state9/version"       # matching schema, so what is seeded stays
+printf 'YouTube\t1000\t5000\n' > "$T/state9/totals.tsv"   # name, up, down
+printf '192.168.2.99\t6000\n'  > "$T/state9/clients.tsv"
+printf '777\n'                 > "$T/state9/router.tsv"
+printf 'h0\n' > "$T/fakehour"
+cat > "$T/bin/date" <<EOF
+#!/bin/sh
+case "\$1" in
+    +%Y-%m-%dT%H) cat "$T/fakehour" 2>/dev/null ;;
+    *) exec "$REALDATE" "\$@" ;;
+esac
+EOF
+chmod +x "$T/bin/date"
+: > "$T/ctempty"
+
+wait_rounds() {
+    local st="$1" want="$2" i=0 at
+    while [ "$i" -lt 150 ]; do
+        at=$(rounds_at "$st/summary.json")
+        case "$at" in ''|*[!0-9]*) at=0 ;; esac
+        [ "$at" -ge "$want" ] && return 0
+        sleep 0.2
+        i=$((i + 1))
+    done
+    return 1
+}
+
+PATH="$T/bin:$PATH" UCI=/bin/true LUA="$T/bin/lua" CT="$T/ctempty" \
+  TRAFFIC_QUERYLOG=/nonexistent TRAFFIC_LAN4=192.168.2. TRAFFIC_INTERVAL=2 \
+  TRAFFIC_DATADIR="$T/data9" TRAFFIC_APPMAP="$T/apps.tsv" \
+  TRAFFIC_CATEGORIES="$T/categories.tsv" STATE_DIR="$T/state9" \
+  SELF_DIR="$(cd "$SELF/../root/usr/share/traffic" && pwd)" \
+  sh "$COLLECTOR" >/dev/null 2>&1 &
+hpid=$!
+# One round in the old hour, then turn the clock over and let it roll once.
+wait_rounds "$T/state9" 1
+printf 'h1\n' > "$T/fakehour"
+wait_rounds "$T/state9" 3
+kill "$hpid" 2>/dev/null
+wait "$hpid" 2>/dev/null
+sleep 0.3
+
+h9="$T/data9/hourly.tsv"
+# The archived row is <hour>\t<kind>\t<name>\t<down>\t<up>, which is the layout the
+# backend reads.  Seeded asymmetrically on purpose: equal numbers would hide a
+# swap, and a swap is exactly what this asserts against.
+chk "26 整点应用行下/上未错位"              "5000/1000" "$(awk -F'\t' '$2=="app"    && $3=="YouTube" { printf "%s/%s", $4, $5 }' "$h9")"
+chk "26a 整点客户端行记字节数"              "6000/0"    "$(awk -F'\t' '$2=="client" { printf "%s/%s", $4, $5 }' "$h9")"
+chk "26b 整点隧道行记路由器自身流量"        "777"       "$(awk -F'\t' '$2=="router" { printf "%s", $4 }' "$h9")"
+chk "26c 整点只归档一次"                    "1"         "$(awk -F'\t' '$2=="router"' "$h9" | wc -l | tr -d ' ')"
+chk "26d 归档行数 = 三类各一行"             "3"         "$(grep -c . "$h9")"
+# The week tier is one point per hour, and its down column carries the router
+# total as well, because the box's own traffic belongs to the hour too.
+chk "26e series1h 下行含路由器流量"         "5777"      "$(cut -f2 "$T/data9/series1h.tsv")"
+chk "26f series1h 上行"                     "1000"      "$(cut -f3 "$T/data9/series1h.tsv")"
+chk "26g series1h 每次滚动一个点"           "1"         "$(grep -c . "$T/data9/series1h.tsv")"
+
+echo
 if [ "$fail" = 0 ]; then echo "=== 全部通过 ==="; else echo "=== 有失败 ==="; fi
 exit "$fail"

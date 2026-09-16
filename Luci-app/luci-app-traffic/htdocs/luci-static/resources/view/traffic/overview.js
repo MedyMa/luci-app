@@ -6,7 +6,6 @@
 
 var callSummary = rpc.declare({ object: 'luci.traffic', method: 'getSummary' });
 var callHourly  = rpc.declare({ object: 'luci.traffic', method: 'getHourly', params: [ 'hours' ] });
-var callReset   = rpc.declare({ object: 'luci.traffic', method: 'resetStats', params: [ 'what' ] });
 var callSeries  = rpc.declare({ object: 'luci.traffic', method: 'getSeries', params: [ 'range' ] });
 var callResolveNow = rpc.declare({ object: 'luci.traffic', method: 'resolveNow' });
 
@@ -25,7 +24,9 @@ var ICON = 26;   /* one size everywhere: list rows, donut legend */
  * in bytes, and the rate is bytes divided by the tier's interval. */
 var SERIES_RANGES = {
 	'1h':  { label: 'Last hour',      interval: 10 },
-	'24h': { label: 'Last 24 hours',  interval: 60 }
+	'12h': { label: 'Last 12 hours',  interval: 60 },
+	'24h': { label: 'Last 24 hours',  interval: 60 },
+	'7d':  { label: 'Last 7 days',    interval: 3600 }
 };
 var CHART_W = 720, CHART_H = 190, CHART_PAD = { l: 10, r: 10, t: 14, b: 22 };
 
@@ -342,7 +343,10 @@ return view.extend({
 	summary: null,
 	prev: null,
 	rate: { down: 0, up: 0 },
-	range: 'session',
+	/* One day by default: it is the window the total, the donut and the table
+	 * all describe, and the one the reference layout opens on.  "Since start"
+	 * stays available for watching the current session move. */
+	range: '24',
 
 	load: function() { return callSummary(); },
 
@@ -359,8 +363,24 @@ return view.extend({
 		this.metaEl   = el('div', { 'class': 'tf-meta' });
 		this.chartEl  = el('div', { 'class': 'tf-chart' });
 		this.chartNote = el('span', { 'class': 'tf-chart-note' });
+		/* The key for the two curves.  They are drawn in the same colours the
+		 * chart uses, so a small upload curve is identifiable rather than
+		 * looking like a stray line at the floor. */
+		this.chartLegend = el('div', { 'class': 'tf-chart-legend' }, [
+			el('span', { 'class': 'tf-lg-down' }, [ el('i'), _('Received') ]),
+			el('span', { 'class': 'tf-lg-up' }, [ el('i'), _('Sent') ])
+		]);
 		this.statusEl = el('div', { 'class': 'tf-status' });
-		this.seriesRange = '1h';
+		/* One day by default: it is the window that answers "what has been
+		 * happening", where the hour view is mostly the last few minutes. */
+		this.seriesRange = '24h';
+
+		var granSel = el('select', { 'class': 'cbi-input-select tf-range tf-gran-sel',
+			'change': function(ev) { self.setSeriesRange(ev.target.value); } },
+			Object.keys(SERIES_RANGES).map(function(k) {
+				return el('option', { 'value': k }, [ _(SERIES_RANGES[k].label) ]);
+			}));
+		granSel.value = this.seriesRange;
 		this.series = null;
 
 		var rangeSel = el('select', { 'class': 'cbi-input-select tf-range', 'change': function(ev) {
@@ -368,20 +388,13 @@ return view.extend({
 			self.refresh(true);
 		} }, [
 			el('option', { 'value': 'session' }, [ _('Since start') ]),
+			el('option', { 'value': '1' }, [ _('Last hour') ]),
+			el('option', { 'value': '12' }, [ _('Last 12 hours') ]),
 			el('option', { 'value': '24' }, [ _('Last 24 hours') ]),
 			el('option', { 'value': '168' }, [ _('Last 7 days') ])
 		]);
-
-		var clearBtn = el('button', {
-			'class': 'cbi-button cbi-button-negative tf-clear',
-			'click': function() {
-				if (!confirm(_('Clear the counters collected so far?'))) return;
-				callReset('session').then(function() {
-					self.prev = null;
-					return callSummary();
-				}).then(function(s) { self.summary = s; self.refresh(true); });
-			}
-		}, [ _('Clear') ]);
+		/* the dropdown has to show what the page is actually displaying */
+		rangeSel.value = this.range;
 
 		var node = el('div', { 'class': 'tf-page' }, [
 			el('div', { 'class': 'tf-card tf-hero' }, [
@@ -399,41 +412,44 @@ return view.extend({
 						el('span', { 'class': 'tf-rate-cap' }, [ _('Sent') ])
 					])
 				]),
-				el('div', { 'class': 'tf-hero-ctl' }, [ rangeSel, clearBtn ])
+				el('div', { 'class': 'tf-hero-ctl' }, [ rangeSel ])
 			]),
 
 			el('div', { 'class': 'tf-card tf-chart-card' }, [
 				el('div', { 'class': 'tf-chart-head' }, [
 					el('h3', {}, [ _('Throughput') ]),
+					el('div', { 'class': 'tf-chart-ctl' }, [ granSel ])
+				]),
+				el('div', { 'class': 'tf-chart-sub' }, [
 					this.chartNote,
-					el('div', { 'class': 'tf-chart-ctl' }, [
-						el('button', { 'class': 'tf-gran tf-gran-on', 'data-range': '1h',
-							'click': function(ev) { self.setSeriesRange('1h', ev.target); } }, [ _('Last hour') ]),
-						el('button', { 'class': 'tf-gran', 'data-range': '24h',
-							'click': function(ev) { self.setSeriesRange('24h', ev.target); } }, [ _('Last 24 hours') ])
-					])
+					this.chartLegend
 				]),
 				this.chartEl
 			]),
 
 			el('div', { 'class': 'tf-card tf-status-card' }, [ this.statusEl ]),
 
-			el('div', { 'class': 'tf-grid' }, [
-				el('div', { 'class': 'tf-card tf-donut-card' }, [
-					el('div', { 'class': 'tf-donut-wrap' }, [ this.donutEl, this.legendEl ])
-				]),
-				el('div', { 'class': 'tf-card tf-list-card' }, [
-					el('table', { 'class': 'table tf-table' }, [
-						el('thead', {}, [ el('tr', {}, [
-							el('th', {}, [ _('Application name') ]),
-							el('th', { 'class': 'tf-num' }, [ _('Total traffic') ]),
-							el('th', { 'class': 'tf-num' }, [ _('Received') ]),
-							el('th', { 'class': 'tf-num' }, [ _('Sent') ]),
-							el('th', {}, [ _('Top client') ]),
-							el('th', { 'class': 'tf-num' }, [ _('Client count') ])
-						]) ]),
-						this.rowsEl
-					])
+			/* The composition sits above the table rather than beside it: the two
+			 * were a flexible two-column row, and below the tablet breakpoint that
+			 * row stacked anyway, so the breakdown pushed the table down and left
+			 * a band of empty page beside the donut.  Above the table it is one
+			 * readable block at every width, and the legend can spread sideways
+			 * instead of being squeezed into one column. */
+			el('div', { 'class': 'tf-card tf-donut-card' }, [
+				el('div', { 'class': 'tf-donut-wrap' }, [ this.donutEl, this.legendEl ])
+			]),
+
+			el('div', { 'class': 'tf-card tf-list-card' }, [
+				el('table', { 'class': 'table tf-table' }, [
+					el('thead', {}, [ el('tr', {}, [
+						el('th', {}, [ _('Application name') ]),
+						el('th', { 'class': 'tf-num' }, [ _('Total traffic') ]),
+						el('th', { 'class': 'tf-num' }, [ _('Received') ]),
+						el('th', { 'class': 'tf-num' }, [ _('Sent') ]),
+						el('th', {}, [ _('Top client') ]),
+						el('th', { 'class': 'tf-num' }, [ _('Client count') ])
+					]) ]),
+					this.rowsEl
 				])
 			]),
 
@@ -455,16 +471,9 @@ return view.extend({
 		return node;
 	},
 
-	setSeriesRange: function(range, btn) {
+	setSeriesRange: function(range) {
 		if (!SERIES_RANGES[range] || this.seriesRange === range) return;
 		this.seriesRange = range;
-		var bar = btn && btn.parentNode;
-		if (bar) {
-			for (var i = 0; i < bar.childNodes.length; i++) {
-				var b = bar.childNodes[i];
-				if (b.classList) b.classList[b === btn ? 'add' : 'remove']('tf-gran-on');
-			}
-		}
 		this.loadSeries();
 	},
 
@@ -501,7 +510,8 @@ return view.extend({
 		});
 		var now = Math.floor(Date.now() / 1000);
 		if (!series.length) {
-			var span = (s && s.range === '24h') ? 86400 : 3600;
+			var spans = { '1h': 3600, '12h': 43200, '24h': 86400, '7d': 604800 };
+			var span = spans[(s && s.range) || this.seriesRange] || 3600;
 			series = [ { t: now - span, down: 0, up: 0 }, { t: now, down: 0, up: 0 } ];
 		}
 		this.chartEl.appendChild(makeChart(series));
@@ -954,13 +964,21 @@ function injectCss() {
 		'.tf-page .tf-rate-cap{font-size:.75rem;color:var(--tf-dim);}',
 		'.tf-page .tf-hero-ctl{margin-left:auto;display:flex;gap:.6rem;align-items:center;}',
 
-		/* throughput chart */
-		'.tf-page .tf-chart-head{display:flex;align-items:baseline;gap:.7rem;flex-wrap:wrap;margin-bottom:.35rem;}',
+		/* throughput chart.  Title and range on one line, the reading and the
+		 * colour key on the next: the title used to sit alone with the controls
+		 * on the row below, which left the top of the card looking empty. */
+		'.tf-page .tf-chart-head{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;margin-bottom:.3rem;}',
 		'.tf-page .tf-chart-head h3{margin:0;font-size:.95rem;font-weight:600;}',
+		'.tf-page .tf-chart-sub{display:flex;align-items:center;gap:.6rem 1rem;flex-wrap:wrap;margin-bottom:.45rem;}',
 		'.tf-page .tf-chart-note{font-size:.76rem;color:var(--tf-dim);font-variant-numeric:tabular-nums;}',
 		'.tf-page .tf-chart-ctl{margin-left:auto;display:flex;gap:.4rem;}',
-		'.tf-page .tf-chart-ctl .tf-gran-on{background:rgba(0,168,232,.18);border-color:rgba(0,168,232,.5);',
-		'color:var(--tf-fg);font-weight:600;}',
+		/* the colour key: the two curves are the same shape at different
+		 * magnitudes, so without a key a small upload reads as a stray line */
+		'.tf-page .tf-chart-legend{display:flex;gap:.9rem;margin-left:auto;font-size:.76rem;color:var(--tf-dim);}',
+		'.tf-page .tf-chart-legend span{display:inline-flex;align-items:center;gap:.34rem;}',
+		'.tf-page .tf-chart-legend i{width:.62rem;height:.62rem;border-radius:2px;display:inline-block;}',
+		'.tf-page .tf-chart-legend .tf-lg-down i{background:#00a8e8;}',
+		'.tf-page .tf-chart-legend .tf-lg-up i{background:#26c281;}',
 		'.tf-page .tf-chart-svg{display:block;width:100%;height:auto;max-height:190px;}',
 		'.tf-page .tf-chart-tick{font-size:9px;fill:var(--tf-dim);}',
 		'.tf-page .tf-chart{position:relative;}',
@@ -982,19 +1000,20 @@ function injectCss() {
 		 * came from a different font, and read worse at this size. */
 		'.tf-page .tf-mono{font-family:inherit;font-weight:600;font-size:.86rem;}',
 
-		/* layout */
-		'.tf-page .tf-grid{display:flex;gap:1rem;flex-wrap:wrap;align-items:stretch;}',
-		'.tf-page .tf-donut-card{flex:0 1 24rem;min-width:19rem;}',
-		'.tf-page .tf-list-card{flex:1 1 30rem;min-width:0;padding-bottom:.4rem;}',
-		'.tf-page .tf-donut-wrap{display:flex;align-items:center;gap:1.1rem;}',
+		/* layout: the donut card is a full-width block above the table, so these
+		 * are ordinary cards rather than the two flexible columns they used to be */
+		'.tf-page .tf-list-card{min-width:0;padding-bottom:.4rem;}',
+		'.tf-page .tf-donut-wrap{display:flex;align-items:center;gap:1.1rem 1.6rem;flex-wrap:wrap;}',
 		'.tf-page .tf-donut-svg{flex:0 0 168px;width:168px;height:168px;}',
 		'.tf-page .tf-donut-empty{font-size:11px;fill:var(--tf-dim);}',
 
-		/* legend */
-		'.tf-page .tf-legend{display:flex;flex-direction:column;gap:.3rem;min-width:9.5rem;}',
-		'.tf-page .tf-legend-row{display:flex;align-items:center;gap:.45rem;font-size:.82rem;}',
+		/* legend: the ten rows spread across the width the card now has, instead
+		 * of one narrow column with the rest of the card empty beside it */
+		'.tf-page .tf-legend{flex:1 1 22rem;display:grid;min-width:0;',
+		'grid-template-columns:repeat(auto-fill,minmax(13rem,1fr));gap:.3rem 1.1rem;}',
+		'.tf-page .tf-legend-row{display:flex;align-items:center;gap:.45rem;font-size:.82rem;min-width:0;}',
 		'.tf-page .tf-legend-dot{width:9px;height:9px;border-radius:50%;flex:0 0 9px;}',
-		'.tf-page .tf-legend-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;max-width:12rem;}',
+		'.tf-page .tf-legend-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}',
 		'.tf-page .tf-legend-pct{color:var(--tf-dim);font-variant-numeric:tabular-nums;}',
 
 		/* table */
@@ -1071,19 +1090,11 @@ function injectCss() {
 		'.tf-page .tf-range:hover{background-color:rgba(140,160,180,.22);}',
 		'.tf-page .tf-range:focus{outline:none;border-color:var(--tf-accent);',
 		'box-shadow:0 0 0 3px rgba(0,168,232,.18);}',
-		'.tf-page .tf-clear{height:2.05rem;padding:0 1.15rem;font-size:.82rem;line-height:2.05rem;',
-		'border-radius:999px!important;border:none;box-shadow:none;cursor:pointer;',
-		'transition:filter .15s,box-shadow .15s;}',
-		'.tf-page .tf-clear:hover{filter:brightness(1.07);box-shadow:0 3px 10px rgba(224,60,60,.25);}',
-		'.tf-page .tf-chart-ctl .tf-gran{font-size:.76rem;height:1.8rem;padding:0 .9rem;',
-		'line-height:1.8rem;border-radius:999px!important;background:rgba(140,160,180,.14);',
-		'border:1px solid transparent;color:var(--tf-fg);cursor:pointer;box-shadow:none;',
-		'transition:background-color .15s,border-color .15s,color .15s;}',
-		'.tf-page .tf-chart-ctl .tf-gran:hover{background:rgba(140,160,180,.24);}',
-		/* The toolbar chips carry no core button class, so the focus ring they
-		 * used to inherit from one is spelled out here.  :focus-visible keeps it
-		 * off a mouse click, which matters because these are toggle chips. */
-		'.tf-page .tf-gran:focus-visible,.tf-page .tf-clear:focus-visible,',
+		/* The chart range control is the same rounded dropdown as the one in the
+		 * hero, only smaller, so the two read as one kind of control. */
+		'.tf-page .tf-chart-ctl .tf-range{height:1.9rem;font-size:.78rem;padding:0 1.7rem 0 .85rem;}',
+		/* The dropdown carries no core control class, so the focus ring it used to
+		 * inherit from one is spelled out here. */
 		'.tf-page .tf-range:focus-visible{outline:2px solid var(--tf-accent);outline-offset:2px;}',
 		'.tf-page .tf-hero-ctl{gap:.7rem;}',
 
@@ -1093,18 +1104,13 @@ function injectCss() {
 		'--tf-shadow:0 6px 22px rgba(0,0,0,.35);',
 		'--tf-down:#4dd2ff;--tf-up:#3ddc97;}',
 		darkOf('.tf-range') + '{background-image:url("' + CHEVRON('#a9b6c2') + '");}',
-		darkOf('.tf-clear') + '{box-shadow:none;}',
 		/* Layout by width rather than by device: the cards stack as soon as they
 		 * cannot both fit, and the two columns a phone cannot spare (the busiest
 		 * client and the device count) drop out there instead of squeezing the
 		 * numbers nobody can read at 320px. */
-		'@media (max-width:64rem){.tf-page .tf-donut-card{flex:1 1 100%;}',
-		'.tf-page .tf-list-card{flex:1 1 100%;}}',
 		'@media (max-width:52rem){.tf-page .tf-hero{flex-wrap:wrap;gap:.6rem;}',
 		'.tf-page .tf-hero-ctl{margin-left:0;width:100%;justify-content:flex-start;}',
-		'.tf-page .tf-donut-wrap{flex-wrap:wrap;justify-content:center;}',
-		'.tf-page .tf-legend{min-width:0;flex:1 1 11rem;}',
-		'.tf-page .tf-legend-name{max-width:none;}',
+		'.tf-page .tf-donut-wrap{justify-content:center;}',
 		'.tf-page .tf-status{gap:.7rem 1.2rem;}}',
 		'@media (max-width:34rem){.tf-page .tf-hero-rates{gap:.7rem;flex-wrap:wrap;}',
 		'.tf-page .tf-table{font-size:.86rem;}',

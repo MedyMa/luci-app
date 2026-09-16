@@ -129,7 +129,13 @@ chk(stats5.some(t=>t==='3'), '含待解析数');
 // the addresses the collector treats as the box itself: the row has to be there
 // when the collector reports them, and absent when it does not
 chk(stats5.some(t=>t==='Router addresses'), '含"路由器自身地址"标题');
-chk(stats5.some(t=>t==='192.168.2.1 fdc8:64ed:f962:0000:0000:0000:0000:0001'), '含自身地址取值');
+// The value is shortened for display - the first address plus how many others
+// there are - because a full v4+v6 list is long enough to push the row out of
+// shape.  Nothing is hidden: the whole list stays in the tooltip, so this checks
+// both halves rather than just the shortened text.
+chk(stats5.some(t=>t==='192.168.2.1 +1'), '自身地址显示为首地址+其余数量');
+const selfTitle=(()=>{ let hit=null; walk(v5.statusEl,n=>{ if(n.attrs&&n.attrs.title&&n.attrs.title.indexOf('192.168.2.1 ' )===0) hit=n.attrs.title; }); return hit; })();
+chk(selfTitle==='192.168.2.1 fdc8:64ed:f962:0000:0000:0000:0000:0001', '完整自身地址保留在提示里');
 // which layer produced the client totals, and the warning when it fell back
 chk(stats5.some(t=>t==='Client totals') && stats5.some(t=>t==='nft counters'),
     '计数层启用时标明来源为 nft 计数器');
@@ -154,20 +160,23 @@ chk(css.length>1500, `样式表已注入（${css.length} 字符）`);
 const open=(css.match(/\{/g)||[]).length, close=(css.match(/\}/g)||[]).length;
 chk(open===close, `大括号平衡（{ ${open} / } ${close}）`);
 chk(!/;\s*;/.test(css), '没有连续分号（空声明）');
-for(const sel of ['.tf-page .tf-range','.tf-page .tf-clear','.tf-page .tf-chart-ctl .tf-gran']){
+for(const sel of ['.tf-page .tf-range','.tf-page .tf-chart-ctl .tf-range']){
   const re=new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\{([^}]*)\\}');
-  const m=css.match(re);
-  chk(!!m, `有 ${sel} 规则`);
-  if(m) chk(/border-radius:999px/.test(m[1]), `  ${sel} 是圆角（999px 药丸形）`);
+  chk(re.test(css), `有 ${sel} 规则`);
 }
+// The pill shape comes from the .tf-range rule that both dropdowns share, which
+// is what makes the chart control read as the same control as the one in the
+// hero rather than a second, differently-styled select.
+const pill=css.match(/\.tf-page \.tf-range\{([^}]*)\}/);
+chk(!!pill && /border-radius:999px/.test(pill[1]), '.tf-range 是圆角（999px 药丸形）');
 // The page must style its own controls and nothing else: a rule against a LuCI
 // core class would restyle the core view action buttons on every other page.
 // The buttons here therefore carry app classes (tf-*) rather than core ones.
 chk(css.indexOf('.cbi-')===-1, '样式表没有改写任何 LuCI 核心类选择器');
 chk(!/\.cbi-/.test(css) && !/cbi-button/.test(css), '未提及核心按钮类');
-// keyboard users still need a visible focus ring on the chips that no longer
-// inherit one from a core button class
-chk(/\.tf-gran:focus-visible/.test(css) && /outline:2px solid/.test(css),
+// keyboard users still need a visible focus ring on the dropdowns that no
+// longer inherit one from a core control class
+chk(/\.tf-range:focus-visible/.test(css) && /outline:2px solid/.test(css),
     '自绘控件保留了键盘焦点环');
 // The same rule as above, enforced over the whole sheet rather than one class:
 // every selector has to be anchored on this page own classes (tf-*), including
