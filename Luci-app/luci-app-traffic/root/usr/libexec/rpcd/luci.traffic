@@ -26,19 +26,34 @@ interval() {
 }
 
 empty_summary() {
-	printf '{"collected_at":0,"interval":0,"flows":0,"dnsmap_lines":0,"apps":[],"clients":[],'
+	printf '{"collected_at":0,"interval":0,"flows":0,"dnsmap_lines":0,"pending":0,"apps":[],"clients":[],'
 	printf '"totals":{"apps":0,"unknown":0,"router":0,"matched":0,"fallback":0,"unmatched":0}}\n'
 }
 
-# Re-emit the snapshot through jshn.  A truncated or half-written file fails to
-# parse and we answer with an empty document instead of breaking the page.
+# Re-emit the snapshot for the page.
+#
+# The collector writes it with write-to-temp-then-rename, so a reader never sees
+# a half-written file and passing the bytes straight through is safe.  Parsing
+# it with jshn and serialising it again - which is what this used to do - costs
+# a process and a full shell-side parse on every poll of every open page, to
+# validate a file we wrote ourselves.
 get_summary() {
 	local f="$STATE_DIR/summary.json"
-	if [ -s "$f" ] && json_load "$(cat "$f" 2>/dev/null)" 2>/dev/null; then
-		json_dump
+	if [ -s "$f" ] && [ "$(head -c 1 "$f" 2>/dev/null)" = "{" ]; then
+		cat "$f"
 	else
 		empty_summary
 	fi
+}
+
+# Ask the collector to stop waiting out its resolve_interval and name the
+# host names it has seen since the last pass.  Called by the page while it is
+# open, so the cost is only paid when somebody is looking at the result.
+resolve_now() {
+	: > "$STATE_DIR/resolve.now"
+	json_init
+	json_add_boolean result 1
+	json_dump
 }
 
 # Aggregate hourly.tsv into per-hour application totals.
@@ -143,6 +158,7 @@ case "$1" in
 		json_add_object "getSeries"
 		json_add_string "range" "string"
 		json_close_object
+		json_add_object "resolveNow"; json_close_object
 		json_add_object "resetStats"
 		json_add_string "what" "string"
 		json_close_object
@@ -160,6 +176,7 @@ case "$1" in
 			getHourly)  get_hourly "$arg_hours" ;;
 			getConfig)  get_config ;;
 			getSeries)  get_series "$arg_range" ;;
+			resolveNow) resolve_now ;;
 			resetStats) reset_stats "$arg_what" ;;
 			*) json_init; json_add_string "error" "unknown method"; json_dump ;;
 		esac

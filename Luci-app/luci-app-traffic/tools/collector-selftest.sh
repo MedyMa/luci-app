@@ -210,5 +210,21 @@ chk "18b 空闲的一分钟仍会落盘"             "0/0"               "$(awk 
 chk "18c 空闲点也受窗口上限约束"           "3"                 "$(grep -c . "$T/data/series60.tsv")"
 
 echo
+echo "=== 按需解析（页面打开时不等节流窗口）==="
+# a fresh resolve timestamp means the throttle would normally hold this host
+# name back; the page asks for it now by dropping the flag
+printf '%s\n' "$(date +%s)" > "$T/state/nmtime"
+printf '192.168.2.138\tnewhost.meituan.com\t10.20.30.40\n' >> "$T/state/dnsmap.tsv"
+printf '1\n' > "$T/state/pending"
+run_collector 4
+chk "19 节流生效：新主机名暂不解析"        ""                  "$(nm 'newhost.meituan.com')"
+chk "19a 待解析数量会上报"                 "1"                 "$(sed -n '1p' "$T/state/pending")"
+: > "$T/state/resolve.now"
+run_collector 4
+chk "19b resolveNow 让页面立刻拿到名称"    "app Meituan"       "$(nm 'newhost.meituan.com')"
+chk "19c 标记被消费后清除"                 "no"                "$( [ -f "$T/state/resolve.now" ] && echo yes || echo no )"
+chk "19d 解析完成后待解析归零"             "0"                 "$(sed -n '1p' "$T/state/pending")"
+
+echo
 if [ "$fail" = 0 ]; then echo "=== 全部通过 ==="; else echo "=== 有失败 ==="; fi
 exit "$fail"

@@ -134,6 +134,53 @@ rule set wins, so `play.google.com` reads as *Google Play* rather than *Google*;
 a small curated layer fixes the brands whose only upstream owner is a bundle
 (`taobao.com` is listed under `alibaba` and nowhere else).
 
+## Cost on the router, and on the page
+
+The tables are large and the page polls while it is open, so both ends are
+built to do nothing when nothing changed.
+
+**On the router**, one poll (measured at 2,000 conntrack flows, 5,000 resolved
+host names, 400 applications):
+
+| Stage | Cost | Note |
+|---|---|---|
+| `poll_ct` | dominant | parsing `/proc/net/nf_conntrack` is the floor; it is what the accounting *is* |
+| `classify` | small | reads the cached name map, not the catalogue |
+| `write_summary` | small | the heaviest N are selected inside awk, so no `sort`/`head` pipeline is spawned |
+| `resolve_names` | rare | reads the 786 KB catalogue only for host names never seen before |
+
+The catalogue is the one genuinely large thing, and it is read **once per new
+host name**, never per poll. Host names it has seen wait out `resolve_interval`
+(30 s) before a second look — except while the page is open, when the page calls
+`resolveNow` and the collector drops the wait, so a name that just appeared is
+resolved within a poll. Nobody watching, no cost.
+
+**On the page**, the DOM is updated rather than rebuilt. A refresh reuses the
+row it already has for each application and only writes the cells whose text
+actually changed. Measured over a 100-row table, second refresh:
+
+| | rebuild (before) | reuse (now) |
+|---|---|---|
+| nodes created, data unchanged | 1,060 | **0** |
+| nodes created, every byte changed | 1,060 | **0** |
+| nodes created, values *and* order changed | 1,060 | 52 |
+| `Image` objects created | 100 | **0** |
+| `L.resource()` calls | 100 | **0** |
+
+The icon count is the one that matters for memory: an `<img>` per row per
+refresh means the browser decodes the same 100 SVGs again every five seconds.
+Now each icon is created once, when its row first appears, and kept.
+
+Two cheap gates sit in front of that. A refresh whose snapshot has not advanced
+(the collector writes every 10 s, the page polls every 5 s) returns before
+touching the DOM, and a hidden tab skips the fetch entirely until it is shown
+again.
+
+**On the RPC path**, `getSummary` hands the snapshot file straight to the caller
+instead of parsing it with jshn and serialising it again. The collector writes
+it write-to-temp-then-rename, so a reader never sees a partial file, and the
+round trip was only ever validating a file this package wrote itself.
+
 ## The page
 
 Found under **Network → 流量统计** (`admin/network/traffic`).

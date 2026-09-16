@@ -204,6 +204,7 @@ init_state() {
     [ -f "$STATE_DIR/meta" ] || printf '0\n0\n' > "$STATE_DIR/meta"
     [ -f "$STATE_DIR/nmoff" ] || printf '0\n' > "$STATE_DIR/nmoff"
     [ -f "$STATE_DIR/nmtime" ] || printf '0\n' > "$STATE_DIR/nmtime"
+    [ -f "$STATE_DIR/pending" ] || printf '0\n' > "$STATE_DIR/pending"
     [ -f "$CFG_DATADIR/hourly.tsv" ] || : > "$CFG_DATADIR/hourly.tsv"
 }
 
@@ -323,12 +324,12 @@ resolve_names() {
         printf '%s\n' "$fp" > "$STATE_DIR/catfp"
         log "catalogue changed, re-resolving known host names"
     fi
-
     size=$(wc -c < "$STATE_DIR/dnsmap.tsv" 2>/dev/null || echo 0)
     off=$(sed -n '1p' "$STATE_DIR/nmoff" 2>/dev/null)
     case "$off" in ''|*[!0-9]*) off=0 ;; esac
     [ "$size" -lt "$off" ] && off=0
-    [ "$size" -gt "$off" ] || return 0
+    # nothing new since the last pass: nothing can be pending either
+    [ "$size" -gt "$off" ] || { printf '0\n' > "$STATE_DIR/pending"; return 0; }
 
     # Host names we have already answered are dropped here, not inside awk, so
     # the batch stays proportional to what is genuinely new.
@@ -354,14 +355,20 @@ resolve_names() {
         last=$(sed -n '1p' "$STATE_DIR/nmtime" 2>/dev/null)
         case "$last" in ''|*[!0-9]*) last=0 ;; esac
         # Throttle: a handful of fresh names is not worth re-reading the whole
-        # catalogue.  Leave the offset where it is so they are picked up on a
-        # later pass - until then they read as their registrable domain.
-        if [ "$pending" -lt 500 ] && [ $((now - last)) -lt "$CFG_RESOLVE" ]; then
+        # catalogue.  The offset stays where it is so they are picked up on a
+        # later pass - until then they read as their registrable domain.  The
+        # page can cut that wait short: rpcd drops a flag when someone who is
+        # actually looking at the page asks for the names now.
+        if [ ! -f "$STATE_DIR/resolve.now" ] &&
+           [ "$pending" -lt 500 ] && [ $((now - last)) -lt "$CFG_RESOLVE" ]; then
+            printf '%s\n' "$pending" > "$STATE_DIR/pending"
             return 0
         fi
+        rm -f "$STATE_DIR/resolve.now"
         resolve_batch "$STATE_DIR/newhosts.txt" >> "$STATE_DIR/namemap.tsv" 2>/dev/null
         printf '%s\n' "$now" > "$STATE_DIR/nmtime.new" && mv -f "$STATE_DIR/nmtime.new" "$STATE_DIR/nmtime"
     fi
+    printf '0\n' > "$STATE_DIR/pending"
 
     printf '%s\n' "$size" > "$STATE_DIR/nmoff.new" && mv -f "$STATE_DIR/nmoff.new" "$STATE_DIR/nmoff"
     return 0
@@ -579,8 +586,8 @@ classify() {
 # minute tier is the sum of the 10 s points inside it, flushed when the minute
 # rolls over.
 record_sample() {
-    local ts d u m cur_m cd cu n
-    ts=$(date +%s 2>/dev/null || echo 0)
+    local ts="${1:-}" d u m cur_m cd cu n
+    [ -n "$ts" ] || ts=$(date +%s 2>/dev/null || echo 0)
     d=0; u=0
     if [ -s "$STATE_DIR/sample.tsv" ]; then
         { read -r d; read -r u; } < "$STATE_DIR/sample.tsv"
@@ -589,10 +596,15 @@ record_sample() {
     case "$u" in ''|*[!0-9]*) u=0 ;; esac
 
     printf '%s\t%s\t%s\n' "$ts" "$d" "$u" >> "$STATE_DIR/series10.tsv"
-    n=$(wc -l < "$STATE_DIR/series10.tsv" 2>/dev/null || echo 0)
-    if [ "$n" -gt "$SERIES10_MAX" ]; then
-        tail -n "$SERIES10_MAX" "$STATE_DIR/series10.tsv" > "$STATE_DIR/series10.new" 2>/dev/null \
-            && mv -f "$STATE_DIR/series10.new" "$STATE_DIR/series10.tsv"
+    # The ring only needs trimming once it can have overrun, and counting the
+    # lines costs a process: check every 60th sample instead of every sample.
+    SAMPLE_N=$(( ${SAMPLE_N:-0} + 1 ))
+    if [ $((SAMPLE_N % 60)) -eq 0 ]; then
+        n=$(wc -l < "$STATE_DIR/series10.tsv" 2>/dev/null || echo 0)
+        if [ "$n" -gt "$SERIES10_MAX" ]; then
+            tail -n "$SERIES10_MAX" "$STATE_DIR/series10.tsv" > "$STATE_DIR/series10.new" 2>/dev/null \
+                && mv -f "$STATE_DIR/series10.new" "$STATE_DIR/series10.tsv"
+        fi
     fi
 
     m=$((ts / 60 * 60))
@@ -718,51 +730,82 @@ write_summary() {
         ' "$STATE_DIR/ac.tsv" 2>/dev/null > "$STATE_DIR/ac.agg"
 
         printf '"querylog":"%s","apps":[' "$(json_escape "$CFG_QUERYLOG")"
-        awk -F'\t' '{ printf "%d\t%s\t%d\t%d\n", $2 + $3, $1, $2, $3 }' "$STATE_DIR/totals.tsv" 2>/dev/null \
-            | sort -rn | head -n "$CFG_TOP_APPS" \
-            | awk -F'\t' -v acagg="$STATE_DIR/ac.agg" -v leases="${TRAFFIC_LEASES:-/tmp/dhcp.leases}" '
-              BEGIN {
-                  while ((getline l < acagg) > 0) {
-                      split(l, f, "\t")
-                      if (f[1] == "") continue
-                      acn[f[1]] = f[2] + 0; acb[f[1]] = f[3] + 0; act[f[1]] = f[4]
-                  }
-                  close(acagg)
-                  # a DHCP lease turns a bare address into something readable
-                  while ((getline l < leases) > 0) {
-                      split(l, f, " ")
-                      if (f[3] != "" && f[4] != "") {
-                          nm = f[4]; gsub(/[^A-Za-z0-9._-]/, "_", nm); lname[f[3]] = nm
-                      }
-                  }
-                  close(leases)
-                  n = 0
+        # The heaviest N applications are picked inside awk instead of by a
+        # "sort | head | awk" pipeline: the table is small but the pipeline cost
+        # three processes on every snapshot, and a snapshot is written on every
+        # poll.  A partial selection sort over N is a few thousand comparisons.
+        awk -F'\t' -v acagg="$STATE_DIR/ac.agg" -v leases="${TRAFFIC_LEASES:-/tmp/dhcp.leases}" \
+            -v top="$CFG_TOP_APPS" '
+          BEGIN {
+              while ((getline l < acagg) > 0) {
+                  split(l, f, "\t")
+                  if (f[1] == "") continue
+                  acn[f[1]] = f[2] + 0; acb[f[1]] = f[3] + 0; act[f[1]] = f[4]
               }
-              {
-                  who = act[$2]; wb = acb[$2]
+              close(acagg)
+              # a DHCP lease turns a bare address into something readable
+              while ((getline l < leases) > 0) {
+                  split(l, f, " ")
+                  if (f[3] != "" && f[4] != "") {
+                      nm = f[4]; gsub(/[^A-Za-z0-9._-]/, "_", nm); lname[f[3]] = nm
+                  }
+              }
+              close(leases)
+              n = 0
+          }
+          {
+              t = $2 + $3
+              if (t <= 0) next
+              n++; key[n] = $1; val[n] = t; upv[n] = $2; dnv[n] = $3
+          }
+          END {
+              k = (n < top) ? n : top
+              for (i = 1; i <= k; i++) {
+                  m = i
+                  for (j = i + 1; j <= n; j++) if (val[j] > val[m]) m = j
+                  if (m != i) {
+                      tv = val[i]; val[i] = val[m]; val[m] = tv
+                      tk = key[i]; key[i] = key[m]; key[m] = tk
+                      tu = upv[i]; upv[i] = upv[m]; upv[m] = tu
+                      td = dnv[i]; dnv[i] = dnv[m]; dnv[m] = td
+                  }
+                  who = act[key[i]]; wb = acb[key[i]]
                   disp = (who in lname) ? lname[who] : who
-                  if (n++) printf ","
+                  if (i > 1) printf ","
                   printf "{\"name\":\"%s\",\"down\":%d,\"up\":%d,\"clients\":%d,\"top\":\"%s\",\"top_bytes\":%d}",
-                         $2, $4, $3, acn[$2], disp, wb
-              }'
-        printf '],"clients":['
-        sort -t"$(printf '\t')" -k2 -rn "$STATE_DIR/clients.tsv" 2>/dev/null | head -n "$CFG_TOP_CLIENTS" \
-            | awk -F'\t' -v leases="${TRAFFIC_LEASES:-/tmp/dhcp.leases}" '
-              BEGIN {
-                  while ((getline l < leases) > 0) {
-                      split(l, f, " ")
-                      if (f[3] != "" && f[4] != "") {
-                          nm = f[4]; gsub(/[^A-Za-z0-9._-]/, "_", nm); lname[f[3]] = nm
-                      }
-                  }
-                  close(leases)
-                  n = 0
+                         key[i], dnv[i], upv[i], acn[key[i]], disp, wb
               }
-              {
-                  disp = ($1 in lname) ? lname[$1] : $1
-                  if (n++) printf ","
-                  printf "{\"ip\":\"%s\",\"name\":\"%s\",\"bytes\":%d}", $1, disp, $2
-              }'
+          }' "$STATE_DIR/totals.tsv" 2>/dev/null
+        printf '],"clients":['
+        # same trick for the busiest clients
+        awk -F'\t' -v leases="${TRAFFIC_LEASES:-/tmp/dhcp.leases}" -v top="$CFG_TOP_CLIENTS" '
+          BEGIN {
+              while ((getline l < leases) > 0) {
+                  split(l, f, " ")
+                  if (f[3] != "" && f[4] != "") {
+                      nm = f[4]; gsub(/[^A-Za-z0-9._-]/, "_", nm); lname[f[3]] = nm
+                  }
+              }
+              close(leases)
+              n = 0
+          }
+          {
+              b = $2 + 0
+              if (b <= 0) next
+              n++; cip[n] = $1; cby[n] = b
+          }
+          END {
+              k = (n < top) ? n : top
+              for (i = 1; i <= k; i++) {
+                  m = i
+                  for (j = i + 1; j <= n; j++) if (cby[j] > cby[m]) m = j
+                  if (m != i) { tb = cby[i]; cby[i] = cby[m]; cby[m] = tb
+                                ti = cip[i]; cip[i] = cip[m]; cip[m] = ti }
+                  disp = (cip[i] in lname) ? lname[cip[i]] : cip[i]
+                  if (i > 1) printf ","
+                  printf "{\"ip\":\"%s\",\"name\":\"%s\",\"bytes\":%d}", cip[i], disp, cby[i]
+              }
+          }' "$STATE_DIR/clients.tsv" 2>/dev/null
         printf '],"totals":{'
         awk -F'\t' '{
             up += $2; down += $3
@@ -772,6 +815,9 @@ write_summary() {
         }' "$STATE_DIR/totals.tsv" 2>/dev/null
         printf ',"router":%s' "$(cat "$STATE_DIR/router.tsv" 2>/dev/null || echo 0)"
         printf ',"client_count":%s' "$(wc -l < "$STATE_DIR/clients.tsv" 2>/dev/null || echo 0)"
+        # host names still waiting for the resolver: the page asks for them to
+        # be resolved at once while it is open, and does nothing when it is not
+        printf ',"pending":%s' "$(sed -n '1p' "$STATE_DIR/pending" 2>/dev/null || echo 0)"
         # stat.tsv: <named via same client> <named via any client> <bucket> <other>
         awk -F'\t' '{ printf ",\"exact\":%d,\"any\":%d,\"bucket\":%d,\"residual\":%d", $1, $2, $3, $4 }' \
             "$STATE_DIR/stat.tsv" 2>/dev/null
@@ -787,14 +833,16 @@ run() {
     init_state
     log "started: interval=${CFG_INTERVAL}s lan4=$CFG_LAN4 lan6=$CFG_LAN6 querylog=$CFG_QUERYLOG"
 
-    local hour last_hour
+    local hour last_hour now
     last_hour=$(cat "$STATE_DIR/hour" 2>/dev/null)
     while :; do
         poll_dns
         resolve_names
         poll_ct
         classify
-        record_sample
+        # one clock read per round, shared by the sample and the hour check
+        now=$(date +%s 2>/dev/null || echo 0)
+        record_sample "$now"
         hour=$(date +%Y-%m-%dT%H 2>/dev/null)
         if [ -n "$last_hour" ] && [ "$hour" != "$last_hour" ]; then
             roll_hour

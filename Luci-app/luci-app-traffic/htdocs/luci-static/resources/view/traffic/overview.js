@@ -8,6 +8,7 @@ var callSummary = rpc.declare({ object: 'luci.traffic', method: 'getSummary' });
 var callHourly  = rpc.declare({ object: 'luci.traffic', method: 'getHourly', params: [ 'hours' ] });
 var callReset   = rpc.declare({ object: 'luci.traffic', method: 'resetStats', params: [ 'what' ] });
 var callSeries  = rpc.declare({ object: 'luci.traffic', method: 'getSeries', params: [ 'range' ] });
+var callResolveNow = rpc.declare({ object: 'luci.traffic', method: 'resolveNow' });
 
 /* Vivid, evenly spaced hues: bright enough to read on a light card and to keep
  * their identity on a dark one. */
@@ -156,6 +157,64 @@ function makeDonut(items, total) {
 }
 
 function el(tag, attrs, children) { return E(tag, attrs || {}, children || []); }
+
+/* Write text only when it actually changed.  The page polls every 5 s and most
+ * of what it redraws is identical to the previous round; skipping the write
+ * keeps the browser from invalidating layout and repainting for nothing. */
+function setText(node, text) {
+	text = String(text);
+	if (node.__tfText === text) return;
+	node.__tfText = text;
+	node.textContent = text;
+}
+
+/* A row is remembered by application name so a refresh can update the numbers
+ * in place.  Rebuilding instead would recreate ~12 nodes, a letter avatar and
+ * an <img> per row every 5 s - and the <img> would be decoded again each time. */
+function makeRow(name, bucket) {
+	var icon = makeIcon(name);
+	var nameEl = el('span', { 'class': 'tf-app-name' }, [ name ]);
+	var cells = {
+		total: el('td', { 'class': 'tf-num tf-total' }),
+		down:  el('td', { 'class': 'tf-num tf-down' }),
+		up:    el('td', { 'class': 'tf-num tf-up' }),
+		top:   el('td', { 'class': 'tf-top' }),
+		clients: el('td', { 'class': 'tf-num' })
+	};
+	var tr = el('tr', { 'class': bucket ? 'tf-isbucket' : '' }, [
+		el('td', { 'class': 'tf-app' }, [
+			icon, nameEl,
+			bucket ? el('span', { 'class': 'tf-tag' }, [ _('type') ]) : ''
+		]),
+		cells.total, cells.down, cells.up, cells.top, cells.clients
+	]);
+	return { tr: tr, cells: cells };
+}
+
+function updateRow(row, a, total) {
+	var share = total ? (100 * a.bytes / total) : 0;
+	setText(row.cells.total, fmtBytes(a.bytes) + ' (' + share.toFixed(1) + '%)');
+	setText(row.cells.down, fmtBytes(a.down));
+	setText(row.cells.up, fmtBytes(a.up));
+	var topText = '—';
+	if (a.top) {
+		var ts = a.bytes ? (100 * (a.top_bytes || 0) / a.bytes) : 0;
+		topText = a.top + ' ' + fmtBytes(a.top_bytes || 0) + ' (' + ts.toFixed(1) + '%)';
+	}
+	setText(row.cells.top, topText);
+	setText(row.cells.clients, a.clients === undefined ? '—' : String(a.clients));
+}
+
+/* The legend rows are reused the same way: only the percentage moves. */
+function makeLegendRow(name) {
+	var pctEl = el('span', { 'class': 'tf-legend-pct' });
+	var row = el('div', { 'class': 'tf-legend-row' }, [
+		el('span', { 'class': 'tf-legend-dot', 'style': 'background:' + colorFor(name) }),
+		el('span', { 'class': 'tf-legend-name' }, [ name ]),
+		pctEl
+	]);
+	return { row: row, pct: pctEl };
+}
 
 /* "14:05" for the axis labels, from an epoch in seconds. */
 function hhmm(t) {
@@ -424,19 +483,59 @@ return view.extend({
 		return callHourly(Number(this.range)).then(function(h) { self.renderHourly(h); });
 	},
 
+	/* Footer, also reused: five label/value pairs whose values move every
+	 * refresh but whose structure never does. */
+	drawMeta: function(list) {
+		var self = this;
+		if (!this.metaRows) this.metaRows = [];
+		list.forEach(function(m, i) {
+			var r = self.metaRows[i];
+			if (!r) {
+				var val = el('span', { 'class': 'tf-meta-val' });
+				r = {
+					val: val,
+					row: el('div', { 'class': 'tf-meta-item' }, [
+						el('span', { 'class': 'tf-meta-cap' }, [ m.cap ]), val
+					])
+				};
+				self.metaRows[i] = r;
+				self.metaEl.appendChild(r.row);
+			}
+			setText(r.val, m.val);
+			if (r.title !== m.title) {
+				r.title = m.title;
+				if (m.title) r.val.setAttribute('title', m.title);
+				else r.val.removeAttribute('title');
+			}
+			var cls = m.warn ? 'tf-meta-val tf-warn' : 'tf-meta-val';
+			if (r.cls !== cls) { r.cls = cls; r.val.className = cls; }
+		});
+		while (this.metaRows.length > list.length) {
+			var extra = this.metaRows.pop();
+			if (extra.row.parentNode) extra.row.parentNode.removeChild(extra.row);
+		}
+	},
+
 	renderLive: function(s) {
+		var t = s.totals || {};
+		var down = Number(t.down) || 0, up = Number(t.up) || 0;
+
+		/* The collector writes a snapshot every interval while the page polls
+		 * twice as often, so half the refreshes have nothing new in them: skip
+		 * those without touching the DOM at all. */
+		var sig = [ Number(s.collected_at) || 0, down, up, (s.apps || []).length ].join('|');
+		if (sig === this.lastSig) return;
+		this.lastSig = sig;
+
 		var items = (s.apps || []).map(function(a) {
-			var down = Number(a.down) || 0, up = Number(a.up) || 0;
+			var d = Number(a.down) || 0, u = Number(a.up) || 0;
 			return {
-				name: a.name, down: down, up: up, bytes: down + up,
+				name: a.name, down: d, up: u, bytes: d + u,
 				clients: (a.clients === undefined) ? undefined : Number(a.clients),
 				top: a.top || '',
 				top_bytes: Number(a.top_bytes) || 0
 			};
 		}).filter(hasTraffic);
-
-		var t = s.totals || {};
-		var down = Number(t.down) || 0, up = Number(t.up) || 0;
 
 		/* rates come from the difference between two snapshots */
 		if (this.prev) {
@@ -474,31 +573,26 @@ return view.extend({
 		var all = named + bucket + residual;
 		var pct = function(v) { return all ? (100 * v / all).toFixed(1) + '%' : '—'; };
 
-		dom.content(this.metaEl, [
-			el('div', { 'class': 'tf-meta-item' }, [
-				el('span', { 'class': 'tf-meta-cap' }, [ _('Proxy tunnel') ]),
-				el('span', { 'class': 'tf-meta-val' }, [ fmtBytes(t.router) ])
-			]),
-			el('div', { 'class': 'tf-meta-item' }, [
-				el('span', { 'class': 'tf-meta-cap' }, [ _('Browser clients') ]),
-				el('span', { 'class': 'tf-meta-val' }, [ fmtBytes(all) ])
-			]),
-			el('div', { 'class': 'tf-meta-item' }, [
-				el('span', { 'class': 'tf-meta-cap' }, [ _('Domain identified') ]),
-				el('span', {
-					'class': 'tf-meta-val',
-					'title': _('by client DNS') + ': ' + pct(namedE) + ', ' + _('by any client DNS') + ': ' + pct(namedA)
-				}, [ pct(named) ])
-			]),
-			el('div', { 'class': 'tf-meta-item' }, [
-				el('span', { 'class': 'tf-meta-cap' }, [ _('Categorised') ]),
-				el('span', { 'class': 'tf-meta-val' }, [ pct(bucket) ])
-			]),
-			el('div', { 'class': 'tf-meta-item' }, [
-				el('span', { 'class': 'tf-meta-cap' }, [ _('Other') ]),
-				el('span', { 'class': 'tf-meta-val tf-warn' }, [ pct(residual) ])
-			])
+		this.drawMeta([
+			{ cap: _('Proxy tunnel'), val: fmtBytes(t.router) },
+			{ cap: _('Browser clients'), val: fmtBytes(all) },
+			{ cap: _('Domain identified'), val: pct(named),
+			  title: _('by client DNS') + ': ' + pct(namedE) + ', ' + _('by any client DNS') + ': ' + pct(namedA) },
+			{ cap: _('Categorised'), val: pct(bucket) },
+			{ cap: _('Other'), val: pct(residual), warn: true }
 		]);
+
+		/* New host names wait for the resolver's next pass, which is throttled
+		 * so that browsing cannot make every poll pay for a fresh name.  When
+		 * someone is actually looking at the page, ask for that pass now - it
+		 * costs nothing while nobody is. */
+		var pending = Number(s.pending) || 0;
+		if (pending > 0 && !this.resolvePending) {
+			this.resolvePending = true;
+			callResolveNow().then(function() {}, function() {}).then(L.bind(function() {
+				this.resolvePending = false;
+			}, this));
+		}
 	},
 
 	renderHourly: function(h) {
@@ -526,12 +620,7 @@ return view.extend({
 		this.draw(items, { total: total, down: gd, up: gu });
 		dom.content(this.rateDown, '—');
 		dom.content(this.rateUp, '—');
-		dom.content(this.metaEl, [
-			el('div', { 'class': 'tf-meta-item' }, [
-				el('span', { 'class': 'tf-meta-cap' }, [ _('Bucket') ]),
-				el('span', { 'class': 'tf-meta-val' }, [ String(hours.length) ])
-			])
-		]);
+		this.drawMeta([ { cap: _('Bucket'), val: String(hours.length) } ]);
 	},
 
 	draw: function(items, stats) {
@@ -540,57 +629,106 @@ return view.extend({
 		colorMap = assignColors(items.slice(0, 30));
 		var top = items.slice(0, 10);
 		var total = stats.total;
+		var self = this;
 
-		dom.content(this.donutEl, makeDonut(top, total));
-		dom.content(this.totalEl, fmtBytes(total));
+		/* Everything below updates what is already on the page rather than
+		 * replacing it.  Only structure that genuinely changed (a new
+		 * application, a different order) touches the DOM tree. */
+		if (!this.rowCache) { this.rowCache = {}; this.rowNames = []; this.legendCache = {}; }
 
-		/* legend beside the ring: name, share, one line each so ten entries fit */
-		dom.content(this.legendEl, top.map(function(a) {
-			var pct = total ? (100 * a.bytes / total) : 0;
-			return el('div', { 'class': 'tf-legend-row' }, [
-				el('span', { 'class': 'tf-legend-dot', 'style': 'background:' + colorFor(a.name) }),
-				el('span', { 'class': 'tf-legend-name' }, [ a.name ]),
-				el('span', { 'class': 'tf-legend-pct' }, [ pct.toFixed(1) + '%' ])
-			]);
-		}));
+		setText(this.totalEl, fmtBytes(total));
 
-		var rows = [];
+		/* donut: redrawn only when its composition changed, not when the bytes
+		 * behind the slices moved */
+		var donutSig = top.map(function(a) {
+			return a.name + ':' + (total ? Math.round(1000 * a.bytes / total) : 0);
+		}).join('|');
+		if (donutSig !== this.donutSig) {
+			this.donutSig = donutSig;
+			dom.content(this.donutEl, makeDonut(top, total));
+		}
 
-		/* the grand total leads the table, the way the reference gateway does it */
-		rows.push(el('tr', { 'class': 'tf-grand' }, [
-			el('td', { 'class': 'tf-app' }, [ el('span', { 'class': 'tf-app-name' }, [ _('All traffic') ]) ]),
-			el('td', { 'class': 'tf-num tf-total' }, [ fmtBytes(total) ]),
-			el('td', { 'class': 'tf-num tf-down' }, [ fmtBytes(stats.down) ]),
-			el('td', { 'class': 'tf-num tf-up' }, [ fmtBytes(stats.up) ]),
-			el('td', { 'class': 'tf-top' }, [ stats.topText || '—' ]),
-			el('td', { 'class': 'tf-num' }, [ stats.clientCount === undefined ? '—' : String(stats.clientCount) ])
-		]));
-
-		items.slice(0, 100).forEach(function(a) {
-			var bucket = isBucket(a.name);
-			var pct = total ? (100 * a.bytes / total) : 0;
-			var topText = '—';
-			if (a.top) {
-				var share = a.bytes ? (100 * (a.top_bytes || 0) / a.bytes) : 0;
-				topText = a.top + ' ' + fmtBytes(a.top_bytes || 0) + ' (' + share.toFixed(1) + '%)';
+		/* legend, keyed by name so the rows survive a reshuffle */
+		var legendSeen = {};
+		top.forEach(function(a) {
+			legendSeen[a.name] = 1;
+			var lr = self.legendCache[a.name];
+			if (!lr) {
+				lr = makeLegendRow(a.name);
+				self.legendCache[a.name] = lr;
+				self.legendEl.appendChild(lr.row);
 			}
-			rows.push(el('tr', { 'class': bucket ? 'tf-isbucket' : '' }, [
-				el('td', { 'class': 'tf-app' }, [
-					makeIcon(a.name),
-					el('span', { 'class': 'tf-app-name' }, [ a.name ]),
-					bucket ? el('span', { 'class': 'tf-tag' }, [ _('type') ]) : ''
-				]),
-				el('td', { 'class': 'tf-num tf-total' }, [ fmtBytes(a.bytes) + ' (' + pct.toFixed(1) + '%)' ]),
-				el('td', { 'class': 'tf-num tf-down' }, [ fmtBytes(a.down) ]),
-				el('td', { 'class': 'tf-num tf-up' }, [ fmtBytes(a.up) ]),
-				el('td', { 'class': 'tf-top' }, [ topText ]),
-				el('td', { 'class': 'tf-num' }, [ a.clients === undefined ? '—' : String(a.clients) ])
-			]));
+			setText(lr.pct, (total ? (100 * a.bytes / total) : 0).toFixed(1) + '%');
+		});
+		Object.keys(this.legendCache).forEach(function(n) {
+			if (legendSeen[n]) return;
+			var lr = self.legendCache[n];
+			if (lr.row.parentNode) lr.row.parentNode.removeChild(lr.row);
+			delete self.legendCache[n];
 		});
 
-		if (!items.length)
-			rows.push(el('tr', {}, [ el('td', { 'colspan': 6, 'class': 'tf-empty' }, [ _('No traffic recorded yet.') ]) ]));
-		dom.content(this.rowsEl, rows);
+		/* grand total row, built once */
+		if (!this.grandRow) {
+			var gc = {
+				total: el('td', { 'class': 'tf-num tf-total' }),
+				down:  el('td', { 'class': 'tf-num tf-down' }),
+				up:    el('td', { 'class': 'tf-num tf-up' }),
+				top:   el('td', { 'class': 'tf-top' }),
+				clients: el('td', { 'class': 'tf-num' })
+			};
+			this.grandRow = {
+				tr: el('tr', { 'class': 'tf-grand' }, [
+					el('td', { 'class': 'tf-app' }, [ el('span', { 'class': 'tf-app-name' }, [ _('All traffic') ]) ]),
+					gc.total, gc.down, gc.up, gc.top, gc.clients
+				]),
+				cells: gc
+			};
+			this.rowsEl.appendChild(this.grandRow.tr);
+		}
+		setText(this.grandRow.cells.total, fmtBytes(total));
+		setText(this.grandRow.cells.down, fmtBytes(stats.down));
+		setText(this.grandRow.cells.up, fmtBytes(stats.up));
+		setText(this.grandRow.cells.top, stats.topText || '—');
+		setText(this.grandRow.cells.clients, stats.clientCount === undefined ? '—' : String(stats.clientCount));
+
+		/* the 100 heaviest applications, each row created once and then only
+		 * nudged: this is what keeps a page open for hours flat in memory */
+		var wanted = items.slice(0, 100);
+		var seen = {}, order = [];
+		wanted.forEach(function(a) {
+			seen[a.name] = 1;
+			order.push(a.name);
+			var row = self.rowCache[a.name];
+			if (!row) {
+				row = makeRow(a.name, isBucket(a.name));
+				self.rowCache[a.name] = row;
+				self.rowsEl.appendChild(row.tr);
+			}
+			updateRow(row, a, total);
+		});
+		Object.keys(this.rowCache).forEach(function(n) {
+			if (seen[n]) return;
+			var row = self.rowCache[n];
+			if (row.tr.parentNode) row.tr.parentNode.removeChild(row.tr);
+			delete self.rowCache[n];
+		});
+
+		/* reordering is 100 node moves, so it waits until the order really
+		 * changed - which, sorted by bytes, is far less often than the bytes */
+		var orderSig = order.join('\u0001');
+		if (orderSig !== this.orderSig) {
+			this.orderSig = orderSig;
+			order.forEach(function(n) { self.rowsEl.appendChild(self.rowCache[n].tr); });
+		}
+
+		if (!items.length && !this.emptyRow) {
+			this.emptyRow = el('tr', {}, [ el('td', { 'colspan': 6, 'class': 'tf-empty' }, [ _('No traffic recorded yet.') ]) ]);
+			this.rowsEl.appendChild(this.emptyRow);
+		}
+		else if (items.length && this.emptyRow) {
+			if (this.emptyRow.parentNode) this.emptyRow.parentNode.removeChild(this.emptyRow);
+			this.emptyRow = null;
+		}
 	},
 
 	handleSave: null,
