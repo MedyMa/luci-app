@@ -37,11 +37,19 @@ AGH querylog     ─┘
 3. **Attribution** matches a flow's `(source, destination)` against those
    mappings. A flow whose source is the router itself is the proxy tunnel and
    is reported separately, so the traffic it carries is not counted twice.
-4. **Names** — a destination is named by the friendly entry in
-   `/etc/traffic/apps.tsv`, matched against the **full host name** first (AdGuard
-   Home reports `music.163.com`, so sub-domain rules are possible) and then
-   against the **registrable domain** (all conntrack alone could offer).
-   Anything unmatched is displayed as its registrable domain.
+4. **Names** — every flow gets a name, in this order:
+   1. `/etc/traffic/apps.tsv`, matched against the **full host name** first
+      (AdGuard Home reports `music.163.com`, so sub-domain rules work) and then
+      against the **registrable domain**;
+   2. `/etc/traffic/categories.tsv`, longest suffix match — hardware and
+      advertising domains then read as `CDN` / `Ads` / `Cloud` instead of a
+      meaningless host name;
+   3. the registrable domain itself: a website is identified by its domain,
+      which is what the reader actually recognises;
+   4. failing all of that (no DNS answer at all), a **protocol bucket** derived
+      from protocol and port — `SSL/TLS`, `QUIC`, `HTTP`, `DNS`, `STUN`,
+      `RTSP`, `Email`, `Other`. That is why an unnamed encrypted flow shows up
+      as `SSL/TLS` rather than disappearing into an "unknown" heap.
 
 Flow state lives in `/tmp/traffic`. Once an hour the counters are appended to
 `<datadir>/hourly.tsv` and reset, which is the persistent history.
@@ -98,33 +106,41 @@ separated in name order, which is likewise rank-independent.
 
 ## Icons
 
-The package ships **47 icons**, taken from two sets and keyed by the
-application name:
+The package ships **64 icons** in two clearly different kinds:
 
-| Source | Used for |
-|---|---|
-| [simple-icons](https://simpleicons.org) (CDN) | brands still published there, drawn in their own colour |
-| [dashboard-icons](https://github.com/homarr-labs/dashboard-icons) (jsDelivr) | the ones simple-icons has withdrawn — Microsoft, Amazon, OpenAI, Weibo, Twitter, … |
+| Kind | Count | Source | Rendered as |
+|---|---|---|---|
+| Brand logos | 47 | [simple-icons](https://simpleicons.org) (brand colour) and [dashboard-icons](https://github.com/homarr-labs/dashboard-icons) | the product mark |
+| Category / protocol glyphs | 17 | [lucide-static](https://lucide.dev) (ISC) | line art in muted grey, plus a `TYPE` tag in the list |
 
-The file name is the application name lower-cased with runs of non-alphanumerics
-turned into dashes: `YouTube` → `youtube.svg`, `China Mobile` →
-`china-mobile.svg`. The page loads
+The two kinds are deliberately not interchangeable. A brand logo answers *which
+product*, a glyph answers *what kind of traffic* — SSL/TLS, QUIC, HTTP, DNS,
+STUN, RTSP, CDN, Cloud, Ads, Email, Search, Social, Video, Software, Other. A
+bucket row is drawn with its glyph, an italic muted name and a `TYPE` tag, so it
+can never be mistaken for an application.
+
+Brand icons are keyed by the application name: lower-cased with runs of
+non-alphanumerics turned into dashes (`YouTube` → `youtube.svg`, `China Mobile`
+→ `china-mobile.svg`). The page loads
 `/luci-static/resources/traffic/icons/<name>.svg` and keeps its coloured letter
 avatar until that file has actually loaded, so a missing icon is invisible
 rather than broken. Both the image and the avatar occupy the same 26 px box, so
-row rhythm never shifts.
+row rhythm never shifts. 15 of the 62 names in `apps.tsv` have no upstream match
+(Tmall, iQIYI, Youku, JD, Didi, Pinduoduo, Toutiao, China Mobile/Telecom/Unicom,
+Tencent Cloud, NetEase, NetEase Mail) and keep their avatar — the open sets
+carry very little of the Chinese app landscape, so those are best added by hand.
 
-15 of the 62 names in `apps.tsv` have no upstream match (Tmall, iQIYI, Youku,
-JD, Didi, Pinduoduo, Toutiao, China Mobile/Telecom/Unicom, Tencent Cloud,
-NetEase Mail, Netflix-free zone …) and keep their avatar. To add or replace
-icons, just drop an SVG into
-`htdocs/luci-static/resources/traffic/icons/` — no code change.
-
-To regenerate the set after editing `apps.tsv`:
+To add or replace an icon, drop an SVG into
+`htdocs/luci-static/resources/traffic/icons/` — no code change. To regenerate
+the whole set (brand logos and glyphs) after editing `apps.tsv`:
 
 ```
 pwsh -File tools/fetch-icons.ps1
 ```
+
+Note that `currentColor` is replaced with an explicit grey when the glyphs are
+saved: an SVG loaded through `<img>` does not inherit the page colour, so
+`currentColor` would resolve to black and disappear in dark mode.
 
 Icons remain the trademarks of their owners and are used here only to identify
 the corresponding service; check the upstream licences before redistributing.
@@ -156,3 +172,12 @@ the corresponding service; check the upstream licences before redistributing.
 | `/usr/libexec/rpcd/luci.traffic` | snapshot, hourly aggregation, reset |
 | `/www/luci-static/resources/view/traffic/overview.js` | the page |
 | `/etc/config/traffic` | settings |
+| `/etc/traffic/apps.tsv` | domain → friendly application name |
+| `/etc/traffic/categories.tsv` | domain suffix → category (CDN, Ads, …) |
+
+Not installed, but shipped in the repository for regeneration and verification:
+
+| Path | Purpose |
+|---|---|
+| `tools/fetch-icons.ps1` | rebuild the icon set from the upstream sets |
+| `tools/collector-selftest.sh` | offline regression: every attribution path |

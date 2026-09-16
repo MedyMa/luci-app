@@ -86,8 +86,20 @@ msgid "by any client DNS"
 msgstr "任意客户端 DNS 识别"
 
 #: htdocs/luci-static/resources/view/traffic/overview.js
-msgid "unidentified"
-msgstr "未识别"
+msgid "Domain identified"
+msgstr "域名命中"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Categorised"
+msgstr "分类归入"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Other"
+msgstr "其他"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "type"
+msgstr "类型"
 
 #: root/usr/share/rpcd/acl.d/luci-app-traffic.json:3
 msgid "Grant access to the per-application traffic statistics"

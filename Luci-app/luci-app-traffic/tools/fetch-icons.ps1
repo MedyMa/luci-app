@@ -140,12 +140,66 @@ foreach ($row in $rows) {
     }
 }
 
+# ---------------------------------------------------------------------------
+# Category / protocol glyphs.
+#
+# These are NOT brands: they label the buckets that have no brand identity -
+# protocols (SSL/TLS, QUIC, HTTP, DNS, ...) and infrastructure categories
+# (CDN, cloud, ads, ...).  lucide-static is ISC licensed and drawn as stroked
+# line art, which reads as "a type, not a product" next to a brand logo.
+#
+# currentColor is replaced with an explicit muted grey on the way in: an SVG
+# loaded through <img> does not inherit the page's colour, so currentColor
+# would resolve to black and vanish in dark mode.
+$glyphColor = '#8b98a5'
+$glyphs = [ordered]@{
+    'ssl-tls'  = 'shield-check'
+    'quic'     = 'zap'
+    'http'     = 'globe'
+    'dns'      = 'network'
+    'stun'     = 'radio'
+    'rtsp'     = 'video'
+    'cdn'      = 'server'
+    'cloud'    = 'cloud'
+    'ads'      = 'megaphone'
+    'email'    = 'mail'
+    'search'   = 'search'
+    'social'   = 'users'
+    'video'    = 'film'
+    'software' = 'package'
+    'website'  = 'link'
+    'other'    = 'ellipsis'
+    'unknown'  = 'help-circle'
+}
+
+$glyphSaved = @(); $glyphMissed = @()
+foreach ($name in $glyphs.Keys) {
+    $lucide = $glyphs[$name]
+    $uri = "https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/$lucide.svg"
+    try {
+        $r = Invoke-WebRequest -Uri $uri -TimeoutSec 15 -ErrorAction Stop
+        if ($r.StatusCode -ne 200 -or $r.Content -notmatch '<svg') { throw 'unexpected body' }
+        $svg = $r.Content
+        $svg = $svg -replace 'stroke="currentColor"', ('stroke="' + $glyphColor + '"')
+        $svg = $svg -replace '(<svg[^>]*?)\s+width="[^"]*"', '$1'
+        $svg = $svg -replace '(<svg[^>]*?)\s+height="[^"]*"', '$1'
+        if ($svg -notmatch 'viewBox') { $svg = $svg -replace '<svg', '<svg viewBox="0 0 24 24"' }
+        Set-Content -LiteralPath (Join-Path $iconDir "$name.svg") -Value $svg.Trim() -Encoding utf8 -NoNewline
+        $glyphSaved += $name
+    }
+    catch { $glyphMissed += $name }
+    Start-Sleep -Milliseconds $DelayMs
+}
+
 Write-Host ""
 Write-Host ("saved   : {0}" -f $saved.Count)
 $saved | ForEach-Object { Write-Host ("  {0,-22} {1,-16} (upstream: {2})" -f $_.File, $_.Name, $_.From) }
 Write-Host ""
 Write-Host ("no match: {0}" -f $missed.Count)
 $missed | ForEach-Object { Write-Host ("  {0}  (keeps its letter avatar)" -f $_) }
+Write-Host ""
+Write-Host ("glyphs  : {0}/{1}  {2}" -f $glyphSaved.Count, $glyphs.Count, ($glyphSaved -join ', '))
+if ($glyphMissed.Count) { Write-Host ("  MISSING glyphs: {0}" -f ($glyphMissed -join ', ')) }
 Write-Host ""
 $total = (Get-ChildItem $iconDir -Filter *.svg | Measure-Object -Property Length -Sum)
 Write-Host ("icon dir: {0} files, {1:N0} bytes" -f $total.Count, $total.Sum)

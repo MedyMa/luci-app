@@ -17,6 +17,22 @@ var PALETTE = [
 
 var ICON = 26;   /* one size everywhere: list rows, donut legend */
 
+/* Names that are not an application or a website but a bucket: a protocol
+ * (SSL/TLS, QUIC, ...) or an infrastructure category (CDN, Ads, ...).  They are
+ * drawn with their category glyph and muted text, so a row reads as "what kind
+ * of traffic" rather than "which product".  Kept in sync with the bucket names
+ * the collector produces and with the glyph files shipped for them. */
+var BUCKETS = {
+	'SSL/TLS': 1, 'QUIC': 1, 'HTTP': 1, 'DNS': 1, 'STUN': 1, 'RTSP': 1,
+	'Email': 1, 'CDN': 1, 'Cloud': 1, 'Ads': 1, 'Search': 1, 'Social': 1,
+	'Video': 1, 'Software': 1, 'Other': 1
+};
+
+function isBucket(name) { return BUCKETS[name] === 1; }
+
+/* A row is only worth drawing when something was actually measured. */
+function hasTraffic(item) { return (item.down + item.up) > 0; }
+
 function fmtBytes(n) {
 	n = Number(n) || 0;
 	var units = [ 'B', 'KiB', 'MiB', 'GiB', 'TiB' ], i = 0;
@@ -213,7 +229,7 @@ return view.extend({
 		var items = (s.apps || []).map(function(a) {
 			var down = Number(a.down) || 0, up = Number(a.up) || 0;
 			return { name: a.name, down: down, up: up, bytes: down + up };
-		}).filter(function(a) { return a.bytes > 0; });
+		}).filter(hasTraffic);
 
 		var t = s.totals || {};
 		var down = Number(t.down) || 0, up = Number(t.up) || 0;
@@ -232,8 +248,12 @@ return view.extend({
 
 		this.draw(items, down + up);
 
-		var matched = Number(t.matched) || 0, fallback = Number(t.fallback) || 0, unmatched = Number(t.unmatched) || 0;
-		var all = matched + fallback + unmatched;
+		/* The three kinds partition the client traffic, so the shares add up to
+		 * 100%.  exact/any only says which client's DNS answer did the naming. */
+		var namedE = Number(t.exact) || 0, namedA = Number(t.any) || 0;
+		var bucket = Number(t.bucket) || 0, residual = Number(t.residual) || 0;
+		var named = namedE + namedA;
+		var all = named + bucket + residual;
 		var pct = function(v) { return all ? (100 * v / all).toFixed(1) + '%' : '—'; };
 
 		dom.content(this.metaEl, [
@@ -246,16 +266,19 @@ return view.extend({
 				el('span', { 'class': 'tf-meta-val' }, [ fmtBytes(all) ])
 			]),
 			el('div', { 'class': 'tf-meta-item' }, [
-				el('span', { 'class': 'tf-meta-cap' }, [ _('by client DNS') ]),
-				el('span', { 'class': 'tf-meta-val' }, [ pct(matched) ])
+				el('span', { 'class': 'tf-meta-cap' }, [ _('Domain identified') ]),
+				el('span', {
+					'class': 'tf-meta-val',
+					'title': _('by client DNS') + ': ' + pct(namedE) + ', ' + _('by any client DNS') + ': ' + pct(namedA)
+				}, [ pct(named) ])
 			]),
 			el('div', { 'class': 'tf-meta-item' }, [
-				el('span', { 'class': 'tf-meta-cap' }, [ _('by any client DNS') ]),
-				el('span', { 'class': 'tf-meta-val' }, [ pct(fallback) ])
+				el('span', { 'class': 'tf-meta-cap' }, [ _('Categorised') ]),
+				el('span', { 'class': 'tf-meta-val' }, [ pct(bucket) ])
 			]),
 			el('div', { 'class': 'tf-meta-item' }, [
-				el('span', { 'class': 'tf-meta-cap' }, [ _('unidentified') ]),
-				el('span', { 'class': 'tf-meta-val tf-warn' }, [ pct(unmatched) ])
+				el('span', { 'class': 'tf-meta-cap' }, [ _('Other') ]),
+				el('span', { 'class': 'tf-meta-val tf-warn' }, [ pct(residual) ])
 			])
 		]);
 	},
@@ -274,7 +297,7 @@ return view.extend({
 		var items = Object.keys(agg).map(function(k) {
 			agg[k].bytes = agg[k].down + agg[k].up;
 			return agg[k];
-		}).filter(function(a) { return a.bytes > 0; })
+		}).filter(hasTraffic)
 		  .sort(function(a, b) { return b.bytes - a.bytes; });
 
 		var total = items.reduce(function(s, a) { return s + a.bytes; }, 0);
@@ -310,8 +333,13 @@ return view.extend({
 
 		var rows = items.slice(0, 30).map(function(a, i) {
 			var pct = total ? (100 * a.bytes / total) : 0;
-			return el('tr', {}, [
-				el('td', { 'class': 'tf-app' }, [ makeIcon(a.name), el('span', { 'class': 'tf-app-name' }, [ a.name ]) ]),
+			var bucket = isBucket(a.name);
+			return el('tr', { 'class': bucket ? 'tf-isbucket' : '' }, [
+				el('td', { 'class': 'tf-app' }, [
+					makeIcon(a.name),
+					el('span', { 'class': 'tf-app-name' }, [ a.name ]),
+					bucket ? el('span', { 'class': 'tf-tag' }, [ _('type') ]) : ''
+				]),
 				el('td', { 'class': 'tf-num tf-down' }, [ fmtBytes(a.down) ]),
 				el('td', { 'class': 'tf-num tf-up' }, [ fmtBytes(a.up) ]),
 				el('td', { 'class': 'tf-num tf-total' }, [ fmtBytes(a.bytes) ]),
@@ -395,6 +423,12 @@ function injectCss() {
 		/* app cell + icon: one 26px box for both the avatar and a real SVG */
 		'.tf-page .tf-app{display:flex;align-items:center;gap:.6rem;}',
 		'.tf-page .tf-app-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:16rem;}',
+		/* a bucket is a kind of traffic, not a product: muted name plus a tag,
+		 * so it never reads as if it were an application */
+		'.tf-page .tf-isbucket .tf-app-name{color:var(--tf-dim);font-style:italic;}',
+		'.tf-page .tf-isbucket .tf-total{font-weight:400;color:var(--tf-dim);}',
+		'.tf-page .tf-tag{margin-left:.15rem;padding:.05rem .34rem;border-radius:6px;font-size:.62rem;',
+		'letter-spacing:.04em;color:var(--tf-dim);background:rgba(128,150,175,.16);text-transform:uppercase;}',
 		'.tf-page .tf-icon{width:' + ICON + 'px;height:' + ICON + 'px;flex:0 0 ' + ICON + 'px;',
 		'border-radius:8px;display:inline-flex;align-items:center;justify-content:center;',
 		'box-shadow:0 2px 6px rgba(31,66,102,.18);}',

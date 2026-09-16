@@ -9,11 +9,21 @@
 #      the traffic of that flow in that interval.
 #   2. AdGuard Home's querylog is read incrementally.  Its base64 Answer field
 #      is decoded by ans.lua, which yields (client, domain, resolved IP).
-#      That is what turns a bare destination IP into an application name.
-#   3. A flow whose source is a LAN client is attributed to the domain its
-#      client resolved for that destination; a flow whose source is the router
-#      itself is the proxy tunnel and is accounted separately, so it never
-#      doubles the client traffic it carries.
+#      That is what turns a bare destination IP into a name.
+#   3. Every flow is then given a name, in this order:
+#        a. the application table (apps.tsv) - full host name first, then the
+#           registrable domain;
+#        b. the category table (categories.tsv) - longest suffix match, so
+#           hardware and advertising domains read as CDN / Ads / Cloud rather
+#           than as a meaningless host name;
+#        c. the registrable domain itself - a website is identified by its
+#           domain, which is what the reader actually recognises;
+#        d. failing all of that (no DNS answer at all), a protocol bucket
+#           derived from protocol and port: SSL/TLS, QUIC, HTTP, DNS, STUN,
+#           RTSP, Email, Other.  This is why an unnamed encrypted flow shows
+#           up as "SSL/TLS" instead of disappearing into an "unknown" heap.
+#      A flow whose source is the router itself is the proxy tunnel and is
+#      accounted separately, so it never doubles the client traffic it carries.
 #
 # State lives in /tmp/traffic (RAM).  Once an hour the session totals are
 # appended to <datadir>/hourly.tsv and reset, which is the persistent history.
@@ -28,7 +38,6 @@ SELF_DIR=${SELF_DIR:-/usr/share/traffic}
 CT=${CT:-/proc/net/nf_conntrack}
 LUA=${LUA:-/usr/bin/lua}
 UCI=${UCI:-/usr/bin/uci}
-HOSTNAME_BIN=${HOSTNAME_BIN:-/bin/hostname}
 
 CFG_ENABLED=1
 CFG_INTERVAL=10
@@ -37,6 +46,7 @@ CFG_QUERYLOG=
 CFG_LAN4=
 CFG_LAN6=
 CFG_APPMAP=$CFG_DATADIR/apps.tsv
+CFG_CATEGORIES=$CFG_DATADIR/categories.tsv
 CFG_RETENTION=7
 CFG_TOP_APPS=50
 CFG_TOP_CLIENTS=20
@@ -57,6 +67,7 @@ uci_get() {
         lan4)           v=${TRAFFIC_LAN4:-} ;;
         lan6)           v=${TRAFFIC_LAN6:-} ;;
         appmap)         v=${TRAFFIC_APPMAP:-} ;;
+        categories)     v=${TRAFFIC_CATEGORIES:-} ;;
         retention_days) v=${TRAFFIC_RETENTION_DAYS:-} ;;
         top_apps)       v=${TRAFFIC_TOP_APPS:-} ;;
         top_clients)    v=${TRAFFIC_TOP_CLIENTS:-} ;;
@@ -121,6 +132,10 @@ load_config() {
     [ -n "$CFG_LAN6" ] || CFG_LAN6=$(detect_lan6)
     v=$(uci_get appmap);       [ -n "$v" ] && CFG_APPMAP=$v
     [ -n "$CFG_APPMAP" ] || CFG_APPMAP=$CFG_DATADIR/apps.tsv
+    # the category table sits next to the application table, so relocating one
+    # relocates the other
+    v=$(uci_get categories);   [ -n "$v" ] && CFG_CATEGORIES=$v
+    [ -n "$CFG_CATEGORIES" ] || CFG_CATEGORIES="${CFG_APPMAP%/*}/categories.tsv"
     v=$(uci_get retention_days); [ -n "$v" ] && CFG_RETENTION=$v
     v=$(uci_get top_apps);       [ -n "$v" ] && CFG_TOP_APPS=$v
     v=$(uci_get top_clients);    [ -n "$v" ] && CFG_TOP_CLIENTS=$v
@@ -141,7 +156,7 @@ init_state() {
     [ -f "$STATE_DIR/totals.tsv" ] || : > "$STATE_DIR/totals.tsv"
     [ -f "$STATE_DIR/clients.tsv" ] || : > "$STATE_DIR/clients.tsv"
     [ -f "$STATE_DIR/router.tsv" ] || : > "$STATE_DIR/router.tsv"
-    [ -f "$STATE_DIR/stat.tsv" ] || : > "$STATE_DIR/stat.tsv"
+    [ -f "$STATE_DIR/stat.tsv" ] || printf '0\n0\n0\n0\n' > "$STATE_DIR/stat.tsv"
     [ -f "$STATE_DIR/meta" ] || printf '0\n0\n' > "$STATE_DIR/meta"
     [ -f "$CFG_DATADIR/hourly.tsv" ] || : > "$CFG_DATADIR/hourly.tsv"
 }
@@ -169,6 +184,8 @@ poll_dns() {
 
 # ---------------------------------------------------------------- conntrack deltas
 poll_ct() {
+    # Both files are cleared first: awk only creates them when it has something
+    # to write, so a stale delta would otherwise be counted a second time.
     rm -f "$STATE_DIR/flow.new" "$STATE_DIR/flow.delta"
     awk -v state="$STATE_DIR/flow.state" -v delta="$STATE_DIR/flow.delta" -v newst="$STATE_DIR/flow.new" '
     BEGIN {
@@ -189,7 +206,9 @@ poll_ct() {
                                       else if (np == 2) b2 = substr(t, 7) + 0 }
         }
         if (src == "" || dst == "") next
-        key = $1 "|" src "|" sport "|" dst "|" dport
+        # $3 is the protocol name; it belongs in the key because the same
+        # address/port pair can exist over both tcp and udp at once
+        key = $1 "|" $3 "|" src "|" sport "|" dst "|" dport
         if (!(key in seen)) { seen[key] = 1; keys[++nk] = key }
         cb1[key] = b1; cb2[key] = b2
     }
@@ -214,7 +233,10 @@ classify() {
     [ -s "$STATE_DIR/flow.delta" ] || return 0
     awk -v dns="$STATE_DIR/dnsmap.tsv" -v tot="$STATE_DIR/totals.tsv" \
         -v cli="$STATE_DIR/clients.tsv" -v rt="$STATE_DIR/router.tsv" -v st="$STATE_DIR/stat.tsv" \
-        -v appmap="$CFG_APPMAP" -v lan4="$CFG_LAN4" -v lan6="$CFG_LAN6" '
+        -v appmap="$CFG_APPMAP" -v catmap="$CFG_CATEGORIES" \
+        -v lan4="$CFG_LAN4" -v lan6="$CFG_LAN6" '
+    # The registrable domain: what conntrack alone can offer when the host name
+    # is not in either table.  A small public-suffix list is enough here.
     function app_of(d,   n, p, last2) {
         if (d == "") return ""
         n = split(d, p, ".")
@@ -226,6 +248,33 @@ classify() {
                        last2 == "co.kr"))
             return p[n-2] "." last2
         return last2
+    }
+    function suffix_match(dom, suf) {
+        return (dom == suf) || (length(dom) > length(suf) &&
+                                substr(dom, length(dom) - length(suf)) == "." suf)
+    }
+    function category_of(dom,   i, best, bestlen) {
+        best = ""; bestlen = -1
+        for (i = 1; i <= ncat; i++) {
+            if (suffix_match(dom, cat_suf[i]) && length(cat_suf[i]) > bestlen) {
+                bestlen = length(cat_suf[i]); best = cat_name[i]
+            }
+        }
+        return best
+    }
+    # Last resort: what the protocol and port alone say.  This is the layer that
+    # turns an unnamed encrypted flow into "SSL/TLS" (or QUIC / HTTP / ...)
+    # rather than leaving it in an undifferentiated heap.
+    function proto_bucket(proto, port,   p) {
+        p = port + 0
+        if (proto == "udp" && p == 443) return "QUIC"
+        if (proto == "tcp" && (p == 443 || p == 8443)) return "SSL/TLS"
+        if (proto == "tcp" && (p == 80 || p == 8080 || p == 8000)) return "HTTP"
+        if (p == 53 || p == 853 || p == 5353) return "DNS"
+        if (proto == "udp" && (p == 3478 || p == 19302 || p == 5349)) return "STUN"
+        if (proto == "tcp" && (p == 554 || p == 8554)) return "RTSP"
+        if (p == 25 || p == 110 || p == 143 || p == 465 || p == 587 || p == 993 || p == 995) return "Email"
+        return "Other"
     }
     BEGIN {
         while ((getline l < dns) > 0) {
@@ -239,18 +288,24 @@ classify() {
             if (f[1] != "" && f[2] != "") pretty[f[2]] = f[1]
         }
         close(appmap)
+        while ((getline l < catmap) > 0) {
+            if (l ~ /^#/ || l == "") continue
+            split(l, f, "\t")
+            if (f[1] != "" && f[2] != "") { ncat++; cat_name[ncat] = f[1]; cat_suf[ncat] = f[2] }
+        }
+        close(catmap)
         while ((getline l < tot) > 0) { split(l, f, "\t"); up[f[1]] = f[2] + 0; dn[f[1]] = f[3] + 0 }
         close(tot)
         while ((getline l < cli) > 0) { split(l, f, "\t"); cb[f[1]] = f[2] + 0 }
         close(cli)
         if ((getline l < rt) > 0) rb_total = l + 0        # router.tsv is a single running total
         close(rt)
-        if ((getline l < st) > 0) { split(l, f, "\t"); m_c = f[1] + 0; m_g = f[2] + 0; m_n = f[3] + 0 }
+        if ((getline l < st) > 0) { split(l, f, "\t"); m_c = f[1] + 0; m_g = f[2] + 0; k_b = f[3] + 0; k_o = f[4] + 0 }
         close(st)
     }
     {
-        split($1, k, "|")                 # family|src|sport|dst|dport
-        src = k[2]; dst = k[4]
+        split($1, k, "|")                 # family|proto|src|sport|dst|dport
+        proto = k[2]; src = k[3]; dst = k[5]; port = k[6]
         u = $2 + 0; d = $3 + 0; t = u + d
         if (t <= 0) next
         if (!(index(src, lan4) == 1 || index(src, lan6) == 1)) {
@@ -258,26 +313,34 @@ classify() {
             next
         }
         cb[src] += t
-        dom = byclient[src "|" dst]
-        if (dom != "")          m_c += t
-        else if (byip[dst] != "") { dom = byip[dst]; m_g += t }
-        else                    m_n += t
-        if (dom == "") { up["unknown"] += u; dn["unknown"] += d; next }
-        # Look the full host name up first - AdGuard Home reports it, so a rule
-        # can distinguish music.163.com from the rest of 163.com.  Only then fall
-        # back to the registrable domain, which is all conntrack alone can give.
-        if (dom in pretty)          a = pretty[dom]
-        else {
-            a = app_of(dom)
-            if (a in pretty) a = pretty[a]
+
+        # Which client resolved this destination decides "exact" vs "any".
+        dom = byclient[src "|" dst]; via = "exact"
+        if (dom == "") { dom = byip[dst]; via = "any" }
+
+        # The three kinds below must partition the client traffic, so the
+        # counters are bumped only once the kind is known.
+        if (dom == "") {
+            # no DNS answer for this destination: the protocol is all we have
+            a = proto_bucket(proto, port)
+            k_o += t
         }
+        # 1) application table, full host name first so a rule can separate
+        #    music.163.com from the rest of 163.com
+        else if (dom in pretty)          { a = pretty[dom];               if (via == "exact") m_c += t; else m_g += t }
+        else if (app_of(dom) in pretty)  { a = pretty[app_of(dom)];       if (via == "exact") m_c += t; else m_g += t }
+        # 2) category table, longest suffix wins - hardware and ad domains read
+        #    as CDN / Ads / Cloud instead of a meaningless host name
+        else if (category_of(dom) != "") { a = category_of(dom); k_b += t }
+        # 3) the site itself - a website is identified by its domain
+        else                             { a = app_of(dom);               if (via == "exact") m_c += t; else m_g += t }
         up[a] += u; dn[a] += d
     }
     END {
         for (x in up) { if (up[x] + dn[x] > 0) printf "%s\t%d\t%d\n", x, up[x], dn[x] > tot }
         for (y in cb) { if (cb[y] > 0) printf "%s\t%d\n", y, cb[y] > cli }
         printf "%d\n", rb_total + rb["proxy"] > rt
-        printf "%d\t%d\t%d\n", m_c, m_g, m_n > st
+        printf "%d\t%d\t%d\t%d\n", m_c, m_g, k_b, k_o > st
     }' "$STATE_DIR/flow.delta"
     return 0
 }
@@ -300,7 +363,7 @@ roll_hour() {
     : > "$STATE_DIR/totals.tsv"
     : > "$STATE_DIR/clients.tsv"
     : > "$STATE_DIR/router.tsv"
-    printf '0\n0\n0\n' > "$STATE_DIR/stat.tsv"
+    printf '0\n0\n0\n0\n' > "$STATE_DIR/stat.tsv"
     prune_hourly
     printf '%s\n' "$hour" > "$STATE_DIR/hour"
     log "hourly bucket $hour written"
@@ -358,12 +421,13 @@ write_summary() {
         printf '],"totals":{'
         awk -F'\t' '{
             up += $2; down += $3
-            if ($1 == "unknown") { uu += $2; ud += $3 }
+            if ($1 == "Other") ou += $2 + $3
         } END {
-            printf "\"down\":%d,\"up\":%d,\"unknown\":%d", down, up, ud + uu
+            printf "\"down\":%d,\"up\":%d,\"other\":%d", down, up, ou
         }' "$STATE_DIR/totals.tsv" 2>/dev/null
         printf ',"router":%s' "$(cat "$STATE_DIR/router.tsv" 2>/dev/null || echo 0)"
-        awk -F'\t' '{ printf ",\"matched\":%d,\"fallback\":%d,\"unmatched\":%d", $1, $2, $3 }' \
+        # stat.tsv: <named via same client> <named via any client> <bucket> <other>
+        awk -F'\t' '{ printf ",\"exact\":%d,\"any\":%d,\"bucket\":%d,\"residual\":%d", $1, $2, $3, $4 }' \
             "$STATE_DIR/stat.tsv" 2>/dev/null
         printf '}}\n'
     } > "$STATE_DIR/summary.json.new" 2>/dev/null \
@@ -394,4 +458,3 @@ run() {
 }
 
 run
-

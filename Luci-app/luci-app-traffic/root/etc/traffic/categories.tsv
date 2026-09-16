@@ -1,0 +1,152 @@
+# Domain suffix -> category, for destinations that have no brand identity but
+# still mean something.  Used by the traffic page to label a flow when
+# apps.tsv has no entry for it.
+#
+#   <category><TAB><domain suffix>
+#
+# Matching is by suffix and the *longest* match wins, so a rule for
+# "example.co.uk" beats one for "co.uk".  A name found in apps.tsv always wins
+# over a category - a real application name is more useful than "Cloud".
+#
+# The category must have a matching glyph in
+# htdocs/luci-static/resources/traffic/icons/<category>.svg (lower case, spaces
+# as dashes); the page falls back to a letter avatar when it is missing.
+# Edit freely - the file is read on every sampling round.
+
+# --- content delivery ---
+CDN	cloudflare.net
+CDN	akamaiedge.net
+CDN	akamaized.net
+CDN	akamai.net
+CDN	fastly.net
+CDN	fastlylb.net
+CDN	cloudfront.net
+CDN	alicdn.com
+CDN	tbcdn.cn
+CDN	hwcdn.net
+CDN	ks-cdn.com
+CDN	ksyuncdn.com
+CDN	wscloudcdn.com
+CDN	cdngslb.com
+CDN	qhcdn.com
+CDN	wscdns.com
+CDN	lxdns.com
+CDN	cdntip.com
+CDN	joyssl.com
+CDN	b-cdn.net
+CDN	cdn77.org
+CDN	stackpathdns.com
+CDN	bdydns.com
+CDN	bytedancecdn.com
+
+# --- cloud / object storage / hosting ---
+Cloud	amazonaws.com
+Cloud	aliyuncs.com
+Cloud	myqcloud.com
+Cloud	qcloud.com
+Cloud	digitalocean.com
+Cloud	oraclecloud.com
+Cloud	windowsazure.com
+Cloud	azure.com
+Cloud	googleusercontent.com
+Cloud	hicloud.com
+Cloud	upyun.com
+Cloud	qiniucdn.com
+Cloud	qbox.me
+Cloud	bcebos.com
+Cloud	linode.com
+Cloud	vultr.com
+Cloud	hetzner.com
+Cloud	ovh.net
+
+# --- advertising / analytics / trackers ---
+Ads	doubleclick.net
+Ads	googlesyndication.com
+Ads	googleadservices.com
+Ads	google-analytics.com
+Ads	googleanalytics.com
+Ads	adservice.google.com
+Ads	umeng.com
+Ads	umengcloud.com
+Ads	cnzz.com
+Ads	mmstat.com
+Ads	admaster.com.cn
+Ads	miaozhen.com
+Ads	ipinyou.com
+Ads	alimama.com
+Ads	tanx.com
+Ads	scorecardresearch.com
+Ads	quantserve.com
+Ads	adsrvr.org
+Ads	casalemedia.com
+Ads	crwdcntrl.net
+Ads	exelator.com
+Ads	moatads.com
+Ads	applovin.com
+Ads	adjust.com
+Ads	branch.io
+
+# --- search ---
+Search	duckduckgo.com
+Search	sogou.com
+Search	so.com
+Search	haosou.com
+Search	yandex.com
+Search	yandex.net
+Search	ecosia.org
+Search	startpage.com
+
+# --- social ---
+Social	facebook.com
+Social	fbcdn.net
+Social	instagram.com
+Social	linkedin.com
+Social	pinterest.com
+Social	snapchat.com
+Social	reddit.com
+Social	redd.it
+Social	douban.com
+Social	t.co
+
+# --- video / streaming ---
+Video	googlevideo.com
+Video	youtu.be
+Video	nflxvideo.net
+Video	nflximg.net
+Video	hdslb.com
+Video	bilivideo.com
+Video	iqiyi.com
+Video	qiyi.com
+Video	youku.com
+Video	tiktokcdn.com
+Video	tiktokv.com
+Video	ttvnw.net
+Video	akamaized.net
+Video	biligame.com
+
+# --- software / updates / code hosting ---
+Software	windowsupdate.com
+Software	microsoft.com
+Software	apple.com
+Software	mzstatic.com
+Software	githubusercontent.com
+Software	githubassets.com
+Software	gitlab.com
+Software	ubuntu.com
+Software	debian.org
+Software	docker.com
+Software	docker.io
+Software	mozilla.org
+Software	mozilla.net
+Software	archlinux.org
+Software	alpinelinux.org
+
+# --- mail ---
+Email	gmail.com
+Email	googlemail.com
+Email	outlook.com
+Email	office365.com
+Email	mail.ru
+Email	zoho.com
+Email	protonmail.com
+Email	proton.me
