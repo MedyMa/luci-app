@@ -39,14 +39,23 @@ function mk(ns,tag,attrs,children){
   return n;
 }
 function E(tag,attrs,children){ return mk(XHTML,tag,attrs,children); }
+// capture what injectCss() puts into the <style> element
+global.__capturedCss = '';
 const documentStub={
-  createElement(t){ return mk(XHTML,t); },
+  createElement(t){
+    const n=mk(XHTML,t);
+    if(t==='style') n.appendChild=function(c){ global.__capturedCss += (c && c._text) || ''; };
+    return n;
+  },
   createElementNS(ns,t){ return mk(ns,t); },
-  createTextNode(){ return mk(null,'#text'); },
-  getElementById(){ return null; }, head:{appendChild(){}}, hidden:false
+  createTextNode(t){ const n=mk(null,'#text'); n._text=String(t); return n; },
+  getElementById(){ return null; },
+  head:{ appendChild(n){ if(n && n.id==='tf-css') global.__capturedCss=global.__capturedCss||''; } },
+  hidden:false
 };
 function ImageStub(){ return {onload:null,src:'',className:''}; }
-const factory=new Function('view','rpc','dom','poll','_','E','L','document','Image','confirm',src);
+const factory=new Function('view','rpc','dom','poll','_','E','L','document','Image','confirm',
+  src.replace(/return view\.extend\(/, 'global.__injectCss = injectCss;\nreturn view.extend('));
 const viewStub={extend(o){ viewStub.__obj=o; return o; }};
 const domStub={content(node,ch){ node.children=[]; (Array.isArray(ch)?ch:[ch]).forEach(x=>{ if(x) node.appendChild(x); }); }};
 const _id=s=>s;
@@ -121,6 +130,25 @@ const v6=freshView();
 view.drawStatus.call(v6,{collected_at:0,interval:0,flows:0,dnsmap_lines:0,pending:0,querylog:''},[]);
 const s6=[]; walk(v6.statusEl,n=>{ if(n.tag==='span') s6.push(n._text); });
 chk(s6.some(t=>t==='Collector has not produced a snapshot yet'), `无快照时明确提示（${s6.slice(0,4).join(' | ')}）`);
+
+console.log('=== 注入的 CSS：括号平衡与圆润控件 ===');
+global.__injectCss();
+const css=global.__capturedCss||'';
+chk(css.length>1500, `样式表已注入（${css.length} 字符）`);
+const open=(css.match(/\{/g)||[]).length, close=(css.match(/\}/g)||[]).length;
+chk(open===close, `大括号平衡（{ ${open} / } ${close}）`);
+chk(!/;\s*;/.test(css), '没有连续分号（空声明）');
+for(const sel of ['.tf-page .tf-range','.tf-page .tf-clear','.tf-page .tf-chart-ctl .cbi-button']){
+  const re=new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\{([^}]*)\\}');
+  const m=css.match(re);
+  chk(!!m, `有 ${sel} 规则`);
+  if(m) chk(/border-radius:999px/.test(m[1]), `  ${sel} 是圆角（999px 药丸形）`);
+}
+chk(/appearance:none/.test(css), '下拉框去掉了原生外观（才能自绘圆角箭头）');
+chk(/data:image\/svg\+xml/.test(css), '用了内联 SVG 箭头（无额外请求）');
+const darkRules=(css.match(/\.dark \.tf-page \.tf-range/g)||[]).length;
+chk(darkRules>=1, '深色模式箭头单独覆盖');
+chk(!/\.tf-page, \[data-darkmode[^{]*\.tf-range/.test(css), '深色后代选择器没有错误地只作用于列表最后一项');
 
 console.log(fail?`\n  ${fail} 项失败`:'\n  页面渲染验证全部通过');
 process.exit(fail?1:0);

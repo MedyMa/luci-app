@@ -830,6 +830,16 @@ return view.extend({
 	handleReset: null
 });
 
+/* Chevron for the pill select, as an inline SVG so no extra request is needed.
+ * Quotes are percent-encoded, which keeps the whole thing free of characters
+ * that would have to be escaped inside the CSS and JS strings. */
+function CHEVRON(color) {
+	return 'data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27' +
+		' viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27' + encodeURIComponent(color) + '%27' +
+		' stroke-width=%272.5%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E' +
+		'%3Cpolyline points=%276 9 12 15 18 9%27/%3E%3C/svg%3E';
+}
+
 /* Kept at the bottom so the view body reads as layout rather than styling.
  *
  * Argon adaptation: the accent colour and the card surface are taken from the
@@ -841,6 +851,13 @@ function injectCss() {
 	if (document.getElementById('tf-css')) return;
 
 	var DARK = '.dark .tf-page, [data-darkmode="true"] .tf-page, [data-theme="dark"] .tf-page';
+	/* A comma-separated selector list cannot be extended by appending a
+	 * descendant: only the last one would get it.  Anything that needs to be
+	 * scoped to dark mode expands the list one selector at a time. */
+	var DARK_ONE = [ '.dark .tf-page', '[data-darkmode="true"] .tf-page', '[data-theme="dark"] .tf-page' ];
+	var darkOf = function(sel) {
+		return DARK_ONE.map(function(d) { return d + ' ' + sel; }).join(',');
+	};
 	var css = [
 		'.tf-page{--tf-accent:var(--primary,#00b4ff);--tf-accent2:#7c5cff;',
 		'--tf-card:rgba(255,255,255,.72);--tf-card-brd:rgba(255,255,255,.75);',
@@ -875,10 +892,8 @@ function injectCss() {
 		'.tf-page .tf-chart-head{display:flex;align-items:baseline;gap:.7rem;flex-wrap:wrap;margin-bottom:.35rem;}',
 		'.tf-page .tf-chart-head h3{margin:0;font-size:.95rem;font-weight:600;}',
 		'.tf-page .tf-chart-note{font-size:.76rem;color:var(--tf-dim);font-variant-numeric:tabular-nums;}',
-		'.tf-page .tf-chart-ctl{margin-left:auto;display:flex;gap:.35rem;}',
-		'.tf-page .tf-chart-ctl .cbi-button{font-size:.74rem;padding:.2rem .6rem;border-radius:8px;',
-		'background:rgba(140,160,180,.14);border:1px solid transparent;color:var(--tf-fg);cursor:pointer;}',
-		'.tf-page .tf-chart-ctl .tf-gran-on{background:rgba(0,168,232,.16);border-color:rgba(0,168,232,.45);',
+		'.tf-page .tf-chart-ctl{margin-left:auto;display:flex;gap:.4rem;}',
+		'.tf-page .tf-chart-ctl .tf-gran-on{background:rgba(0,168,232,.18);border-color:rgba(0,168,232,.5);',
 		'color:var(--tf-fg);font-weight:600;}',
 		'.tf-page .tf-chart-svg{display:block;width:100%;height:auto;max-height:190px;}',
 		'.tf-page .tf-chart-tick{font-size:9px;fill:var(--tf-dim);}',
@@ -952,13 +967,38 @@ function injectCss() {
 		'.tf-page .tf-meta-val{font-size:.95rem;font-weight:600;font-variant-numeric:tabular-nums;}',
 		'.tf-page .tf-warn{color:#ff8f1f;}',
 		'.tf-page .tf-empty{text-align:center;color:var(--tf-dim);padding:1.2rem 0;}',
-		'.tf-page .tf-range{min-width:9rem;}',
+		/* controls: every chip and field is a pill, so the toolbar reads as one
+		 * row of soft shapes rather than as mismatched theme widgets.
+		 * border-radius carries !important because themes also style
+		 * .cbi-button and can otherwise win the tie on specificity. */
+		'.tf-page .tf-range{-webkit-appearance:none;appearance:none;min-width:9.5rem;',
+		'height:2.05rem;padding:0 2.05rem 0 .9rem;font-size:.82rem;line-height:2.05rem;',
+		'color:var(--tf-fg);background-color:rgba(140,160,180,.14);',
+		'background-image:url("' + CHEVRON('#6b7c8c') + '");',
+		'background-repeat:no-repeat;background-position:right .72rem center;background-size:.95rem;',
+		'border:1px solid rgba(128,150,175,.22);border-radius:999px!important;box-shadow:none;cursor:pointer;',
+		'transition:background-color .15s,border-color .15s,box-shadow .15s;}',
+		'.tf-page .tf-range:hover{background-color:rgba(140,160,180,.22);}',
+		'.tf-page .tf-range:focus{outline:none;border-color:var(--tf-accent);',
+		'box-shadow:0 0 0 3px rgba(0,168,232,.18);}',
+		'.tf-page .tf-clear{height:2.05rem;padding:0 1.15rem;font-size:.82rem;line-height:2.05rem;',
+		'border-radius:999px!important;border:none;box-shadow:none;cursor:pointer;',
+		'transition:filter .15s,box-shadow .15s;}',
+		'.tf-page .tf-clear:hover{filter:brightness(1.07);box-shadow:0 3px 10px rgba(224,60,60,.25);}',
+		'.tf-page .tf-chart-ctl .cbi-button{font-size:.76rem;height:1.8rem;padding:0 .9rem;',
+		'line-height:1.8rem;border-radius:999px!important;background:rgba(140,160,180,.14);',
+		'border:1px solid transparent;color:var(--tf-fg);cursor:pointer;box-shadow:none;',
+		'transition:background-color .15s,border-color .15s,color .15s;}',
+		'.tf-page .tf-chart-ctl .cbi-button:hover{background:rgba(140,160,180,.24);}',
+		'.tf-page .tf-hero-ctl{gap:.7rem;}',
 
 		/* dark: Argon sets .dark on <body> when its dark mode is on */
 		DARK + '{--tf-card:rgba(30,38,48,.66);--tf-card-brd:rgba(255,255,255,.08);',
 		'--tf-fg:#e6edf3;--tf-dim:rgba(230,237,243,.55);',
 		'--tf-shadow:0 6px 22px rgba(0,0,0,.35);',
 		'--tf-down:#4dd2ff;--tf-up:#3ddc97;}',
+		darkOf('.tf-range') + '{background-image:url("' + CHEVRON('#a9b6c2') + '");}',
+		darkOf('.tf-clear') + '{box-shadow:none;}',
 		'@media (max-width:52rem){.tf-page .tf-list-card{min-width:0;flex-basis:100%;}',
 		'.tf-page .tf-donut-card{flex-basis:100%;}.tf-page .tf-hero-ctl{margin-left:0;}}'
 	].join('');
