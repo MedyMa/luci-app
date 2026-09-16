@@ -24,6 +24,8 @@
 #      real client on the same prefixes still is
 #  13. an older state schema rebuilds the running totals instead of keeping a
 #      row that must no longer exist, and a matching one does not
+#  14. the box addresses are found without being configured, which is the path
+#      the router actually takes
 #
 #   bash collector-selftest.sh
 set -u
@@ -336,6 +338,35 @@ chk "21b 计数器是从新数据重建的"            "72600"             "$(c3
 # second run: the schema now matches, so the totals must survive it untouched
 run_collector_at 30 "$T/state3" "$T/data3" "$T/ct" "$T/ql"
 chk "21c 版本未变时不会清空计数器"          "72600"             "$(c3 '192.168.2.138')"
+
+echo
+echo "=== 自动探测路由器自身地址（设备实走路径）==="
+# Nobody sets 'self' by hand: on the router the collector finds the addresses
+# itself, which is the path the field report came from and the one that has to
+# keep working.  A stub 'ip' stands in for the LAN interface, link-local
+# address included, because 'ip -6 addr show' prints one.
+mkdir -p "$T/fakebin" "$T/state4" "$T/data4"
+cat > "$T/fakebin/ip" <<'EOF'
+#!/bin/sh
+case "$*" in
+    "-4 addr show dev br-lan")
+        printf '    inet 192.168.2.1/24 brd 192.168.2.255 scope global br-lan\n' ;;
+    "-6 addr show dev br-lan")
+        printf '    inet6 fdc8:64ed:f962::1/64 scope global\n'
+        printf '    inet6 fe80::1/64 scope link\n' ;;
+esac
+EOF
+chmod +x "$T/fakebin/ip"
+# no TRAFFIC_SELF and no TRAFFIC_LAN6: both are detected through the stub
+run_collector_at 30 "$T/state4" "$T/data4" "$T/ct2" /nonexistent "PATH=$T/fakebin:$PATH"
+c4() { awk -F'\t' -v ip="$1" '$1==ip {print $2}' "$T/state4/clients.tsv"; }
+chk "22 自动探测到 LAN 地址并排除"          ""                  "$(c4 '192.168.2.1')"
+chk "22a 自动探测到 v6 地址并排除"          ""                  "$(c4 'fdc8:64ed:f962:0000:0000:0000:0000:0001')"
+chk "22b v6 客户端不受影响"                 "4400"              "$(c4 'fdc8:64ed:f962:0000:0000:0000:0000:0050')"
+chk "22c 探到的地址写入快照（v4+v6，v6 已展开）" \
+    "192.168.2.1 fdc8:64ed:f962:0000:0000:0000:0000:0001 fe80:0000:0000:0000:0000:0000:0000:0001" \
+    "$(grep -o '"self":"[^"]*"' "$T/state4/summary.json" 2>/dev/null | cut -d'"' -f4)"
+chk "22d 自动探测时自身流量仍归 router"     "5500"              "$(cat "$T/state4/router.tsv")"
 
 echo
 if [ "$fail" = 0 ]; then echo "=== 全部通过 ==="; else echo "=== 有失败 ==="; fi
