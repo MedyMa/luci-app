@@ -16,6 +16,12 @@ config traffic 'settings'
 	# listed as a device.  Leave empty to auto-detect every address on the LAN
 	# interface.
 	option self ''
+	# per-host byte counters in nftables.  These are what the client totals come
+	# from: they count every packet a host sends or receives, independent of the
+	# conntrack table and of the DNS correlation, so proxied traffic and anything
+	# the conntrack accounting misses is still included.  Set to 0 to fall back
+	# to the conntrack totals alone, which is also what happens with no nft.
+	option accounting '1'
 	# optional: map a registrable domain to a friendlier application name
 	option appmap '/etc/traffic/apps.tsv'
 	# how many days of hourly history to keep

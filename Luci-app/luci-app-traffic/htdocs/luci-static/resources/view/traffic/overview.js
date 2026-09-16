@@ -582,6 +582,13 @@ return view.extend({
 		bits.push({ k: _('Host names'), v: String(Number(s.dnsmap_lines) || 0) });
 		if (Number(s.pending) > 0) bits.push({ k: _('Waiting to resolve'), v: String(Number(s.pending)), warn: true });
 		bits.push({ k: _('Query log'), v: s.querylog || '—', mono: true });
+		/* which layer is producing the client totals: the nft counters see every
+		   packet, the conntrack fallback only what the connection table knows.
+		   A fallback is not an error, but it must not look like one and the
+		   same page, or a silent degradation reads as "the network got quiet". */
+		bits.push({ k: _('Client totals'), v: s.acct ? _('nft counters') : _('conntrack'),
+			warn: !s.acct && !!s.acct_error });
+		if (!s.acct && s.acct_error) bits.push({ k: _('Counter error'), v: s.acct_error, warn: true });
 		/* what the collector treats as the box itself: the first thing to check
 		   when a client list looks like it has the router in it */
 		if (s.self) bits.push({ k: _('Router addresses'), v: s.self, mono: true });
@@ -670,14 +677,29 @@ return view.extend({
 		var all = named + bucket + residual;
 		var pct = function(v) { return all ? (100 * v / all).toFixed(1) + '%' : '—'; };
 
-		this.drawMeta([
+		/* When the per-host nft counters are running they are the honest total:
+		 * they count every packet the clients sent or received, including the
+		 * proxied traffic that never shows up in a DNS answer and the traffic
+		 * the conntrack accounting can miss.  The application breakdown is then
+		 * a share *of that total*, and the gap between the two is what the page
+		 * should be honest about rather than hide. */
+		var acct = s.accounted || null;
+		var acctAll = acct ? (Number(acct.down) || 0) + (Number(acct.up) || 0) : 0;
+		var rows = [
 			{ cap: _('Router and tunnel'), val: fmtBytes(t.router) },
 			{ cap: _('Browser clients'), val: fmtBytes(all) },
 			{ cap: _('Domain identified'), val: pct(named),
 			  title: _('by client DNS') + ': ' + pct(namedE) + ', ' + _('by any client DNS') + ': ' + pct(namedA) },
 			{ cap: _('Categorised'), val: pct(bucket) },
 			{ cap: _('Other'), val: pct(residual), warn: true }
-		]);
+		];
+		if (acctAll > 0) {
+			rows.push({ cap: _('Counter total'), val: fmtBytes(acctAll),
+				title: _('every packet counted at the LAN interface, proxied traffic included') });
+			rows.push({ cap: _('Accounted share'), val: (100 * all / acctAll).toFixed(1) + '%',
+				warn: all / acctAll < 0.5 });
+		}
+		this.drawMeta(rows);
 
 		/* New host names wait for the resolver's next pass, which is throttled
 		 * so that browsing cannot make every poll pay for a fresh name.  When

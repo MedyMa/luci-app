@@ -370,5 +370,93 @@ chk "22c 探到的地址写入快照（v4+v6，v6 已展开）" \
 chk "22d 自动探测时自身流量仍归 router"     "5500"              "$(cat "$T/state4/router.tsv")"
 
 echo
+echo "=== 逐客户端字节计数（nft）==="
+# The counters are what makes the client totals independent of the conntrack
+# table.  A stub nft stands in for the kernel: it remembers which chains and
+# rules were added and prints the byte counters the test sets, so rule building,
+# reading, the delta and the rebuild after a firewall reload are all exercised
+# offline.
+mkdir -p "$T/fakebin" "$T/nft5" "$T/state5" "$T/data5"
+cat > "$T/fakebin/nft" <<'EOF'
+#!/bin/sh
+# The table is always "<family> traffic_acct", so the chain name is the fifth
+# argument for every call shape the collector uses.
+S=${NFTS:?}
+mkdir -p "$S"
+case "$1" in
+    add)
+        case "$2" in
+            table) : ;;
+            chain) : > "$S/rules.$5" ;;
+            rule)
+                ch="$5"; shift 5
+                printf '%s\n' "$*" >> "$S/rules.$ch" ;;
+        esac ;;
+    flush)
+        [ "$2" = chain ] && : > "$S/rules.$5" ;;
+    list)
+        ch="$5"
+        [ -f "$S/rules.$ch" ] || exit 1
+        printf 'table inet traffic_acct {\n\tchain %s {\n' "$ch"
+        while read -r line; do
+            [ -n "$line" ] || continue
+            a=$(printf '%s\n' "$line" | awk '{ for (i = 1; i <= NF; i++) if ($i == "saddr" || $i == "daddr") print $(i + 1) }')
+            b=$(awk -v a="$a" '$1 == a { print $2 }' "$S/counters.$ch" 2>/dev/null)
+            [ -n "$b" ] || b=0
+            printf '\t\t%s counter packets 1 bytes %s\n' "$line" "$b"
+        done < "$S/rules.$ch"
+        printf '\t}\n}\n' ;;
+esac
+exit 0
+EOF
+chmod +x "$T/fakebin/nft"
+# one live host, one more live host, and a stale arp entry that is not a client
+cat > "$T/arp5" <<'EOF'
+IP address       HW type     Flags       HW address            Mask     Device
+192.168.2.50     0x1         0x2         aa:bb:cc:dd:ee:01     *        br-lan
+192.168.2.51     0x1         0x2         aa:bb:cc:dd:ee:02     *        br-lan
+192.168.2.99     0x1         0x0         00:00:00:00:00:00     *        br-lan
+192.168.1.7      0x1         0x2         aa:bb:cc:dd:ee:03     *        br-lan
+EOF
+printf '192.168.2.50 1000\n192.168.2.51 0\n' > "$T/nft5/counters.pre"
+printf '192.168.2.50 10000\n192.168.2.51 0\n' > "$T/nft5/counters.post"
+run_collector_at 30 "$T/state5" "$T/data5" "$T/ct2" /nonexistent \
+    "PATH=$T/fakebin:$PATH" "NFTS=$T/nft5" "TRAFFIC_ARPFILE=$T/arp5" \
+    TRAFFIC_SELF="192.168.2.1" TRAFFIC_LAN6=fdc8:64ed:f962:
+chk "23 只给真正的 LAN 邻居建计数规则"      "2"                 "$(grep -c 'saddr' "$T/nft5/rules.pre" 2>/dev/null)"
+chk "23a 陈旧的 arp 表项不建规则"           "0"                 "$(grep -c '192.168.2.99' "$T/nft5/rules.pre" 2>/dev/null)"
+chk "23b WAN 网段邻居不建规则"              "0"                 "$(grep -c '192.168.1.7' "$T/nft5/rules.pre" 2>/dev/null)"
+chk "23c 下行按目的地址计（postrouting）"   "10000"             "$(awk -F'\t' '$1=="192.168.2.50"{print $2}' "$T/state5/acct_delta.tsv")"
+chk "23d 上行按源地址计（prerouting）"      "1000"              "$(awk -F'\t' '$1=="192.168.2.50"{print $3}' "$T/state5/acct_delta.tsv")"
+chk "23e 客户端总量来自计数器"              "11000"             "$(awk -F'\t' '$1=="192.168.2.50"{print $2}' "$T/state5/clients.tsv")"
+chk "23f 快照报告计数层已启用"              "1"                 "$(grep -o '"acct":[0-9]*' "$T/state5/summary.json" | cut -d: -f2)"
+acctf() { grep -o '"accounted":{[^}]*}' "$1" | sed -n "s/.*\"$2\":\([0-9]*\).*/\1/p"; }
+chk "23g 快照报告计数器总量（下行）"        "10000"             "$(acctf "$T/state5/summary.json" down)"
+chk "23g2 快照报告计数器总量（上行）"       "1000"              "$(acctf "$T/state5/summary.json" up)"
+# second round: only the increase is added, not the absolute counter again
+printf '192.168.2.50 3000\n192.168.2.51 0\n' > "$T/nft5/counters.pre"
+printf '192.168.2.50 25000\n192.168.2.51 0\n' > "$T/nft5/counters.post"
+run_collector_at 30 "$T/state5" "$T/data5" "$T/ct2" /nonexistent \
+    "PATH=$T/fakebin:$PATH" "NFTS=$T/nft5" "TRAFFIC_ARPFILE=$T/arp5" \
+    TRAFFIC_SELF="192.168.2.1" TRAFFIC_LAN6=fdc8:64ed:f962:
+chk "23h 增量累加而不是重复计入绝对值"      "3000"              "$(awk -F'\t' '$1=="192.168.2.50"{print $3}' "$T/state5/acct.tsv")"
+# a firewall reload flushes the whole ruleset, ours included: the chains have to
+# come back, and the counters restart from a lower value
+rm -f "$T/nft5/rules.pre" "$T/nft5/rules.post"
+printf '192.168.2.50 200\n192.168.2.51 0\n' > "$T/nft5/counters.pre"
+printf '192.168.2.50 500\n192.168.2.51 0\n' > "$T/nft5/counters.post"
+run_collector_at 30 "$T/state5" "$T/data5" "$T/ct2" /nonexistent \
+    "PATH=$T/fakebin:$PATH" "NFTS=$T/nft5" "TRAFFIC_ARPFILE=$T/arp5" \
+    TRAFFIC_SELF="192.168.2.1" TRAFFIC_LAN6=fdc8:64ed:f962:
+chk "23i 防火墙重载后计数规则自愈"          "2"                 "$(grep -c 'saddr' "$T/nft5/rules.pre" 2>/dev/null)"
+chk "23j 计数器归零后按新绝对值计增量"      "200"               "$(awk -F'\t' '$1=="192.168.2.50"{print $3}' "$T/state5/acct_delta.tsv")"
+chk "23k 累计值在前两轮基础上继续"          "3200"              "$(awk -F'\t' '$1=="192.168.2.50"{print $3}' "$T/state5/acct.tsv")"
+# without nft the client totals fall back to conntrack, and the snapshot says so
+run_collector_at 30 "$T/state6" "$T/data6" "$T/ct" "$T/ql" TRAFFIC_SELF="192.168.2.1"
+chk "23l 无 nft 时降级并如实上报"           "0"                 "$(grep -o '"acct":[0-9]*' "$T/state6/summary.json" | cut -d: -f2)"
+chk "23m 降级原因写入快照"                  "nft is not installed" "$(grep -o '"acct_error":"[^"]*"' "$T/state6/summary.json" | cut -d'"' -f4)"
+chk "23n 降级时客户端总量仍由 conntrack 给出" "72600"           "$(awk -F'\t' '$1=="192.168.2.138"{print $2}' "$T/state6/clients.tsv")"
+
+echo
 if [ "$fail" = 0 ]; then echo "=== 全部通过 ==="; else echo "=== 有失败 ==="; fi
 exit "$fail"

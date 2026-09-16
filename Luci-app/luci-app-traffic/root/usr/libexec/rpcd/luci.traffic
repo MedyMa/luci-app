@@ -138,6 +138,11 @@ reset_stats() {
 	: > "$STATE_DIR/clients.tsv"
 	: > "$STATE_DIR/router.tsv"
 	: > "$STATE_DIR/ac.tsv"
+	# The per-host counters live in the kernel.  Dropping the accumulated copy
+	# and the rule set (so the next round rebuilds it) is what makes a reset
+	# actually start from zero; keeping the absolute baseline would instead
+	# count every counter again from where it stands.
+	rm -f "$STATE_DIR/acct.tsv" "$STATE_DIR/acct.abs" "$STATE_DIR/acct.hosts"
 	printf '0\n0\n0\n' > "$STATE_DIR/stat.tsv"
 	# the sharp tier belongs to the session, the coarse one to the history
 	: > "$STATE_DIR/series10.tsv"

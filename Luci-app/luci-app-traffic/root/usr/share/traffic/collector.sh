@@ -38,8 +38,12 @@
 # State lives in /tmp/traffic (RAM).  Once an hour the session totals are
 # appended to <datadir>/hourly.tsv and reset, which is the persistent history.
 #
-# Read-only with respect to the rest of the system: nothing here changes
-# firewall, DNS or proxy configuration.
+# The one thing this does change outside its own state is a pair of nftables
+# counting chains of its own (table inet traffic_acct), used for the per-host
+# byte counters.  It touches no firewall, DNS or proxy configuration: the chains
+# only count, and they are removed when the service stops.  Set
+# traffic.settings.accounting to 0 to leave the firewall alone entirely, in
+# which case the client totals come from conntrack as they did before.
 
 set -u
 
@@ -58,6 +62,13 @@ CFG_LAN6=
 # the router's own LAN addresses, space separated; a source matching one of
 # these is the router, not a client
 CFG_SELF=
+# per-host byte counters in nftables, on top of the conntrack accounting: they
+# do not depend on nf_conntrack_acct or on the connection table having room, and
+# they are what makes the client totals authoritative
+CFG_ACCT=1
+# set once per round by account_clients(): 1 when the nft counters are running
+# and own the client totals, 0 when the conntrack totals stand in for them
+ACCT_ON=0
 CFG_APPMAP=$CFG_DATADIR/apps.tsv
 CFG_CATEGORIES=$CFG_DATADIR/categories.tsv
 CFG_RETENTION=7
@@ -105,6 +116,7 @@ uci_get() {
         lan4)           v=${TRAFFIC_LAN4:-} ;;
         lan6)           v=${TRAFFIC_LAN6:-} ;;
         self)           v=${TRAFFIC_SELF:-} ;;
+        accounting)     v=${TRAFFIC_ACCOUNTING:-} ;;
         appmap)         v=${TRAFFIC_APPMAP:-} ;;
         categories)     v=${TRAFFIC_CATEGORIES:-} ;;
         retention_days) v=${TRAFFIC_RETENTION_DAYS:-} ;;
@@ -211,6 +223,7 @@ load_config() {
     v=$(uci_get lan6);         [ -n "$v" ] && CFG_LAN6=$v
     [ -n "$CFG_LAN6" ] || CFG_LAN6=$(detect_lan6)
     v=$(uci_get self);         [ -n "$v" ] && CFG_SELF=$v
+    v=$(uci_get accounting);   [ -n "$v" ] && CFG_ACCT=$v
     [ -n "$CFG_SELF" ] || CFG_SELF=$(detect_self | tr '\n' ' ')
     v=$(uci_get appmap);       [ -n "$v" ] && CFG_APPMAP=$v
     [ -n "$CFG_APPMAP" ] || CFG_APPMAP=$CFG_DATADIR/apps.tsv
@@ -253,7 +266,8 @@ init_state() {
         # delta is measured against, and clearing it would count every open
         # flow from zero once.
         rm -f "$STATE_DIR/totals.tsv" "$STATE_DIR/clients.tsv" "$STATE_DIR/router.tsv" \
-              "$STATE_DIR/stat.tsv" "$STATE_DIR/ac.tsv"
+              "$STATE_DIR/stat.tsv" "$STATE_DIR/ac.tsv" \
+              "$STATE_DIR/acct.tsv" "$STATE_DIR/acct.abs" "$STATE_DIR/acct.hosts"
         printf '%s\n' "$STATE_VERSION" > "$STATE_DIR/version"
         [ -n "$v" ] && log "state schema $v -> $STATE_VERSION: live counters reset"
     fi
@@ -490,6 +504,189 @@ poll_ct() {
     return 0
 }
 
+# ---------------------------------------------------------------- per-host accounting
+# A byte counter per client, in the spirit of wrtbwmon: the router counts what
+# each host really sends and receives, with no dependence on DNS, on the
+# conntrack table or on nf_conntrack_acct being on.
+#
+# wrtbwmon counts in the FORWARD chain (RRDIPT_FORWARD in its readDB.awk).  That
+# is the one hook this deployment cannot use.  passwall keeps its own nft table
+# whose base chains are prerouting and output only (see gen_nft_tables in its
+# nftables.sh), and every proxied connection ends in "tproxy to :port" or
+# "redirect to :port", both of which hand it to a local socket.  Proxied client
+# traffic therefore travels PREROUTING to INPUT and never reaches FORWARD, so a
+# FORWARD counter would miss the bulk of what we want to measure - and AdGuard
+# Home DNS is redirected out of PREROUTING in exactly the same way.
+# (wrtbwmon's readDB.awk is also gawk-only: it dispatches on ARGIND, which
+# busybox awk does not have, so on this target it would do nothing at all and
+# report nothing.)
+#
+# The two hooks a packet from or to a LAN client crosses exactly once are:
+#
+#   upload    prerouting  priority raw   iifname <lan>  ip saddr <client>
+#   download  postrouting priority 101   oifname <lan>  ip daddr <client>
+#
+# Upload is matched by source and download by destination, and no packet matches
+# both, so a directly routed download is not counted twice.  Filtering on the
+# LAN interface keeps the proxy own sockets out of it, since those leave by the
+# WAN device.  The download hook has to be postrouting rather than prerouting:
+# the download half of a proxied connection is produced by a local socket and
+# leaves through OUTPUT, so it never appears in prerouting at all.
+#
+# One nft rule per client and direction is used, because a rule counter works on
+# every nftables in this tree whereas per-element map counters do not.  The rule
+# set is rebuilt only when the set of clients changes, and the counters are read
+# before any rebuild, so rebuilding does not lose the round.
+ACCT_TABLE=${ACCT_TABLE:-inet traffic_acct}
+
+acct_available() { command -v nft >/dev/null 2>&1; }
+
+# The LAN device: what separates client traffic from the proxy own.
+detect_lan_dev() {
+    local br
+    br=$($UCI -q get network.lan.device 2>/dev/null)
+    [ -n "$br" ] || br=br-lan
+    printf '%s\n' "$br"
+}
+
+# Report, once per distinct reason, that the counters are unavailable.  The page
+# reads this from the snapshot, so a silent fallback does not look like a
+# working collector with suspiciously low numbers.
+acct_off() {
+    [ "$(sed -n '1p' "$STATE_DIR/acct.off" 2>/dev/null)" = "$1" ] && return 0
+    printf '%s\n' "$1" > "$STATE_DIR/acct.off"
+    log "per-host accounting off: $1"
+}
+
+# The hosts to count: every neighbour the kernel has on the LAN.  A failed or
+# incomplete entry is not a client, and the MAC check keeps junk out of the
+# rule set.
+CFG_ARPFILE=${TRAFFIC_ARPFILE:-/proc/net/arp}
+
+acct_hosts() {
+    if [ -r "$CFG_ARPFILE" ]; then
+        awk -v lan="$CFG_LAN4" '
+            NR > 1 && $3 != "0x0" && $4 ~ /^([0-9a-fA-F][0-9a-fA-F]:){5}[0-9a-fA-F][0-9a-fA-F]$/ {
+                if (lan == "" || index($1, lan) == 1) print $1
+            }' "$CFG_ARPFILE"
+    fi
+    if command -v ip >/dev/null 2>&1; then
+        ip -6 neigh show 2>/dev/null | awk -v lan="$CFG_LAN6" '
+            /^[0-9a-fA-F:]+[ \t]/ {
+                if ($0 ~ /(FAILED|INCOMPLETE)/) next
+                a = $1
+                sub(/%[^%]*$/, "", a)
+                if (lan == "" || index(a, lan) == 1) print a
+            }'
+    fi
+}
+
+# Rebuild the counting rules when the client set or the LAN device changed, and
+# also whenever the chains are gone: a firewall reload flushes the whole
+# ruleset, ours included, and without this check the counters would stop for
+# good while every number on the page stayed plausible.
+acct_sync() {
+    local lan hosts cur
+    lan=$(detect_lan_dev)
+    [ -n "$lan" ] || return 1
+    hosts=$(acct_hosts | sort -u | tr '\n' ' ')
+    cur=$(cat "$STATE_DIR/acct.hosts" 2>/dev/null)
+    if [ "$hosts" = "$cur" ] && [ "$lan" = "$(cat "$STATE_DIR/acct.dev" 2>/dev/null)" ] &&
+       nft list chain $ACCT_TABLE pre >/dev/null 2>&1 && nft list chain $ACCT_TABLE post >/dev/null 2>&1; then
+        return 0
+    fi
+
+    nft add table $ACCT_TABLE 2>/dev/null
+    nft add chain $ACCT_TABLE pre '{ type filter hook prerouting priority raw; policy accept; }' 2>/dev/null
+    nft add chain $ACCT_TABLE post '{ type filter hook postrouting priority 101; policy accept; }' 2>/dev/null
+    nft list chain $ACCT_TABLE pre >/dev/null 2>&1 || return 1
+    nft list chain $ACCT_TABLE post >/dev/null 2>&1 || return 1
+    nft flush chain $ACCT_TABLE pre 2>/dev/null
+    nft flush chain $ACCT_TABLE post 2>/dev/null
+
+    local h
+    for h in $hosts; do
+        case "$h" in
+            *:*) nft add rule $ACCT_TABLE pre  iifname "$lan" ip6 saddr "$h" counter 2>/dev/null
+                 nft add rule $ACCT_TABLE post oifname "$lan" ip6 daddr "$h" counter 2>/dev/null ;;
+            *)   nft add rule $ACCT_TABLE pre  iifname "$lan" ip saddr "$h" counter 2>/dev/null
+                 nft add rule $ACCT_TABLE post oifname "$lan" ip daddr "$h" counter 2>/dev/null ;;
+        esac
+    done
+    printf '%s\n' "$hosts" > "$STATE_DIR/acct.hosts"
+    printf '%s\n' "$lan" > "$STATE_DIR/acct.dev"
+    return 0
+}
+
+# Print "<address> <TAB> <bytes>" for every counting rule in one chain.  The
+# field order is searched rather than assumed, so it survives nft print changes.
+acct_read() {
+    nft list chain $ACCT_TABLE "$1" 2>/dev/null | awk '
+        {
+            a = ""; b = ""
+            for (i = 1; i <= NF; i++) {
+                if ($i == "saddr" || $i == "daddr") a = $(i + 1)
+                else if ($i == "bytes") b = $(i + 1)
+            }
+            if (a != "" && b != "") print a "\t" b
+        }'
+}
+
+# Turn the absolute counters into this round deltas and accumulate them per
+# client.  A counter that went backwards means the rules were rebuilt (a
+# firewall reload wipes our table), so the new value is used as the delta.
+account_clients() {
+    local m
+    ACCT_ON=0
+    [ "$CFG_ACCT" = "1" ] || return 0
+    acct_available || { acct_off "nft is not installed"; return 0; }
+    acct_sync || { acct_off "the counter table could not be set up"; return 0; }
+    ACCT_ON=1
+    rm -f "$STATE_DIR/acct.off"
+
+    : > "$STATE_DIR/acct.new"
+    for m in pre post; do
+        acct_read "$m" | awk -v m="$m" -F'\t' '{ print m "\t" $1 "\t" $2 }' >> "$STATE_DIR/acct.new"
+    done
+    : > "$STATE_DIR/acct_delta.tsv"
+
+    awk -F'\t' -v abs="$STATE_DIR/acct.abs" -v cum="$STATE_DIR/acct.tsv" \
+        -v dl="$STATE_DIR/acct_delta.tsv" '
+        BEGIN {
+            while ((getline l < abs) > 0) { split(l, f, "\t"); old[f[1] "|" f[2]] = f[3] + 0 }
+            close(abs)
+            while ((getline l < cum) > 0) {
+                split(l, f, "\t")
+                td[f[1]] = f[2] + 0; tu[f[1]] = f[3] + 0
+            }
+            close(cum)
+        }
+        {
+            b = $3 + 0
+            d = b - old[$1 "|" $2]
+            if (d < 0) d = b
+            if ($1 == "pre") up[$2] += d; else down[$2] += d
+            seen[$2] = 1
+        }
+        END {
+            for (ip in seen) {
+                td[ip] += down[ip]; tu[ip] += up[ip]
+                if (down[ip] + up[ip] > 0) printf "%s\t%d\t%d\n", ip, down[ip], up[ip] > dl
+            }
+            for (ip in td) printf "%s\t%d\t%d\n", ip, td[ip], tu[ip] > cum
+        }' "$STATE_DIR/acct.new" 2>/dev/null
+    mv -f "$STATE_DIR/acct.new" "$STATE_DIR/acct.abs"
+
+    # clients.tsv is what the page lists: when the counters are running they are
+    # the client totals, and conntrack only supplies the application attribution.
+    if [ "$ACCT_ON" = "1" ] && [ -f "$STATE_DIR/acct.tsv" ]; then
+        awk -F'\t' '{ if ($2 + $3 > 0) printf "%s\t%d\t%d\t%d\n", $1, $2 + $3, $2, $3 }' \
+            "$STATE_DIR/acct.tsv" > "$STATE_DIR/clients.new" 2>/dev/null \
+            && mv -f "$STATE_DIR/clients.new" "$STATE_DIR/clients.tsv"
+    fi
+    return 0
+}
+
 # ---------------------------------------------------------------- attribution
 classify() {
     if [ ! -s "$STATE_DIR/flow.delta" ]; then
@@ -502,7 +699,7 @@ classify() {
         -v cli="$STATE_DIR/clients.tsv" -v rt="$STATE_DIR/router.tsv" -v st="$STATE_DIR/stat.tsv" \
         -v acfile="$STATE_DIR/ac.tsv" -v acnew="$STATE_DIR/ac.new" \
         -v nmap="$STATE_DIR/namemap.tsv" -v smp="$STATE_DIR/sample.new" \
-        -v lan4="$CFG_LAN4" -v lan6="$CFG_LAN6" -v self="$CFG_SELF" '
+        -v lan4="$CFG_LAN4" -v lan6="$CFG_LAN6" -v self="$CFG_SELF" -v acct="$ACCT_ON" '
     # The registrable domain: what to show when a host name was in neither
     # catalogue, i.e. an unidentified website.  A small public-suffix list is
     # enough here.
@@ -638,7 +835,11 @@ classify() {
     }
     END {
         for (x in up) { if (up[x] + dn[x] > 0) printf "%s\t%d\t%d\n", x, up[x], dn[x] > tot }
-        for (y in cb) { if (cb[y] > 0) printf "%s\t%d\n", y, cb[y] > cli }
+        # The client totals come from the nft counters when they are running:
+        # they see every packet, and the conntrack side of a proxied flow is not
+        # where its bytes end up.  Only when the counters are unavailable does
+        # the conntrack total stand in for them.
+        if (!acct) for (y in cb) { if (cb[y] > 0) printf "%s\t%d\n", y, cb[y] > cli }
         printf "%d\n", rb_total + rb["proxy"] > rt
         printf "%d\t%d\t%d\t%d\n", m_c, m_g, k_b, k_o > st
         printf "%d\n%d\n", sd, su > smp
@@ -739,6 +940,10 @@ roll_hour() {
     : > "$STATE_DIR/clients.tsv"
     : > "$STATE_DIR/router.tsv"
     : > "$STATE_DIR/ac.tsv"
+    # the session part of the per-client counters starts over with the bucket.
+    # acct.abs is kept on purpose: it is the absolute baseline the next delta is
+    # measured against, so clearing it would count every counter from zero once.
+    : > "$STATE_DIR/acct.tsv"
     printf '0\n0\n0\n0\n' > "$STATE_DIR/stat.tsv"
     prune_hourly
     prune_dnsmap
@@ -901,6 +1106,17 @@ write_summary() {
         }' "$STATE_DIR/totals.tsv" 2>/dev/null
         printf ',"router":%s' "$(cat "$STATE_DIR/router.tsv" 2>/dev/null || echo 0)"
         printf ',"client_count":%s' "$(wc -l < "$STATE_DIR/clients.tsv" 2>/dev/null || echo 0)"
+        # the per-host counters: how much every LAN client really moved, which is
+        # the denominator the application breakdown is measured against.  When
+        # they are not running (no nft, or the table could not be created) the
+        # page is told, instead of being handed suspiciously small numbers.
+        printf ',"acct":%s' "$ACCT_ON"
+        if [ "$ACCT_ON" = "1" ]; then
+            printf ',"accounted":{'
+            awk -F'\t' '{ d += $2; u += $3 } END { printf "\"down\":%d,\"up\":%d}", d + 0, u + 0 }' \
+                "$STATE_DIR/acct.tsv" 2>/dev/null || printf '"down":0,"up":0}'
+        fi
+        [ -s "$STATE_DIR/acct.off" ] && printf ',"acct_error":"%s"' "$(json_escape "$(sed -n '1p' "$STATE_DIR/acct.off")")"
         # host names still waiting for the resolver: the page asks for them to
         # be resolved at once while it is open, and does nothing when it is not
         printf ',"pending":%s' "$(sed -n '1p' "$STATE_DIR/pending" 2>/dev/null || echo 0)"
@@ -928,6 +1144,10 @@ run() {
         poll_dns
         resolve_names
         poll_ct
+        # the counters are read before classify(): they are what the client
+        # totals come from, and reading them first keeps a rule rebuild from
+        # swallowing the round
+        account_clients
         classify
         # one clock read per round, shared by the sample and the hour check
         now=$(date +%s 2>/dev/null || echo 0)

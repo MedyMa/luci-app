@@ -181,6 +181,34 @@ msgstr "查询日志"
 msgid "Router addresses"
 msgstr "路由器自身地址"
 
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Counter total"
+msgstr "计数器总量"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Accounted share"
+msgstr "已分类占比"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "every packet counted at the LAN interface, proxied traffic included"
+msgstr "在 LAN 接口处逐包计数，包含被代理的流量"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Client totals"
+msgstr "客户端总量来源"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "nft counters"
+msgstr "nft 计数器"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "conntrack"
+msgstr "连接跟踪"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Counter error"
+msgstr "计数器错误"
+
 # Small-case variants: "Total"/"Up" are translated by luci-base, so the page
 # uses its own caption strings where the wording has to be exact.
 #: htdocs/luci-static/resources/view/traffic/overview.js

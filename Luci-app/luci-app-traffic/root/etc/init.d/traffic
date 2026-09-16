@@ -21,7 +21,10 @@ start_service() {
 
 stop_service() {
 	# Nothing to flush: the live counters are in /tmp and the hourly history
-	# is written as it happens.
+	# is written as it happens.  The per-host counter table does have to go:
+	# it is firewall state this package created, and leaving it behind after a
+	# stop would keep counting - and counting is the whole point of stopping.
+	command -v nft >/dev/null 2>&1 && nft delete table inet traffic_acct 2>/dev/null
 	:
 }
 

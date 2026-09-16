@@ -64,6 +64,50 @@ AGH querylog     ─┘
    accounting itself. Replacing the catalogue (an upgrade) invalidates the
    cache and everything is resolved again in one batch.
 
+5. **Per-host counters** (the `accounting` option, on by default). Everything
+   above is conntrack and DNS, which cannot be the whole story: a conntrack
+   entry can be missed when the table is full, `nf_conntrack_acct` can be off,
+   and a domain resolved by the proxy rather than locally leaves no DNS answer
+   to name the flow with. So the client **totals** come from a byte counter per
+   host, created in a small nftables table of its own (`inet traffic_acct`):
+
+   | direction | hook | match |
+   |---|---|---|
+   | upload | `prerouting`, priority `raw` | `iifname <lan> ip saddr <client>` |
+   | download | `postrouting`, priority `101` | `oifname <lan> ip daddr <client>` |
+
+   Upload is matched by source and download by destination, and no packet
+   matches both, so a directly routed download is not counted twice. Filtering
+   on the LAN interface is what keeps the proxy's own sockets out of it, since
+   those leave by the WAN device.
+
+   This is the idea behind **wrtbwmon** — account per host with firewall
+   counters rather than with conntrack — but deliberately **not** its hook
+   choice. wrtbwmon counts in the `FORWARD` chain.
+   That cannot work here: passwall's own nft table has only `prerouting` and
+   `output` base chains, and every proxied connection ends in `tproxy to :port`
+   or `redirect to :port`, both of which hand the connection to a local socket.
+   Proxied client traffic therefore goes `PREROUTING → INPUT` and never reaches
+   `FORWARD` — and AdGuard Home's DNS redirect leaves `PREROUTING` the same way.
+   A `FORWARD` counter would miss exactly the bulk it was added to measure.
+   (`wrtbwmon`'s `readDB.awk` is also gawk-only: it dispatches on `ARGIND`,
+   which busybox `awk` does not have, so on this target it would silently do
+   nothing at all.)
+
+   The download hook must be `postrouting` and not `prerouting` for the same
+   reason: the download half of a proxied connection is produced by a local
+   socket and leaves through `OUTPUT`, so it never appears in `prerouting`.
+
+   The counters are the client totals; the application breakdown stays
+   conntrack-based, and the page reports both, so the share of traffic that
+   could not be attributed is visible instead of hidden. With no `nft`
+   installed, or with `accounting` set to `0`, the client totals fall back to
+   conntrack and the page says so.
+
+   **Flow offloading defeats any netfilter counter**, this one included: an
+   offloaded flow stops traversing the hooks after its first packets. For exact
+   totals, leave `option flow_offloading` off in `/etc/config/firewall`.
+
 Flow state lives in `/tmp/traffic`. Once an hour the counters are appended to
 `<datadir>/hourly.tsv` and reset, which is the persistent history.
 
@@ -89,6 +133,7 @@ Home's workdir. Both are shown on the page and can be overridden.
 | `querylog` | auto | AdGuard Home's `querylog.json` |
 | `lan4` / `lan6` | auto | client prefixes; anything else is "the router itself" |
 | `self` | auto | the box's own LAN addresses (space-separated); their flows are tunnel traffic, not a client |
+| `accounting` | `1` | per-host nftables counters for the client totals; `0` falls back to conntrack alone |
 | `appmap` | `/etc/traffic/apps.tsv` | the application catalogue |
 | `retention_days` | `7` | how much hourly history to keep |
 | `top_apps` / `top_clients` | `50` / `20` | how many entries the snapshot carries |
