@@ -130,19 +130,20 @@ function makeIcon(name) {
 /* Donut drawn with one stroked circle per slice (dash offset), which needs no
  * arc maths and stays crisp at any size. */
 function makeDonut(items, total) {
-	var size = 208, stroke = 22, r = (size - stroke) / 2, c = 2 * Math.PI * r;
-	var svg = E('svg', { 'width': size, 'height': size, 'viewBox': '0 0 ' + size + ' ' + size });
-	var g = E('g', { 'transform': 'translate(' + (size / 2) + ',' + (size / 2) + ') rotate(-90)' });
+	var size = 168, stroke = 20, r = (size - stroke) / 2, c = 2 * Math.PI * r;
+	var svg = S('svg', { 'width': size, 'height': size, 'viewBox': '0 0 ' + size + ' ' + size,
+		'class': 'tf-donut-svg' });
+	var g = S('g', { 'transform': 'translate(' + (size / 2) + ',' + (size / 2) + ') rotate(-90)' });
 
 	if (!total || !items.length) {
-		g.appendChild(E('circle', { 'r': r, 'fill': 'none', 'stroke': 'rgba(140,160,180,.22)', 'stroke-width': stroke }));
+		g.appendChild(S('circle', { 'r': r, 'fill': 'none', 'stroke': 'rgba(140,160,180,.22)', 'stroke-width': stroke }));
 	}
 	else {
 		var offset = 0;
 		for (var i = 0; i < items.length; i++) {
 			var frac = items[i].bytes / total;
 			var len = Math.max(frac * c - 2, 0.6);
-			g.appendChild(E('circle', {
+			g.appendChild(S('circle', {
 				'r': r, 'fill': 'none', 'stroke-linecap': 'butt',
 				'stroke': colorFor(items[i].name),
 				'stroke-width': stroke,
@@ -153,10 +154,32 @@ function makeDonut(items, total) {
 		}
 	}
 	svg.appendChild(g);
+	if (!total || !items.length) {
+		svg.appendChild(S('text', { 'x': size / 2, 'y': size / 2 + 4, 'text-anchor': 'middle',
+			'class': 'tf-donut-empty', 'text': _('No traffic recorded yet.') }));
+	}
 	return svg;
 }
 
 function el(tag, attrs, children) { return E(tag, attrs || {}, children || []); }
+
+/* SVG needs its own namespace.
+ *
+ * LuCI's E() ends up in dom.create(), which calls document.createElement() -
+ * and that never produces an SVG element, so a donut or a chart built with E()
+ * simply does not render (it becomes an unknown HTML element with no size).
+ * Everything drawn as SVG therefore goes through S(). */
+var SVG_NS = 'http://www.w3.org/2000/svg';
+function S(tag, attrs, children) {
+	var n = document.createElementNS(SVG_NS, tag), k;
+	for (k in (attrs || {})) {
+		if (k === 'class') n.setAttribute('class', attrs[k]);
+		else if (k === 'text') n.textContent = attrs[k];
+		else if (attrs[k] !== null && attrs[k] !== undefined && attrs[k] !== '') n.setAttribute(k, attrs[k]);
+	}
+	(children || []).forEach(function(c) { if (c) n.appendChild(c); });
+	return n;
+}
 
 /* Write text only when it actually changed.  The page polls every 5 s and most
  * of what it redraws is identical to the previous round; skipping the write
@@ -255,22 +278,22 @@ function makeChart(series) {
 	var x = function(k) { return pad.l + (n < 2 ? iw / 2 : (k * iw) / (n - 1)); };
 	var y = function(v) { return pad.t + ih - (Math.max(0, Math.min(1, v / top)) * ih); };
 
-	var svg = E('svg', {
+	var svg = S('svg', {
 		'class': 'tf-chart-svg', 'viewBox': '0 0 ' + W + ' ' + H, 'role': 'img'
 	});
 
 	/* horizontal grid, with the value on each line */
 	for (var gi = 0; gi <= 2; gi++) {
 		var gv = top * (gi / 2), gy = y(gv);
-		svg.appendChild(E('line', {
+		svg.appendChild(S('line', {
 			'x1': pad.l, 'x2': W - pad.r, 'y1': gy, 'y2': gy,
 			'stroke': 'rgba(140,160,180,.20)', 'stroke-width': 1,
 			'stroke-dasharray': gi === 0 ? '' : '3 4'
 		}));
-		svg.appendChild(E('text', {
+		svg.appendChild(S('text', {
 			'x': W - pad.r - 2, 'y': gy - 3, 'text-anchor': 'end',
-			'class': 'tf-chart-tick'
-		}, [ fmtRate(gv) ]));
+			'class': 'tf-chart-tick', 'text': fmtRate(gv)
+		}));
 	}
 
 	function path(key, fill) {
@@ -279,8 +302,8 @@ function makeChart(series) {
 			d += (k ? 'L' : 'M') + x(k).toFixed(1) + ' ' + y(series[k][key]).toFixed(1) + ' ';
 		}
 		area = d + 'L' + x(n - 1).toFixed(1) + ' ' + (pad.t + ih) + ' L' + x(0).toFixed(1) + ' ' + (pad.t + ih) + ' Z';
-		if (fill) svg.appendChild(E('path', { 'd': area, 'fill': fill, 'stroke': 'none' }));
-		svg.appendChild(E('path', {
+		if (fill) svg.appendChild(S('path', { 'd': area, 'fill': fill, 'stroke': 'none' }));
+		svg.appendChild(S('path', {
 			'd': d, 'fill': 'none', 'stroke': key === 'down' ? '#00a8e8' : '#26c281',
 			'stroke-width': 1.6, 'stroke-linejoin': 'round', 'stroke-linecap': 'round'
 		}));
@@ -290,9 +313,10 @@ function makeChart(series) {
 	path('up', 'rgba(38,194,129,.11)');
 
 	/* first and last timestamp, so the window is unambiguous */
-	svg.appendChild(E('text', { 'x': pad.l, 'y': H - 6, 'class': 'tf-chart-tick' }, [ hhmm(series[0].t) ]));
-	svg.appendChild(E('text', { 'x': W - pad.r, 'y': H - 6, 'text-anchor': 'end', 'class': 'tf-chart-tick' },
-		[ hhmm(series[n - 1].t) ]));
+	svg.appendChild(S('text', { 'x': pad.l, 'y': H - 6, 'class': 'tf-chart-tick',
+		'text': hhmm(series[0].t) }));
+	svg.appendChild(S('text', { 'x': W - pad.r, 'y': H - 6, 'text-anchor': 'end',
+		'class': 'tf-chart-tick', 'text': hhmm(series[n - 1].t) }));
 
 	return svg;
 }
@@ -311,13 +335,14 @@ return view.extend({
 
 		this.rateDown = el('b', {}, [ '—' ]);
 		this.rateUp   = el('b', {}, [ '—' ]);
-		this.totalEl  = el('div', { 'class': 'tf-total' }, [ '—' ]);
+		this.totalEl  = el('div', { 'class': 'tf-grand-total' }, [ '—' ]);
 		this.donutEl  = el('div', { 'class': 'tf-donut' });
 		this.legendEl = el('div', { 'class': 'tf-legend' });
 		this.rowsEl   = el('tbody');
 		this.metaEl   = el('div', { 'class': 'tf-meta' });
 		this.chartEl  = el('div', { 'class': 'tf-chart' });
 		this.chartNote = el('span', { 'class': 'tf-chart-note' });
+		this.statusEl = el('div', { 'class': 'tf-status' });
 		this.seriesRange = '1h';
 		this.series = null;
 
@@ -350,11 +375,11 @@ return view.extend({
 				el('div', { 'class': 'tf-hero-rates' }, [
 					el('div', { 'class': 'tf-rate tf-rate-down' }, [
 						el('span', { 'class': 'tf-rate-arrow' }, [ '↓' ]), this.rateDown,
-						el('span', { 'class': 'tf-rate-cap' }, [ _('Down') ])
+						el('span', { 'class': 'tf-rate-cap' }, [ _('Received') ])
 					]),
 					el('div', { 'class': 'tf-rate tf-rate-up' }, [
 						el('span', { 'class': 'tf-rate-arrow' }, [ '↑' ]), this.rateUp,
-						el('span', { 'class': 'tf-rate-cap' }, [ _('Up') ])
+						el('span', { 'class': 'tf-rate-cap' }, [ _('Sent') ])
 					])
 				]),
 				el('div', { 'class': 'tf-hero-ctl' }, [ rangeSel, clearBtn ])
@@ -374,6 +399,8 @@ return view.extend({
 				this.chartEl
 			]),
 
+			el('div', { 'class': 'tf-card tf-status-card' }, [ this.statusEl ]),
+
 			el('div', { 'class': 'tf-grid' }, [
 				el('div', { 'class': 'tf-card tf-donut-card' }, [
 					el('div', { 'class': 'tf-donut-wrap' }, [ this.donutEl, this.legendEl ])
@@ -381,12 +408,12 @@ return view.extend({
 				el('div', { 'class': 'tf-card tf-list-card' }, [
 					el('table', { 'class': 'table tf-table' }, [
 						el('thead', {}, [ el('tr', {}, [
-							el('th', {}, [ _('Application') ]),
-							el('th', { 'class': 'tf-num' }, [ _('Total') ]),
-							el('th', { 'class': 'tf-num' }, [ _('Down') ]),
-							el('th', { 'class': 'tf-num' }, [ _('Up') ]),
+							el('th', {}, [ _('Application name') ]),
+							el('th', { 'class': 'tf-num' }, [ _('Total traffic') ]),
+							el('th', { 'class': 'tf-num' }, [ _('Received') ]),
+							el('th', { 'class': 'tf-num' }, [ _('Sent') ]),
 							el('th', {}, [ _('Top client') ]),
-							el('th', { 'class': 'tf-num' }, [ _('Clients') ])
+							el('th', { 'class': 'tf-num' }, [ _('Client count') ])
 						]) ]),
 						this.rowsEl
 					])
@@ -450,18 +477,24 @@ return view.extend({
 
 		while (this.chartEl.firstChild) this.chartEl.removeChild(this.chartEl.firstChild);
 
-		if (!pts.length) {
-			this.chartNote.textContent = '';
-			this.chartEl.appendChild(el('div', { 'class': 'tf-chart-empty' }, [ _('No traffic recorded yet.') ]));
-			return;
-		}
-
-		/* bytes in a bucket -> bytes per second, so the axis reads in the same
-		 * unit as the live rates in the hero card */
+		/* An empty chart still gets its frame: a card with nothing in it reads
+		 * as broken, a flat line at the floor reads as "no traffic yet". */
 		var series = pts.map(function(p) {
 			return { t: Number(p[0]) || 0, down: (Number(p[1]) || 0) / iv, up: (Number(p[2]) || 0) / iv };
 		});
+		var now = Math.floor(Date.now() / 1000);
+		if (!series.length) {
+			var span = (s && s.range === '24h') ? 86400 : 3600;
+			series = [ { t: now - span, down: 0, up: 0 }, { t: now, down: 0, up: 0 } ];
+		}
 		this.chartEl.appendChild(makeChart(series));
+
+		if (!pts.length) {
+			var empty = el('div', { 'class': 'tf-chart-empty' }, [ _('No samples yet') ]);
+			this.chartEl.appendChild(empty);
+			this.chartNote.textContent = meta.label + ' · ' + iv + 's';
+			return;
+		}
 
 		var peak = 0, sumD = 0, sumU = 0;
 		series.forEach(function(p) {
@@ -516,6 +549,65 @@ return view.extend({
 		}
 	},
 
+	/* A single strip that explains the state of the collector.  Without it an
+	 * empty page is a dead end: the reader cannot tell "no traffic yet" from
+	 * "the service is not running" or "the query log path is wrong". */
+	drawStatus: function(s, items) {
+		var self = this;
+		var now = Math.floor(Date.now() / 1000);
+		var at = Number(s.collected_at) || 0;
+		var age = at ? (now - at) : -1;
+		var iv = Number(s.interval) || 0;
+
+		var state, warn = false;
+		if (!at) {
+			state = _('Collector has not produced a snapshot yet');
+			warn = true;
+		}
+		else if (iv && age > iv * 3 + 15) {
+			state = _('Snapshot is stale') + ' (' + age + 's)';
+			warn = true;
+		}
+		else if (!items.length) {
+			state = _('Running, no traffic measured yet');
+		}
+		else {
+			state = _('Running');
+		}
+
+		var bits = [];
+		bits.push({ k: _('State'), v: state, warn: warn });
+		if (iv) bits.push({ k: _('Interval'), v: iv + 's' });
+		bits.push({ k: _('Flows'), v: String(Number(s.flows) || 0) });
+		bits.push({ k: _('Host names'), v: String(Number(s.dnsmap_lines) || 0) });
+		if (Number(s.pending) > 0) bits.push({ k: _('Waiting to resolve'), v: String(Number(s.pending)), warn: true });
+		bits.push({ k: _('Query log'), v: s.querylog || '—', mono: true });
+		if (s.hour) bits.push({ k: _('Bucket'), v: s.hour });
+
+		if (!this.statusEl) return;
+		if (!this.statusRows) this.statusRows = [];
+		bits.forEach(function(b, i) {
+			var r = self.statusRows[i];
+			if (!r) {
+				var v = el('span', { 'class': 'tf-stat-val' });
+				r = { v: v, k: null, row: el('div', { 'class': 'tf-stat' }, [
+					el('span', { 'class': 'tf-stat-cap' }), v
+				]) };
+				r.k = r.row.firstChild;
+				self.statusRows[i] = r;
+				self.statusEl.appendChild(r.row);
+			}
+			setText(r.k, b.k);
+			setText(r.v, b.v);
+			var cls = 'tf-stat-val' + (b.warn ? ' tf-warn' : '') + (b.mono ? ' tf-mono' : '');
+			if (r.cls !== cls) { r.cls = cls; r.v.className = cls; }
+		});
+		while (this.statusRows.length > bits.length) {
+			var extra = this.statusRows.pop();
+			if (extra.row.parentNode) extra.row.parentNode.removeChild(extra.row);
+		}
+	},
+
 	renderLive: function(s) {
 		var t = s.totals || {};
 		var down = Number(t.down) || 0, up = Number(t.up) || 0;
@@ -536,6 +628,8 @@ return view.extend({
 				top_bytes: Number(a.top_bytes) || 0
 			};
 		}).filter(hasTraffic);
+
+		this.drawStatus(s, items);
 
 		/* rates come from the difference between two snapshots */
 		if (this.prev) {
@@ -760,11 +854,14 @@ function injectCss() {
 		'border-radius:16px;box-shadow:var(--tf-shadow);backdrop-filter:blur(14px) saturate(150%);',
 		'-webkit-backdrop-filter:blur(14px) saturate(150%);padding:1rem 1.15rem;margin-bottom:1rem;}',
 
-		/* hero */
-		'.tf-page .tf-hero{display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;',
+		/* hero.  The big number has its own class: "tf-total" is also the class
+		 * of the table's total cell, and sharing it made every row's total
+		 * render at 2rem. */
+		'.tf-page .tf-hero{display:flex;align-items:center;gap:1.4rem;flex-wrap:wrap;',
 		'background:linear-gradient(135deg,rgba(0,180,255,.14),rgba(124,92,255,.14)),var(--tf-card);}',
-		'.tf-page .tf-total{font-size:2rem;font-weight:700;line-height:1.15;letter-spacing:.5px;}',
-		'.tf-page .tf-hero-cap{font-size:.8rem;color:var(--tf-dim);text-transform:uppercase;letter-spacing:.08em;}',
+		'.tf-page .tf-grand-total{font-size:1.7rem;font-weight:700;line-height:1.1;letter-spacing:.4px;',
+		'font-variant-numeric:tabular-nums;}',
+		'.tf-page .tf-hero-cap{font-size:.74rem;color:var(--tf-dim);text-transform:uppercase;letter-spacing:.08em;}',
 		'.tf-page .tf-hero-rates{display:flex;gap:1.6rem;}',
 		'.tf-page .tf-rate{display:flex;align-items:baseline;gap:.35rem;font-variant-numeric:tabular-nums;}',
 		'.tf-page .tf-rate b{font-size:1.05rem;font-weight:600;}',
@@ -783,15 +880,28 @@ function injectCss() {
 		'background:rgba(140,160,180,.14);border:1px solid transparent;color:var(--tf-fg);cursor:pointer;}',
 		'.tf-page .tf-chart-ctl .tf-gran-on{background:rgba(0,168,232,.16);border-color:rgba(0,168,232,.45);',
 		'color:var(--tf-fg);font-weight:600;}',
-		'.tf-page .tf-chart-svg{display:block;width:100%;height:auto;}',
+		'.tf-page .tf-chart-svg{display:block;width:100%;height:auto;max-height:190px;}',
 		'.tf-page .tf-chart-tick{font-size:9px;fill:var(--tf-dim);}',
-		'.tf-page .tf-chart-empty{padding:2.2rem 0;text-align:center;color:var(--tf-dim);font-size:.85rem;}',
+		'.tf-page .tf-chart{position:relative;}',
+		'.tf-page .tf-chart-empty{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);',
+		'text-align:center;color:var(--tf-dim);font-size:.85rem;pointer-events:none;}',
+
+		/* collector state strip: makes an empty page self-explanatory */
+		'.tf-page .tf-status-card{display:flex;gap:1.6rem;flex-wrap:wrap;padding:.7rem 1.15rem;}',
+		'.tf-page .tf-status{display:flex;gap:1.6rem;flex-wrap:wrap;align-items:baseline;}',
+		'.tf-page .tf-stat{display:flex;flex-direction:column;gap:.05rem;min-width:0;}',
+		'.tf-page .tf-stat-cap{font-size:.7rem;color:var(--tf-dim);text-transform:uppercase;letter-spacing:.06em;}',
+		'.tf-page .tf-stat-val{font-size:.86rem;font-weight:600;font-variant-numeric:tabular-nums;',
+		'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:22rem;}',
+		'.tf-page .tf-mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:400;font-size:.8rem;}',
 
 		/* layout */
-		'.tf-page .tf-grid{display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-start;}',
-		'.tf-page .tf-donut-card{flex:0 0 auto;}',
-		'.tf-page .tf-list-card{flex:1 1 30rem;min-width:24rem;padding-bottom:.4rem;}',
-		'.tf-page .tf-donut-wrap{display:flex;align-items:center;gap:1.1rem;}',
+		'.tf-page .tf-grid{display:flex;gap:1rem;flex-wrap:wrap;align-items:stretch;}',
+		'.tf-page .tf-donut-card{flex:0 0 auto;width:20rem;}',
+		'.tf-page .tf-list-card{flex:1 1 30rem;min-width:22rem;padding-bottom:.4rem;}',
+		'.tf-page .tf-donut-wrap{display:flex;align-items:center;gap:1rem;}',
+		'.tf-page .tf-donut-svg{flex:0 0 168px;width:168px;height:168px;}',
+		'.tf-page .tf-donut-empty{font-size:11px;fill:var(--tf-dim);}',
 
 		/* legend */
 		'.tf-page .tf-legend{display:flex;flex-direction:column;gap:.3rem;min-width:9.5rem;}',
@@ -832,13 +942,16 @@ function injectCss() {
 		'.tf-page .tf-icon-letter{color:#fff;font-size:.82rem;font-weight:700;line-height:1;}',
 		'.tf-page .tf-icon-img{width:' + ICON + 'px;height:' + ICON + 'px;border-radius:8px;display:block;}',
 
-		/* footer stats + misc */
-		'.tf-page .tf-meta-card{display:flex;gap:1.8rem;flex-wrap:wrap;padding:.8rem 1.15rem;}',
+		/* footer stats + misc.  .tf-meta is the flex row - styling the card
+		 * instead left the five items stacked in a column and the card grew to
+		 * the height of the page. */
+		'.tf-page .tf-meta-card{padding:.8rem 1.15rem;}',
+		'.tf-page .tf-meta{display:flex;gap:2rem;flex-wrap:wrap;align-items:baseline;}',
 		'.tf-page .tf-meta-item{display:flex;flex-direction:column;gap:.1rem;}',
-		'.tf-page .tf-meta-cap{font-size:.75rem;color:var(--tf-dim);}',
+		'.tf-page .tf-meta-cap{font-size:.72rem;color:var(--tf-dim);text-transform:uppercase;letter-spacing:.06em;}',
 		'.tf-page .tf-meta-val{font-size:.95rem;font-weight:600;font-variant-numeric:tabular-nums;}',
 		'.tf-page .tf-warn{color:#ff8f1f;}',
-		'.tf-page .tf-empty{text-align:center;color:var(--tf-dim);padding:1.6rem 0;}',
+		'.tf-page .tf-empty{text-align:center;color:var(--tf-dim);padding:1.2rem 0;}',
 		'.tf-page .tf-range{min-width:9rem;}',
 
 		/* dark: Argon sets .dark on <body> when its dark mode is on */

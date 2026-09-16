@@ -176,6 +176,20 @@ Two cheap gates sit in front of that. A refresh whose snapshot has not advanced
 touching the DOM, and a hidden tab skips the fetch entirely until it is shown
 again.
 
+**The donut and the chart are built with `createElementNS`.** LuCI's `E()` ends
+up in `document.createElement()`, which never produces an SVG element — a chart
+built that way is created without complaint, passes every syntax check, and then
+renders as nothing at all. `tools/page-render-selftest.js` drives the real
+`draw()`/`drawSeries()`/`drawStatus()` with a stub DOM that records namespaces
+and asserts what actually landed in the tree, which is the only way this class
+of bug shows up off-device.
+
+**A status strip explains the state of the collector** — running or not, how old
+the snapshot is, the interval, how many conntrack entries and host names it has,
+how many names are waiting to be resolved, and which query log it is reading.
+An empty page is otherwise a dead end: "no traffic yet", "the service is not
+running" and "the query log path is wrong" all look identical.
+
 **On the RPC path**, `getSummary` hands the snapshot file straight to the caller
 instead of parsing it with jshn and serialising it again. The collector writes
 it write-to-temp-then-rename, so a reader never sees a partial file, and the
@@ -210,6 +224,12 @@ separated in name order, which is likewise rank-independent.
 * **List card** — application, down, up, total and share, 30 rows.
 * **Footer card** — proxy tunnel total, client total, and the identification
   rate (by the same client's DNS, by any client's DNS, unidentified).
+
+Column and caption strings are spelled out on purpose ("Application name",
+"Total traffic", "Received"): the one-word msgids (`Application`, `Total`,
+`Down`, `Up`, `Clients`) are translated by luci-base itself and its text wins at
+runtime, so `Application` came out as *应用层* — a firewall term, not a label for
+a list of apps.
 
 ## Icons
 
@@ -288,3 +308,4 @@ Not installed, but shipped in the repository for regeneration and verification:
 |---|---|
 | `tools/build-catalog.js` | rebuild both catalogues and the icon set from upstream |
 | `tools/collector-selftest.sh` | offline regression: every attribution path |
+| `tools/page-render-selftest.js` | offline rendering check (SVG namespace, chart, status strip) |

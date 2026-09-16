@@ -28,27 +28,6 @@ msgstr "最近 24 小时"
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "Last 7 days"
 msgstr "最近 7 天"
-
-#: htdocs/luci-static/resources/view/traffic/overview.js
-msgid "Application"
-msgstr "应用"
-
-#: htdocs/luci-static/resources/view/traffic/overview.js
-msgid "Down"
-msgstr "下行"
-
-#: htdocs/luci-static/resources/view/traffic/overview.js
-msgid "Up"
-msgstr "上行"
-
-#: htdocs/luci-static/resources/view/traffic/overview.js
-msgid "Total"
-msgstr "合计"
-
-#: htdocs/luci-static/resources/view/traffic/overview.js
-msgid "total"
-msgstr "总计"
-
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "Rate"
 msgstr "速率"
@@ -108,11 +87,6 @@ msgstr "所有流量"
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "Top client"
 msgstr "热门客户端"
-
-#: htdocs/luci-static/resources/view/traffic/overview.js
-msgid "Clients"
-msgstr "客户端"
-
 #: root/usr/share/rpcd/acl.d/luci-app-traffic.json:3
 msgid "Grant access to the per-application traffic statistics"
 msgstr "授予访问按应用流量统计的权限"
@@ -133,3 +107,82 @@ msgstr "峰值"
 msgid "avg down"
 msgstr "下行均值"
 
+
+
+# The generic one-word msgids ("Application", "Total", "Down", "Up", "Clients")
+# are deliberately NOT used: luci-base translates those itself and its text wins
+# at runtime ("Application" came out as "应用层", which means something else
+# entirely).  Every string this page needs is therefore spelled out.
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Application name"
+msgstr "应用"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Total traffic"
+msgstr "总量"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Received"
+msgstr "下载"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Sent"
+msgstr "上传"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Client count"
+msgstr "客户端数"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "No samples yet"
+msgstr "暂无采样数据"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "State"
+msgstr "状态"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Running"
+msgstr "运行中"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Running, no traffic measured yet"
+msgstr "运行中，尚未统计到流量"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Collector has not produced a snapshot yet"
+msgstr "采集器尚未生成快照"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Snapshot is stale"
+msgstr "快照已过期"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Interval"
+msgstr "采集间隔"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Flows"
+msgstr "连接跟踪条目"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Host names"
+msgstr "已解析主机名"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Waiting to resolve"
+msgstr "待解析"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Query log"
+msgstr "查询日志"
+
+# Small-case variants: "Total"/"Up" are translated by luci-base, so the page
+# uses its own caption strings where the wording has to be exact.
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "total"
+msgstr "总计"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "up"
+msgstr "上行"
