@@ -59,10 +59,35 @@ const factory=new Function('view','rpc','dom','poll','_','E','L','document','Ima
 const viewStub={extend(o){ viewStub.__obj=o; return o; }};
 const domStub={content(node,ch){ node.children=[]; (Array.isArray(ch)?ch:[ch]).forEach(x=>{ if(x) node.appendChild(x); }); }};
 const rpcStub={declare(){ return ()=>Promise.resolve({}); }};
-factory(viewStub,rpcStub,domStub,{add(){}},s=>s,E,{bind(f,c){return f.bind(c);},resource(p){return p;},env:{}},
+const PO = loadPo(path.join(__dirname, '..', 'po', 'zh_Hans', 'traffic.po'));
+// an untranslated string falls through to its msgid, which is what LuCI does
+const translate = s => (PO[s] !== undefined ? PO[s] : s);
+factory(viewStub,rpcStub,domStub,{add(){}},translate,E,{bind(f,c){return f.bind(c);},resource(p){return p;},env:{}},
   documentStub,function(){ return {onload:null,src:'',className:''}; },()=>true);
 const view=viewStub.__obj;
 
+/* The page's labels come from po/zh_Hans/traffic.po, and the preview has to show
+ * them: the strip boxes are sized for the Chinese ones, which are two to six
+ * characters.  An English preview hides the very thing the width was chosen for
+ * (and made long captions wrap, which Chinese never does), so it is not a
+ * faithful picture of the page.  The catalogue is flat, so a small gettext
+ * reader is enough. */
+function loadPo(file){
+  const map = {};
+  const unesc = s => s.replace(/\\n/g,'\n').replace(/\\"/g,'"').replace(/\\\\/g,'\\');
+  const unq = s => { const m = /^\s*"([\s\S]*)"\s*$/.exec(s); return m ? m[1] : ''; };
+  let id = null, str = null, mode = null;
+  const put = () => { if (id && str) map[unesc(id)] = unesc(str); id = null; str = null; mode = null; };
+  for (const raw of fs.readFileSync(file, 'utf8').split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line || line[0] === '#') continue;
+    if (line.startsWith('msgid ')) { put(); id = unq(line.slice(6)); mode = 'id'; }
+    else if (line.startsWith('msgstr ')) { str = unq(line.slice(7)); mode = 'str'; }
+    else if (line[0] === '"') { if (mode === 'id') id += unq(line); else if (mode === 'str') str += unq(line); }
+  }
+  put();
+  return map;
+}
 /* ---- fixture: a day of history, so the ranged (default) view has something ---- */
 const APPS=[['OpenAI',3.78e6,3.64e6],['ChatGPT',1.30e6,.39e6],['SSL/TLS',642e3,185e3],
             ['Tencent Time',631e3,95.9e3],['Other',194e3,112e3],['DNS',120e3,44e3]];
@@ -76,7 +101,7 @@ const HOURS=Array.from({length:24},(_,h)=>{
     router:Math.round(90e3*f) };
 });
 const SUMMARY={ collected_at:Math.floor(Date.now()/1000), interval:10, flows:371,
-  dnsmap_lines:9305, pending:0, acct:1, version:'0.1.23-r1', hour:'2026-09-17T10',
+  dnsmap_lines:9305, pending:0, acct:1, version:'0.1.27-r1', hour:'2026-09-17T10',
   totals:{down:2.84e9,up:3.76e9,router:1.07e9,client_count:9,exact:120,bucket:60,residual:20},
   clients:[{name:'Mac',ip:'192.168.2.21',bytes:8.09e9}], apps:[] };
 /* bursty rather than a clean sine: real traffic is long quiet stretches with
