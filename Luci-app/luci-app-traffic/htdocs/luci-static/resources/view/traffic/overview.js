@@ -1457,18 +1457,23 @@ function injectCss() {
 	};
 	var css = [
 		'.tf-page{--tf-accent:var(--primary,#00b4ff);--tf-accent2:#7c5cff;',
-		'--tf-card:rgba(255,255,255,.72);--tf-card-brd:rgba(255,255,255,.75);',
+		/* The card surface, the two traffic colours and the secondary text are the
+		 * design's palette.  They are written as rgba() rather than as the
+		 * 8-digit hex the design shows (#FFFFFFCC, #2C2C2ECC): the colours are
+		 * identical and rgba() is what every browser this page targets
+		 * understands, including the older Safari the layout works around. */
+		'--tf-card:rgba(255,255,255,.8);--tf-card-brd:rgba(255,255,255,.75);',
 		'--tf-chip:rgba(140,160,180,.16);--tf-menu:rgba(255,255,255,.99);',
 		/* Every line, tint and shadow on this page comes from a variable, so a
 		 * theme that paints its dark mode some way this page cannot name still
 		 * gets a page that is dark all through.  A hardcoded colour is what left
 		 * a light table on a dark page. */
-		'--tf-line:rgba(128,150,175,.20);--tf-tint:rgba(0,180,255,.07);',
+		'--tf-line:rgba(128,150,175,.20);--tf-tint:rgba(10,132,255,.07);',
 		'--tf-icon-shadow:0 2px 6px rgba(31,66,102,.18);',
-		'--tf-fg:var(--font-color,#20303d);--tf-dim:rgba(32,48,61,.55);',
+		'--tf-fg:var(--font-color,#20303d);--tf-dim:#68727c;',
 		'--tf-shadow:0 6px 22px rgba(31,66,102,.10);',
-		'--tf-down:#00a8e8;--tf-up:#26c281;',
-		'--tf-area-down:rgba(0,168,232,.13);--tf-area-up:rgba(38,194,129,.11);',
+		'--tf-down:#0a84ff;--tf-up:#30d158;',
+		'--tf-area-down:rgba(10,132,255,.13);--tf-area-up:rgba(48,209,88,.11);',
 		/* width, not just flex:1: the page is a flex item in the wrapper LuCI
 		 * puts a view in, and as one it was sized by its own content.  With the
 		 * cards laid out inside it that came out circular - the halves took
@@ -1533,8 +1538,12 @@ function injectCss() {
 		 * over the open list and cut it off.  Lifting the card itself puts the
 		 * menu above them, which is where a dropdown belongs. */
 		'.tf-page .tf-hero{display:flex;align-items:flex-end;gap:1.4rem;flex-wrap:wrap;',
-		'position:relative;z-index:5;',
-		'background:linear-gradient(135deg,rgba(0,180,255,.14),rgba(124,92,255,.14)),var(--tf-card);}',
+		'position:relative;z-index:5;}',
+		/* The hero used to paint its own cyan-to-violet wash over the card.  The
+		 * design gives it the same glass surface as every other card and lets the
+		 * size of the number carry the emphasis, so the wash is gone: the palette
+		 * has no violet in it, and a second material for one card is the opposite
+		 * of the layered-but-uniform look the design asks for. */
 		/* The three captions sit on one line and the three readings on the next,
 		 * so the hero reads as a label row over a value row.  Pairing each
 		 * caption with its own reading in a column reads worse: with the bottoms
@@ -1544,6 +1553,31 @@ function injectCss() {
 		 * and the column widths are the same either way. */
 		'.tf-page .tf-hero-stats{display:grid;grid-template-columns:repeat(3,auto);',
 		'align-items:end;column-gap:1.6rem;row-gap:.1rem;}',
+		/* The hairline the design draws between the two traffic readings.  It is a
+		 * grid item rather than a border or an absolutely placed box: a border on
+		 * the cells would come out as two stubs, one under the caption and one
+		 * under the figure, and the rows have no fixed height to position against.
+		 * Placing it in the caption's own column, pushed to that column's end and
+		 * pulled back by half the gap, puts it in the middle of the gap spanning
+		 * both rows - here between columns two and three, which is 下载 and 上传.
+		 * The narrow layout moves the same element to the rows the rates occupy on
+		 * a phone, so every width gets the same line between the same two.
+		 *
+		 * Every child is placed explicitly because of it.  A grid item - and a
+		 * pseudo-element counts as one - claims its cells, and auto flow then has
+		 * to steer around them: the six readings are emitted captions-first, so
+		 * with the hairline holding column two's two rows the rest packed into
+		 * columns one and three and the hero came apart, which the desktop render
+		 * showed before this. */
+		'.tf-page .tf-hero-stats>*:nth-child(1){grid-area:1/1;}',
+		'.tf-page .tf-hero-stats>*:nth-child(2){grid-area:1/2;}',
+		'.tf-page .tf-hero-stats>*:nth-child(3){grid-area:1/3;}',
+		'.tf-page .tf-hero-stats>*:nth-child(4){grid-area:2/1;}',
+		'.tf-page .tf-hero-stats>*:nth-child(5){grid-area:2/2;}',
+		'.tf-page .tf-hero-stats>*:nth-child(6){grid-area:2/3;}',
+		'.tf-page .tf-hero-stats::after{content:"";grid-area:1/2/3/3;',
+		'justify-self:end;align-self:stretch;width:1px;margin-right:-.8rem;',
+		'background:var(--tf-line);}',
 		'.tf-page .tf-grand-total{font-size:1.7rem;font-weight:700;line-height:1.1;letter-spacing:.4px;',
 		'font-variant-numeric:tabular-nums;}',
 		'.tf-page .tf-hero-cap{font-size:.74rem;color:var(--tf-dim);letter-spacing:.04em;}',
@@ -1840,22 +1874,23 @@ function injectCss() {
 		 * white lift has no hue of its own, so it takes whatever the theme's
 		 * background is and keeps the material.  Borders still come from the theme,
 		 * where its own hairline colour is the right answer. */
-		DARK + '{--tf-card:rgba(255,255,255,.06);',
+		DARK + '{--tf-card:rgba(44,44,46,.8);',
 		'--tf-card-brd:var(--border-color-low,rgba(255,255,255,.08));',
 		'--tf-chip:rgba(255,255,255,.08);',
 		/* the one surface that must stay legible over whatever is behind it, so it
-		 * keeps a near-opaque neutral rather than going translucent */
-		'--tf-menu:rgba(38,38,38,.98);',
+		 * keeps a near-opaque neutral rather than going translucent - the same
+		 * neutral the card uses, at nearly full alpha */
+		'--tf-menu:rgba(44,44,46,.98);',
 		'--tf-line:var(--border-color-low,rgba(255,255,255,.12));',
 		/* the highlight follows the theme's accent too: it was a cyan of this
 		 * page's own choosing, which is the same kind of mismatch as the surfaces
 		 * were; --primary-low is the theme's own washed accent */
 		'--tf-tint:var(--primary-low,rgba(255,255,255,.06));',
 		'--tf-icon-shadow:0 2px 6px rgba(0,0,0,.45);',
-		'--tf-fg:#e6edf3;--tf-dim:rgba(230,237,243,.55);',
+		'--tf-fg:#e6edf3;--tf-dim:#aeb5bc;',
 		'--tf-shadow:0 6px 22px rgba(0,0,0,.35);',
-		'--tf-down:#4dd2ff;--tf-up:#3ddc97;',
-		'--tf-area-down:rgba(77,210,255,.18);--tf-area-up:rgba(61,220,151,.15);}',
+		'--tf-down:#55c7ff;--tf-up:#42d993;',
+		'--tf-area-down:rgba(85,199,255,.18);--tf-area-up:rgba(66,217,147,.15);}',
 		darkOf('.tf-range') + '{background-image:url("' + CHEVRON('#a9b6c2') + '");}',
 		/* Layout by width rather than by device: the cards stack as soon as they
 		 * cannot both fit, and the two columns a phone cannot spare (the busiest
@@ -1898,6 +1933,17 @@ function injectCss() {
 		'.tf-page .tf-hero-stats>*:nth-child(3){grid-area:3/2;}',
 		'.tf-page .tf-hero-stats>*:nth-child(5){grid-area:4/1;}',
 		'.tf-page .tf-hero-stats>*:nth-child(6){grid-area:4/2;}',
+		/* The hairline between the two rates, as the design draws it: one line
+		 * spanning both the caption row and the figure row, not two stubs with a
+		 * gap between them - which is what a border on the cells would give.  It
+		 * is a grid item rather than an absolutely placed box because the rows
+		 * have no fixed height to position against; grid-area 3/1/5/2 covers rows
+		 * three and four, and the negative margin drops it into the middle of the
+		 * column gap.  Written here and not in the markup, so the six children
+		 * stay the six the strip logic and the tests expect. */
+		'.tf-page .tf-hero-stats::after{content:"";grid-area:3/1/5/2;',
+		'justify-self:end;align-self:stretch;width:1px;margin-right:-.45rem;',
+		'background:var(--tf-line);}',
 		'.tf-page .tf-table{font-size:.86rem;min-width:0;}',
 		'.tf-page .tf-table>thead>tr>th,.tf-page .tf-table>tbody>tr>td{padding:.35rem .3rem;}',
 		/* A phone gets three columns: the application, and its two byte figures.

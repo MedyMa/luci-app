@@ -356,6 +356,13 @@ chk(/\.tf-page \.tf-hero-stats\{grid-template-columns:1fr 1fr;/.test(css) &&
     /\.tf-page \.tf-hero-stats>\*:nth-child\(4\)\{grid-area:2\/1\/3\/3;\}/.test(css) &&
     !/\.tf-page \.tf-grand-total\{font-size:1\.45rem;\}/.test(css),
     '窄屏 hero：总计标签与数值各占整行，不再缩小字号');
+// The hairline between 下载 and 上传 is drawn by the same pseudo-element at every
+// width: between columns two and three on a wide screen, and on the two rows the
+// rates occupy on a phone.  One of the two missing is the bug this guards.
+const heroLine=(css.match(/\.tf-page \.tf-hero-stats::after\{[^}]*\}/g)||[]);
+chk(heroLine.length===2 && /grid-area:1\/2\/3\/3/.test(heroLine[0]) &&
+    /grid-area:3\/1\/5\/2/.test(heroLine[1]),
+    `hero 分隔线在两种宽度各就位（${heroLine.length} 条：${heroLine.map(s=>(s.match(/grid-area:[^;]*/)||[''])[0]).join(' / ')}）`);
 // The page carries one range control, not two: the chart tier is derived from
 // the range, so the only dropdown on the page is the picker in the hero.
 for(const sel of ['.tf-page .tf-range','.tf-page .tf-dd-menu','.tf-page .tf-col-app',

@@ -115,6 +115,18 @@ const SERIES={ range:'24h', interval:60, points:Array.from({length:180},(_,i)=>{
   return [t,d,Math.round(d*0.16)]; }) };
 
 /* ---- build the page for real ---- */
+/* The two figures under 下载/上传 are the difference between two consecutive
+ * snapshots, which in the page comes from refresh() polling a summary and then
+ * the next one ten seconds later.  The preview calls the render methods directly,
+ * so it has to stand in for that - otherwise the reading the design is about
+ * renders as the initial placeholder dash and looks missing. */
+function seedRate(v){
+  const past=Object.assign({},SUMMARY,{ collected_at:SUMMARY.collected_at-10,
+    totals:Object.assign({},SUMMARY.totals,
+      { down:SUMMARY.totals.down-12700, up:SUMMARY.totals.up-9020 }) });
+  view.updateRate.call(v,past);
+  view.updateRate.call(v,SUMMARY);
+}
 /* The chart is built in the browser from a viewBox chosen by window.innerWidth,
  * and this generator serialises the SVG it built - so a phone's chart can only be
  * previewed by building the page as if the window were that narrow.  That is what
@@ -127,6 +139,7 @@ function build(narrowWidth){
   v.seriesRange='24h'; v.series=SERIES;
   view.drawSeries.call(v);
   view.renderHourly.call(v,{hours:HOURS});
+  seedRate(v);
   view.drawStatus.call(v,SUMMARY,v.lastItems||[]);
   return { page, css:cssParts.join('') };
 }
@@ -156,9 +169,9 @@ const {page,css}=build();
 const darkPage=(()=>{ const {page:p}=build(); p.attrs['class']=(p.attrs['class']||'')+' tf-dark'; return p; })();
 // the session view too: it is the one that carries the extra note line
 const sessionPage=(()=>{ const v=Object.create(view); const p=view.render.call(v,SUMMARY);
-  view.renderLive.call(v,SUMMARY); return p; })();
+  seedRate(v); view.renderLive.call(v,SUMMARY); return p; })();
 const sessionDark=(()=>{ const v=Object.create(view); const p=view.render.call(v,SUMMARY);
-  view.renderLive.call(v,SUMMARY); p.attrs['class']=(p.attrs['class']||'')+' tf-dark'; return p; })();
+  seedRate(v); view.renderLive.call(v,SUMMARY); p.attrs['class']=(p.attrs['class']||'')+' tf-dark'; return p; })();
 
 function write(name,node,theme){
   const html='<!DOCTYPE html>\n<html lang="zh"><head><meta charset="utf-8">\n<style>\n'+
@@ -181,13 +194,13 @@ write('traffic-real-session-dark.html',sessionDark,'dark');
 const phoneNarrow=(()=>{ global.window={innerWidth:390};
   const v=Object.create(view); const p=view.render.call(v,SUMMARY);
   v.seriesRange='24h'; v.series=SERIES; view.drawSeries.call(v);
-  view.renderHourly.call(v,{hours:HOURS}); view.drawStatus.call(v,SUMMARY,v.lastItems||[]);
+  view.renderHourly.call(v,{hours:HOURS}); seedRate(v); view.drawStatus.call(v,SUMMARY,v.lastItems||[]);
   return p; })();
 write('traffic-real-phone.html',phoneNarrow,'light');
 const phoneDark=(()=>{ global.window={innerWidth:390};
   const v=Object.create(view); const p=view.render.call(v,SUMMARY);
   v.seriesRange='24h'; v.series=SERIES; view.drawSeries.call(v);
-  view.renderHourly.call(v,{hours:HOURS}); view.drawStatus.call(v,SUMMARY,v.lastItems||[]);
+  view.renderHourly.call(v,{hours:HOURS}); seedRate(v); view.drawStatus.call(v,SUMMARY,v.lastItems||[]);
   p.attrs['class']=(p.attrs['class']||'')+' tf-dark'; return p; })();
 write('traffic-real-phone-dark.html',phoneDark,'dark');
 global.window=undefined;
