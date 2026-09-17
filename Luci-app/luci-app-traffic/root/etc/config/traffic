@@ -43,7 +43,7 @@ config traffic 'settings'
 	option appmap '/etc/traffic/apps.tsv'
 	# how many days of hourly history to keep
 	option retention_days '7'
-	option top_apps '50'
+	option top_apps '300'
 	option top_clients '20'
 # minimum seconds between reads of the application catalogue.  Fresh host names
 # keep arriving while someone browses and re-reading the whole catalogue for

@@ -16,6 +16,15 @@ if [ -z "$(uci -q get traffic.settings.querylog)" ]; then
 	uci -q set traffic.settings.querylog="$wl/data/querylog.json"
 fi
 
+# 0.1.46 raised the shipped ceiling on how many applications are published and
+# drawn from 50 to 300.  /etc/config/traffic is a conffile, so an upgrade keeps
+# whatever the router already had and a fresh default would never reach an
+# existing install.  Only the exact old default is moved: a value somebody
+# picked on purpose is left alone.
+if [ "$(uci -q get traffic.settings.top_apps)" = "50" ]; then
+	uci -q set traffic.settings.top_apps='300'
+fi
+
 uci -q commit traffic
 
 # A procd service is not started, and not even enabled, by being installed.

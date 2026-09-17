@@ -82,7 +82,7 @@ ACCT_OFFLOAD=0
 CFG_APPMAP=$CFG_DATADIR/apps.tsv
 CFG_CATEGORIES=$CFG_DATADIR/categories.tsv
 CFG_RETENTION=7
-CFG_TOP_APPS=50
+CFG_TOP_APPS=300
 CFG_TOP_CLIENTS=20
 # Minimum seconds between catalogue reads.  Fresh host names keep arriving while
 # someone browses, and re-reading an 80k-key catalogue for every one of them
@@ -276,7 +276,7 @@ load_config() {
     case "$CFG_INTERVAL" in ''|*[!0-9]*) CFG_INTERVAL=10 ;; esac
     [ "$CFG_INTERVAL" -lt 2 ] && CFG_INTERVAL=2
     case "$CFG_RETENTION" in ''|*[!0-9]*) CFG_RETENTION=7 ;; esac
-    case "$CFG_TOP_APPS" in ''|*[!0-9]*) CFG_TOP_APPS=50 ;; esac
+    case "$CFG_TOP_APPS" in ''|*[!0-9]*) CFG_TOP_APPS=300 ;; esac
     case "$CFG_TOP_CLIENTS" in ''|*[!0-9]*) CFG_TOP_CLIENTS=20 ;; esac
     case "$CFG_RESOLVE" in ''|*[!0-9]*) CFG_RESOLVE=30 ;; esac
     case "$CFG_DNSMAP_MAX" in ''|*[!0-9]*) CFG_DNSMAP_MAX=50000 ;; esac

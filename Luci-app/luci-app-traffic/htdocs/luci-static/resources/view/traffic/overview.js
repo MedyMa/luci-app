@@ -1293,9 +1293,13 @@ return view.extend({
 		setText(this.grandRow.cells.top, stats.topText || '—');
 		setText(this.grandRow.cells.clients, stats.clientCount === undefined ? '—' : String(stats.clientCount));
 
-		/* the 100 heaviest applications, each row created once and then only
-		 * nudged: this is what keeps a page open for hours flat in memory */
-		var wanted = items.slice(0, 100);
+		/* the 300 heaviest applications, each row created once and then only
+		 * nudged: this is what keeps a page open for hours flat in memory.  The
+		 * ceiling matches the number the collector publishes (top_apps), so the
+		 * session view is never showing fewer rows than the page is willing to
+		 * draw; the ranged view builds its own rows from the archive, which
+		 * keeps every application it saw. */
+		var wanted = items.slice(0, 300);
 		var seen = {}, order = [];
 		wanted.forEach(function(a) {
 			seen[a.name] = 1;
