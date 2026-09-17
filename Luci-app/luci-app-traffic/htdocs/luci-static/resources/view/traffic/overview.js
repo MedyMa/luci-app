@@ -1682,18 +1682,21 @@ function injectCss() {
 		 * and once the card is dark the same override would have given dark text
 		 * on a dark card.  The page's own colour wins here. */
 		'.tf-page .tf-table>thead>tr>th,.tf-page .tf-table>tbody>tr>td{color:inherit;}',
-		'.tf-page .tf-table>tbody>tr{background:transparent;}',
-		'.tf-page .tf-table>tbody>tr>td{border-bottom:1px solid var(--tf-line);',
+		'.tf-page .tf-table>tbody>tr{background:transparent;border:none;}',
+		/* No rule under the data rows.  A line between every row made the list read
+		 * as a stack of boxes, and with 20-odd rows on a dark card the repeated
+		 * line was the loudest thing in the table.  Rows are told apart by the
+		 * row height and by the hover tint; the header keeps its own rule, which
+		 * is what still separates the captions from the data. */
+		'.tf-page .tf-table>tbody>tr>td{border:none;',
 		'padding:.5rem .6rem;vertical-align:middle;overflow:hidden;background:transparent;}',
-		'.tf-page .tf-table>tbody>tr:last-child>td{border-bottom:none;}',
 		'.tf-page .tf-table>tbody>tr:hover>td{background:var(--tf-tint);}',
 		'.tf-page .tf-num{white-space:nowrap;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;}',
 		'.tf-page .tf-down{color:var(--tf-down);}',
 		'.tf-page .tf-up{color:var(--tf-up);}',
 		'.tf-page .tf-total{font-weight:600;}',
 		/* the grand total leads the table, so it is tinted rather than roped off */
-		'.tf-page .tf-table>tbody>tr.tf-grand>td{background:var(--tf-tint);font-weight:600;',
-		'border-bottom:1px solid var(--tf-line)!important;}',
+		'.tf-page .tf-table>tbody>tr.tf-grand>td{background:var(--tf-tint);font-weight:600;}',
 		'.tf-page .tf-top{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
 		'color:var(--tf-dim);font-size:.85rem;}',
 
