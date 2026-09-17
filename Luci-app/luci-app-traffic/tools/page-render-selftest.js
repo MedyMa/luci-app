@@ -247,22 +247,40 @@ chk(txt(v6.statusEl).indexOf('Collector has not produced a snapshot yet')>=0,
     `无快照时明确提示（${txt(v6.statusEl).slice(0,40)}）`);
 chk(boxes(v6.statusEl).length===6, `无快照时六个框仍在（${boxes(v6.statusEl).length}）`);
 
-console.log('=== 范围视图：速率按区间取平均 ===');
-// A rate needs a window.  In the ranged view the window is the range itself, so
-// the two figures are averages over it - and they used to be a dash, which next
-// to a card full of bytes read as "nothing is happening".
-// renderHourly reaches for the view own draw()/drawMeta(), so the fake object
-// takes the view as its prototype and overrides only the element handles.
+console.log('=== 速率：两种档位都是相邻快照的实时增量 ===');
+// The two figures under 下载/上传 are the difference between two consecutive
+// snapshots, in every view.  The ranged view used to divide the window's bytes by
+// the window's length instead, which on a real router barely moved - the archive
+// only grows as hours are archived - and a rate that sits still next to a total
+// that moves reads as a stalled page.  The window's average is still derivable
+// from the total and the bucket count, both of which the strip shows.
 const flat=n=>{ let s=''; (function go(x){ if(typeof x==='string'){ s+=x; return; } if(x&&x._text)s+=x._text; ((x&&x.children)||[]).forEach(go); })(n); return s; };
-const rateOf=(hours)=>{ const v=Object.assign(Object.create(view),freshView()); view.renderHourly.call(v,{hours:hours}); return v; };
-const one=rateOf([{hour:'h0',apps:[{name:'YouTube',down:36000,up:18000}],clients:[],router:0}]);
-chk(flat(one.rateDown)!=='—', `下行给区间均速而不是破折号（${flat(one.rateDown)}）`);
-chk(flat(one.rateUp)!=='—', `上行给区间均速（${flat(one.rateUp)}）`);
-chk(/average/.test(String((one.rateDown.attrs||{}).title||'')), '均速在提示里说明是区间平均');
-const ten=rateOf(Array.from({length:10},(_,i)=>({hour:'h'+i,
-  apps:i?[]:[{name:'YouTube',down:36000,up:18000}],clients:[],router:0})));
-chk(flat(ten.rateDown)!==flat(one.rateDown),
-    `同一批字节摊到更长窗口，均速变小（1h ${flat(one.rateDown)} → 10h ${flat(ten.rateDown)}）`);
+const mkView=(o)=>Object.assign(Object.create(view),freshView(),o||{});
+const rv=mkView({});
+view.renderHourly.call(rv,{hours:[{hour:'h0',apps:[{name:'YouTube',down:36000,up:18000}],clients:[],router:0}]});
+chk(flat(rv.rateDown)==='' && flat(rv.rateUp)==='',
+    `范围视图不再自己写速率（[${flat(rv.rateDown)}] / [${flat(rv.rateUp)}]）`);
+chk(!/average/.test(String((rv.rateDown.attrs||{}).title||'')), '不再有"区间平均"提示');
+chk((src.match(/updateRate/g)||[]).length>=3,
+    `两条绘制路径共用 updateRate（${(src.match(/updateRate/g)||[]).length} 处）`);
+// 20 KiB down and 1 KiB up in a 10 s window
+const live=mkView({});
+view.updateRate.call(live,{collected_at:1000,totals:{down:1000,up:100}});
+chk(flat(live.rateDown)==='0 B/s', `第一次没有前一份快照，速率还是 0（${flat(live.rateDown)}）`);
+view.updateRate.call(live,{collected_at:1010,totals:{down:1000+20480,up:100+1024}});
+chk(/KiB\/s/.test(flat(live.rateDown)), `10 秒 20 KiB → KiB/s 级下行速率（${flat(live.rateDown)}）`);
+chk(/B\/s/.test(flat(live.rateUp)), `上行按同一窗口算（${flat(live.rateUp)}）`);
+chk(flat(live.rateDown)!=='0 B/s', `有前一份快照后速率不再停在 0（${flat(live.rateDown)}）`);
+// The page polls twice as often as the collector writes, so every other poll
+// hands back the very same snapshot.  That must keep the figure rather than
+// divide by a zero interval, which would flash 0 B/s every five seconds.
+view.updateRate.call(live,{collected_at:1010,totals:{down:1000+20480,up:100+1024}});
+chk(flat(live.rateDown)==='2.00 KiB/s',
+    `同一份快照再轮询一次，速率不变（${flat(live.rateDown)}）`);
+// A snapshot that really is ten seconds later with nothing in it is a zero rate:
+// the honest reading, and not the case above.
+view.updateRate.call(live,{collected_at:1020,totals:{down:1000+20480,up:100+1024}});
+chk(flat(live.rateDown)==='0 B/s', `十秒内没有新流量就是 0（${flat(live.rateDown)}）`);
 
 console.log('=== 页面结构：一个下拉、列宽在 colgroup ===');
 const page=view.render.call(Object.assign(Object.create(view),freshView()),{});

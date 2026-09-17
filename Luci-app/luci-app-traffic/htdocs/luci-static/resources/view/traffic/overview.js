@@ -777,6 +777,10 @@ return view.extend({
 				}
 				self.archiveEmpty = false;
 				self.renderHourly(h);
+				/* the same live rate the session view shows, from the same two
+				 * snapshots, so choosing a range changes the window and not the
+				 * meaning of the two figures under 下载 and 上传 */
+				self.updateRate(self.summary);
 				self.drawStatus(self.summary, self.lastItems || []);
 			});
 		});
@@ -981,6 +985,40 @@ return view.extend({
 		this.renderDiag();
 	},
 
+	/* The rate under 下载/上传: the difference between two consecutive snapshots
+	 * over the time between them, so it is the speed right now.
+	 *
+	 * This used to be computed in the session view only, while the ranged view
+	 * replaced it with the window's average.  That average hardly moves on a busy
+	 * router: its denominator is the whole range and its numerator only grows as
+	 * the archive does, so within one hour the figure is nearly constant - and a
+	 * figure under a label that says 下载 is read as "now", which makes a number
+	 * that sits still read as a page that has stopped.  Both views show the live
+	 * rate now.  The window's own average is not lost: it is the window total
+	 * divided by the bucket count, both of which the strip already shows. */
+	updateRate: function(s) {
+		var t = (s && s.totals) || {};
+		var down = Number(t.down) || 0, up = Number(t.up) || 0;
+		/* rates come from the difference between two snapshots */
+		if (this.prev) {
+			var dt = (Number(s.collected_at) || 0) - (Number(this.prev.collected_at) || 0);
+			var pd = Number(this.prev.totals.down) || 0, pu = Number(this.prev.totals.up) || 0;
+			if (dt > 0 && down >= pd && up >= pu)
+				this.rate = { down: (down - pd) / dt, up: (up - pu) / dt };
+		}
+		this.prev = s;
+
+		/* a plain rate has no window to explain, so the tooltip that described
+		 * the ranged view's average goes with the average itself */
+		if (this.rateAvg !== false) {
+			this.rateAvg = false;
+			this.rateDown.removeAttribute('title');
+			this.rateUp.removeAttribute('title');
+		}
+		dom.content(this.rateDown, fmtRate(this.rate.down));
+		dom.content(this.rateUp, fmtRate(this.rate.up));
+	},
+
 	renderLive: function(s) {
 		var t = s.totals || {};
 		var down = Number(t.down) || 0, up = Number(t.up) || 0;
@@ -1011,24 +1049,9 @@ return view.extend({
 		if (sig === this.lastSig) return;
 		this.lastSig = sig;
 
-		/* rates come from the difference between two snapshots */
-		if (this.prev) {
-			var dt = (Number(s.collected_at) || 0) - (Number(this.prev.collected_at) || 0);
-			var pd = Number(this.prev.totals.down) || 0, pu = Number(this.prev.totals.up) || 0;
-			if (dt > 0 && down >= pd && up >= pu)
-				this.rate = { down: (down - pd) / dt, up: (up - pu) / dt };
-		}
-		this.prev = s;
-
-		/* these two are the live sampling deltas again, not the range averages
-		 * the ranged view leaves behind, so the tooltip goes with them */
-		if (this.rateAvg !== false) {
-			this.rateAvg = false;
-			this.rateDown.removeAttribute('title');
-			this.rateUp.removeAttribute('title');
-		}
-		dom.content(this.rateDown, fmtRate(this.rate.down));
-		dom.content(this.rateUp, fmtRate(this.rate.up));
+		/* the live rate, from this snapshot and the one before it; the ranged
+		 * view calls the same method so the two agree */
+		this.updateRate(s);
 
 		/* the grand-total row carries the busiest client overall; down+up is the
 		 * same client-side total the footer breaks down by kind */
@@ -1174,20 +1197,12 @@ return view.extend({
 			total: total, down: gd, up: gu,
 			topText: topText, clientCount: cl.length
 		});
-		/* A rate needs a window to divide by, and in this view the window is the
-		 * range itself: these are the averages over it, not the last sampling
-		 * interval.  They were left as a dash before, which next to a card full
-		 * of bytes reads as "nothing is happening" rather than "this figure is
-		 * not measured that way here", so the tooltip says which one it is. */
-		var win = Math.max(1, hours.length) * 3600;
-		dom.content(this.rateDown, fmtRate(gd / win));
-		dom.content(this.rateUp, fmtRate(gu / win));
-		if (this.rateAvg !== true) {
-			this.rateAvg = true;
-			var tip = _('average over the selected range');
-			this.rateDown.setAttribute('title', tip);
-			this.rateUp.setAttribute('title', tip);
-		}
+		/* The two rates are deliberately not written here.  They describe the
+		 * sampling interval rather than the window, exactly as in the session
+		 * view, and refresh() keeps them current through updateRate().  Dividing
+		 * the window's bytes by the window's length, which is what this used to
+		 * do, gave a figure that barely moved - and next to a total that does
+		 * move, a rate that does not reads as a stalled page. */
 		/* The footer says what the range held, from what the history actually
 		 * keeps: the number of buckets, the client bytes, the tunnel and how many
 		 * devices moved them.  The identification rates below are not here
