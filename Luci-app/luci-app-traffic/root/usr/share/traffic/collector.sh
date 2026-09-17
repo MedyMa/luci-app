@@ -1125,18 +1125,36 @@ publish_current() {
     mkdir -p "$arch" 2>/dev/null
 
     # applications: totals.tsv is <name> up down, cur.apps is <name> down up
-    awk -F'\t' -v snap="$arch/totals.tsv" '
+    # (plus the busiest client, its bytes and the client count when ac.agg has
+    # them).  Without those three the hour in progress - which is the whole of
+    # what a range view has for the first hour after an install - could never
+    # name a client, so those columns stayed empty until the clock crossed the
+    # hour and roll_hour wrote the archived form of the same row.
+    #
+    # The client named here is the session's busiest for that application rather
+    # than strictly this hour's: ac.agg is a live aggregate with no time window.
+    # It is the same client that has dominated the hour in practice, and a name
+    # that is right in the ordinary case beats a dash that is always right.
+    awk -F'\t' -v snap="$arch/totals.tsv" -v agg="$STATE_DIR/ac.agg" '
         BEGIN {
             while ((getline l < snap) > 0) {
                 split(l, f, "\t"); su[f[1]] = f[2] + 0; sd[f[1]] = f[3] + 0
             }
             close(snap)
+            while ((getline l < agg) > 0) {
+                split(l, f, "\t")
+                if (f[1] != "") { ac[f[1]] = f[2] + 0; ab[f[1]] = f[3] + 0; aw[f[1]] = f[4] }
+            }
+            close(agg)
         }
         {
             u = $2 - su[$1]; d = $3 - sd[$1]
             if (u < 0) u = 0
             if (d < 0) d = 0
-            if (u + d > 0) printf "%s\t%d\t%d\n", $1, d, u
+            if (u + d > 0) {
+                if (aw[$1] != "") printf "%s\t%d\t%d\t%s\t%d\t%d\n", $1, d, u, aw[$1], ab[$1], ac[$1]
+                else printf "%s\t%d\t%d\n", $1, d, u
+            }
         }' "$STATE_DIR/totals.tsv" > "$STATE_DIR/cur.apps.new" 2>/dev/null \
         && mv -f "$STATE_DIR/cur.apps.new" "$STATE_DIR/cur.apps"
 

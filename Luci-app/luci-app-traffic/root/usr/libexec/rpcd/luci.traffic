@@ -110,6 +110,7 @@ get_hourly() {
 				split(l, f, "\t")
 				if (f[1] == "") continue
 				can[++nca] = f[1]; cad[f[1]] = f[2] + 0; cau[f[1]] = f[3] + 0
+				if (f[4] != "") { caw[f[1]] = f[4]; cwb[f[1]] = f[5] + 0; cwc[f[1]] = f[6] + 0 }
 			}
 			close(cur)
 			while ((getline l < curc) > 0) {
@@ -185,7 +186,9 @@ get_hourly() {
 				for (i = 1; i <= nca; i++) {
 					k = can[i]
 					if (i > 1) printf ","
-					printf "{\"name\":\"%s\",\"down\":%d,\"up\":%d}", esc(k), cad[k], cau[k]
+					printf "{\"name\":\"%s\",\"down\":%d,\"up\":%d", esc(k), cad[k], cau[k]
+					if (k in caw) printf ",\"top\":\"%s\",\"top_bytes\":%d,\"clients\":%d", esc(caw[k]), cwb[k], cwc[k]
+					printf "}"
 				}
 				printf "],\"clients\":["
 				for (i = 1; i <= ncc; i++) {
