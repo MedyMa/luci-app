@@ -56,6 +56,16 @@ function tierOfRange(v) {
  * which drew a line through "0 B/s".  A label a curve can cross is worse than a
  * slightly narrower plot. */
 var CHART_W = 720, CHART_H = 190, CHART_PAD = { l: 10, r: 54, t: 14, b: 22 };
+/* A phone gets its own canvas.  The chart is drawn in user units and its labels
+ * are sized in those units, so a 720-unit box scaled into a 275px column renders
+ * 9-unit text at about 3.5px and flattens the plot into a 72px ribbon - the curve
+ * is there, and nobody can read it.  Fewer units across means the same labels come
+ * out at a readable size, and a squarer box keeps a usable plot height.  The
+ * breakpoint matches the stylesheet, which lifts the 190px max-height there so the
+ * aspect is not fought. */
+var CHART_NARROW_W = 300, CHART_NARROW_H = 130,
+    CHART_NARROW_PAD = { l: 8, r: 42, t: 12, b: 20 },
+    CHART_NARROW_MAX = 624;
 
 /* Names that are not an application or a website but a bucket: a protocol
  * (SSL/TLS, QUIC, ...) or an infrastructure category (CDN, Ads, ...).  They are
@@ -373,7 +383,11 @@ function niceTop(peak) {
  * page's colours.  A flat zero reads as a line on the floor rather than as a
  * gap. */
 function makeChart(series) {
-	var pad = CHART_PAD, W = CHART_W, H = CHART_H;
+	var narrow = (typeof window !== 'undefined') && (window.innerWidth || 0) > 0 &&
+		window.innerWidth <= CHART_NARROW_MAX;
+	var pad = narrow ? CHART_NARROW_PAD : CHART_PAD;
+	var W = narrow ? CHART_NARROW_W : CHART_W;
+	var H = narrow ? CHART_NARROW_H : CHART_H;
 	var iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
 	var n = series.length;
 
@@ -1500,7 +1514,15 @@ function injectCss() {
 		 * longest English caption ("Router and tunnel") measures 87px against the
 		 * 84px that .5rem leaves, so it ellipsised.  The Chinese labels are two to
 		 * six characters and were never near the edge. */
-		'.tf-page .tf-stat{flex:1 1 6.25rem;min-width:6.25rem;display:flex;flex-direction:column;',
+		/* max-width is what keeps the boxes the same size.  With grow alone they
+		 * are equal only while the row is full: as soon as the last row has fewer
+		 * boxes they share that whole row between them, and a 10-box strip on a
+		 * 1024px screen ended with two boxes 449px wide against the first row's
+		 * 105.  Capping the growth means every box is between 6.25 and 6.75rem at
+		 * every width - 103px on a 1200px screen, 108 on a phone, where the rows
+		 * come out equal instead of merely full. */
+		'.tf-page .tf-stat{flex:1 1 6.25rem;min-width:6.25rem;max-width:6.75rem;',
+		'display:flex;flex-direction:column;',
 		'align-items:center;justify-content:center;text-align:center;gap:.05rem;',
 		'padding:.4rem .35rem;background:var(--tf-chip);border-radius:12px;}',
 		/* the two sets are not the same kind of reading, so a hairline divides them */
@@ -1745,9 +1767,14 @@ function injectCss() {
 		'.tf-page .tf-hero-ctl{margin-left:0;width:100%;justify-content:flex-start;}',
 		'.tf-page .tf-donut-wrap{justify-content:center;}',
 		'.tf-page .tf-stat-strip{gap:.35rem;}',
+		/* Three boxes to a row instead of two, which is the difference between a
+		 * five-row strip and a four-row one on a 360px phone.  A 5.3rem box still
+		 * holds the longest label (客户端合计 is 58px against 85 - 11 of padding). */
+		'.tf-page .tf-stat{flex:0 0 5.3rem;min-width:5.3rem;max-width:5.3rem;}',
 		/* the list scrolls sideways here instead of squeezing the name column:
 		 * every column stays readable and nothing wraps into a second line */
 		'.tf-page .tf-table{min-width:34rem;}}',
+		'@media (max-width:39rem){.tf-page .tf-chart-svg{max-height:none;}}',
 		'@media (max-width:34rem){.tf-page .tf-hero-stats{column-gap:.9rem;}',
 		'.tf-page .tf-table{font-size:.86rem;min-width:0;}',
 		'.tf-page .tf-table>thead>tr>th,.tf-page .tf-table>tbody>tr>td{padding:.35rem .3rem;}',

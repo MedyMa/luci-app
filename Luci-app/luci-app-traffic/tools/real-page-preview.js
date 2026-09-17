@@ -115,7 +115,12 @@ const SERIES={ range:'24h', interval:60, points:Array.from({length:180},(_,i)=>{
   return [t,d,Math.round(d*0.16)]; }) };
 
 /* ---- build the page for real ---- */
-function build(){
+/* The chart is built in the browser from a viewBox chosen by window.innerWidth,
+ * and this generator serialises the SVG it built - so a phone's chart can only be
+ * previewed by building the page as if the window were that narrow.  That is what
+ * the width argument is for. */
+function build(narrowWidth){
+  global.window = narrowWidth ? { innerWidth: narrowWidth } : undefined;
   cssParts.length=0;
   const v=Object.create(view);
   const page=view.render.call(v,SUMMARY);       // real markup + injectCss()
@@ -158,7 +163,10 @@ const sessionDark=(()=>{ const v=Object.create(view); const p=view.render.call(v
 function write(name,node,theme){
   const html='<!DOCTYPE html>\n<html lang="zh"><head><meta charset="utf-8">\n<style>\n'+
     'html,body{margin:0;padding:0;background:'+(theme==='dark'?'#191d24':'#eef1f5')+';}\n'+
-    'body{padding:20px 24px 30px;width:1200px;box-sizing:border-box;'+
+    // no fixed width: a hardcoded 1200px body made the page ignore the window,
+    // so it could not be used to check any width but one.  At a 1200px window
+    // this renders exactly as before.
+    'body{padding:20px 24px 30px;box-sizing:border-box;'+
     'font:100%/1.5 system-ui,-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;}\n'+
     css+'\n</style></head><body>\n'+ser(node)+'\n</body></html>\n';
   const f=path.join(OUT,name);
@@ -169,3 +177,11 @@ write('traffic-real-range.html',page,'light');
 write('traffic-real-range-dark.html',darkPage,'dark');
 write('traffic-real-session.html',sessionPage,'light');
 write('traffic-real-session-dark.html',sessionDark,'dark');
+// the same page as a 390px phone sees it, chart canvas included
+const phoneNarrow=(()=>{ global.window={innerWidth:390};
+  const v=Object.create(view); const p=view.render.call(v,SUMMARY);
+  v.seriesRange='24h'; v.series=SERIES; view.drawSeries.call(v);
+  view.renderHourly.call(v,{hours:HOURS}); view.drawStatus.call(v,SUMMARY,v.lastItems||[]);
+  return p; })();
+write('traffic-real-phone.html',phoneNarrow,'light');
+global.window=undefined;
