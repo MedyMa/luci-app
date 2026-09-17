@@ -66,6 +66,13 @@ var CHART_W = 720, CHART_H = 190, CHART_PAD = { l: 10, r: 54, t: 14, b: 22 };
 var CHART_NARROW_W = 300, CHART_NARROW_H = 130,
     CHART_NARROW_PAD = { l: 8, r: 42, t: 12, b: 20 },
     CHART_NARROW_MAX = 624;
+/* The table's own threshold, matching the stylesheet's 34rem rule: below it three
+ * of the six columns are dropped and the share goes with them. */
+var TABLE_NARROW_MAX = 544;
+function narrowTable() {
+	return (typeof window !== 'undefined') && (window.innerWidth || 0) > 0 &&
+		window.innerWidth <= TABLE_NARROW_MAX;
+}
 
 /* Names that are not an application or a website but a bucket: a protocol
  * (SSL/TLS, QUIC, ...) or an infrastructure category (CDN, Ads, ...).  They are
@@ -333,7 +340,13 @@ function makeRow(name, bucket) {
 
 function updateRow(row, a, total) {
 	var share = total ? (100 * a.bytes / total) : 0;
-	setText(row.cells.total, fmtBytes(a.bytes) + ' (' + share.toFixed(1) + '%)');
+	/* The share is left off on a phone.  "127 MiB (70.0%)" needs 124px and the
+	 * column has 97px at 390px, so every row was truncated to "127 MiB (70…";
+	 * the share is stated in the legend above anyway, so the narrow table keeps
+	 * the figure whole instead.  The breakpoint is the table's own, the same 34rem
+	 * at which the stylesheet drops three of the six columns. */
+	setText(row.cells.total, fmtBytes(a.bytes) +
+		(narrowTable() ? '' : ' (' + share.toFixed(1) + '%)'));
 	setText(row.cells.down, fmtBytes(a.down));
 	setText(row.cells.up, fmtBytes(a.up));
 	var topText = '—';
@@ -1778,12 +1791,20 @@ function injectCss() {
 		'@media (max-width:34rem){.tf-page .tf-hero-stats{column-gap:.9rem;}',
 		'.tf-page .tf-table{font-size:.86rem;min-width:0;}',
 		'.tf-page .tf-table>thead>tr>th,.tf-page .tf-table>tbody>tr>td{padding:.35rem .3rem;}',
-		/* the two columns a phone cannot spare drop out, and the four that stay
-		 * take the whole width */
+		/* A phone gets the first three columns - the application, its total and its
+		 * received figure - which is the three that answer "what is using my link".
+		 * Upload, the busiest client and the device count drop out: the last two are
+		 * the readings a narrow layout can least spare, and the device count is a
+		 * box in the strip above anyway.  The width those three keep is re-divided
+		 * rather than left at the six-column proportions, and the dropped columns'
+		 * <col> widths go to zero: hiding the cells can leave the columns themselves
+		 * in the fixed layout, where they would hold empty space. */
+		'.tf-page .tf-table>thead>tr>th:nth-child(4),.tf-page .tf-table>tbody>tr>td:nth-child(4),',
 		'.tf-page .tf-table>thead>tr>th:nth-child(5),.tf-page .tf-table>tbody>tr>td:nth-child(5),',
 		'.tf-page .tf-table>thead>tr>th:nth-child(6),.tf-page .tf-table>tbody>tr>td:nth-child(6){display:none;}',
-		'.tf-page .tf-col-app{width:46%;}.tf-page .tf-col-total{width:24%;}',
-		'.tf-page .tf-col-down{width:15%;}.tf-page .tf-col-up{width:15%;}}'
+		'.tf-page .tf-col-app{width:40%;}.tf-page .tf-col-total{width:31%;}',
+		'.tf-page .tf-col-down{width:29%;}',
+		'.tf-page .tf-col-up,.tf-page .tf-col-top,.tf-page .tf-col-clients{width:0;}}'
 	].join('');
 
 	var st = document.createElement('style');
