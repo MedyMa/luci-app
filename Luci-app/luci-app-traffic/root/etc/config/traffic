@@ -26,12 +26,19 @@ config traffic 'settings'
 	# listed as a device.  Leave empty to auto-detect every address on the LAN
 	# interface.
 	option self ''
-	# per-host byte counters in nftables.  These are what the client totals come
-	# from: they count every packet a host sends or receives, independent of the
-	# conntrack table and of the DNS correlation, so proxied traffic and anything
-	# the conntrack accounting misses is still included.  Set to 0 to fall back
-	# to the conntrack totals alone, which is also what happens with no nft.
-	option accounting '1'
+	# which layer produces the client totals.
+	#   auto  follow the firewall: conntrack when flow offloading is on, the nft
+	#         per-host counters when it is not (the shipped value)
+	#   1     force the nft counters
+	#   0     force the conntrack totals
+	# The nft counters are the better source when they see the traffic - they
+	# count every packet a host sends or receives, independent of the conntrack
+	# table and of the DNS correlation - but flow offloading hands established
+	# forwarded flows to a fast path that bypasses the netfilter hooks those
+	# counters hang on, and then they miss nearly everything a client sends.  On
+	# one real router that was 2.05 MiB counted against 535 MiB across br-lan for
+	# the same period, which is why 'auto' is the default rather than '1'.
+	option accounting 'auto'
 	# optional: map a registrable domain to a friendlier application name
 	option appmap '/etc/traffic/apps.tsv'
 	# how many days of hourly history to keep

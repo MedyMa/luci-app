@@ -960,6 +960,13 @@ return view.extend({
 			diag.push({ cap: _('Waiting to resolve'), val: String(Number(s.pending)), warn: true });
 		if (!s.acct && s.acct_error)
 			diag.push({ cap: _('Counter error'), val: s.acct_error, warn: true });
+		/* The counters are the nft ones and the firewall offloads: the forwarded
+		 * traffic bypasses the hooks they hang on, so the client figures are a
+		 * fraction of what the box actually carried.  Said out loud, because
+		 * nothing else on the page looks wrong when it happens. */
+		if (s.acct_offload)
+			diag.push({ cap: _('Counter mode'),
+				val: _('flow offloading is on: the nft counters miss client traffic'), warn: true });
 		/* The hour being accumulated is not a note.  It is a raw bucket label
 		 * ("2026-09-17T10") that no reader acts on, and as a note it put a whole
 		 * card at the bottom of every ordinary page load carrying nothing else -

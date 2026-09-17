@@ -74,6 +74,11 @@ CFG_DNSLOG=
 # set once per round by account_clients(): 1 when the nft counters are running
 # and own the client totals, 0 when the conntrack totals stand in for them
 ACCT_ON=0
+# and 1 there when the firewall has flow offloading on, which is what the summary
+# reports so the page can say the nft counters are not seeing the forwarded
+# traffic.  Declared here because the summary is built even on a round where
+# account_clients() returned before reaching the assignment.
+ACCT_OFFLOAD=0
 CFG_APPMAP=$CFG_DATADIR/apps.tsv
 CFG_CATEGORIES=$CFG_DATADIR/categories.tsv
 CFG_RETENTION=7
@@ -824,8 +829,27 @@ acct_read() {
 # client.  A counter that went backwards means the rules were rebuilt (a
 # firewall reload wipes our table), so the new value is used as the delta.
 account_clients() {
-    local m
+    local m off offh
     ACCT_ON=0
+    # Which layer produces the client totals is decided here, not only by the
+    # config, because the config cannot know what the firewall is doing.  Flow
+    # offloading hands established forwarded flows to a fast path that bypasses
+    # the netfilter hooks the nft counters hang on, so with it on those counters
+    # miss nearly everything a client sends - measured on a real router, 2.05 MiB
+    # counted against 535 MiB across br-lan for the same period - while conntrack
+    # accounting still records it.  That is also why the totals looked wrong on a
+    # router whose firewall has offloading on, which is the common default.
+    #
+    # 'auto' (the shipped value) follows the firewall setting; an explicit 0 or 1
+    # in the config always wins.
+    off=$(uci -q get firewall.@defaults[0].flow_offloading 2>/dev/null)
+    offh=$(uci -q get firewall.@defaults[0].flow_offloading_hw 2>/dev/null)
+    if [ "$off" = "1" ] || [ "$offh" = "1" ]; then ACCT_OFFLOAD=1; else ACCT_OFFLOAD=0; fi
+    case "$(uci_get accounting)" in
+        0) CFG_ACCT=0 ;;
+        1) CFG_ACCT=1 ;;
+        *) if [ "$ACCT_OFFLOAD" = "1" ]; then CFG_ACCT=0; else CFG_ACCT=1; fi ;;
+    esac
     [ "$CFG_ACCT" = "1" ] || return 0
     acct_available || { acct_off "nft is not installed"; return 0; }
     acct_sync || { acct_off "the counter table could not be set up"; return 0; }
@@ -1397,6 +1421,11 @@ write_summary() {
         # silently render none of them.
         printf '"version":"%s"' "$COLLECTOR_VERSION"
         printf ',"acct":%s' "$ACCT_ON"
+        # Forcing the nft counters on a router that offloads is the one
+        # combination that undercounts silently, so the page is told to say so
+        # rather than leaving the reader to notice that the client traffic is
+        # smaller than what the box itself carried.
+        [ "$ACCT_ON" = "1" ] && [ "$ACCT_OFFLOAD" = "1" ] && printf ',"acct_offload":1'
         if [ "$ACCT_ON" = "1" ]; then
             printf ',"accounted":{'
             awk -F'\t' '{ d += $2; u += $3 } END { printf "\"down\":%d,\"up\":%d}", d + 0, u + 0 }' \

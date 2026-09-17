@@ -225,6 +225,16 @@ msgstr "连接跟踪"
 msgid "Counter error"
 msgstr "计数器错误"
 
+# The warning that the nft counters are being used on a router whose firewall
+# offloads forwarded traffic past them - the combination that undercounts.
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Counter mode"
+msgstr "计数口径"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "flow offloading is on: the nft counters miss client traffic"
+msgstr "已开启流量卸载：nft 计数会漏掉客户端流量"
+
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "Collector version"
 msgstr "版本"
