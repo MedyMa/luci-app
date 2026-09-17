@@ -806,8 +806,14 @@ return view.extend({
 	 * same shape the note line takes; the strip itself works in k/v, so the two
 	 * names meet here rather than at every call site. */
 	drawSummary: function(list) {
+		var hour = this.hourLabel;
 		this.sumBits = (list || []).map(function(x) {
-			return { k: x.cap, v: x.val, warn: x.warn, title: x.title, mono: x.mono };
+			var b = { k: x.cap, v: x.val, warn: x.warn, title: x.title, mono: x.mono };
+			/* the archived-hour count is the reading the current bucket belongs
+			 * to, so the bucket label hangs off it rather than taking a card */
+			if (hour && x.cap === _('Bucket'))
+				b.title = _('Current hour') + ': ' + hour;
+			return b;
 		});
 		this.renderStrip();
 	},
@@ -911,8 +917,13 @@ return view.extend({
 			diag.push({ cap: _('Waiting to resolve'), val: String(Number(s.pending)), warn: true });
 		if (!s.acct && s.acct_error)
 			diag.push({ cap: _('Counter error'), val: s.acct_error, warn: true });
-		if (s.hour)
-			diag.push({ cap: _('Current hour'), val: s.hour });
+		/* The hour being accumulated is not a note.  It is a raw bucket label
+		 * ("2026-09-17T10") that no reader acts on, and as a note it put a whole
+		 * card at the bottom of every ordinary page load carrying nothing else -
+		 * which is the one thing the note card was not for.  The question it does
+		 * answer, which hour is being written, is worth keeping, so it rides as
+		 * the tooltip on the 周期 box where it costs no space at all. */
+		this.hourLabel = s.hour || '';
 
 		this.statBits = bits;
 		this.statDiag = diag;

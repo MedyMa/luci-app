@@ -213,13 +213,20 @@ chk(txt(v9.diagEl).trim()==='', '没有条件时不产生注释');
 chk(v9.diagCardEl.style.display==='none', '注释行为空时整张卡片隐藏');
 // "Bucket" used to label two different readings, which only showed once the two
 // strips were merged into one row: the archived-hour count and the hour being
-// accumulated.  The second one is its own caption now.
+// accumulated.  The second is a tooltip on the first now: as a note of its own it
+// put a whole card at the bottom of the page to carry one raw bucket label.
 const v10=freshView();
 view.drawStatus.call(v10,{collected_at:Math.floor(Date.now()/1000),interval:10,flows:1,
   dnsmap_lines:1,pending:0,acct:1,hour:'2026-09-17T10'},items);
-chk(txt(v10.diagEl).indexOf('Current hour')>=0 && txt(v10.diagEl).indexOf('2026-09-17T10')>=0,
-    '当前小时在注释行');
-chk(boxes(v10.statusEl).filter(b=>b.cap==='Bucket').length===0, '条里不会并排出现两个"周期"');
+view.drawSummary.call(v10,[{cap:'Bucket',val:'24'},{cap:'Browser clients',val:'1 B'},
+  {cap:'Router and tunnel',val:'0 B'},{cap:'Devices',val:'1'}]);
+chk(txt(v10.diagEl).trim()==='', '当前小时不再占用注释行');
+chk(v10.diagCardEl.style.display==='none', '普通场景下注释卡整张不显示');
+const bucketRow=(v10.statusEl.children||[]).filter(c=>(c.attrs||{}).class==='tf-stat')
+  .filter(c=>(c.children[0]||{})._text==='Bucket')[0];
+chk(bucketRow && String((bucketRow.attrs||{}).title||'').indexOf('2026-09-17T10')>=0,
+    `当前小时挂在周期的提示里（${bucketRow&&bucketRow.attrs.title}）`);
+chk(boxes(v10.statusEl).filter(b=>b.cap==='Bucket').length===1, '只有一个周期框');
 const v8=freshView();
 view.drawStatus.call(v8,{collected_at:Math.floor(Date.now()/1000),interval:10,flows:1,
   dnsmap_lines:1,pending:0,acct:0,acct_error:'nft is not installed'},items);

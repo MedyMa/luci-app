@@ -109,6 +109,12 @@ function ser(n){
   if(n.ns===null) return esc(n._text);
   let s='<'+n.tag;
   for(const k in (n.attrs||{})){ const v=n.attrs[k]; if(v===''||v==null) continue; s+=' '+k+'="'+esc(v)+'"'; }
+  // the stub keeps style as its own object, so an inline display:none (how the
+  // page hides the note card) has to be written out or the preview shows a card
+  // the real page does not
+  const st=n.style||{};
+  const inline=Object.keys(st).map(k=>k+':'+st[k]+';').join('');
+  if(inline) s+=' style="'+esc(inline)+'"';
   s+='>';
   if(VOID[n.tag]) return s;
   if((n.children||[]).length) s+=n.children.map(ser).join('');
