@@ -375,11 +375,16 @@ separated in name order, which is likewise rank-independent.
   the collector was not running, never merely "nothing happened". A colour key
   names the two curves under the header, because they often differ by orders of
   magnitude and a small upload curve would otherwise read as a stray line.
-* **Donut card** — the ten largest applications with a matching legend, as a
-  full-width block above the table. It used to be a second column beside the
-  table, which stacked below the tablet breakpoint anyway and left a band of
-  empty page beside the donut; as a block above, the legend can spread across the
-  width instead of being squeezed into one narrow column.
+* **Donut card and throughput card** — the composition and the curve are the two
+  halves of one row, equal width by construction (`1fr 1fr`), with the collector
+  state above them and the readings above the list. The whole page is one grid
+  placed by area, so the reading order is stated in one place instead of being
+  whatever order the cards happen to be built in. Below the tablet width the
+  areas collapse to a single column, in the same order.
+* **Donut card** — the ten largest applications with a matching legend. It used
+  to be a full-width block above the table, and before that a column beside the
+  table; as half of the row with the curve, the legend still spreads sideways
+  instead of being squeezed into one narrow column.
 * **List card** — application, total and share, received, sent, busiest client,
   device count; 100 rows kept in the DOM, so a page left open all day does not
   grow. The column widths live in a `<colgroup>`: under `table-layout:fixed` those

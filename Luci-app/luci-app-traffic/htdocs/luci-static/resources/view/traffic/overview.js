@@ -635,9 +635,19 @@ return view.extend({
 
 	refresh: function() {
 		var self = this;
-		if (this.range === 'session')
-			return callSummary().then(function(s) { self.renderLive(s); });
-		return callHourly(Number(this.range)).then(function(h) { self.renderHourly(h); });
+		/* The collector state is fetched in every mode, not only in the session
+		 * view: the strip describes the running collector rather than a window,
+		 * so it is drawn whichever window the data cards are showing.  This is
+		 * also what makes choosing a range a whole-page refresh, instead of a
+		 * curve that moves while the readings around it stay as they were. */
+		return callSummary().then(function(s) {
+			self.summary = s || {};
+			if (self.range === 'session') { self.renderLive(self.summary); return; }
+			return callHourly(Number(self.range)).then(function(h) {
+				self.renderHourly(h);
+				self.drawStatus(self.summary, self.lastItems || []);
+			});
+		});
 	},
 
 	/* Footer, also reused: five label/value pairs whose values move every
@@ -764,6 +774,8 @@ return view.extend({
 			};
 		}).filter(hasTraffic);
 
+		this.lastItems = items;
+
 		/* The status strip is drawn before the early return below, on purpose.
 		 * Its whole job is to say when the snapshot stopped arriving, and the
 		 * signature does not change while the collector is stuck - so skipping
@@ -878,6 +890,8 @@ return view.extend({
 			return agg[k];
 		}).filter(hasTraffic)
 		  .sort(function(a, b) { return b.bytes - a.bytes; });
+		/* the status strip is drawn by refresh() from these, in either mode */
+		this.lastItems = items;
 
 		var total = items.reduce(function(s, a) { return s + a.bytes; }, 0);
 		var gd = items.reduce(function(s, a) { return s + a.down; }, 0);
@@ -1088,7 +1102,22 @@ function injectCss() {
 		'--tf-fg:var(--font-color,#20303d);--tf-dim:rgba(32,48,61,.55);',
 		'--tf-shadow:0 6px 22px rgba(31,66,102,.10);',
 		'--tf-down:#00a8e8;--tf-up:#26c281;',
-		'margin:-.4rem 0 0;color:var(--tf-fg);}',
+		'margin:-.4rem 0 0;color:var(--tf-fg);',
+		/* One grid for the page, placed by area.  The order below is the order it
+		 * reads in, which is deliberately not the order the cards are built: the
+		 * collector state belongs above the curve, the composition and the curve
+		 * are two halves of one row, the readings sit above the list, and the
+		 * list is last.  Both middle columns are 1fr, so those two cards are the
+		 * same width by construction instead of by two sets of numbers that have
+		 * to be kept in step. */
+		'display:grid;gap:0 1rem;align-items:start;grid-template-columns:1fr 1fr;',
+		'grid-template-areas:"hero hero" "status status" "chart donut" "meta meta" "list list";}',
+		'.tf-page .tf-hero{grid-area:hero;}',
+		'.tf-page .tf-status-card{grid-area:status;}',
+		'.tf-page .tf-chart-card{grid-area:chart;}',
+		'.tf-page .tf-donut-card{grid-area:donut;}',
+		'.tf-page .tf-meta-card{grid-area:meta;}',
+		'.tf-page .tf-list-card{grid-area:list;}',
 
 		/* cards: translucent + blurred, which is what gives the "bright" look */
 		'.tf-page .tf-card{background:var(--tf-card);border:1px solid var(--tf-card-brd);',
@@ -1098,7 +1127,13 @@ function injectCss() {
 		/* hero.  The big number has its own class: "tf-total" is also the class
 		 * of the table's total cell, and sharing it made every row's total
 		 * render at 2rem. */
+		/* z-index is not decoration: the card blurs its backdrop, and an element
+		 * with backdrop-filter starts a stacking context, so the range menu's own
+		 * z-index only ever counted inside this card - the cards below painted
+		 * over the open list and cut it off.  Lifting the card itself puts the
+		 * menu above them, which is where a dropdown belongs. */
 		'.tf-page .tf-hero{display:flex;align-items:center;gap:1.4rem;flex-wrap:wrap;',
+		'position:relative;z-index:5;',
 		'background:linear-gradient(135deg,rgba(0,180,255,.14),rgba(124,92,255,.14)),var(--tf-card);}',
 		'.tf-page .tf-grand-total{font-size:1.7rem;font-weight:700;line-height:1.1;letter-spacing:.4px;',
 		'font-variant-numeric:tabular-nums;}',
@@ -1306,7 +1341,9 @@ function injectCss() {
 		 * cannot both fit, and the two columns a phone cannot spare (the busiest
 		 * client and the device count) drop out there instead of squeezing the
 		 * numbers nobody can read at 320px. */
-		'@media (max-width:52rem){.tf-page .tf-hero{flex-wrap:wrap;gap:.6rem;}',
+		'@media (max-width:52rem){.tf-page{grid-template-columns:1fr;',
+		'grid-template-areas:"hero" "status" "chart" "donut" "meta" "list";}',
+		'.tf-page .tf-hero{flex-wrap:wrap;gap:.6rem;}',
 		'.tf-page .tf-hero-ctl{margin-left:0;width:100%;justify-content:flex-start;}',
 		'.tf-page .tf-donut-wrap{justify-content:center;}',
 		'.tf-page .tf-status{gap:.45rem;}',

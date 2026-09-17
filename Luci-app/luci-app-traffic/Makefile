@@ -11,7 +11,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-traffic
-PKG_VERSION:=0.1.13
+PKG_VERSION:=0.1.14
 PKG_RELEASE:=1
 PKG_LICENSE:=Apache-2.0
 LUCI_PKGARCH:=all
@@ -47,6 +47,27 @@ endef
 
 define Package/$(PKG_NAME)/conffiles
 /etc/config/traffic
+endef
+
+# Removing the package used to leave the collector running: opkg deletes the
+# files, but a shell that is already executing keeps going, so it went on
+# polling and went on recreating its accounting chains - and those chains live
+# in the kernel, not on disk, so they outlived the uninstall too.  Stop the
+# service first, then take the table and the session state with it.  The
+# history in /etc/traffic is deliberately kept: that is the user's data, and
+# removing a package is not a reason to throw away a week of measurements.
+define Package/$(PKG_NAME)/prerm
+#!/bin/sh
+[ -n "$$IPKG_INSTROOT" ] && exit 0
+if [ -x /etc/init.d/traffic ]; then
+	/etc/init.d/traffic stop >/dev/null 2>&1
+	/etc/init.d/traffic disable >/dev/null 2>&1
+fi
+# the collector is a shell loop, so make sure none survived the stop
+pkill -f '/usr/share/traffic/collector.sh' >/dev/null 2>&1
+nft delete table inet traffic_acct >/dev/null 2>&1
+rm -rf /tmp/traffic
+exit 0
 endef
 
 define Package/$(PKG_NAME)/postinst
