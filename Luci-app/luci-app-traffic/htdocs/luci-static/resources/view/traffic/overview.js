@@ -1120,10 +1120,16 @@ return view.extend({
 		var cl = Object.keys(clAgg).map(function(ip) {
 			return { ip: ip, bytes: clAgg[ip] };
 		}).sort(function(a, b) { return b.bytes - a.bytes; });
+		/* The share is of the client total, not of the application total.  The two
+		 * are different sums - a client carries bytes no application row accounts
+		 * for, the tunnel and anything the DNS correlation could not name - so
+		 * dividing by the application total reported the busiest client as using
+		 * more than all of the traffic (144.8% on a real page). */
+		var clTotal = cl.reduce(function(s, c) { return s + c.bytes; }, 0);
 		var topText = '—';
-		if (cl.length && total > 0) {
+		if (cl.length && clTotal > 0) {
 			topText = cl[0].ip + ' ' + fmtBytes(cl[0].bytes) +
-				' (' + (100 * cl[0].bytes / total).toFixed(1) + '%)';
+				' (' + (100 * cl[0].bytes / clTotal).toFixed(1) + '%)';
 		}
 		this.draw(items, {
 			total: total, down: gd, up: gu,
