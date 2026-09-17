@@ -1281,6 +1281,18 @@ roll_hour() {
                 if (b > 0) printf "%s\tclient\t%s\t%d\t0\n", h, $1, b
             }
         ' "$STATE_DIR/clients.tsv" >> "$CFG_DATADIR/hourly.tsv"
+    # The busiest client of each application, so a range view can name it.  The
+    # archive holds app rows and client rows but not the correlation between
+    # them, which is why every per-application client column was a dash in a
+    # range and only the session view could fill it.  ac.agg is where the
+    # collector already keeps that correlation: <app> <count> <bytes> <client>.
+    # The client is stored as the address it is; the page turns it into a device
+    # name from the live summary, which carries the lease names anyway.
+    if [ -s "$STATE_DIR/ac.agg" ]; then
+        awk -F'\t' -v h="$hour" '
+            $1 != "" && $4 != "" { printf "%s\tapptop\t%s\t%s\t%d\t%d\n", h, $1, $4, $3 + 0, $2 + 0 }
+        ' "$STATE_DIR/ac.agg" >> "$CFG_DATADIR/hourly.tsv"
+    fi
     fi
 
     if [ "$dhr" -gt 0 ]; then

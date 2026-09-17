@@ -94,6 +94,18 @@ var BUCKETS = {
 
 function isBucket(name) { return BUCKETS[name] === 1; }
 
+/* Address to device name, taken from the live snapshot, which carries the names
+ * a DHCP lease gave.  The archive stores the address it saw; turning that into a
+ * name is presentation, and the live map is the one place that knows it. */
+var clientNames = {};
+function clientName(v) { return (v && clientNames[v]) ? clientNames[v] : (v || ''); }
+function rememberNames(s) {
+	clientNames = {};
+	((s && s.clients) || []).forEach(function(c) {
+		if (c && c.ip && c.name) clientNames[c.ip] = c.name;
+	});
+}
+
 /* A row is only worth drawing when something was actually measured. */
 function hasTraffic(item) { return (item.down + item.up) > 0; }
 
@@ -339,7 +351,7 @@ function updateRow(row, a, total) {
 	var topText = '—';
 	if (a.top) {
 		var ts = a.bytes ? (100 * (a.top_bytes || 0) / a.bytes) : 0;
-		topText = a.top + ' ' + fmtBytes(a.top_bytes || 0) + ' (' + ts.toFixed(1) + '%)';
+		topText = clientName(a.top) + ' ' + fmtBytes(a.top_bytes || 0) + ' (' + ts.toFixed(1) + '%)';
 	}
 	setText(row.cells.top, topText);
 	setText(row.cells.clients, a.clients === undefined ? '—' : String(a.clients));
@@ -743,6 +755,7 @@ return view.extend({
 		 * curve that moves while the readings around it stay as they were. */
 		return callSummary().then(function(s) {
 			self.summary = s || {};
+			rememberNames(self.summary);
 			if (self.range === 'session') { self.renderLive(self.summary); return; }
 			return callHourly(Number(self.range)).then(function(h) {
 				/* remembered so the strip can still answer "how many hours does
@@ -1091,9 +1104,23 @@ return view.extend({
 		hours.forEach(function(b) {
 			(b.apps || []).forEach(function(a) {
 				var k = a.name;
-				if (!agg[k]) agg[k] = { name: k, down: 0, up: 0 };
+				if (!agg[k]) agg[k] = { name: k, down: 0, up: 0, top: '', top_bytes: 0, clients: undefined };
 				agg[k].down += Number(a.down) || 0;
 				agg[k].up += Number(a.up) || 0;
+				/* The busiest client of this application, which the archive only
+				 * started recording recently; across the hours the one with the most
+				 * bytes wins.  The client count is the largest single hour rather
+				 * than a sum: the archive has no way to tell whether the same device
+				 * was counted in two hours, and a sum would overstate it. */
+				var tb = Number(a.top_bytes) || 0;
+				if (a.top && tb >= (agg[k].top_bytes || 0)) {
+					agg[k].top = a.top;
+					agg[k].top_bytes = tb;
+				}
+				if (a.clients !== undefined) {
+					var n = Number(a.clients) || 0;
+					if (agg[k].clients === undefined || n > agg[k].clients) agg[k].clients = n;
+				}
 			});
 			(b.clients || []).forEach(function(c) {
 				var ip = c.ip || '?';

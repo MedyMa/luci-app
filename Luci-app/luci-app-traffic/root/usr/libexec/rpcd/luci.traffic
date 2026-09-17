@@ -134,6 +134,12 @@ get_hourly() {
 			cb[k] += $4 + 0
 			next
 		}
+		$2 == "apptop" {
+			# <hour> apptop <app> <client> <bytes> <clients>
+			k = $1 SUBSEP $3
+			at[k] = $4; atb[k] = $5 + 0; atc[k] = $6 + 0
+			next
+		}
 		$2 == "router" { rv[$1] += $4 + 0; next }
 		END {
 			printf "{\"hours\":["
@@ -149,7 +155,11 @@ get_hourly() {
 					k = h SUBSEP nm[j]
 					if (!f1) printf ","
 					f1 = 0
-					printf "{\"name\":\"%s\",\"down\":%d,\"up\":%d}", esc(nm[j]), ad[k], au[k]
+					printf "{\"name\":\"%s\",\"down\":%d,\"up\":%d", esc(nm[j]), ad[k], au[k]
+					# the busiest client of that hour and how many clients moved it,
+					# when the archive has them (rows written after 0.1.38 do)
+					if (k in at) printf ",\"top\":\"%s\",\"top_bytes\":%d,\"clients\":%d", esc(at[k]), atb[k], atc[k]
+					printf "}"
 				}
 				printf "],\"clients\":["
 				ncl = split(names_c[h], cn, "\n")
