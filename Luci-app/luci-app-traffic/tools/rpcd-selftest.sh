@@ -182,5 +182,42 @@ out3=$(hr 24)
 chk "8l 有归档时归档与进行中的小时都在"      "2"   "$(printf '%s' "$out3" | grep -o '"hour":' | wc -l | tr -d ' ')"
 
 echo
+echo "=== 每 app 的客户端（归档行 + 进行中的小时行）==="
+# The archive held application rows and client rows but not the correlation
+# between them, so every per-application client column was a dash in a range view
+# and only the session view could fill it.  roll_hour now writes the correlation
+# as <hour> apptop <app> <client> <bytes> <clients>, and publish_current puts the
+# same three figures on the end of the in-progress application rows - two separate
+# paths that both have to carry them, and dropping the field from either one sends
+# the page back to a dash with nothing else changing.  That is what happened once,
+# which is why this is asserted here rather than checked by hand on the router.
+{
+    printf 'h1\tapp\tOpenAI\t1000\t500\n'
+    printf 'h1\tapptop\tOpenAI\t192.168.2.120\t900\t3\n'
+    printf 'h1\tapp\tNoRows\t10\t5\n'
+} > "$T/data/hourly.tsv"
+: > "$T/state/cur.apps"; : > "$T/state/cur.clients"
+printf '0\n' > "$T/state/cur.router"; : > "$T/state/cur.hour"
+out=$(hr 24)
+chk "9 归档的 app 行带上客户端"  '{"name":"OpenAI","down":1000,"up":500,"top":"192.168.2.120","top_bytes":900,"clients":3}' \
+    "$(printf '%s' "$out" | grep -o '{"name":"OpenAI"[^}]*}')"
+chk "9a 没有 apptop 行的 app 不多出字段" '{"name":"NoRows","down":10,"up":5}' \
+    "$(printf '%s' "$out" | grep -o '{"name":"NoRows"[^}]*}')"
+# the hour in progress: publish_current appends the same three figures, in the
+# order <name> <down> <up> <client> <bytes> <clients>
+printf 'YouTube\t60000\t3600\t10.0.0.9\t42000\t4\n' > "$T/state/cur.apps"
+printf '10.0.0.9\t42000\n' > "$T/state/cur.clients"
+printf '2026-09-17T10\n'   > "$T/state/cur.hour"
+out=$(hr 24)
+chk "9b 进行中的小时行也带上客户端" \
+    '{"name":"YouTube","down":60000,"up":3600,"top":"10.0.0.9","top_bytes":42000,"clients":4}' \
+    "$(printf '%s' "$out" | grep -o '{"name":"YouTube"[^}]*}')"
+# an application the collector had no client for still comes back whole
+printf 'Solo\t70\t30\n' >> "$T/state/cur.apps"
+out=$(hr 24)
+chk "9c 缺客户端字段时仍是三字段行" '{"name":"Solo","down":70,"up":30}' \
+    "$(printf '%s' "$out" | grep -o '{"name":"Solo"[^}]*}')"
+
+echo
 if [ "$fail" = 0 ]; then echo "=== 全部通过 ==="; else echo "=== 有失败 ==="; fi
 exit "$fail"
