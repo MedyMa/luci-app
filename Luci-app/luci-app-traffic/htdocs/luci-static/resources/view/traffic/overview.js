@@ -169,7 +169,7 @@ function makeDonut(items, total) {
 	var g = S('g', { 'transform': 'translate(' + (size / 2) + ',' + (size / 2) + ') rotate(-90)' });
 
 	if (!total || !items.length) {
-		g.appendChild(S('circle', { 'r': r, 'fill': 'none', 'stroke': 'rgba(140,160,180,.22)', 'stroke-width': stroke }));
+		g.appendChild(S('circle', { 'class': 'tf-ring', 'r': r, 'fill': 'none', 'stroke': 'rgba(140,160,180,.22)', 'stroke-width': stroke }));
 	}
 	else {
 		var offset = 0;
@@ -315,10 +315,12 @@ function makeRow(name, bucket) {
 		clients: el('td', { 'class': 'tf-num' })
 	};
 	var tr = el('tr', { 'class': bucket ? 'tf-isbucket' : '' }, [
-		el('td', { 'class': 'tf-app' }, [
-			icon, nameEl,
-			bucket ? el('span', { 'class': 'tf-tag' }, [ _('type') ]) : ''
-		]),
+		/* No tag on a bucket row: "type" said nothing about what kind of thing the
+		 * row was - every reader asked what type of what - and it took room from
+		 * the column the names need.  The glyph, the italic name and the muted
+		 * colour already carry the only distinction that matters: a kind of
+		 * traffic rather than a product. */
+		el('td', { 'class': 'tf-app' }, [ icon, nameEl ]),
 		cells.total, cells.down, cells.up, cells.top, cells.clients
 	]);
 	return { tr: tr, cells: cells };
@@ -398,6 +400,7 @@ function makeChart(series) {
 		var gv = top * (gi / 2), gy = y(gv);
 		svg.appendChild(S('line', {
 			'x1': pad.l, 'x2': W - pad.r, 'y1': gy, 'y2': gy,
+			'class': 'tf-grid',
 			'stroke': 'rgba(140,160,180,.20)', 'stroke-width': 1,
 			'stroke-dasharray': gi === 0 ? '' : '3 4'
 		}));
@@ -1200,6 +1203,12 @@ function injectCss() {
 		'.tf-page{--tf-accent:var(--primary,#00b4ff);--tf-accent2:#7c5cff;',
 		'--tf-card:rgba(255,255,255,.72);--tf-card-brd:rgba(255,255,255,.75);',
 		'--tf-chip:rgba(140,160,180,.16);--tf-menu:rgba(255,255,255,.99);',
+		/* Every line, tint and shadow on this page comes from a variable, so a
+		 * theme that paints its dark mode some way this page cannot name still
+		 * gets a page that is dark all through.  A hardcoded colour is what left
+		 * a light table on a dark page. */
+		'--tf-line:rgba(128,150,175,.20);--tf-tint:rgba(0,180,255,.07);',
+		'--tf-icon-shadow:0 2px 6px rgba(31,66,102,.18);',
 		'--tf-fg:var(--font-color,#20303d);--tf-dim:rgba(32,48,61,.55);',
 		'--tf-shadow:0 6px 22px rgba(31,66,102,.10);',
 		'--tf-down:#00a8e8;--tf-up:#26c281;',
@@ -1300,6 +1309,12 @@ function injectCss() {
 		'.tf-page .tf-donut-wrap{display:flex;align-items:center;gap:1.1rem 1.6rem;flex-wrap:wrap;}',
 		'.tf-page .tf-donut-svg{flex:0 0 168px;width:168px;height:168px;}',
 		'.tf-page .tf-donut-empty{font-size:11px;fill:var(--tf-dim);}',
+		/* The ring and the grid are drawn in SVG, where a colour cannot come from
+		 * a variable: a presentation attribute has no var().  A class can, and a
+		 * CSS rule outranks the attribute, so the literal stays as the fallback
+		 * while the variable does the work - which is what keeps the empty ring
+		 * and the grid from staying light on a dark page. */
+		'.tf-page .tf-ring,.tf-page .tf-grid{stroke:var(--tf-line);}',
 
 		/* legend: the ten rows spread across the width the card now has, instead
 		 * of one narrow column with the rest of the card empty beside it */
@@ -1346,7 +1361,7 @@ function injectCss() {
 		'.tf-page .tf-col-up{width:13%;}',
 		'.tf-page .tf-col-top{width:26%;}',
 		'.tf-page .tf-col-clients{width:10%;}',
-		'.tf-page .tf-table>thead>tr>th{border-bottom:1px solid rgba(128,150,175,.18);',
+		'.tf-page .tf-table>thead>tr>th{border-bottom:1px solid var(--tf-line);',
 		'font-size:.78rem;font-weight:600;color:var(--tf-dim);letter-spacing:.04em;padding:.5rem .6rem;',
 		'white-space:nowrap;background:transparent;}',
 		/* Alignment is per kind of column, and the header follows its own data:
@@ -1364,17 +1379,17 @@ function injectCss() {
 		 * on a dark card.  The page's own colour wins here. */
 		'.tf-page .tf-table>thead>tr>th,.tf-page .tf-table>tbody>tr>td{color:inherit;}',
 		'.tf-page .tf-table>tbody>tr{background:transparent;}',
-		'.tf-page .tf-table>tbody>tr>td{border-bottom:1px solid rgba(128,150,175,.10);',
+		'.tf-page .tf-table>tbody>tr>td{border-bottom:1px solid var(--tf-line);',
 		'padding:.5rem .6rem;vertical-align:middle;overflow:hidden;background:transparent;}',
 		'.tf-page .tf-table>tbody>tr:last-child>td{border-bottom:none;}',
-		'.tf-page .tf-table>tbody>tr:hover>td{background:rgba(0,180,255,.07);}',
+		'.tf-page .tf-table>tbody>tr:hover>td{background:var(--tf-tint);}',
 		'.tf-page .tf-num{white-space:nowrap;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;}',
 		'.tf-page .tf-down{color:var(--tf-down);}',
 		'.tf-page .tf-up{color:var(--tf-up);}',
 		'.tf-page .tf-total{font-weight:600;}',
 		/* the grand total leads the table, so it is tinted rather than roped off */
-		'.tf-page .tf-table>tbody>tr.tf-grand>td{background:rgba(0,180,255,.08);font-weight:600;',
-		'border-bottom:1px solid rgba(128,150,175,.22)!important;}',
+		'.tf-page .tf-table>tbody>tr.tf-grand>td{background:var(--tf-tint);font-weight:600;',
+		'border-bottom:1px solid var(--tf-line)!important;}',
 		'.tf-page .tf-top{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
 		'color:var(--tf-dim);font-size:.85rem;}',
 
@@ -1395,7 +1410,7 @@ function injectCss() {
 		'letter-spacing:.04em;color:var(--tf-dim);background:rgba(128,150,175,.16);text-transform:uppercase;}',
 		'.tf-page .tf-icon{width:' + ICON + 'px;height:' + ICON + 'px;flex:0 0 ' + ICON + 'px;',
 		'border-radius:8px;display:inline-flex;align-items:center;justify-content:center;',
-		'box-shadow:0 2px 6px rgba(31,66,102,.18);}',
+		'box-shadow:var(--tf-icon-shadow);}',
 		'.tf-page .tf-icon-letter{color:#fff;font-size:.82rem;font-weight:700;line-height:1;}',
 		'.tf-page .tf-icon-img{width:' + ICON + 'px;height:' + ICON + 'px;border-radius:8px;display:block;}',
 
@@ -1433,13 +1448,13 @@ function injectCss() {
 		'color:var(--tf-fg);background-color:var(--tf-chip);',
 		'background-image:url("' + CHEVRON('#6b7c8c') + '");',
 		'background-repeat:no-repeat;background-position:right .72rem center;background-size:.95rem;',
-		'border:1px solid rgba(128,150,175,.22);border-radius:999px!important;box-shadow:none;cursor:pointer;',
+		'border:1px solid var(--tf-line);border-radius:999px!important;box-shadow:none;cursor:pointer;',
 		'transition:background-color .15s,border-color .15s,box-shadow .15s;}',
 		'.tf-page .tf-dd{position:relative;display:inline-flex;}',
 		'.tf-page .tf-dd-label{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
 		'.tf-page .tf-dd-menu{display:none;position:absolute;right:0;top:calc(100% + .35rem);z-index:30;',
 		'min-width:100%;padding:.3rem;',
-		'background:var(--tf-menu);border:1px solid rgba(128,150,175,.24);border-radius:14px;',
+		'background:var(--tf-menu);border:1px solid var(--tf-line);border-radius:14px;',
 		'box-shadow:var(--tf-shadow);}',
 		'.tf-page .tf-dd-open .tf-dd-menu{display:block;}',
 		'.tf-page .tf-dd-item{display:block;width:100%;margin:0;text-align:left;',
@@ -1459,6 +1474,8 @@ function injectCss() {
 		/* dark: Argon sets .dark on <body> when its dark mode is on */
 		DARK + '{--tf-card:rgba(30,38,48,.66);--tf-card-brd:rgba(255,255,255,.08);',
 		'--tf-chip:rgba(255,255,255,.08);--tf-menu:rgba(36,45,57,.99);',
+		'--tf-line:rgba(255,255,255,.12);--tf-tint:rgba(77,210,255,.12);',
+		'--tf-icon-shadow:0 2px 6px rgba(0,0,0,.45);',
 		'--tf-fg:#e6edf3;--tf-dim:rgba(230,237,243,.55);',
 		'--tf-shadow:0 6px 22px rgba(0,0,0,.35);',
 		'--tf-down:#4dd2ff;--tf-up:#3ddc97;}',
