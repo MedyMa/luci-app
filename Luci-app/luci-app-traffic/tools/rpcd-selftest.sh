@@ -159,6 +159,27 @@ printf 'h0\tapp\tOld\t7\t7\n' >> "$T/data/hourly.tsv"
 out1=$(hr 1)
 chk "8d 只取最新小时"                       "0"   "$(printf '%s' "$out1" | grep -c 'Old')"
 chk "8e 最新小时仍然完整"                   "25"  "$(printf '%s' "$out1" | grep -o '"name":"App' | wc -l | tr -d ' ')"
+# The hour in progress.  The collector publishes it every round as the difference
+# between its live counters and what is already archived, and the archive only
+# gets its first row when the clock crosses the hour - so a range view has to
+# take it from here, or it stays empty for the first hour after an install.
+printf 'YouTube\t60000\t3600\n' > "$T/state/cur.apps"      # name, down, up
+printf '10.0.0.9\t42000\n'      > "$T/state/cur.clients"   # ip, bytes
+printf '777\n'                  > "$T/state/cur.router"
+printf '2026-09-17T10\n'        > "$T/state/cur.hour"
+: > "$T/data/hourly.tsv"
+out2=$(hr 24)
+chk "8f 归档为空时给出进行中的小时"          "1"   "$(printf '%s' "$out2" | grep -c '"hour":"2026-09-17T10"')"
+chk "8g 进行中的小时含应用行"               "1"   "$(printf '%s' "$out2" | grep -c '"name":"YouTube"')"
+chk "8h 进行中的小时下/上未错位"            "60000/3600" \
+    "$(printf '%s' "$out2" | sed -n 's/.*{"name":"YouTube","down":\([0-9]*\),"up":\([0-9]*\)}.*/\1\/\2/p')"
+chk "8i 进行中的小时含客户端"               "1"   "$(printf '%s' "$out2" | grep -c '"ip":"10\.0\.0\.9"')"
+chk "8j 进行中的小时含隧道"                 "1"   "$(printf '%s' "$out2" | grep -c '"router":777')"
+chk "8k 空归档时仍是合法 JSON"              '{"hours":' "$(printf '%s' "$out2" | cut -c1-9)"
+# with an archive present, both come back
+printf 'h1\tapp\tApp01\t100\t10\n' > "$T/data/hourly.tsv"
+out3=$(hr 24)
+chk "8l 有归档时归档与进行中的小时都在"      "2"   "$(printf '%s' "$out3" | grep -o '"hour":' | wc -l | tr -d ' ')"
 
 echo
 if [ "$fail" = 0 ]; then echo "=== 全部通过 ==="; else echo "=== 有失败 ==="; fi

@@ -42,7 +42,7 @@ msgstr "确定清空已统计的流量数据？"
 
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "Router and tunnel"
-msgstr "路由器与隧道"
+msgstr "隧道"
 
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "Browser clients"
@@ -50,7 +50,7 @@ msgstr "客户端合计"
 
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "Bucket"
-msgstr "统计周期"
+msgstr "周期"
 
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "No traffic recorded yet."
@@ -141,6 +141,14 @@ msgstr "上传"
 msgid "Client count"
 msgstr "客户端数"
 
+# The strip box for the same figure uses its own word: sitting next to
+# "客户端合计" (the bytes) a second "客户端数" reads as more of the same thing,
+# where "设备数" is plainly a count of devices.  The table header keeps
+# "客户端数", which is what its column actually holds.
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Devices"
+msgstr "设备数"
+
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "No samples yet"
 msgstr "暂无采样数据"
@@ -167,15 +175,15 @@ msgstr "快照已过期"
 
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "Interval"
-msgstr "采集间隔"
+msgstr "间隔"
 
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "Flows"
-msgstr "连接跟踪条目"
+msgstr "连接跟踪"
 
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "Host names"
-msgstr "已解析主机名"
+msgstr "主机名"
 
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "Waiting to resolve"
@@ -203,7 +211,7 @@ msgstr "在 LAN 接口处逐包计数，包含被代理的流量"
 
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "Client totals"
-msgstr "客户端总量来源"
+msgstr "总量来源"
 
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "nft counters"
@@ -219,13 +227,26 @@ msgstr "计数器错误"
 
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "Collector version"
-msgstr "采集器版本"
+msgstr "版本"
+
+# The hour the collector is currently accumulating.  It was labelled "Bucket",
+# which is also the caption of the archived-hour count in the same strip - two
+# different readings under one word once the strips were merged into one row.
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Current hour"
+msgstr "当前小时"
 
 # Small-case variants: "Total"/"Up" are translated by luci-base, so the page
 # uses its own caption strings where the wording has to be exact.
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "total"
 msgstr "总计"
+
+# What the ring is a breakdown of.  The hero already says 总计 for the same
+# number; the ring's own label says what the slices add up to.
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Total volume"
+msgstr "总流量"
 
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "up"

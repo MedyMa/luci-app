@@ -79,12 +79,18 @@ get_hourly() {
 	case "$hours" in ''|*[!0-9]*) hours=24 ;; esac
 	f="$(datadir)/hourly.tsv"
 	if [ ! -s "$f" ]; then
-		printf '{"hours":[]}\n'
-		return
+		# No archive yet: a fresh install, or the first hour after a reflash.
+		# The collector has been publishing the hour in progress the whole time,
+		# so hand the awk an empty history instead of answering with nothing -
+		# this early return is what kept the default view blank even once the
+		# page knew how to ask for the hour in progress.
+		f=/dev/null
 	fi
 	list=$(awk -F'\t' '{ if (!seen[$1]++) print $1 }' "$f" | sort | tail -n "$hours")
 	sel=$(printf '%s ' $list)
-	awk -F'\t' -v sel="$sel" '
+	awk -F'\t' -v sel="$sel" -v cur="$STATE_DIR/cur.apps" \
+		-v curc="$STATE_DIR/cur.clients" -v curr="$STATE_DIR/cur.router" \
+		-v curh="$STATE_DIR/cur.hour" '
 		# Names come from the generated catalogue, so a quote is the only thing
 		# that could break the JSON; the & form is what makes gsub put a real
 		# backslash in front of the match instead of eating it.
@@ -92,6 +98,28 @@ get_hourly() {
 		BEGIN {
 			n = split(sel, w, " ")
 			for (i = 1; i <= n; i++) { order[i] = w[i]; keep[w[i]] = 1 }
+			# The hour in progress, as the collector publishes it: the difference
+			# between the live counters and what is already archived, so a range
+			# covers the current hour without counting anything twice.
+			#   cur.apps    <name> <down> <up>
+			#   cur.clients <ip> <bytes>
+			#   cur.router  one number     cur.hour  the hour it belongs to
+			if ((getline l < curh) > 0) { sub(/\r?\n$/, "", l); curhour = l }
+			close(curh)
+			while ((getline l < cur) > 0) {
+				split(l, f, "\t")
+				if (f[1] == "") continue
+				can[++nca] = f[1]; cad[f[1]] = f[2] + 0; cau[f[1]] = f[3] + 0
+			}
+			close(cur)
+			while ((getline l < curc) > 0) {
+				split(l, f, "\t")
+				if (f[1] == "") continue
+				ccn[++ncc] = f[1]; ccb[f[1]] = f[2] + 0
+			}
+			close(curc)
+			if ((getline l < curr) > 0) { sub(/\r?\n$/, "", l); crt = l + 0 }
+			close(curr)
 		}
 		!($1 in keep) { next }
 		$2 == "app" {
@@ -109,9 +137,10 @@ get_hourly() {
 		$2 == "router" { rv[$1] += $4 + 0; next }
 		END {
 			printf "{\"hours\":["
+			cnt = 0
 			for (i = 1; i <= n; i++) {
 				h = order[i]
-				if (i > 1) printf ","
+				if (cnt++) printf ","
 				printf "{\"hour\":\"%s\",\"apps\":[", esc(h)
 				na = split(names_a[h], nm, "\n")
 				f1 = 1
@@ -133,6 +162,28 @@ get_hourly() {
 					printf "{\"ip\":\"%s\",\"bytes\":%d}", esc(cn[j]), cb[k]
 				}
 				printf "],\"router\":%d}", rv[h] + 0
+			}
+			# The hour in progress, so a range never comes back empty merely
+			# because the clock has not crossed the hour yet.  It is appended
+			# even when the archive already holds that label: roll_hour writes
+			# its row under the hour the roll ran in, so a row with this label
+			# can still be the previous hour bytes, and dropping the published
+			# hour in that case would lose the current one.
+			if (curhour != "" && (nca > 0 || crt > 0)) {
+				if (cnt++) printf ","
+				printf "{\"hour\":\"%s\",\"apps\":[", esc(curhour)
+				for (i = 1; i <= nca; i++) {
+					k = can[i]
+					if (i > 1) printf ","
+					printf "{\"name\":\"%s\",\"down\":%d,\"up\":%d}", esc(k), cad[k], cau[k]
+				}
+				printf "],\"clients\":["
+				for (i = 1; i <= ncc; i++) {
+					k = ccn[i]
+					if (i > 1) printf ","
+					printf "{\"ip\":\"%s\",\"bytes\":%d}", esc(k), ccb[k]
+				}
+				printf "],\"router\":%d}", crt
 			}
 			printf "]}\n"
 		}

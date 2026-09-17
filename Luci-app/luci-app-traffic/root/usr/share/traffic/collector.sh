@@ -1109,6 +1109,66 @@ record_sample() {
     return 0
 }
 
+# ------------------------------------------------------------- hour in progress
+# Publish the part of the current hour the archive does not have yet: the
+# difference between the live counters and the snapshot the last roll took.
+# The archive only gets its first row when the clock crosses the hour, so a
+# range view - which reads the archive - had nothing to show for the first hour
+# after an install or a reflash, while the collector was measuring perfectly
+# well.  This is the same difference roll_hour archives, so nothing is counted
+# twice: what is already in the archive is subtracted out.  It lives in /tmp and
+# never touches the overlay, because it is written every round.
+publish_current() {
+    local arch="$STATE_DIR/arch" hour hr shr
+    hour=$(date +%Y-%m-%dT%H 2>/dev/null)
+    [ -n "$hour" ] || return 0
+    mkdir -p "$arch" 2>/dev/null
+
+    # applications: totals.tsv is <name> up down, cur.apps is <name> down up
+    awk -F'\t' -v snap="$arch/totals.tsv" '
+        BEGIN {
+            while ((getline l < snap) > 0) {
+                split(l, f, "\t"); su[f[1]] = f[2] + 0; sd[f[1]] = f[3] + 0
+            }
+            close(snap)
+        }
+        {
+            u = $2 - su[$1]; d = $3 - sd[$1]
+            if (u < 0) u = 0
+            if (d < 0) d = 0
+            if (u + d > 0) printf "%s\t%d\t%d\n", $1, d, u
+        }' "$STATE_DIR/totals.tsv" > "$STATE_DIR/cur.apps.new" 2>/dev/null \
+        && mv -f "$STATE_DIR/cur.apps.new" "$STATE_DIR/cur.apps"
+
+    # clients: acct.tsv is <ip> down up, and the page reads one figure per client
+    awk -F'\t' -v snap="$arch/acct.tsv" '
+        BEGIN {
+            while ((getline l < snap) > 0) {
+                split(l, f, "\t"); sd[f[1]] = f[2] + 0; su[f[1]] = f[3] + 0
+            }
+            close(snap)
+        }
+        {
+            d = $2 - sd[$1]; u = $3 - su[$1]
+            if (d < 0) d = 0
+            if (u < 0) u = 0
+            if (d + u > 0) printf "%s\t%d\n", $1, d + u
+        }' "$STATE_DIR/acct.tsv" > "$STATE_DIR/cur.clients.new" 2>/dev/null \
+        && mv -f "$STATE_DIR/cur.clients.new" "$STATE_DIR/cur.clients"
+
+    # the traffic the box itself carried, a single running number
+    hr=$(sed -n '1p' "$STATE_DIR/router.tsv" 2>/dev/null)
+    case "$hr" in ''|*[!0-9]*) hr=0 ;; esac
+    shr=$(sed -n '1p' "$arch/router" 2>/dev/null)
+    case "$shr" in ''|*[!0-9]*) shr=0 ;; esac
+    [ "$hr" -ge "$shr" ] || shr=0
+    printf '%s\n' "$((hr - shr))" > "$STATE_DIR/cur.router.new" 2>/dev/null \
+        && mv -f "$STATE_DIR/cur.router.new" "$STATE_DIR/cur.router"
+    printf '%s\n' "$hour" > "$STATE_DIR/cur.hour.new" 2>/dev/null \
+        && mv -f "$STATE_DIR/cur.hour.new" "$STATE_DIR/cur.hour"
+    return 0
+}
+
 # ---------------------------------------------------------------- hour rollover
 # Close the hour: append what the last hour carried to the persistent history.
 #
@@ -1437,6 +1497,7 @@ run() {
     # stalls in its first round looks identical to one that never started, which
     # is the state that is hardest to tell apart from the outside.
     account_clients
+    publish_current
     write_summary
 
     local hour last_hour now
@@ -1461,6 +1522,7 @@ run() {
         [ -n "$hour" ] && last_hour=$hour
         ROUNDS=$(( ${ROUNDS:-0} + 1 ))
         printf '%s\n' "$ROUNDS" > "$STATE_DIR/rounds"
+        publish_current
         write_summary
         sleep "$CFG_INTERVAL"
     done

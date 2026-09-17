@@ -50,7 +50,12 @@ function tierOfRange(v) {
 	return '1h';
 }
 
-var CHART_W = 720, CHART_H = 190, CHART_PAD = { l: 10, r: 10, t: 14, b: 22 };
+/* The right padding is wide enough to hold the value labels, so they sit beside
+ * the plot instead of inside it: they are right-anchored on the plot's right
+ * edge, and with a 10px margin the floor label sat where the upload curve runs,
+ * which drew a line through "0 B/s".  A label a curve can cross is worse than a
+ * slightly narrower plot. */
+var CHART_W = 720, CHART_H = 190, CHART_PAD = { l: 10, r: 54, t: 14, b: 22 };
 
 /* Names that are not an application or a website but a bucket: a protocol
  * (SSL/TLS, QUIC, ...) or an infrastructure category (CDN, Ads, ...).  They are
@@ -81,16 +86,6 @@ function isBucket(name) { return BUCKETS[name] === 1; }
 
 /* A row is only worth drawing when something was actually measured. */
 function hasTraffic(item) { return (item.down + item.up) > 0; }
-
-/* The address list is the one status value that is naturally long, so it is
- * shortened here and keeps its exact value in the tooltip: the first address
- * plus how many others there are. */
-function shortAddrs(v) {
-	var a = String(v || '').split(/\s+/).filter(function(s) { return s.length > 0; });
-	if (!a.length) return '—';
-	if (a.length === 1) return a[0];
-	return a[0] + ' +' + (a.length - 1);
-}
 
 function fmtBytes(n) {
 	n = Number(n) || 0;
@@ -373,9 +368,10 @@ function niceTop(peak) {
 	return 1024 * base;
 }
 
-/* The throughput chart: one stroked polyline per direction over a translucent
- * area, drawn by hand so it needs no chart library and inherits the page's
- * colours.  A flat zero reads as a line on the floor rather than as a gap. */
+/* The throughput chart: one smooth stroked curve per direction over a
+ * translucent area, drawn by hand so it needs no chart library and inherits the
+ * page's colours.  A flat zero reads as a line on the floor rather than as a
+ * gap. */
 function makeChart(series) {
 	var pad = CHART_PAD, W = CHART_W, H = CHART_H;
 	var iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
@@ -401,30 +397,86 @@ function makeChart(series) {
 		svg.appendChild(S('line', {
 			'x1': pad.l, 'x2': W - pad.r, 'y1': gy, 'y2': gy,
 			'class': 'tf-grid',
-			'stroke': 'rgba(140,160,180,.20)', 'stroke-width': 1,
+			'stroke-width': 1,
 			'stroke-dasharray': gi === 0 ? '' : '3 4'
 		}));
+		/* anchored at the SVG's right edge, not the plot's: the right padding is
+		 * the label's own gutter, and anchoring on the plot edge (which is what
+		 * this did) left the label inside the plot no matter how wide the
+		 * padding was, so the upload curve still ran through "0 B/s" */
 		svg.appendChild(S('text', {
-			'x': W - pad.r - 2, 'y': gy - 3, 'text-anchor': 'end',
+			'x': W - 3, 'y': gy - 3, 'text-anchor': 'end',
 			'class': 'tf-chart-tick', 'text': fmtRate(gv)
 		}));
 	}
 
-	function path(key, fill) {
-		var d = '', area = '';
-		for (var k = 0; k < n; k++) {
-			d += (k ? 'L' : 'M') + x(k).toFixed(1) + ' ' + y(series[k][key]).toFixed(1) + ' ';
+	/* A smooth curve through the samples rather than a chain of straight
+	 * segments.  Monotone cubic interpolation - the same shape d3 calls
+	 * curveMonotoneX - gives each segment a cubic Bezier whose tangents are
+	 * limited so the curve cannot overshoot the two samples it joins.
+	 *
+	 * That limit matters more here than the smoothness does.  An ordinary spline
+	 * through traffic samples dips below the floor between a spike and the next
+	 * low reading, which draws bytes that were never transferred, and invents a
+	 * hump on a flat stretch.  Monotone keeps every value between its two
+	 * neighbours, so the curve stays inside what was actually measured.
+	 *
+	 * Both colours come from classes: a stroke set as a presentation attribute
+	 * cannot read a custom property, so the curve kept its light-mode blue on a
+	 * dark page while the table under it turned over correctly. */
+	function curve(key) {
+		var pts = [], k;
+		for (k = 0; k < n; k++) pts.push({ x: x(k), y: y(series[k][key]) });
+		var d = 'M' + pts[0].x.toFixed(1) + ' ' + pts[0].y.toFixed(1);
+
+		if (pts.length >= 3) {
+			/* secant slope of each span, then the Fritsch-Carlson tangent at each
+			 * sample: the weighted harmonic mean of the two secants, or zero at a
+			 * local extreme where the sign flips. */
+			var dx = [], sec = [], m = [];
+			for (k = 0; k < pts.length - 1; k++) {
+				dx[k] = pts[k + 1].x - pts[k].x || 1;
+				sec[k] = (pts[k + 1].y - pts[k].y) / dx[k];
+			}
+			m[0] = sec[0];
+			m[pts.length - 1] = sec[pts.length - 2];
+			for (k = 1; k < pts.length - 1; k++) {
+				if (sec[k - 1] * sec[k] <= 0) m[k] = 0;
+				else {
+					var w1 = 2 * dx[k] + dx[k - 1], w2 = dx[k] + 2 * dx[k - 1];
+					m[k] = (w1 + w2) / (w1 / sec[k - 1] + w2 / sec[k]);
+				}
+			}
+			for (k = 0; k < pts.length - 1; k++) {
+				var h = dx[k];
+				d += 'C' + (pts[k].x + h / 3).toFixed(1) + ' ' + (pts[k].y + m[k] * h / 3).toFixed(1) +
+				     ' ' + (pts[k + 1].x - h / 3).toFixed(1) + ' ' + (pts[k + 1].y - m[k + 1] * h / 3).toFixed(1) +
+				     ' ' + pts[k + 1].x.toFixed(1) + ' ' + pts[k + 1].y.toFixed(1);
+			}
 		}
-		area = d + 'L' + x(n - 1).toFixed(1) + ' ' + (pad.t + ih) + ' L' + x(0).toFixed(1) + ' ' + (pad.t + ih) + ' Z';
-		if (fill) svg.appendChild(S('path', { 'd': area, 'fill': fill, 'stroke': 'none' }));
+		else {
+			for (k = 1; k < pts.length; k++)
+				d += 'L' + pts[k].x.toFixed(1) + ' ' + pts[k].y.toFixed(1);
+		}
+		return d;
+	}
+
+	function path(key) {
+		var d = curve(key);
+		var base = (pad.t + ih).toFixed(1);
+		/* the fill follows the same curve, so the area under it is the area the
+		 * line encloses rather than a second, straighter shape */
+		var area = d + 'L' + x(n - 1).toFixed(1) + ' ' + base +
+			' L' + x(0).toFixed(1) + ' ' + base + ' Z';
+		svg.appendChild(S('path', { 'd': area, 'class': 'tf-area-' + key, 'stroke': 'none' }));
 		svg.appendChild(S('path', {
-			'd': d, 'fill': 'none', 'stroke': key === 'down' ? '#00a8e8' : '#26c281',
+			'd': d, 'fill': 'none', 'class': 'tf-curve tf-curve-' + key,
 			'stroke-width': 1.6, 'stroke-linejoin': 'round', 'stroke-linecap': 'round'
 		}));
 	}
 
-	path('down', 'rgba(0,168,232,.13)');
-	path('up', 'rgba(38,194,129,.11)');
+	path('down');
+	path('up');
 
 	/* first and last timestamp, so the window is unambiguous */
 	svg.appendChild(S('text', { 'x': pad.l, 'y': H - 6, 'class': 'tf-chart-tick',
@@ -453,10 +505,21 @@ return view.extend({
 		this.rateDown = el('b', {}, [ '—' ]);
 		this.rateUp   = el('b', {}, [ '—' ]);
 		this.totalEl  = el('div', { 'class': 'tf-grand-total' }, [ '—' ]);
-		this.donutEl  = el('div', { 'class': 'tf-donut' });
+		/* The ring and the total laid over its hole.  The total moves on every
+		 * refresh while the ring is only rebuilt when the composition of it
+		 * changed, so the two are separate nodes rather than one SVG. */
+		this.donutFigEl   = el('div', { 'class': 'tf-donut-fig' });
+		this.donutTotalEl = el('div', { 'class': 'tf-donut-total' }, [ '—' ]);
+		this.donutEl  = el('div', { 'class': 'tf-donut' }, [
+			this.donutFigEl,
+			el('div', { 'class': 'tf-donut-center' }, [
+				this.donutTotalEl,
+				el('div', { 'class': 'tf-donut-cap' }, [ _('Total volume') ])
+			])
+		]);
 		this.legendEl = el('div', { 'class': 'tf-legend' });
 		this.rowsEl   = el('tbody');
-		this.metaEl   = el('div', { 'class': 'tf-meta' });
+		this.diagEl   = el('div', { 'class': 'tf-diag' });
 		this.chartEl  = el('div', { 'class': 'tf-chart' });
 		this.chartNote = el('span', { 'class': 'tf-chart-note' });
 		/* The key for the two curves.  They are drawn in the same colours the
@@ -466,7 +529,11 @@ return view.extend({
 			el('span', { 'class': 'tf-lg-down' }, [ el('i'), _('Received') ]),
 			el('span', { 'class': 'tf-lg-up' }, [ el('i'), _('Sent') ])
 		]);
-		this.statusEl = el('div', { 'class': 'tf-status' });
+		this.statusEl = el('div', { 'class': 'tf-stat-strip' });
+		/* the readings that do not belong in the strip, under the table they
+		 * comment on.  Hidden until there is something to say. */
+		this.diagCardEl = el('div', { 'class': 'tf-card tf-diag-card' }, [ this.diagEl ]);
+		this.diagCardEl.style.display = 'none';
 		/* One day by default: it is the window that answers "what has been
 		 * happening", where the hour view is mostly the last few minutes. */
 		/* the chart tier is derived from the range, never chosen separately */
@@ -479,19 +546,20 @@ return view.extend({
 			L.bind(this.setRange, this));
 
 		var node = el('div', { 'class': 'tf-page' }, [
+			/* One grid of three columns: the three captions on the first row and
+			 * the three readings on the second.  The stylesheet says why this is
+			 * a grid rather than three caption/reading pairs. */
 			el('div', { 'class': 'tf-card tf-hero' }, [
-				el('div', { 'class': 'tf-hero-main' }, [
+				el('div', { 'class': 'tf-hero-stats' }, [
+					el('div', { 'class': 'tf-hero-cap' }, [ _('total') ]),
+					el('div', { 'class': 'tf-hero-cap' }, [ _('Received') ]),
+					el('div', { 'class': 'tf-hero-cap' }, [ _('Sent') ]),
 					this.totalEl,
-					el('div', { 'class': 'tf-hero-cap' }, [ _('total') ])
-				]),
-				el('div', { 'class': 'tf-hero-rates' }, [
 					el('div', { 'class': 'tf-rate tf-rate-down' }, [
-						el('span', { 'class': 'tf-rate-arrow' }, [ '↓' ]), this.rateDown,
-						el('span', { 'class': 'tf-rate-cap' }, [ _('Received') ])
+						el('span', { 'class': 'tf-rate-arrow' }, [ '↓' ]), this.rateDown
 					]),
 					el('div', { 'class': 'tf-rate tf-rate-up' }, [
-						el('span', { 'class': 'tf-rate-arrow' }, [ '↑' ]), this.rateUp,
-						el('span', { 'class': 'tf-rate-cap' }, [ _('Sent') ])
+						el('span', { 'class': 'tf-rate-arrow' }, [ '↑' ]), this.rateUp
 					])
 				]),
 				el('div', { 'class': 'tf-hero-ctl' }, [ this.rangePicker.node ])
@@ -508,7 +576,7 @@ return view.extend({
 				this.chartEl
 			]),
 
-			el('div', { 'class': 'tf-card tf-status-card' }, [ this.statusEl ]),
+			el('div', { 'class': 'tf-card tf-stat-card' }, [ this.statusEl ]),
 
 			/* The composition sits above the table rather than beside it: the two
 			 * were a flexible two-column row, and below the tablet breakpoint that
@@ -553,7 +621,7 @@ return view.extend({
 				])
 			]),
 
-			el('div', { 'class': 'tf-card tf-meta-card' }, [ this.metaEl ])
+			this.diagCardEl
 		]);
 
 		injectCss();
@@ -658,6 +726,10 @@ return view.extend({
 			self.summary = s || {};
 			if (self.range === 'session') { self.renderLive(self.summary); return; }
 			return callHourly(Number(self.range)).then(function(h) {
+				/* remembered so the strip can still answer "how many hours does
+				 * the archive hold" after the reader switches to the session
+				 * view, which does not fetch the history at all */
+				self.archHours = ((h && h.hours) || []).length;
 				/* Nothing archived yet for this range.  That is the normal state
 				 * for the first hour after an install or a reflash, because the
 				 * history only gets its first row when the clock crosses the
@@ -678,44 +750,118 @@ return view.extend({
 		});
 	},
 
-	/* Footer, also reused: five label/value pairs whose values move every
-	 * refresh but whose structure never does. */
-	drawMeta: function(list) {
+	/* The strip: one row of identical boxes holding the collector's own state and
+	 * the totals of the window on screen.  The two sets are produced by two
+	 * different callers - the state comes from the summary, which is fetched in
+	 * every mode, and the totals come from whichever window is being shown - so
+	 * they are stored separately and laid out together here.  Laying them out in
+	 * one pass is the point: two rows would each share out their own width, and
+	 * six boxes in one against four in the other cannot come out equally wide. */
+	renderStrip: function() {
+		if (!this.statusEl) return;
+		var a = this.statBits || [], b = this.sumBits || [], bits = a.concat(b);
 		var self = this;
-		if (!this.metaRows) this.metaRows = [];
-		list.forEach(function(m, i) {
-			var r = self.metaRows[i];
+		if (!this.statRows) this.statRows = [];
+		if (!this.statSep) this.statSep = el('div', { 'class': 'tf-stat-sep' });
+		bits.forEach(function(x, i) {
+			var r = self.statRows[i];
 			if (!r) {
-				var val = el('span', { 'class': 'tf-meta-val' });
-				r = {
-					val: val,
-					row: el('div', { 'class': 'tf-meta-item' }, [
-						el('span', { 'class': 'tf-meta-cap' }, [ m.cap ]), val
-					])
-				};
-				self.metaRows[i] = r;
-				self.metaEl.appendChild(r.row);
+				var v = el('span', { 'class': 'tf-stat-val' });
+				r = { v: v, k: null, tip: null, cls: null,
+					row: el('div', { 'class': 'tf-stat' }, [
+						el('span', { 'class': 'tf-stat-cap' }), v
+					]) };
+				r.k = r.row.firstChild;
+				self.statRows[i] = r;
 			}
-			setText(r.val, m.val);
-			if (r.title !== m.title) {
-				r.title = m.title;
-				if (m.title) r.val.setAttribute('title', m.title);
-				else r.val.removeAttribute('title');
-			}
-			var cls = m.warn ? 'tf-meta-val tf-warn' : 'tf-meta-val';
-			if (r.cls !== cls) { r.cls = cls; r.val.className = cls; }
+			setText(r.k, x.k);
+			setText(r.v, x.v);
+			/* a shortened value keeps its exact form in the tooltip, so nothing
+			 * is lost by showing it short */
+			var tip = x.title || '';
+			if (r.tip !== tip) { r.tip = tip; r.row.setAttribute('title', tip); }
+			var cls = 'tf-stat-val' + (x.warn ? ' tf-warn' : '') + (x.mono ? ' tf-mono' : '');
+			if (r.cls !== cls) { r.cls = cls; r.v.className = cls; }
 		});
-		while (this.metaRows.length > list.length) {
-			var extra = this.metaRows.pop();
+		while (this.statRows.length > bits.length) {
+			var extra = this.statRows.pop();
 			if (extra.row.parentNode) extra.row.parentNode.removeChild(extra.row);
+		}
+		/* The two sets are drawn by different callers, so one that grows after
+		 * the other is already in the DOM would otherwise append its new boxes
+		 * past the separator instead of before it.  Re-appending only what is
+		 * out of place costs one comparison per box. */
+		var want = [], i;
+		for (i = 0; i < a.length; i++) want.push(this.statRows[i].row);
+		if (a.length && b.length) want.push(this.statSep);
+		for (i = a.length; i < bits.length; i++) want.push(this.statRows[i].row);
+		for (i = 0; i < want.length; i++) {
+			if (this.statusEl.children[i] !== want[i])
+				this.statusEl.insertBefore(want[i], this.statusEl.children[i] || null);
 		}
 	},
 
-	/* A single strip that explains the state of the collector.  Without it an
-	 * empty page is a dead end: the reader cannot tell "no traffic yet" from
-	 * "the service is not running" or "the query log path is wrong". */
-	drawStatus: function(s, items) {
+	/* The window's own totals: the four readings that describe whatever range is
+	 * on screen rather than the collector.  Callers pass caption/value pairs, the
+	 * same shape the note line takes; the strip itself works in k/v, so the two
+	 * names meet here rather than at every call site. */
+	drawSummary: function(list) {
+		this.sumBits = (list || []).map(function(x) {
+			return { k: x.cap, v: x.val, warn: x.warn, title: x.title, mono: x.mono };
+		});
+		this.renderStrip();
+	},
+
+	/* Everything else: the readings that only exist in the session view, and the
+	 * ones that are only present while something is wrong or still settling.
+	 * They are notes rather than boxes - see the strip rules in the stylesheet -
+	 * and the line hides itself when there is nothing to say.
+	 *
+	 * Two sources write here, for the same reason as the strip: the collector's
+	 * own conditions and the window's rates are produced by different callers.
+	 * Each keeps its list and this lays the two out together. */
+	drawDiag: function(list) {
+		this.viewDiag = list || [];
+		this.renderDiag();
+	},
+
+	renderDiag: function() {
+		if (!this.diagEl) return;
 		var self = this;
+		var list = (this.statDiag || []).concat(this.viewDiag || []);
+		if (!this.diagRows) this.diagRows = [];
+		list.forEach(function(d, i) {
+			var r = self.diagRows[i];
+			if (!r) {
+				var v = el('span', { 'class': 'tf-diag-val' });
+				r = { v: v, k: null, tip: null, cls: null,
+					row: el('span', { 'class': 'tf-diag-item' }, [
+						el('span', { 'class': 'tf-diag-cap' }), v
+					]) };
+				r.k = r.row.firstChild;
+				self.diagRows[i] = r;
+				self.diagEl.appendChild(r.row);
+			}
+			setText(r.k, d.cap);
+			setText(r.v, d.val);
+			var tip = d.title || '';
+			if (r.tip !== tip) { r.tip = tip; r.row.setAttribute('title', tip); }
+			var cls = 'tf-diag-val' + (d.warn ? ' tf-warn' : '');
+			if (r.cls !== cls) { r.cls = cls; r.v.className = cls; }
+		});
+		while (this.diagRows.length > list.length) {
+			var extra = this.diagRows.pop();
+			if (extra.row.parentNode) extra.row.parentNode.removeChild(extra.row);
+		}
+		this.diagCardEl.style.display = list.length ? '' : 'none';
+	},
+
+	/* The strip's first six boxes, plus a note line and the strip's own two
+	 * conditional readings.  A single strip that explains the state of the
+	 * collector.  Without it an empty page is a dead end: the reader cannot tell
+	 * "no traffic yet" from "the service is not running" or "the query log path
+	 * is wrong". */
+	drawStatus: function(s, items) {
 		var now = Math.floor(Date.now() / 1000);
 		var at = Number(s.collected_at) || 0;
 		var age = at ? (now - at) : -1;
@@ -737,55 +883,41 @@ return view.extend({
 			state = _('Running');
 		}
 
-		var bits = [];
-		bits.push({ k: _('State'), v: state, warn: warn });
-		if (iv) bits.push({ k: _('Interval'), v: iv + 's' });
-		bits.push({ k: _('Flows'), v: String(Number(s.flows) || 0) });
-		bits.push({ k: _('Host names'), v: String(Number(s.dnsmap_lines) || 0) });
-		if (Number(s.pending) > 0) bits.push({ k: _('Waiting to resolve'), v: String(Number(s.pending)), warn: true });
-		/* which layer is producing the client totals: the nft counters see every
-		   packet, the conntrack fallback only what the connection table knows.
-		   A fallback is not an error, but it must not look like one and the
-		   same page, or a silent degradation reads as "the network got quiet". */
-		bits.push({ k: _('Client totals'), v: s.acct ? _('nft counters') : _('conntrack'),
-			warn: !s.acct && !!s.acct_error });
-		if (!s.acct && s.acct_error) bits.push({ k: _('Counter error'), v: s.acct_error, warn: true });
-		/* which collector build is running: the first thing to check when a fix
-		   does not seem to be in effect after installing the package */
-		if (s.version) bits.push({ k: _('Collector version'), v: s.version, mono: true });
-		/* what the collector treats as the box itself: the first thing to check
-		   when a client list looks like it has the router in it.  The full list
-		   is not something anyone reads in a strip, so it is shortened and the
-		   exact value left a hover away. */
-		if (s.self) bits.push({ k: _('Router addresses'), v: shortAddrs(s.self), title: s.self, mono: true });
-		if (s.hour) bits.push({ k: _('Bucket'), v: s.hour });
+		/* The six that are always there, in this order, so the strip does not
+		 * reshuffle itself as the collector's state changes. */
+		var bits = [
+			{ k: _('State'), v: state, warn: warn },
+			{ k: _('Interval'), v: iv ? iv + 's' : '—' },
+			{ k: _('Flows'), v: String(Number(s.flows) || 0) },
+			{ k: _('Host names'), v: String(Number(s.dnsmap_lines) || 0) },
+			/* which layer is producing the client totals: the nft counters see
+			   every packet, the conntrack fallback only what the connection table
+			   knows.  A fallback is not an error, but it must not look like one
+			   and the same page, or a silent degradation reads as "the network
+			   got quiet". */
+			{ k: _('Client totals'), v: s.acct ? _('nft counters') : _('conntrack'),
+			  warn: !s.acct && !!s.acct_error },
+			/* which collector build is running: the first thing to check when a
+			   fix does not seem to be in effect after installing the package */
+			{ k: _('Collector version'), v: s.version || '—', mono: !!s.version }
+		];
 
-		if (!this.statusEl) return;
-		if (!this.statusRows) this.statusRows = [];
-		bits.forEach(function(b, i) {
-			var r = self.statusRows[i];
-			if (!r) {
-				var v = el('span', { 'class': 'tf-stat-val' });
-				r = { v: v, k: null, row: el('div', { 'class': 'tf-stat' }, [
-					el('span', { 'class': 'tf-stat-cap' }), v
-				]) };
-				r.k = r.row.firstChild;
-				self.statusRows[i] = r;
-				self.statusEl.appendChild(r.row);
-			}
-			setText(r.k, b.k);
-			setText(r.v, b.v);
-			/* the shortened value keeps its exact form in the tooltip, so nothing
-			 * is lost by showing it short */
-			var tip = b.title || '';
-			if (r.tip !== tip) { r.tip = tip; r.row.setAttribute('title', tip); }
-			var cls = 'tf-stat-val' + (b.warn ? ' tf-warn' : '') + (b.mono ? ' tf-mono' : '');
-			if (r.cls !== cls) { r.cls = cls; r.v.className = cls; }
-		});
-		while (this.statusRows.length > bits.length) {
-			var extra = this.statusRows.pop();
-			if (extra.row.parentNode) extra.row.parentNode.removeChild(extra.row);
-		}
+		/* The rest are conditions rather than readings - they come and go with
+		 * the state of the box - so they go on the note line, where a long value
+		 * (an error string, the hour label) costs nothing the way it would in a
+		 * box of fixed width. */
+		var diag = [];
+		if (Number(s.pending) > 0)
+			diag.push({ cap: _('Waiting to resolve'), val: String(Number(s.pending)), warn: true });
+		if (!s.acct && s.acct_error)
+			diag.push({ cap: _('Counter error'), val: s.acct_error, warn: true });
+		if (s.hour)
+			diag.push({ cap: _('Current hour'), val: s.hour });
+
+		this.statBits = bits;
+		this.statDiag = diag;
+		this.renderStrip();
+		this.renderDiag();
 	},
 
 	renderLive: function(s) {
@@ -869,27 +1001,35 @@ return view.extend({
 		 * should be honest about rather than hide. */
 		var acct = s.accounted || null;
 		var acctAll = acct ? (Number(acct.down) || 0) + (Number(acct.up) || 0) : 0;
-		var rows = [
-			{ cap: _('Router and tunnel'), val: fmtBytes(t.router) },
+		/* The window's four boxed readings.  They are the same four in both views
+		 * so the strip keeps its shape when the range changes; in the session
+		 * view there is no archive bucket count to read, and a dash is the honest
+		 * answer rather than a number borrowed from another window. */
+		this.drawSummary([
+			{ cap: _('Bucket'), val: this.archiveEmpty ? '0'
+				: (this.archHours === undefined ? '—' : String(this.archHours)) },
 			{ cap: _('Browser clients'), val: fmtBytes(all) },
+			{ cap: _('Router and tunnel'), val: fmtBytes(t.router) },
+			{ cap: _('Devices'), val: String(Number(t.client_count) || 0) }
+		]);
+
+		/* How much of the traffic the page managed to name, which is the only
+		 * reading that says whether the DNS lookup is working at all.  It lives
+		 * in the session counters and the ranged history does not store it, so
+		 * these notes appear in the session view and nowhere else. */
+		var diag = [
 			{ cap: _('Domain identified'), val: pct(named),
 			  title: _('by client DNS') + ': ' + pct(namedE) + ', ' + _('by any client DNS') + ': ' + pct(namedA) },
 			{ cap: _('Categorised'), val: pct(bucket) },
 			{ cap: _('Other'), val: pct(residual), warn: true }
 		];
 		if (acctAll > 0) {
-			rows.push({ cap: _('Counter total'), val: fmtBytes(acctAll),
+			diag.push({ cap: _('Counter total'), val: fmtBytes(acctAll),
 				title: _('every packet counted at the LAN interface, proxied traffic included') });
-			rows.push({ cap: _('Accounted share'), val: (100 * all / acctAll).toFixed(1) + '%',
+			diag.push({ cap: _('Accounted share'), val: (100 * all / acctAll).toFixed(1) + '%',
 				warn: all / acctAll < 0.5 });
 		}
-		/* When a range view had no archive to read and fell back to this session,
-		 * say so.  The bucket count is the reading that means "hours archived",
-		 * and 0 is the honest answer - without it the footer would show session
-		 * identification rates under a "last 24 hours" label and nothing would
-		 * tell the reader that the day is not actually there yet. */
-		if (this.archiveEmpty) rows.unshift({ cap: _('Bucket'), val: '0' });
-		this.drawMeta(rows);
+		this.drawDiag(diag);
 
 		/* New host names wait for the resolver's next pass, which is throttled
 		 * so that browsing cannot make every poll pay for a fresh name.  When
@@ -971,12 +1111,14 @@ return view.extend({
 		 * the kind of number this page should not show. */
 		var rt = 0;
 		hours.forEach(function(b) { rt += Number(b.router) || 0; });
-		this.drawMeta([
+		this.drawSummary([
 			{ cap: _('Bucket'), val: String(hours.length) },
 			{ cap: _('Browser clients'), val: fmtBytes(total) },
 			{ cap: _('Router and tunnel'), val: fmtBytes(rt) },
-			{ cap: _('Client count'), val: String(cl.length) }
+			{ cap: _('Devices'), val: String(cl.length) }
 		]);
+		/* nothing to add here: every note this view has is already in the strip */
+		this.drawDiag([]);
 	},
 
 	draw: function(items, stats) {
@@ -994,6 +1136,15 @@ return view.extend({
 
 		setText(this.totalEl, fmtBytes(total));
 
+		/* The total is also the answer the ring is a breakdown of, so it sits in
+		 * the ring's hole rather than only in the hero above.  It moves on every
+		 * refresh, which is why it is its own node: folding it into the SVG would
+		 * mean rebuilding the ring on every poll to change one line of text. */
+		setText(this.donutTotalEl, fmtBytes(total));
+		var off = (this.donutEl.className.indexOf('tf-donut-off') >= 0);
+		if ((total <= 0) !== off)
+			this.donutEl.className = total > 0 ? 'tf-donut' : 'tf-donut tf-donut-off';
+
 		/* donut: redrawn only when its composition changed, not when the bytes
 		 * behind the slices moved */
 		var donutSig = top.map(function(a) {
@@ -1001,7 +1152,7 @@ return view.extend({
 		}).join('|');
 		if (donutSig !== this.donutSig) {
 			this.donutSig = donutSig;
-			dom.content(this.donutEl, makeDonut(top, total));
+			dom.content(this.donutFigEl, makeDonut(top, total));
 		}
 
 		/* legend, keyed by name so the rows survive a reshuffle */
@@ -1212,7 +1363,13 @@ function injectCss() {
 		'--tf-fg:var(--font-color,#20303d);--tf-dim:rgba(32,48,61,.55);',
 		'--tf-shadow:0 6px 22px rgba(31,66,102,.10);',
 		'--tf-down:#00a8e8;--tf-up:#26c281;',
-		'margin:-.4rem 0 0;color:var(--tf-fg);',
+		'--tf-area-down:rgba(0,168,232,.13);--tf-area-up:rgba(38,194,129,.11);',
+		/* width, not just flex:1: the page is a flex item in the wrapper LuCI
+		 * puts a view in, and as one it was sized by its own content.  With the
+		 * cards laid out inside it that came out circular - the halves took
+		 * their width from the page and the page from them - and the whole thing
+		 * collapsed to a narrow column. */
+		'width:100%;margin:-.4rem 0 0;color:var(--tf-fg);',
 		/* The page is a wrapping flex column of full-width cards, with the
 		 * composition and the curve sharing one row.  It was a grid placed by
 		 * named areas, which read well but did not survive contact with a real
@@ -1226,15 +1383,29 @@ function injectCss() {
 		 * silently drops the spacing - the cards would touch.  The gutter is a
 		 * margin on the left half instead, which every browser has understood
 		 * for a very long time. */
-		'display:flex;flex-wrap:wrap;align-items:flex-start;}',
-		'.tf-page .tf-hero,.tf-page .tf-status-card,',
-		'.tf-page .tf-meta-card,.tf-page .tf-list-card{order:1;flex:0 0 100%;max-width:100%;}',
-		'.tf-page .tf-status-card{order:2;}',
+		'display:flex;flex-wrap:wrap;align-items:stretch;}',
+		/* stretch, not flex-start: the chart and the ring are two halves of one
+		 * row and the design is two cards of the same height.  With flex-start
+		 * each took its own content height, so whichever held more legend rows
+		 * stood taller than the other and the pair stopped reading as a pair. */
+		/* The whole layout is sized in percentages and in flex-basis, and both are
+		 * only arithmetic that adds up under border-box: with the content box,
+		 * flex-basis:6.25rem means 100px of text plus the padding, so ten boxes
+		 * needed 1244px inside a 1152px card and the tenth wrapped onto a row of
+		 * its own - and the two 50% cards, each 36.8px wider than half, stopped
+		 * fitting beside each other.  The theme sets this globally and every other
+		 * page leans on that; this page states it for its own subtree so it does
+		 * not depend on which theme happens to be installed. */
+		'.tf-page,.tf-page *,.tf-page *:before,.tf-page *:after{box-sizing:border-box;}',
+		'.tf-page .tf-hero,.tf-page .tf-stat-card,',
+		'.tf-page .tf-diag-card,.tf-page .tf-list-card{order:1;flex:0 0 100%;max-width:100%;}',
+		'.tf-page .tf-stat-card{order:2;}',
 		'.tf-page .tf-chart-card{order:3;flex:0 0 calc(50% - .5rem);max-width:calc(50% - .5rem);',
 		'margin-right:1rem;}',
 		'.tf-page .tf-donut-card{order:4;flex:0 0 calc(50% - .5rem);max-width:calc(50% - .5rem);}',
-		'.tf-page .tf-meta-card{order:5;}',
-		'.tf-page .tf-list-card{order:6;}',
+		'.tf-page .tf-list-card{order:5;}',
+		/* the note line reads as a footnote to the table, so it goes under it */
+		'.tf-page .tf-diag-card{order:6;}',
 
 		/* cards: translucent + blurred, which is what gives the "bright" look */
 		'.tf-page .tf-card{background:var(--tf-card);border:1px solid var(--tf-card-brd);',
@@ -1249,19 +1420,27 @@ function injectCss() {
 		 * z-index only ever counted inside this card - the cards below painted
 		 * over the open list and cut it off.  Lifting the card itself puts the
 		 * menu above them, which is where a dropdown belongs. */
-		'.tf-page .tf-hero{display:flex;align-items:center;gap:1.4rem;flex-wrap:wrap;',
+		'.tf-page .tf-hero{display:flex;align-items:flex-end;gap:1.4rem;flex-wrap:wrap;',
 		'position:relative;z-index:5;',
 		'background:linear-gradient(135deg,rgba(0,180,255,.14),rgba(124,92,255,.14)),var(--tf-card);}',
+		/* The three captions sit on one line and the three readings on the next,
+		 * so the hero reads as a label row over a value row.  Pairing each
+		 * caption with its own reading in a column reads worse: with the bottoms
+		 * aligned - which is what makes the numbers share a line - a 1.7rem line
+		 * box and a 1.05rem one do not start at the same y, so the three captions
+		 * come out at three different heights.  Aligning them by row fixes that,
+		 * and the column widths are the same either way. */
+		'.tf-page .tf-hero-stats{display:grid;grid-template-columns:repeat(3,auto);',
+		'align-items:end;column-gap:1.6rem;row-gap:.1rem;}',
 		'.tf-page .tf-grand-total{font-size:1.7rem;font-weight:700;line-height:1.1;letter-spacing:.4px;',
 		'font-variant-numeric:tabular-nums;}',
-		'.tf-page .tf-hero-cap{font-size:.74rem;color:var(--tf-dim);text-transform:uppercase;letter-spacing:.08em;}',
-		'.tf-page .tf-hero-rates{display:flex;gap:1.6rem;}',
-		'.tf-page .tf-rate{display:flex;align-items:baseline;gap:.35rem;font-variant-numeric:tabular-nums;}',
+		'.tf-page .tf-hero-cap{font-size:.74rem;color:var(--tf-dim);letter-spacing:.04em;}',
+		'.tf-page .tf-rate{display:flex;align-items:baseline;gap:.35rem;font-size:1.05rem;',
+		'font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums;}',
 		'.tf-page .tf-rate b{font-size:1.05rem;font-weight:600;}',
 		'.tf-page .tf-rate-arrow{font-size:1rem;}',
 		'.tf-page .tf-rate-down .tf-rate-arrow,.tf-page .tf-rate-down b{color:var(--tf-down);}',
 		'.tf-page .tf-rate-up .tf-rate-arrow,.tf-page .tf-rate-up b{color:var(--tf-up);}',
-		'.tf-page .tf-rate-cap{font-size:.75rem;color:var(--tf-dim);}',
 		'.tf-page .tf-hero-ctl{margin-left:auto;display:flex;gap:.6rem;align-items:center;}',
 
 		/* throughput chart.  Title and range on one line, the reading and the
@@ -1276,38 +1455,86 @@ function injectCss() {
 		'.tf-page .tf-chart-legend{display:flex;gap:.9rem;margin-left:auto;font-size:.76rem;color:var(--tf-dim);}',
 		'.tf-page .tf-chart-legend span{display:inline-flex;align-items:center;gap:.34rem;}',
 		'.tf-page .tf-chart-legend i{width:.62rem;height:.62rem;border-radius:2px;display:inline-block;}',
-		'.tf-page .tf-chart-legend .tf-lg-down i{background:#00a8e8;}',
-		'.tf-page .tf-chart-legend .tf-lg-up i{background:#26c281;}',
+		'.tf-page .tf-chart-legend .tf-lg-down i{background:var(--tf-down);}',
+		'.tf-page .tf-chart-legend .tf-lg-up i{background:var(--tf-up);}',
 		'.tf-page .tf-chart-svg{display:block;width:100%;height:auto;max-height:190px;}',
 		'.tf-page .tf-chart-tick{font-size:9px;fill:var(--tf-dim);}',
 		'.tf-page .tf-chart{position:relative;}',
 		'.tf-page .tf-chart-empty{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);',
 		'text-align:center;color:var(--tf-dim);font-size:.85rem;pointer-events:none;}',
 
-		/* collector state strip: makes an empty page self-explanatory.  Each
-		 * reading is its own soft grey chip: as a bare caption over a value in a
-		 * long wrapping row the eye has to work out which label belongs to which
-		 * number, and the chips settle that grouping at a glance. */
-		'.tf-page .tf-status-card{display:flex;gap:1.6rem;flex-wrap:wrap;padding:.85rem 1.15rem;}',
-		'.tf-page .tf-status{display:flex;gap:.55rem;flex-wrap:wrap;align-items:stretch;}',
-		'.tf-page .tf-stat{display:flex;flex-direction:column;gap:.05rem;min-width:0;max-width:100%;',
-		'padding:.38rem .72rem;background:var(--tf-chip);border-radius:12px;}',
+		/* One strip of identical boxes: the collector's own state and the totals
+		 * of the selected window, in a single row.  They used to be two cards
+		 * with two rows of chips of different widths, which read as two unrelated
+		 * things rather than as one band of readings.  One flex line is also what
+		 * keeps the boxes the same size: two rows would each share out their own
+		 * width, and six boxes in one against four in the other cannot come out
+		 * equally wide.
+		 *
+		 * flex-basis with grow rather than a fixed width, so the row ends flush
+		 * with the card instead of leaving a ragged gap on a wide screen, and
+		 * min-width keeps a box from ever being squeezed under its own label. */
+		'.tf-page .tf-stat-card{padding:.85rem 1.15rem;}',
+		'.tf-page .tf-stat-strip{display:flex;flex-wrap:wrap;align-items:stretch;gap:.5rem;}',
+		/* .35rem of side padding rather than .5: at the 6.25rem minimum width the
+		 * longest English caption ("Router and tunnel") measures 87px against the
+		 * 84px that .5rem leaves, so it ellipsised.  The Chinese labels are two to
+		 * six characters and were never near the edge. */
+		'.tf-page .tf-stat{flex:1 1 6.25rem;min-width:6.25rem;display:flex;flex-direction:column;',
+		'align-items:center;justify-content:center;text-align:center;gap:.05rem;',
+		'padding:.4rem .35rem;background:var(--tf-chip);border-radius:12px;}',
+		/* the two sets are not the same kind of reading, so a hairline divides them */
+		'.tf-page .tf-stat-sep{flex:0 0 1px;align-self:stretch;margin:.2rem .1rem;background:var(--tf-line);}',
 		/* No text-transform: the labels are mostly Chinese, which it cannot touch
 		 * anyway, so forcing upper case only made the few English ones (the
-		 * collector version among them) look like a different kind of label. */
-		'.tf-page .tf-stat-cap{font-size:.7rem;color:var(--tf-dim);letter-spacing:.04em;}',
+		 * collector version among them) look like a different kind of label.
+		 *
+		 * The caption is allowed to wrap rather than being cut with an ellipsis.
+		 * The boxes are sized for the Chinese labels, which are two to six
+		 * characters; the longest English ones ("Router and tunnel", "Collector
+		 * version") are wider than a box, and "Collector versi…" is a label the
+		 * reader has to guess at.  Wrapping costs one line of height in English
+		 * and nothing in Chinese, and the boxes stay equal because they stretch.
+		 * The value below never wraps: a number split across two lines is worse
+		 * than one that is cut. */
+		'.tf-page .tf-stat-cap{font-size:.7rem;color:var(--tf-dim);letter-spacing:.03em;',
+		'max-width:100%;overflow-wrap:break-word;}',
 		'.tf-page .tf-stat-val{font-size:.86rem;font-weight:600;font-variant-numeric:tabular-nums;',
 		'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}',
 		/* Long values (a query log path, the box own addresses) are normal text,
 		 * not code: monospace here made two entries of one row look like they
 		 * came from a different font, and read worse at this size. */
 		'.tf-page .tf-mono{font-family:inherit;font-weight:600;font-size:.86rem;}',
+		/* The readings that are conditional - present only while a counter is on
+		 * a fallback, or while names are still resolving - and the ones that only
+		 * exist in the session view are a note under the table rather than more
+		 * boxes.  In the strip they would make the row longer than the ten boxes
+		 * it is designed for, and a strip whose length changes with the state of
+		 * the collector is a strip nobody can read at a glance. */
+		'.tf-page .tf-diag-card{padding:.55rem 1.15rem;}',
+		'.tf-page .tf-diag{display:flex;flex-wrap:wrap;align-items:baseline;gap:.15rem 1.1rem;',
+		'font-size:.75rem;color:var(--tf-dim);font-variant-numeric:tabular-nums;}',
+		'.tf-page .tf-diag-item{display:inline-flex;align-items:baseline;gap:.35rem;min-width:0;}',
+		'.tf-page .tf-diag-val{color:var(--tf-fg);font-weight:600;}',
 
 		/* layout: the donut card is a full-width block above the table, so these
 		 * are ordinary cards rather than the two flexible columns they used to be */
 		'.tf-page .tf-list-card{min-width:0;padding-bottom:.4rem;overflow-x:auto;}',
 		'.tf-page .tf-donut-wrap{display:flex;align-items:center;gap:1.1rem 1.6rem;flex-wrap:wrap;}',
-		'.tf-page .tf-donut-svg{flex:0 0 168px;width:168px;height:168px;}',
+		/* the ring is a fixed 168px figure, so it is the positioned box and the
+		 * total is laid over its hole - no arc maths and no second copy of the
+		 * number inside the SVG */
+		'.tf-page .tf-donut{position:relative;flex:0 0 168px;width:168px;height:168px;}',
+		'.tf-page .tf-donut-center{position:absolute;left:0;right:0;top:0;bottom:0;',
+		'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.05rem;',
+		'text-align:center;pointer-events:none;}',
+		'.tf-page .tf-donut-total{font-size:1.05rem;font-weight:700;letter-spacing:-.02em;',
+		'font-variant-numeric:tabular-nums;}',
+		'.tf-page .tf-donut-cap{font-size:.72rem;color:var(--tf-dim);}',
+		/* with nothing recorded the ring is empty and says so, and a "0 B" over
+		 * that message would be two answers to the same question */
+		'.tf-page .tf-donut-off .tf-donut-center{display:none;}',
+		'.tf-page .tf-donut-svg{display:block;width:168px;height:168px;}',
 		'.tf-page .tf-donut-empty{font-size:11px;fill:var(--tf-dim);}',
 		/* The ring and the grid are drawn in SVG, where a colour cannot come from
 		 * a variable: a presentation attribute has no var().  A class can, and a
@@ -1315,6 +1542,14 @@ function injectCss() {
 		 * while the variable does the work - which is what keeps the empty ring
 		 * and the grid from staying light on a dark page. */
 		'.tf-page .tf-ring,.tf-page .tf-grid{stroke:var(--tf-line);}',
+		/* The curves and the two fills need the same treatment.  These were the
+		 * last hardcoded colours on the page, and they showed: on a dark page the
+		 * table numbers and the legend dots came out one shade of blue while the
+		 * curve above them stayed the light-mode one. */
+		'.tf-page .tf-curve-down{stroke:var(--tf-down);}',
+		'.tf-page .tf-curve-up{stroke:var(--tf-up);}',
+		'.tf-page .tf-area-down{fill:var(--tf-area-down);}',
+		'.tf-page .tf-area-up{fill:var(--tf-area-up);}',
 
 		/* legend: the ten rows spread across the width the card now has, instead
 		 * of one narrow column with the rest of the card empty beside it */
@@ -1324,7 +1559,15 @@ function injectCss() {
 		/* The legend gets the same marks as the list, miniaturised: at the list
 		 * size (26px) they made every legend row twice as tall as the text in it,
 		 * which is why the ten rows stopped fitting beside the ring. */
-		'.tf-page .tf-legend-box{flex:1 1 22rem;min-width:0;display:flex;flex-direction:column;gap:.4rem;}',
+		/* The basis has to fit beside the ring, or the whole legend wraps under it
+		 * and the donut card grows a head taller than the chart card next to it.
+		 * 22rem (352px) did not fit in a 568px card: 168 of ring + 1.6rem of gap
+		 * + 352 is more than the 529px of content, so it wrapped, took the full
+		 * width, and split into two columns - the card came out 85px taller than
+		 * the one beside it.  16rem leaves room beside the ring, and the legend
+		 * then lays out in one column, which is what puts the percentages on a
+		 * single right-hand edge instead of two. */
+		'.tf-page .tf-legend-box{flex:1 1 16rem;min-width:0;display:flex;flex-direction:column;gap:.4rem;}',
 		'.tf-page .tf-legend-box .tf-legend{flex:0 0 auto;}',
 		'.tf-page .tf-legend-cap{font-size:.72rem;color:var(--tf-dim);letter-spacing:.04em;}',
 		'.tf-page .tf-legend-row .tf-icon,.tf-page .tf-legend-row .tf-icon-img{',
@@ -1414,15 +1657,6 @@ function injectCss() {
 		'.tf-page .tf-icon-letter{color:#fff;font-size:.82rem;font-weight:700;line-height:1;}',
 		'.tf-page .tf-icon-img{width:' + ICON + 'px;height:' + ICON + 'px;border-radius:8px;display:block;}',
 
-		/* footer stats + misc.  .tf-meta is the flex row - styling the card
-		 * instead left the five items stacked in a column and the card grew to
-		 * the height of the page. */
-		'.tf-page .tf-meta-card{padding:.85rem 1.15rem;}',
-		'.tf-page .tf-meta{display:flex;gap:.55rem;flex-wrap:wrap;align-items:stretch;}',
-		'.tf-page .tf-meta-item{display:flex;flex-direction:column;gap:.1rem;min-width:0;',
-		'padding:.38rem .72rem;background:var(--tf-chip);border-radius:12px;}',
-		'.tf-page .tf-meta-cap{font-size:.72rem;color:var(--tf-dim);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;}',
-		'.tf-page .tf-meta-val{font-size:.95rem;font-weight:600;font-variant-numeric:tabular-nums;}',
 		'.tf-page .tf-warn{color:#ff8f1f;}',
 		'.tf-page .tf-empty{text-align:center;color:var(--tf-dim);padding:1.2rem 0;}',
 		/* controls: every chip and field is a pill, so the toolbar reads as one
@@ -1478,7 +1712,8 @@ function injectCss() {
 		'--tf-icon-shadow:0 2px 6px rgba(0,0,0,.45);',
 		'--tf-fg:#e6edf3;--tf-dim:rgba(230,237,243,.55);',
 		'--tf-shadow:0 6px 22px rgba(0,0,0,.35);',
-		'--tf-down:#4dd2ff;--tf-up:#3ddc97;}',
+		'--tf-down:#4dd2ff;--tf-up:#3ddc97;',
+		'--tf-area-down:rgba(77,210,255,.18);--tf-area-up:rgba(61,220,151,.15);}',
 		darkOf('.tf-range') + '{background-image:url("' + CHEVRON('#a9b6c2') + '");}',
 		/* Layout by width rather than by device: the cards stack as soon as they
 		 * cannot both fit, and the two columns a phone cannot spare (the busiest
@@ -1489,11 +1724,11 @@ function injectCss() {
 		'.tf-page .tf-hero{flex-wrap:wrap;gap:.6rem;}',
 		'.tf-page .tf-hero-ctl{margin-left:0;width:100%;justify-content:flex-start;}',
 		'.tf-page .tf-donut-wrap{justify-content:center;}',
-		'.tf-page .tf-status{gap:.45rem;}',
+		'.tf-page .tf-stat-strip{gap:.35rem;}',
 		/* the list scrolls sideways here instead of squeezing the name column:
 		 * every column stays readable and nothing wraps into a second line */
 		'.tf-page .tf-table{min-width:34rem;}}',
-		'@media (max-width:34rem){.tf-page .tf-hero-rates{gap:.7rem;flex-wrap:wrap;}',
+		'@media (max-width:34rem){.tf-page .tf-hero-stats{column-gap:.9rem;}',
 		'.tf-page .tf-table{font-size:.86rem;min-width:0;}',
 		'.tf-page .tf-table>thead>tr>th,.tf-page .tf-table>tbody>tr>td{padding:.35rem .3rem;}',
 		/* the two columns a phone cannot spare drop out, and the four that stay

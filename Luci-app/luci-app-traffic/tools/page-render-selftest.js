@@ -24,16 +24,23 @@ function mk(ns,tag,attrs,children){
   seen.ns[ns==null?'null':ns]=(seen.ns[ns==null?'null':ns]||0)+1;
   seen.tags[tag]=(seen.tags[tag]||0)+1;
   if(ns===XHTML && ['svg','g','circle','path','line','text'].includes(tag)) seen.wrongNs.push(tag);
-  const n={tag,ns,attrs:{},children:[],parentNode:null,_text:'',
+  const n={tag,ns,attrs:{},children:[],parentNode:null,_text:'',style:{},
     setAttribute(k,v){ this.attrs[k]=v; }, removeAttribute(k){ delete this.attrs[k]; },
     addEventListener(){}, removeEventListener(){}, focus(){},
     appendChild(c){ if(c.parentNode)c.parentNode.removeChild(c); c.parentNode=this; this.children.push(c); return c; },
+    // the strip re-appends boxes that are out of order, so the stub needs this
+    insertBefore(c,ref){ if(c.parentNode)c.parentNode.removeChild(c);
+      const i=ref?this.children.indexOf(ref):-1;
+      if(i<0)this.children.push(c); else this.children.splice(i,0,c);
+      c.parentNode=this; return c; },
     removeChild(c){ const i=this.children.indexOf(c); if(i>=0)this.children.splice(i,1); c.parentNode=null; return c; },
     get firstChild(){ return this.children[0]||null; },
-    set textContent(v){ this._text=String(v); if(v==='')this.children=[]; },
+    // a real DOM replaces every child when textContent is assigned
+    set textContent(v){ this._text=String(v); this.children=[]; },
     get textContent(){ return this._text; },
     get classList(){ return {add(){},remove(){}}; },
-    set className(v){ this.attrs['class']=v; }, get className(){ return this.attrs['class']; }
+    // a real element's className is '' until something sets it, not undefined
+    set className(v){ this.attrs['class']=v; }, get className(){ return this.attrs['class']||''; }
   };
   for(const k in (attrs||{})) n.attrs[k]=attrs[k];
   (children||[]).forEach(c=>n.appendChild(c));
@@ -68,11 +75,23 @@ let fail=0; const chk=(c,m)=>{ console.log(`  ${c?'PASS':'FAIL'} ${m}`); if(!c)f
 const walk=(n,fn)=>{ fn(n); (n.children||[]).forEach(c=>walk(c,fn)); };
 const texts=(root)=>{ const a=[]; (root.children||[]).forEach(c=>walk(c,n=>{ if(n.tag==='span'&&n._text)a.push(n._text); })); return a; };
 const count=(root,tag)=>{ let k=0; (root.children||[]).forEach(c=>walk(c,n=>{ if(n.tag===tag)k++; })); return k; };
+// the strip's boxes, in order: one caption/value pair each
+const boxes=root=>(root.children||[]).filter(c=>(c.attrs||{}).class==='tf-stat')
+  .map(c=>{ const s=c.children.filter(x=>x.tag==='span'); return {cap:s[0]&&s[0]._text, val:s[1]&&s[1]._text}; });
+const txt=n=>{ let s=''; (function go(x){ if(!x||typeof x!=='object')return;
+  if(x._text)s+=x._text+' '; ((x.children)||[]).forEach(go); })(n); return s; };
 
 function freshView(){
-  return { rowsEl:E('tbody'), donutEl:E('div'), legendEl:E('div'), totalEl:E('div'),
-           metaEl:E('div'), statusEl:E('div'), chartEl:E('div'), chartNote:E('span'),
-           rateDown:E('b'), rateUp:E('b') };
+  // the ring is drawn into the figure inside .tf-donut, and the strip/diag
+  // composers are methods on the view, so the fake has to be view-prototyped
+  // and nested the way render() builds it
+  const donutFigEl=E('div'), donutEl=E('div',{'class':'tf-donut'});
+  donutEl.appendChild(donutFigEl);
+  return Object.assign(Object.create(view), {
+           rowsEl:E('tbody'), donutEl:donutEl, donutFigEl:donutFigEl, donutTotalEl:E('div'),
+           legendEl:E('div'), totalEl:E('div'), diagEl:E('div'), diagCardEl:E('div'),
+           statusEl:E('div'), chartEl:E('div'), chartNote:E('span'),
+           rateDown:E('b'), rateUp:E('b') });
 }
 const items=[{name:'YouTube',down:1e6,up:1e5,bytes:11e5,clients:3,top:'192.168.2.5',top_bytes:5e5},
              {name:'Google',down:9e5,up:9e4,bytes:99e4,clients:5,top:'192.168.2.7',top_bytes:4e5},
@@ -106,11 +125,44 @@ v3.series={range:'1h',interval:10,points:Array.from({length:120},(_,i)=>[1789530
 view.drawSeries.call(v3);
 chk(count(v3.chartEl,'svg')===1, `chartEl 里有 1 个 svg（${count(v3.chartEl,'svg')}）`);
 chk(count(v3.chartEl,'line')===3, `网格线 3 条（${count(v3.chartEl,'line')}）`);
-chk(count(v3.chartEl,'path')===4, `折线+面积 4 条（${count(v3.chartEl,'path')}）`);
+chk(count(v3.chartEl,'path')===4, `曲线+面积 4 条（${count(v3.chartEl,'path')}）`);
 chk(count(v3.chartEl,'text')>=5, `文字标注 >=5（${count(v3.chartEl,'text')}）`);
 const csvg=(function find(n){ if(n.tag==='svg')return n; for(const c of (n.children||[])){ const r=find(c); if(r)return r; } return null; })(v3.chartEl);
 chk(csvg && csvg.ns===SVG, `曲线根元素在 SVG 命名空间`);
 chk(csvg && typeof csvg.attrs.viewBox==='string' && csvg.attrs.viewBox.startsWith('0 0 720'), `viewBox = ${csvg&&csvg.attrs.viewBox}`);
+
+console.log('=== 曲线平滑：单调三次贝塞尔 ===');
+// The curve has to be smooth without being allowed to lie.  A plain spline
+// through traffic samples overshoots between a spike and the next low reading -
+// below the floor on the way down, and a hump on a flat stretch - which draws
+// bytes that were never transferred.  Monotone tangents (Fritsch-Carlson) limit
+// each segment so it stays between the two samples it joins, so the shape is
+// checked as well as the smoothness.
+const curveDs=[], areaDs=[];
+walk(v3.chartEl,n=>{ const c=(n.attrs||{}).class||'';
+  if(n.tag==='path' && /tf-curve/.test(c)) curveDs.push(n.attrs.d);
+  if(n.tag==='path' && /tf-area/.test(c)) areaDs.push(n.attrs.d); });
+chk(curveDs.length===2, `两条曲线路径（${curveDs.length}）`);
+chk(curveDs.every(d=>(d.match(/C/g)||[]).length===119 && !/L/.test(d)),
+    `每条 119 段三次贝塞尔、无直线段（C=${(curveDs[0]||'').match(/C/g)?.length}）`);
+chk(areaDs.length===2 && areaDs.every((d,i)=>d.indexOf(curveDs[i])===0),
+    '面积填充用的是同一条曲线，而不是另画一条更直的');
+// every y in the path - samples and Bezier control points alike - has to sit
+// inside the plot band, which is what "no overshoot" means once it is drawn
+const ysOf=d=>{
+  const toks=d.match(/[MCL]|-?\d+(?:\.\d+)?/g)||[]; const ys=[]; let cur=null, k=0;
+  for(const t of toks){
+    if(t==='M'||t==='L'||t==='C'){ cur=t; k=0; continue; }
+    k++; if(cur==='M'||cur==='L'){ if(k===2) ys.push(Number(t)); }
+    else if(cur==='C'){ if(k%2===0) ys.push(Number(t)); }
+  }
+  return ys;
+};
+const plotTop=14, plotBottom=14+(190-14-22);
+const allY=curveDs.concat(areaDs).flatMap(ysOf);
+const bad=allY.filter(y=>y<plotTop-0.6||y>plotBottom+0.6);
+chk(allY.length>100 && bad.length===0,
+    `所有 y 都在绘图区内（${allY.length} 个，越界 ${bad.length}${bad.length?'，例如 '+bad.slice(0,3).join(','):''}）`);
 
 console.log('=== 无采样时也画轴（避免空卡片）===');
 const v4=freshView();
@@ -119,41 +171,70 @@ view.drawSeries.call(v4);
 chk(count(v4.chartEl,'svg')===1 && count(v4.chartEl,'line')===3, `空数据仍有轴：svg=${count(v4.chartEl,'svg')}, line=${count(v4.chartEl,'line')}`);
 chk(count(v4.chartEl,'div')>=1, `并有"暂无采样"提示（${count(v4.chartEl,'div')}）`);
 
-console.log('=== 状态条（信息展示）===');
+console.log('=== 状态条：一行十个等宽框 ===');
 const v5=freshView();
-view.drawStatus.call(v5,{collected_at:Math.floor(Date.now()/1000),interval:10,flows:1234,dnsmap_lines:5678,pending:3,querylog:'/etc/config/adGuardConfig/workspace/data/querylog.json',self:'192.168.2.1 fdc8:64ed:f962:0000:0000:0000:0000:0001',acct:1},items);
-const stats5=[]; walk(v5.statusEl,n=>{ if(n.tag==='span') stats5.push(n._text); });
-chk(stats5.length>=14, `状态条内容项 ${stats5.length} 个（应为 7 项×2）`);
-chk(stats5.some(t=>t==='Running'), `含运行状态（${stats5.slice(0,4).join(' | ')}）`);
-chk(stats5.some(t=>t==='1234'), '含 conntrack 条目数');
-chk(stats5.some(t=>t==='5678'), '含已解析主机名数');
-chk(stats5.some(t=>t==='3'), '含待解析数');
-// the addresses the collector treats as the box itself: the row has to be there
-// when the collector reports them, and absent when it does not
-chk(stats5.some(t=>t==='Router addresses'), '含"路由器自身地址"标题');
-// The value is shortened for display - the first address plus how many others
-// there are - because a full v4+v6 list is long enough to push the row out of
-// shape.  Nothing is hidden: the whole list stays in the tooltip, so this checks
-// both halves rather than just the shortened text.
-chk(stats5.some(t=>t==='192.168.2.1 +1'), '自身地址显示为首地址+其余数量');
-const selfTitle=(()=>{ let hit=null; walk(v5.statusEl,n=>{ if(n.attrs&&n.attrs.title&&n.attrs.title.indexOf('192.168.2.1 ' )===0) hit=n.attrs.title; }); return hit; })();
-chk(selfTitle==='192.168.2.1 fdc8:64ed:f962:0000:0000:0000:0000:0001', '完整自身地址保留在提示里');
-// which layer produced the client totals, and the warning when it fell back
-chk(stats5.some(t=>t==='Client totals') && stats5.some(t=>t==='nft counters'),
+view.drawStatus.call(v5,{collected_at:Math.floor(Date.now()/1000),interval:10,flows:1234,
+  dnsmap_lines:5678,pending:3,acct:1,version:'0.1.23-r1'},items);
+view.drawSummary.call(v5,[{cap:'Bucket',val:'24'},{cap:'Browser clients',val:'1.2 MiB'},
+  {cap:'Router and tunnel',val:'0 B'},{cap:'Client count',val:'12'}]);
+const b5=boxes(v5.statusEl);
+chk(b5.length===10, `收集器状态 + 窗口合计共 10 个框（${b5.length}）`);
+chk(b5[0] && b5[0].cap==='State' && b5[0].val==='Running', `第一格是运行状态（${b5[0]&&b5[0].val}）`);
+chk(b5[5] && b5[5].cap==='Collector version', `第六格是采集器版本（${b5[5]&&b5[5].cap}）`);
+chk(b5[6] && b5[6].cap==='Bucket',
+    `分隔线后第一格是周期（${b5[6]&&b5[6].cap}）｜全表 ${b5.map(b=>b.cap).join('|')}`);
+// The two sets have to come out the same width, which is the whole reason they
+// are laid out as one flex line: two rows would each share out their own width,
+// and six boxes in one against four in the other cannot match.
+const kids=v5.statusEl.children;
+chk(kids.filter(c=>(c.attrs||{}).class==='tf-stat').length===10 &&
+    kids.filter(c=>(c.attrs||{}).class==='tf-stat-sep').length===1,
+    '十个框加一条分隔线，按 6|4 排列');
+chk(kids[6] && kids[6].attrs.class==='tf-stat-sep', `分隔线在第 7 个位置（${kids[6]&&kids[6].attrs.class}）`);
+// the strip keeps its shape when only one of the two callers has run
+const vOnly=freshView();
+view.drawStatus.call(vOnly,{collected_at:Math.floor(Date.now()/1000),interval:10,flows:1,
+  dnsmap_lines:1,pending:0,acct:1},items);
+chk(boxes(vOnly.statusEl).length===6, `只有收集器状态时 6 个框、无分隔线（${boxes(vOnly.statusEl).length}）`);
+chk(!vOnly.statusEl.children.some(c=>(c.attrs||{}).class==='tf-stat-sep'), '缺一组时不画分隔线');
+chk(b5.some(b=>b.val==='1234'), '含 conntrack 条目数');
+chk(b5.some(b=>b.val==='5678'), '含已解析主机名数');
+chk(b5.some(b=>b.cap==='Client totals') && b5.some(b=>b.val==='nft counters'),
     '计数层启用时标明来源为 nft 计数器');
+
+console.log('=== 注释行：条件性读数不进条 ===');
+chk(txt(v5.diagEl).indexOf('Waiting to resolve')>=0, `待解析在注释行（${txt(v5.diagEl).trim()}）`);
+chk(txt(v5.diagEl).indexOf('3')>=0, '待解析数量可见');
+chk(v5.diagCardEl.style.display==='', '注释行有内容时显示');
+const v9=freshView();
+view.drawStatus.call(v9,{collected_at:Math.floor(Date.now()/1000),interval:10,flows:1,
+  dnsmap_lines:1,pending:0,acct:1,version:'0.1.23-r1'},items);
+chk(txt(v9.diagEl).trim()==='', '没有条件时不产生注释');
+chk(v9.diagCardEl.style.display==='none', '注释行为空时整张卡片隐藏');
+// "Bucket" used to label two different readings, which only showed once the two
+// strips were merged into one row: the archived-hour count and the hour being
+// accumulated.  The second one is its own caption now.
+const v10=freshView();
+view.drawStatus.call(v10,{collected_at:Math.floor(Date.now()/1000),interval:10,flows:1,
+  dnsmap_lines:1,pending:0,acct:1,hour:'2026-09-17T10'},items);
+chk(txt(v10.diagEl).indexOf('Current hour')>=0 && txt(v10.diagEl).indexOf('2026-09-17T10')>=0,
+    '当前小时在注释行');
+chk(boxes(v10.statusEl).filter(b=>b.cap==='Bucket').length===0, '条里不会并排出现两个"周期"');
 const v8=freshView();
-view.drawStatus.call(v8,{collected_at:Math.floor(Date.now()/1000),interval:10,flows:1,dnsmap_lines:1,pending:0,querylog:'',acct:0,acct_error:'nft is not installed'},items);
-const s8=[]; walk(v8.statusEl,n=>{ if(n.tag==='span') s8.push(n._text); });
-chk(s8.some(t=>t==='conntrack'), '降级时标明来源为连接跟踪');
-chk(s8.some(t=>t==='Counter error') && s8.some(t=>t==='nft is not installed'), '降级原因可见（不是静默失败）');
-const v7=freshView();
-view.drawStatus.call(v7,{collected_at:Math.floor(Date.now()/1000),interval:10,flows:1,dnsmap_lines:1,pending:0,querylog:''},items);
-const s7=[]; walk(v7.statusEl,n=>{ if(n.tag==='span') s7.push(n._text); });
-chk(!s7.some(t=>t==='Router addresses'), '未上报自身地址时不显示该行');
+view.drawStatus.call(v8,{collected_at:Math.floor(Date.now()/1000),interval:10,flows:1,
+  dnsmap_lines:1,pending:0,acct:0,acct_error:'nft is not installed'},items);
+chk(boxes(v8.statusEl).some(b=>b.val==='conntrack'), '降级时条里标明来源为连接跟踪');
+chk(txt(v8.diagEl).indexOf('Counter error')>=0 && txt(v8.diagEl).indexOf('nft is not installed')>=0,
+    '降级原因在注释行可见（不是静默失败）');
+// the box the strip reserved for the box own addresses is gone: it was the one
+// reading long enough to force one box wider than the rest
+chk(txt(v5.statusEl).indexOf('Router addresses')===-1, '条里不再有路由器自身地址');
+chk(!/shortAddrs/.test(src), '不再有只为它存在的缩写函数');
 const v6=freshView();
-view.drawStatus.call(v6,{collected_at:0,interval:0,flows:0,dnsmap_lines:0,pending:0,querylog:''},[]);
-const s6=[]; walk(v6.statusEl,n=>{ if(n.tag==='span') s6.push(n._text); });
-chk(s6.some(t=>t==='Collector has not produced a snapshot yet'), `无快照时明确提示（${s6.slice(0,4).join(' | ')}）`);
+view.drawStatus.call(v6,{collected_at:0,interval:0,flows:0,dnsmap_lines:0,pending:0},[]);
+chk(txt(v6.statusEl).indexOf('Collector has not produced a snapshot yet')>=0,
+    `无快照时明确提示（${txt(v6.statusEl).slice(0,40)}）`);
+chk(boxes(v6.statusEl).length===6, `无快照时六个框仍在（${boxes(v6.statusEl).length}）`);
 
 console.log('=== 范围视图：速率按区间取平均 ===');
 // A rate needs a window.  In the ranged view the window is the range itself, so
@@ -187,6 +268,28 @@ chk(/listbox/.test(String((ddBtn[0]&&ddBtn[0].attrs||{}).role||'')+String((ddBtn
     '自绘下拉带 listbox 语义');
 const ddItems=[]; walk(page,n=>{ if(/tf-dd-item/.test((n.attrs||{}).class||'')) ddItems.push(n); });
 chk(ddItems.length===5, `下拉有 5 个区间选项（${ddItems.length}）`);
+// The hero lays its three captions out on one row and the three readings on the
+// next.  Three caption/reading pairs as their own columns read worse: with the
+// bottoms aligned the captions come out at three different heights, because a
+// 1.7rem line box and a 1.05rem one do not start at the same y.
+const heroStats=[]; walk(page,n=>{ if((n.attrs||{}).class==='tf-hero-stats') heroStats.push(n); });
+chk(heroStats.length===1, `hero 是一个网格（${heroStats.length}）`);
+chk(heroStats[0] && heroStats[0].children.length===6,
+    `网格里 6 个单元：三个标题在前、三个读数在后（${heroStats[0]&&heroStats[0].children.length}）`);
+const heroOrder=(heroStats[0]?heroStats[0].children:[]).map(c=>(c.attrs||{}).class);
+chk(heroOrder.slice(0,3).every(c=>/tf-hero-cap/.test(c)),
+    `前三格都是标题（${heroOrder.slice(0,3).join(' / ')}）`);
+chk(/tf-grand-total/.test(heroOrder[3]||'') && /tf-rate/.test(heroOrder[4]||'') && /tf-rate/.test(heroOrder[5]||''),
+    `后三格是总计、下行、上行（${heroOrder.slice(3).join(' / ')}）`);
+// the two cards the merge produced: one strip, and the note line under the table
+const cardClasses=[]; walk(page,n=>{ if(/tf-card/.test((n.attrs||{}).class||'')) cardClasses.push((n.attrs||{}).class); });
+chk(cardClasses.some(c=>/tf-stat-card/.test(c)), '有状态条卡片');
+chk(cardClasses.some(c=>/tf-diag-card/.test(c)), '有表格下的注释行卡片');
+chk(!cardClasses.some(c=>/tf-status-card|tf-meta-card/.test(c)), '原来的两张卡片已合并，不再存在');
+// the donut has a hole to put the total in
+const donutCenter=[]; walk(page,n=>{ if((n.attrs||{}).class==='tf-donut-center') donutCenter.push(n); });
+chk(donutCenter.length===1 && donutCenter[0].children.length===2,
+    `环形图中心有总计+标题两层（${donutCenter.length}）`);
 
 console.log('=== 档位跟随范围，默认一天 ===');
 const pv=Object.assign(Object.create(view),freshView());
@@ -205,6 +308,9 @@ pv.setRange('session');
 chk(pv.seriesRange==='24h', `会话档的曲线仍是 24 小时（${pv.seriesRange}）`);
 
 console.log('=== 注入的 CSS：括号平衡与圆润控件 ===');
+// render() already injects once, so reset: otherwise these assertions run against
+// two concatenated copies and a single replace() no longer removes every match
+global.__capturedCss='';
 global.__injectCss();
 const css=global.__capturedCss||'';
 chk(css.length>1500, `样式表已注入（${css.length} 字符）`);
@@ -213,7 +319,11 @@ chk(open===close, `大括号平衡（{ ${open} / } ${close}）`);
 chk(!/;\s*;/.test(css), '没有连续分号（空声明）');
 // The page carries one range control, not two: the chart tier is derived from
 // the range, so the only dropdown on the page is the picker in the hero.
-for(const sel of ['.tf-page .tf-range','.tf-page .tf-dd-menu','.tf-page .tf-col-app']){
+for(const sel of ['.tf-page .tf-range','.tf-page .tf-dd-menu','.tf-page .tf-col-app',
+                  '.tf-page .tf-stat-strip','.tf-page .tf-stat-sep','.tf-page .tf-diag',
+                  '.tf-page .tf-hero-stats','.tf-page .tf-donut-center',
+                  '.tf-page .tf-curve-down','.tf-page .tf-curve-up',
+                  '.tf-page .tf-area-down','.tf-page .tf-area-up']){
   const re=new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\{([^}]*)\\}');
   chk(re.test(css), `有 ${sel} 规则`);
 }
@@ -223,6 +333,21 @@ chk(!/\.tf-chart-ctl/.test(css), '图表上重复的档位控件已移除');
 // hero rather than a second, differently-styled select.
 const pill=css.match(/\.tf-page \.tf-range\{([^}]*)\}/);
 chk(!!pill && /border-radius:999px/.test(pill[1]), '.tf-range 是圆角（999px 药丸形）');
+// A presentation attribute cannot read a custom property, so every colour the
+// page draws has to come from a rule: the curve kept its light-mode blue on a
+// dark page until these four moved out of the SVG attributes.
+chk(/--tf-area-down/.test(css) && /--tf-area-up/.test(css), '曲线填充色有深浅两套变量');
+const hardDown=(css.match(/#00a8e8/g)||[]).length;
+const varDown=(css.match(/--tf-down:#00a8e8;/g)||[]).length;
+chk(hardDown===varDown, `写死的下行色只出现在变量定义里（共 ${hardDown} 处，其中 ${varDown} 处是定义）`);
+const hardUp=(css.match(/#26c281/g)||[]).length;
+const varUp=(css.match(/--tf-up:#26c281;/g)||[]).length;
+chk(hardUp===varUp, `写死的上行色只出现在变量定义里（共 ${hardUp} 处，其中 ${varUp} 处是定义）`);
+// the strip has to reach both edges without leaving a ragged gap, and the boxes
+// have to stay the same size
+const statRule=css.match(/\.tf-page \.tf-stat\{([^}]*)\}/);
+chk(!!statRule && /flex:1 1/.test(statRule[1]) && /min-width/.test(statRule[1]),
+    '数据框按 flex-basis 分配、有最小宽度');
 // The page must style its own controls and nothing else: a rule against a LuCI
 // core class would restyle the core view action buttons on every other page.
 // The buttons here therefore carry app classes (tf-*) rather than core ones.
