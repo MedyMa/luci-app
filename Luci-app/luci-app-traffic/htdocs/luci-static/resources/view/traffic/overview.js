@@ -1124,18 +1124,39 @@ function CHEVRON(color) {
 			if (p.length > 3 && p[3] === 0) return null;          /* transparent */
 			return 0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2];
 		}
+		function textLuminance(el) {
+			if (!el) return null;
+			var c = getComputedStyle(el).color;
+			var m = c && c.match(/^rgba?\(([^)]+)\)$/);
+			if (!m) return null;
+			var p = m[1].split(',').map(function(x) { return parseFloat(x); });
+			if (p.length > 3 && p[3] === 0) return null;
+			return 0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2];
+		}
 		function apply() {
-			var l = luminance(document.body);
-			if (l === null) l = luminance(document.documentElement);
-			if (l === null) {
-				/* nothing opaque to measure, so fall back to the markers */
+			/* The background is the direct answer, but it is not always readable:
+			 * a theme that paints with a gradient or an image has no opaque
+			 * background colour at all, and that is exactly the case that left a
+			 * bright table on a dark page - the measurement came back empty and
+			 * this fell through to the markers, which is what had already failed.
+			 * The text colour is the signal that survives it: a dark theme writes
+			 * light text, a light theme writes dark text, whatever it does with
+			 * its background.  Either measurement saying "dark" is taken. */
+			var bg = luminance(document.body);
+			if (bg === null) bg = luminance(document.documentElement);
+			var fg = textLuminance(document.body);
+			if (fg === null) fg = textLuminance(document.documentElement);
+			var dark;
+			if (bg === null && fg === null) {
 				var b = document.body, r = document.documentElement;
-				var marked = !!(b && b.classList && b.classList.contains('dark')) ||
+				dark = !!(b && b.classList && b.classList.contains('dark')) ||
 					!!(r && r.getAttribute && (r.getAttribute('data-darkmode') === 'true' ||
 						r.getAttribute('data-theme') === 'dark'));
-				l = marked ? 0 : 255;
 			}
-			var cls = (l < 128) ? 'add' : 'remove';
+			else {
+				dark = (bg !== null && bg < 128) || (fg !== null && fg > 140);
+			}
+			var cls = dark ? 'add' : 'remove';
 			if (node.classList && node.classList[cls]) node.classList[cls]('tf-dark');
 		}
 		apply();
@@ -1315,6 +1336,11 @@ function injectCss() {
 		'.tf-page .tf-table>thead>tr>th.tf-app,.tf-page .tf-table>tbody>tr>td.tf-app,',
 		'.tf-page .tf-table>thead>tr>th.tf-top-h,.tf-page .tf-table>tbody>tr>td.tf-top{text-align:left;}',
 		'.tf-page .tf-table>thead>tr>th.tf-num,.tf-page .tf-table>tbody>tr>td.tf-num{text-align:center;}',
+		/* the theme colours .table cells itself.  Left alone, a dark page got a
+		 * light table with dark text - a bright slab in the middle of the page -
+		 * and once the card is dark the same override would have given dark text
+		 * on a dark card.  The page's own colour wins here. */
+		'.tf-page .tf-table>thead>tr>th,.tf-page .tf-table>tbody>tr>td{color:inherit;}',
 		'.tf-page .tf-table>tbody>tr{background:transparent;}',
 		'.tf-page .tf-table>tbody>tr>td{border-bottom:1px solid rgba(128,150,175,.10);',
 		'padding:.5rem .6rem;vertical-align:middle;overflow:hidden;background:transparent;}',
