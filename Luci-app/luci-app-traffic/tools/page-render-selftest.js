@@ -328,6 +328,16 @@ chk(css.length>1500, `样式表已注入（${css.length} 字符）`);
 const open=(css.match(/\{/g)||[]).length, close=(css.match(/\}/g)||[]).length;
 chk(open===close, `大括号平衡（{ ${open} / } ${close}）`);
 chk(!/;\s*;/.test(css), '没有连续分号（空声明）');
+// The phone hero keeps the total on a row of its own: its caption and its figure
+// each span both columns, so the figure cannot be squeezed beside the caption by
+// the grid's auto first column.  That squeeze is what "总计" sitting far left of
+// "354 MiB" on one row looked like at 486px, and the 1.45rem shrink was there to
+// work around the same narrow column, so it goes with the fix.
+chk(/\.tf-page \.tf-hero-stats\{grid-template-columns:1fr 1fr;/.test(css) &&
+    /\.tf-page \.tf-hero-stats>\*:nth-child\(1\)\{grid-area:1\/1\/2\/3;\}/.test(css) &&
+    /\.tf-page \.tf-hero-stats>\*:nth-child\(4\)\{grid-area:2\/1\/3\/3;\}/.test(css) &&
+    !/\.tf-page \.tf-grand-total\{font-size:1\.45rem;\}/.test(css),
+    '窄屏 hero：总计标签与数值各占整行，不再缩小字号');
 // The page carries one range control, not two: the chart tier is derived from
 // the range, so the only dropdown on the page is the picker in the hero.
 for(const sel of ['.tf-page .tf-range','.tf-page .tf-dd-menu','.tf-page .tf-col-app',
