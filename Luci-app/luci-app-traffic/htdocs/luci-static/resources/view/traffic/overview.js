@@ -1839,7 +1839,24 @@ function injectCss() {
 		 * every column stays readable and nothing wraps into a second line */
 		'.tf-page .tf-table{min-width:34rem;}}',
 		'@media (max-width:39rem){.tf-page .tf-chart-svg{max-height:none;}}',
-		'@media (max-width:34rem){.tf-page .tf-hero-stats{column-gap:.9rem;}',
+		/* The hero on a phone: the total on a row of its own, then the two rates.
+		 * Three columns of nowrap figures cannot fit a 305px card at 390px, let
+		 * alone 235px at 320px, and the browser answered by breaking the big number
+		 * across two lines - "181" over "MiB" - which is what the render showed.
+		 * The children are placed explicitly: the markup emits the three captions
+		 * first and the three readings after, so no auto flow can pair them. */
+		'@media (max-width:34rem){.tf-page .tf-hero-stats{grid-template-columns:auto 1fr;',
+		'justify-content:start;column-gap:.9rem;row-gap:.15rem;}',
+		'.tf-page .tf-hero-stats>*:nth-child(1){grid-area:1/1;align-self:end;}',
+		'.tf-page .tf-hero-stats>*:nth-child(4){grid-area:1/2;align-self:end;}',
+		'.tf-page .tf-hero-stats>*:nth-child(2){grid-area:2/1;}',
+		'.tf-page .tf-hero-stats>*:nth-child(3){grid-area:2/2;}',
+		'.tf-page .tf-hero-stats>*:nth-child(5){grid-area:3/1;}',
+		'.tf-page .tf-hero-stats>*:nth-child(6){grid-area:3/2;}',
+		/* the second column is 1fr, and on a 320px screen that is about 119px while
+		 * the total needs more than that at 1.7rem - it wrapped there even with the
+		 * grid fixed, so the phone gets a slightly smaller figure */
+		'.tf-page .tf-grand-total{font-size:1.45rem;}',
 		'.tf-page .tf-table{font-size:.86rem;min-width:0;}',
 		'.tf-page .tf-table>thead>tr>th,.tf-page .tf-table>tbody>tr>td{padding:.35rem .3rem;}',
 		/* A phone gets three columns: the application, and its two byte figures.
