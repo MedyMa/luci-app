@@ -557,6 +557,9 @@ return view.extend({
 			el('span', { 'class': 'tf-lg-up' }, [ el('i'), _('Sent') ])
 		]);
 		this.statusEl = el('div', { 'class': 'tf-stat-strip' });
+		/* the card around it, held here so renderStrip can mark it when a reading
+		 * is a warning - the stylesheet keeps this card off a phone except then */
+		this.statCardEl = el('div', { 'class': 'tf-card tf-stat-card' }, [ this.statusEl ]);
 		/* the readings that do not belong in the strip, under the table they
 		 * comment on.  Hidden until there is something to say. */
 		this.diagCardEl = el('div', { 'class': 'tf-card tf-diag-card' }, [ this.diagEl ]);
@@ -604,7 +607,7 @@ return view.extend({
 				this.chartEl
 			]),
 
-			el('div', { 'class': 'tf-card tf-stat-card' }, [ this.statusEl ]),
+			this.statCardEl,
 
 			/* The composition sits above the table rather than beside it: the two
 			 * were a flexible two-column row, and below the tablet breakpoint that
@@ -828,6 +831,17 @@ return view.extend({
 			if (this.statusEl.children[i] !== want[i])
 				this.statusEl.insertBefore(want[i], this.statusEl.children[i] || null);
 		}
+		/* The stylesheet hides this card on a phone, where ten boxes cannot fit -
+		 * but a stale or dead collector has to stay visible, and the state box is
+		 * the only thing that says so.  The class is what lets the stylesheet bring
+		 * back just that one box.  A selector like :has() would say it in CSS alone
+		 * and is exactly the kind of thing this page avoids, since the reason it
+		 * uses no flex gap is a Safari that lacks it. */
+		var warn = false;
+		for (i = 0; i < bits.length; i++) if (bits[i].warn) warn = true;
+		var cls = 'tf-card tf-stat-card' + (warn ? ' tf-stat-warn' : '');
+		if (this.statCardEl && this.statCardEl.className !== cls)
+			this.statCardEl.className = cls;
 	},
 
 	/* The window's own totals: the four readings that describe whatever range is
@@ -1827,7 +1841,17 @@ function injectCss() {
 		'.tf-page .tf-table>thead>tr>th:nth-child(6),.tf-page .tf-table>tbody>tr>td:nth-child(6){display:none;}',
 		'.tf-page .tf-col-app{width:40%;}.tf-page .tf-col-total{width:31%;}',
 		'.tf-page .tf-col-down{width:29%;}',
-		'.tf-page .tf-col-up,.tf-page .tf-col-top,.tf-page .tf-col-clients{width:0;}}'
+		'.tf-page .tf-col-up,.tf-page .tf-col-top,.tf-page .tf-col-clients{width:0;}',
+		/* The ten-box strip does not fit a phone - measured, it needed four rows at
+		 * 390px and five at 320px, which is a third of the screen spent on readings
+		 * that are reference rather than the answer.  It goes.  What stays is the
+		 * state box, and only when it has something to warn about, so "the snapshot
+		 * stopped arriving" is still said out loud on a phone. */
+		'.tf-page .tf-stat-card{display:none;}',
+		'.tf-page .tf-stat-card.tf-stat-warn{display:block;}',
+		'.tf-page .tf-stat-card.tf-stat-warn .tf-stat{display:none;}',
+		'.tf-page .tf-stat-card.tf-stat-warn .tf-stat:first-child{display:flex;}',
+		'.tf-page .tf-stat-card.tf-stat-warn .tf-stat-sep{display:none;}}'
 	].join('');
 
 	var st = document.createElement('style');
