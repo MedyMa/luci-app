@@ -376,11 +376,17 @@ separated in name order, which is likewise rank-independent.
   names the two curves under the header, because they often differ by orders of
   magnitude and a small upload curve would otherwise read as a stray line.
 * **Donut card and throughput card** — the composition and the curve are the two
-  halves of one row, equal width by construction (`1fr 1fr`), with the collector
-  state above them and the readings above the list. The whole page is one grid
-  placed by area, so the reading order is stated in one place instead of being
-  whatever order the cards happen to be built in. Below the tablet width the
-  areas collapse to a single column, in the same order.
+  halves of one row, equal width from the same `calc(50% - .5rem)`, with the
+  collector state above them, the readings above the list, and the list last. The
+  card order is set with flex `order`, so it lives in one place instead of being
+  whatever order the cards happen to be built in. This was a grid placed by named
+  areas first, which reads better but did not survive a real browser: the area
+  template was ignored and the columns fell back to `auto`, so every card shrank
+  to its own content and the page came out as a ragged left-aligned stack. There
+  is deliberately **no `gap`** anywhere in the page layout either — flex `gap`
+  needs Safari 14.1, and a browser without it drops the spacing silently, so the
+  gutter is a margin on the left half. Below the tablet width the halves go full
+  width, in the same order.
 * **Donut card** — the ten largest applications with a matching legend. It used
   to be a full-width block above the table, and before that a column beside the
   table; as half of the row with the curve, the legend still spreads sideways

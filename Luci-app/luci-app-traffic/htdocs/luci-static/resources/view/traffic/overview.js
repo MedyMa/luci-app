@@ -1103,21 +1103,28 @@ function injectCss() {
 		'--tf-shadow:0 6px 22px rgba(31,66,102,.10);',
 		'--tf-down:#00a8e8;--tf-up:#26c281;',
 		'margin:-.4rem 0 0;color:var(--tf-fg);',
-		/* One grid for the page, placed by area.  The order below is the order it
-		 * reads in, which is deliberately not the order the cards are built: the
-		 * collector state belongs above the curve, the composition and the curve
-		 * are two halves of one row, the readings sit above the list, and the
-		 * list is last.  Both middle columns are 1fr, so those two cards are the
-		 * same width by construction instead of by two sets of numbers that have
-		 * to be kept in step. */
-		'display:grid;gap:0 1rem;align-items:start;grid-template-columns:1fr 1fr;',
-		'grid-template-areas:"hero hero" "status status" "chart donut" "meta meta" "list list";}',
-		'.tf-page .tf-hero{grid-area:hero;}',
-		'.tf-page .tf-status-card{grid-area:status;}',
-		'.tf-page .tf-chart-card{grid-area:chart;}',
-		'.tf-page .tf-donut-card{grid-area:donut;}',
-		'.tf-page .tf-meta-card{grid-area:meta;}',
-		'.tf-page .tf-list-card{grid-area:list;}',
+		/* The page is a wrapping flex column of full-width cards, with the
+		 * composition and the curve sharing one row.  It was a grid placed by
+		 * named areas, which read well but did not survive contact with a real
+		 * browser here: the area template was ignored and the columns fell back
+		 * to auto, so every card shrank to its own content and the page came out
+		 * as a ragged left-aligned stack.  order does the same job with nothing
+		 * to ignore, and the two halves are sized from the same calc() so they
+		 * stay equal.
+		 *
+		 * No gap anywhere: flex gap needs Safari 14.1, and a browser without it
+		 * silently drops the spacing - the cards would touch.  The gutter is a
+		 * margin on the left half instead, which every browser has understood
+		 * for a very long time. */
+		'display:flex;flex-wrap:wrap;align-items:flex-start;}',
+		'.tf-page .tf-hero,.tf-page .tf-status-card,',
+		'.tf-page .tf-meta-card,.tf-page .tf-list-card{order:1;flex:0 0 100%;max-width:100%;}',
+		'.tf-page .tf-status-card{order:2;}',
+		'.tf-page .tf-chart-card{order:3;flex:0 0 calc(50% - .5rem);max-width:calc(50% - .5rem);',
+		'margin-right:1rem;}',
+		'.tf-page .tf-donut-card{order:4;flex:0 0 calc(50% - .5rem);max-width:calc(50% - .5rem);}',
+		'.tf-page .tf-meta-card{order:5;}',
+		'.tf-page .tf-list-card{order:6;}',
 
 		/* cards: translucent + blurred, which is what gives the "bright" look */
 		'.tf-page .tf-card{background:var(--tf-card);border:1px solid var(--tf-card-brd);',
@@ -1341,8 +1348,8 @@ function injectCss() {
 		 * cannot both fit, and the two columns a phone cannot spare (the busiest
 		 * client and the device count) drop out there instead of squeezing the
 		 * numbers nobody can read at 320px. */
-		'@media (max-width:52rem){.tf-page{grid-template-columns:1fr;',
-		'grid-template-areas:"hero" "status" "chart" "donut" "meta" "list";}',
+		'@media (max-width:52rem){.tf-page .tf-chart-card,.tf-page .tf-donut-card{',
+		'flex:0 0 100%;max-width:100%;margin-right:0;}',
 		'.tf-page .tf-hero{flex-wrap:wrap;gap:.6rem;}',
 		'.tf-page .tf-hero-ctl{margin-left:0;width:100%;justify-content:flex-start;}',
 		'.tf-page .tf-donut-wrap{justify-content:center;}',
