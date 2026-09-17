@@ -1770,9 +1770,23 @@ function injectCss() {
 		'.tf-page .tf-hero-ctl{gap:.7rem;}',
 
 		/* dark: Argon sets .dark on <body> when its dark mode is on */
-		DARK + '{--tf-card:rgba(30,38,48,.66);--tf-card-brd:rgba(255,255,255,.08);',
-		'--tf-chip:rgba(255,255,255,.08);--tf-menu:rgba(36,45,57,.99);',
-		'--tf-line:rgba(255,255,255,.12);--tf-tint:rgba(77,210,255,.12);',
+		/* The surfaces come from the theme's own semantic colours, with neutral
+		 * fallbacks.  They used to be literals - rgba(30,38,48,.66) and friends -
+		 * which are dark *blue*: measured against the real page, the theme paints
+		 * its panels and its page as neutral grey (#333333 and #1A1A1A, no channel
+		 * offset) while every card here came out #1E2329, and a card whose hue the
+		 * theme never uses is what "the dark background does not match" looks like.
+		 * --background-color-high is the theme's panel surface (the sidebar is
+		 * painted with it), --border-color-low its hairline. */
+		DARK + '{--tf-card:var(--background-color-high,rgba(255,255,255,.06));',
+		'--tf-card-brd:var(--border-color-low,rgba(255,255,255,.08));',
+		'--tf-chip:rgba(255,255,255,.08);',
+		'--tf-menu:var(--background-color-high,rgba(51,51,51,.99));',
+		'--tf-line:var(--border-color-low,rgba(255,255,255,.12));',
+		/* the highlight follows the theme's accent too: it was a cyan of this
+		 * page's own choosing, which is the same kind of mismatch as the surfaces
+		 * were; --primary-low is the theme's own washed accent */
+		'--tf-tint:var(--primary-low,rgba(255,255,255,.06));',
 		'--tf-icon-shadow:0 2px 6px rgba(0,0,0,.45);',
 		'--tf-fg:#e6edf3;--tf-dim:rgba(230,237,243,.55);',
 		'--tf-shadow:0 6px 22px rgba(0,0,0,.35);',
