@@ -171,26 +171,30 @@ view.drawSeries.call(v4);
 chk(count(v4.chartEl,'svg')===1 && count(v4.chartEl,'line')===3, `空数据仍有轴：svg=${count(v4.chartEl,'svg')}, line=${count(v4.chartEl,'line')}`);
 chk(count(v4.chartEl,'div')>=1, `并有"暂无采样"提示（${count(v4.chartEl,'div')}）`);
 
-console.log('=== 状态条：一行十个等宽框 ===');
+console.log('=== 状态条：一行十一个等宽框 ===');
 const v5=freshView();
 view.drawStatus.call(v5,{collected_at:Math.floor(Date.now()/1000),interval:10,flows:1234,
   dnsmap_lines:5678,pending:3,acct:1,version:'0.1.23-r1'},items);
 view.drawSummary.call(v5,[{cap:'Bucket',val:'24'},{cap:'Browser clients',val:'1.2 MiB'},
-  {cap:'Router and tunnel',val:'0 B'},{cap:'Client count',val:'12'}]);
+  {cap:'Router and tunnel',val:'0 B'},{cap:'Client count',val:'12'},{cap:'Apps',val:'7'}]);
 const b5=boxes(v5.statusEl);
-chk(b5.length===10, `收集器状态 + 窗口合计共 10 个框（${b5.length}）`);
+chk(b5.length===11, `收集器状态 + 窗口合计共 11 个框（${b5.length}）`);
 chk(b5[0] && b5[0].cap==='State' && b5[0].val==='Running', `第一格是运行状态（${b5[0]&&b5[0].val}）`);
 chk(b5[5] && b5[5].cap==='Collector version', `第六格是采集器版本（${b5[5]&&b5[5].cap}）`);
 chk(b5[6] && b5[6].cap==='Bucket',
     `分隔线后第一格是周期（${b5[6]&&b5[6].cap}）｜全表 ${b5.map(b=>b.cap).join('|')}`);
 // The two sets have to come out the same width, which is the whole reason they
 // are laid out as one flex line: two rows would each share out their own width,
-// and six boxes in one against four in the other cannot match.
+// and six boxes in one against five in the other cannot match.
 const kids=v5.statusEl.children;
-chk(kids.filter(c=>(c.attrs||{}).class==='tf-stat').length===10 &&
+chk(kids.filter(c=>(c.attrs||{}).class==='tf-stat').length===11 &&
     kids.filter(c=>(c.attrs||{}).class==='tf-stat-sep').length===1,
-    '十个框加一条分隔线，按 6|4 排列');
+    '十一个框加一条分隔线，按 6|5 排列');
 chk(kids[6] && kids[6].attrs.class==='tf-stat-sep', `分隔线在第 7 个位置（${kids[6]&&kids[6].attrs.class}）`);
+// the last box counts the applications the table below is listing, so it has to
+// stay last: it is the one reading that describes the rows rather than the bytes
+chk(b5[10] && b5[10].cap==='Apps' && b5[10].val==='7',
+    `最后一格是应用数（${b5[10]&&b5[10].cap}=${b5[10]&&b5[10].val}）`);
 // the strip keeps its shape when only one of the two callers has run
 const vOnly=freshView();
 view.drawStatus.call(vOnly,{collected_at:Math.floor(Date.now()/1000),interval:10,flows:1,

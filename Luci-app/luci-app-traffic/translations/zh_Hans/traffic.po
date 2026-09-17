@@ -149,6 +149,15 @@ msgstr "客户端数"
 msgid "Devices"
 msgstr "设备数"
 
+# The strip box that counts the applications the table is listing.  It is the
+# same word the table's own column header uses ("Application name"), so the box
+# and the column read as one thing, and "应用" rather than "应用数" because the
+# caption is already the name of what is being counted - next to "设备数" and
+# "周期" a second "数" suffix would read as more of the same.
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Apps"
+msgstr "应用"
+
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "No samples yet"
 msgstr "暂无采样数据"

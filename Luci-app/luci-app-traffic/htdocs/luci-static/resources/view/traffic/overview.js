@@ -1062,16 +1062,20 @@ return view.extend({
 		 * should be honest about rather than hide. */
 		var acct = s.accounted || null;
 		var acctAll = acct ? (Number(acct.down) || 0) + (Number(acct.up) || 0) : 0;
-		/* The window's four boxed readings.  They are the same four in both views
-		 * so the strip keeps its shape when the range changes; in the session
-		 * view there is no archive bucket count to read, and a dash is the honest
-		 * answer rather than a number borrowed from another window. */
+		/* The window's boxed readings.  They are the same five in both views so
+		 * the strip keeps its shape when the range changes; in the session view
+		 * there is no archive bucket count to read, and a dash is the honest
+		 * answer rather than a number borrowed from another window.  The last one
+		 * counts what the table below is listing, so a window that covers more
+		 * applications than the table shows says so instead of quietly leaving
+		 * the reader to assume the rows are all of them. */
 		this.drawSummary([
 			{ cap: _('Bucket'), val: this.archiveEmpty ? '0'
 				: (this.archHours === undefined ? '—' : String(this.archHours)) },
 			{ cap: _('Browser clients'), val: fmtBytes(all) },
 			{ cap: _('Router and tunnel'), val: fmtBytes(t.router) },
-			{ cap: _('Devices'), val: String(Number(t.client_count) || 0) }
+			{ cap: _('Devices'), val: String(Number(t.client_count) || 0) },
+			{ cap: _('Apps'), val: String(items.length) }
 		]);
 
 		/* How much of the traffic the page managed to name, which is the only
@@ -1196,7 +1200,8 @@ return view.extend({
 			{ cap: _('Bucket'), val: String(hours.length) },
 			{ cap: _('Browser clients'), val: fmtBytes(total) },
 			{ cap: _('Router and tunnel'), val: fmtBytes(rt) },
-			{ cap: _('Devices'), val: String(cl.length) }
+			{ cap: _('Devices'), val: String(cl.length) },
+			{ cap: _('Apps'), val: String(items.length) }
 		]);
 		/* nothing to add here: every note this view has is already in the strip */
 		this.drawDiag([]);
