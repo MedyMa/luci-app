@@ -565,7 +565,7 @@ return view.extend({
 				el('div', { 'class': 'tf-hero-ctl' }, [ this.rangePicker.node ])
 			]),
 
-			el('div', { 'class': 'tf-pair' }, [
+			el('div', { 'class': 'tf-mid' }, [
 			el('div', { 'class': 'tf-card tf-chart-card' }, [
 				el('div', { 'class': 'tf-chart-head' }, [
 					el('h3', {}, [ _('Throughput') ])
@@ -1398,7 +1398,7 @@ function injectCss() {
 		 * for a very long time. */
 		'display:block;}',
 		/* A plain block column, with the one side-by-side part stated locally in
-		 * .tf-pair below.
+		 * .tf-mid below.
 		 *
 		 * It used to be a single wrapping flex container with the cards placed by
 		 * order, and on the router that came apart.  A flex container whose own
@@ -1408,7 +1408,11 @@ function injectCss() {
 		 * card, which is why the others stretched into huge empty boxes.  Block
 		 * layout has no such failure mode: block children fill the width they are
 		 * given, whatever that turns out to be. */
-		'.tf-page .tf-pair{display:flex;flex-wrap:wrap;align-items:stretch;}',
+		/* One wrapping row holding the strip and the chart-and-ring pair: the strip
+		 * is 100%, so it takes a line of its own and the two halves share the next.
+		 * They are a row rather than three blocks because the two halves have to
+		 * sit side by side and be the same height. */
+		'.tf-page .tf-mid{display:flex;flex-wrap:wrap;align-items:stretch;}',
 		/* The whole layout is sized in percentages and in flex-basis, and both are
 		 * only arithmetic that adds up under border-box: with the content box,
 		 * flex-basis:6.25rem means 100px of text plus the padding, so ten boxes
@@ -1418,15 +1422,10 @@ function injectCss() {
 		 * page leans on that; this page states it for its own subtree so it does
 		 * not depend on which theme happens to be installed. */
 		'.tf-page,.tf-page *,.tf-page *:before,.tf-page *:after{box-sizing:border-box;}',
-		'.tf-page .tf-hero,.tf-page .tf-stat-card,',
-		'.tf-page .tf-diag-card,.tf-page .tf-list-card{order:1;flex:0 0 100%;max-width:100%;}',
-		'.tf-page .tf-stat-card{order:2;}',
-		'.tf-page .tf-chart-card{order:3;flex:0 0 calc(50% - .5rem);max-width:calc(50% - .5rem);',
+		'.tf-page .tf-stat-card{order:1;flex:0 0 100%;}',
+		'.tf-page .tf-chart-card{order:2;flex:0 0 calc(50% - .5rem);max-width:calc(50% - .5rem);',
 		'margin-right:1rem;}',
-		'.tf-page .tf-donut-card{order:4;flex:0 0 calc(50% - .5rem);max-width:calc(50% - .5rem);}',
-		'.tf-page .tf-list-card{order:5;}',
-		/* the note line reads as a footnote to the table, so it goes under it */
-		'.tf-page .tf-diag-card{order:6;}',
+		'.tf-page .tf-donut-card{order:3;flex:0 0 calc(50% - .5rem);max-width:calc(50% - .5rem);}',
 
 		/* cards: translucent + blurred, which is what gives the "bright" look */
 		'.tf-page .tf-card{background:var(--tf-card);border:1px solid var(--tf-card-brd);',
