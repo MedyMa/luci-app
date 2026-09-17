@@ -59,14 +59,14 @@ const factory=new Function('view','rpc','dom','poll','_','E','L','document','Ima
 const viewStub={extend(o){ viewStub.__obj=o; return o; }};
 const domStub={content(node,ch){ node.children=[]; (Array.isArray(ch)?ch:[ch]).forEach(x=>{ if(x) node.appendChild(x); }); }};
 const rpcStub={declare(){ return ()=>Promise.resolve({}); }};
-const PO = loadPo(path.join(__dirname, '..', 'po', 'zh_Hans', 'traffic.po'));
+const PO = loadPo(path.join(__dirname, '..', 'translations', 'zh_Hans', 'traffic.po'));
 // an untranslated string falls through to its msgid, which is what LuCI does
 const translate = s => (PO[s] !== undefined ? PO[s] : s);
 factory(viewStub,rpcStub,domStub,{add(){}},translate,E,{bind(f,c){return f.bind(c);},resource(p){return p;},env:{}},
   documentStub,function(){ return {onload:null,src:'',className:''}; },()=>true);
 const view=viewStub.__obj;
 
-/* The page's labels come from po/zh_Hans/traffic.po, and the preview has to show
+/* The page's labels come from translations/zh_Hans/traffic.po, and the preview has to show
  * them: the strip boxes are sized for the Chinese ones, which are two to six
  * characters.  An English preview hides the very thing the width was chosen for
  * (and made long captions wrap, which Chinese never does), so it is not a

@@ -220,29 +220,16 @@ jobs:
         working-directory: ${{ env.SDK_DIR }}
         run: |
           set -eux
-          package_po_dir="$SDK_DIR/feeds/luci/applications/luci-app-traffic/po"
-          traffic_i18n_langs=''
-
-          if [ -d "$package_po_dir" ]; then
-            traffic_i18n_langs="$(find "$package_po_dir" -mindepth 2 -maxdepth 2 -type f -name '*.po' -printf '%h\n' | sed 's#^.*/##' | sort -u | tr '\n' ' ' | sed 's/[[:space:]]\+$//')"
-          fi
-
+          # luci-app-traffic carries its own translation and deliberately has no
+          # po/ directory: luci.mk would otherwise build a
+          # luci-i18n-traffic-<lang> package that installs the same .lmo file,
+          # and the two packages then refuse to install together.  So no
+          # language pack is configured here, and nothing below expects one.
           echo 'CONFIG_PACKAGE_luci-app-traffic=y' >> .config
-
-          for lang in $traffic_i18n_langs; do
-            echo "CONFIG_PACKAGE_luci-i18n-traffic-${lang}=y" >> .config
-          done
 
           make defconfig
 
-          {
-            echo 'TRAFFIC_I18N_LANGS<<EOF'
-            printf '%s\n' "$traffic_i18n_langs"
-            echo 'EOF'
-          } >> "$GITHUB_ENV"
-
           grep '^CONFIG_PACKAGE_luci-app-traffic=' .config
-          grep '^CONFIG_PACKAGE_luci-i18n-traffic-' .config || true
 
       - name: Compile package
         working-directory: ${{ env.SDK_DIR }}
@@ -258,9 +245,11 @@ jobs:
           mkdir -p "$artifact_dir"
 
           pkg_ext=".${PKG_FORMAT:-apk}"
+          # Only the application package is expected: the translation travels
+          # inside it (see the Configure SDK step), so there is no
+          # luci-i18n-traffic-<lang> package to collect or to assert.
           find "$SDK_DIR/bin/packages" -type f \( \
             -name "luci-app-traffic*${pkg_ext}" \
-            -o -name "luci-i18n-traffic*${pkg_ext}" \
             -o -path '*/luci/Packages*' \
           \) -exec cp -f {} "$artifact_dir/" \;
 
@@ -268,16 +257,6 @@ jobs:
             echo "No luci-app-traffic ${pkg_ext} was produced by the build." >&2
             find "$SDK_DIR/bin/packages" -maxdepth 4 -type f | sort >&2
             exit 1
-          fi
-
-          if [ -n "${TRAFFIC_I18N_LANGS:-}" ]; then
-            for lang in $TRAFFIC_I18N_LANGS; do
-              if ! find "$artifact_dir" -maxdepth 1 -type f -name "luci-i18n-traffic-${lang}_*.${pkg_ext}" | grep -q .; then
-                echo "No luci-i18n-traffic-${lang} ${pkg_ext} was produced by the build." >&2
-                find "$SDK_DIR/bin/packages" -maxdepth 4 -type f | sort >&2
-                exit 1
-              fi
-            done
           fi
 
           echo "ARTIFACT_DIR=$artifact_dir" >> "$GITHUB_ENV"

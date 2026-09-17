@@ -11,7 +11,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-traffic
-PKG_VERSION:=0.1.43
+PKG_VERSION:=0.1.44
 PKG_RELEASE:=1
 PKG_LICENSE:=Apache-2.0
 LUCI_PKGARCH:=all
@@ -31,17 +31,28 @@ define Build/Prepare/$(PKG_NAME)
 	# Makefile the only place the version is written down.
 	$(SED) 's|^COLLECTOR_VERSION=.*|COLLECTOR_VERSION=$(PKG_VERSION)-r$(PKG_RELEASE)|' \
 		$(PKG_BUILD_DIR)/root/usr/share/traffic/collector.sh
-	# Carry the translation in this package as well as in the generated
-	# luci-i18n-<name>-<lang> one.  That package is published with a version of
-	# 0, so opkg never treats a newer catalogue as an upgrade and a message added
+	# The translation is carried in this package and nowhere else.
+	#
+	# Any directory named po/ next to this Makefile makes luci.mk build a
+	# luci-i18n-<name>-<lang> package (it globs ${CURDIR}/po/*), and that package
+	# installs the very same /usr/lib/lua/luci/i18n/traffic.zh-cn.lmo this one
+	# does.  Installing both therefore fails with a file clash, which is exactly
+	# what a fresh 23.05 install reported.  Carrying it here is also what the
+	# version numbering wants: the generated package is published as version 0,
+	# so opkg never treats a newer catalogue as an upgrade and a message added
 	# after the first install stays missing on the router forever - which is how
 	# the range dropdown ended up with one option in Chinese and the next in
-	# English.  po2lmo is the same tool the generated package is built with, and
-	# the source is read from ${CURDIR} for the same reason luci.mk does it: po/
-	# is not part of what gets prepared into the build directory, and po2lmo
-	# reports an unreadable input as a usage error rather than as a missing file.
+	# English.
+	#
+	# Hence translations/ rather than po/: keeping the catalogue out of the one
+	# directory luci.mk scans is what stops that second package from existing at
+	# all, so there is only ever one provider of the file.  po2lmo is the tool
+	# that package would be built with, and the source is read from ${CURDIR}
+	# for the same reason luci.mk does it: the catalogue is not part of what gets
+	# prepared into the build directory, and po2lmo reports an unreadable input
+	# as a usage error rather than as a missing file.
 	$(INSTALL_DIR) $(PKG_BUILD_DIR)/root/usr/lib/lua/luci/i18n
-	po2lmo ${CURDIR}/po/zh_Hans/traffic.po \
+	po2lmo ${CURDIR}/translations/zh_Hans/traffic.po \
 		$(PKG_BUILD_DIR)/root/usr/lib/lua/luci/i18n/traffic.zh-cn.lmo
 endef
 

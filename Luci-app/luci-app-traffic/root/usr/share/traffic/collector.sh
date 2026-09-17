@@ -1323,6 +1323,8 @@ roll_hour() {
                 if (b > 0) printf "%s\tclient\t%s\t%d\t0\n", h, $1, b
             }
         ' "$STATE_DIR/clients.tsv" >> "$CFG_DATADIR/hourly.tsv"
+    fi
+
     # The busiest client of each application, so a range view can name it.  The
     # archive holds app rows and client rows but not the correlation between
     # them, which is why every per-application client column was a dash in a
@@ -1330,11 +1332,17 @@ roll_hour() {
     # collector already keeps that correlation: <app> <count> <bytes> <client>.
     # The client is stored as the address it is; the page turns it into a device
     # name from the live summary, which carries the lease names anyway.
+    #
+    # This deliberately sits outside the branch above.  ac.agg comes from ac.tsv,
+    # which is written from the flow log on every poll whichever layer produced
+    # the client totals, so the correlation exists in both counter modes.  Inside
+    # the elif it was reachable only when acct.tsv was empty - that is, only when
+    # the nft counters were off - so on a router running them no archived hour
+    # ever carried a busiest client and every range view showed a dash.
     if [ -s "$STATE_DIR/ac.agg" ]; then
         awk -F'\t' -v h="$hour" '
             $1 != "" && $4 != "" { printf "%s\tapptop\t%s\t%s\t%d\t%d\n", h, $1, $4, $3 + 0, $2 + 0 }
         ' "$STATE_DIR/ac.agg" >> "$CFG_DATADIR/hourly.tsv"
-    fi
     fi
 
     if [ "$dhr" -gt 0 ]; then
