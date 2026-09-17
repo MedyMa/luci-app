@@ -565,6 +565,7 @@ return view.extend({
 				el('div', { 'class': 'tf-hero-ctl' }, [ this.rangePicker.node ])
 			]),
 
+			el('div', { 'class': 'tf-pair' }, [
 			el('div', { 'class': 'tf-card tf-chart-card' }, [
 				el('div', { 'class': 'tf-chart-head' }, [
 					el('h3', {}, [ _('Throughput') ])
@@ -594,6 +595,7 @@ return view.extend({
 						this.legendEl
 					])
 				])
+			]),
 			]),
 
 			el('div', { 'class': 'tf-card tf-list-card' }, [
@@ -1394,11 +1396,19 @@ function injectCss() {
 		 * silently drops the spacing - the cards would touch.  The gutter is a
 		 * margin on the left half instead, which every browser has understood
 		 * for a very long time. */
-		'display:flex;flex-wrap:wrap;align-items:stretch;}',
-		/* stretch, not flex-start: the chart and the ring are two halves of one
-		 * row and the design is two cards of the same height.  With flex-start
-		 * each took its own content height, so whichever held more legend rows
-		 * stood taller than the other and the pair stopped reading as a pair. */
+		'display:block;}',
+		/* A plain block column, with the one side-by-side part stated locally in
+		 * .tf-pair below.
+		 *
+		 * It used to be a single wrapping flex container with the cards placed by
+		 * order, and on the router that came apart.  A flex container whose own
+		 * width is not definite does not wrap at all, so every card went on one
+		 * line - the full-width strip, the two halves, then the table, running off
+		 * the right of the screen - and the line was then as tall as its tallest
+		 * card, which is why the others stretched into huge empty boxes.  Block
+		 * layout has no such failure mode: block children fill the width they are
+		 * given, whatever that turns out to be. */
+		'.tf-page .tf-pair{display:flex;flex-wrap:wrap;align-items:stretch;}',
 		/* The whole layout is sized in percentages and in flex-basis, and both are
 		 * only arithmetic that adds up under border-box: with the content box,
 		 * flex-basis:6.25rem means 100px of text plus the padding, so ten boxes
