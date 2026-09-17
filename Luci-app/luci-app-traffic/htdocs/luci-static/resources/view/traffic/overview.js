@@ -646,6 +646,20 @@ return view.extend({
 			self.summary = s || {};
 			if (self.range === 'session') { self.renderLive(self.summary); return; }
 			return callHourly(Number(self.range)).then(function(h) {
+				/* Nothing archived yet for this range.  That is the normal state
+				 * for the first hour after an install or a reflash, because the
+				 * history only gets its first row when the clock crosses the
+				 * hour - and waiting for it left the default view blank while the
+				 * collector was measuring perfectly well.  There is data to show,
+				 * so show it: the session counters are what "since start" draws.
+				 * The bucket reading stays 0, which is what says the archive is
+				 * still empty rather than pretending a day of history exists. */
+				if (!h || !h.hours || !h.hours.length) {
+					self.archiveEmpty = true;
+					self.renderLive(self.summary);
+					return;
+				}
+				self.archiveEmpty = false;
 				self.renderHourly(h);
 				self.drawStatus(self.summary, self.lastItems || []);
 			});
@@ -857,6 +871,12 @@ return view.extend({
 			rows.push({ cap: _('Accounted share'), val: (100 * all / acctAll).toFixed(1) + '%',
 				warn: all / acctAll < 0.5 });
 		}
+		/* When a range view had no archive to read and fell back to this session,
+		 * say so.  The bucket count is the reading that means "hours archived",
+		 * and 0 is the honest answer - without it the footer would show session
+		 * identification rates under a "last 24 hours" label and nothing would
+		 * tell the reader that the day is not actually there yet. */
+		if (this.archiveEmpty) rows.unshift({ cap: _('Bucket'), val: '0' });
 		this.drawMeta(rows);
 
 		/* New host names wait for the resolver's next pass, which is throttled
