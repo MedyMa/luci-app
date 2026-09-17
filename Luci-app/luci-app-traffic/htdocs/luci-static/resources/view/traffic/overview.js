@@ -1798,18 +1798,23 @@ function injectCss() {
 		'.tf-page .tf-hero-ctl{gap:.7rem;}',
 
 		/* dark: Argon sets .dark on <body> when its dark mode is on */
-		/* The surfaces come from the theme's own semantic colours, with neutral
-		 * fallbacks.  They used to be literals - rgba(30,38,48,.66) and friends -
-		 * which are dark *blue*: measured against the real page, the theme paints
-		 * its panels and its page as neutral grey (#333333 and #1A1A1A, no channel
-		 * offset) while every card here came out #1E2329, and a card whose hue the
-		 * theme never uses is what "the dark background does not match" looks like.
-		 * --background-color-high is the theme's panel surface (the sidebar is
-		 * painted with it), --border-color-low its hairline. */
-		DARK + '{--tf-card:var(--background-color-high,rgba(255,255,255,.06));',
+		/* Translucent, and neutral.  Pointing these at the theme's panel colour made
+		 * the cards opaque on a theme that defines it - Argon paints its panels
+		 * #333333 - and the glass material went with it.
+		 *
+		 * The colour that did not match the theme was never "translucent": it was
+		 * that the literal was dark *blue*.  Measured against the real page, the
+		 * theme paints its panels and its page as neutral grey (#333333 and #1A1A1A,
+		 * no channel offset) while every card here came out #1E2329.  A neutral
+		 * white lift has no hue of its own, so it takes whatever the theme's
+		 * background is and keeps the material.  Borders still come from the theme,
+		 * where its own hairline colour is the right answer. */
+		DARK + '{--tf-card:rgba(255,255,255,.06);',
 		'--tf-card-brd:var(--border-color-low,rgba(255,255,255,.08));',
 		'--tf-chip:rgba(255,255,255,.08);',
-		'--tf-menu:var(--background-color-high,rgba(51,51,51,.99));',
+		/* the one surface that must stay legible over whatever is behind it, so it
+		 * keeps a near-opaque neutral rather than going translucent */
+		'--tf-menu:rgba(38,38,38,.98);',
 		'--tf-line:var(--border-color-low,rgba(255,255,255,.12));',
 		/* the highlight follows the theme's accent too: it was a cyan of this
 		 * page's own choosing, which is the same kind of mismatch as the surfaces
