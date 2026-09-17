@@ -545,6 +545,8 @@ return view.extend({
 		]);
 
 		injectCss();
+		/* the page works out its own dark mode; see watchTheme() */
+		watchTheme(node);
 		this.refresh(false);
 		this.loadSeries();
 		poll.add(L.bind(function() {
@@ -1084,14 +1086,63 @@ function CHEVRON(color) {
  * --font-color and friends), with bright fallbacks so the page also looks right
  * on the default theme.  Nothing here depends on Argon-only class names, and
  * dark mode is honoured through the class Argon sets on <body>. */
+	/* Dark mode is decided by looking at the page rather than by guessing which
+	 * marker the theme used.  The three selectors above cover the mechanisms seen
+	 * so far, and a theme that switches some other way - or only follows the
+	 * system preference - left the cards bright on a dark background, which is
+	 * exactly how it looked on the router.  Reading the computed background of
+	 * the document works for any of them, and the class it sets is one the
+	 * stylesheet already knows: .tf-page.tf-dark. */
+	function watchTheme(node) {
+		if (typeof getComputedStyle !== 'function') return;
+		function luminance(el) {
+			if (!el) return null;
+			var c = getComputedStyle(el).backgroundColor;
+			var m = c && c.match(/^rgba?\(([^)]+)\)$/);
+			if (!m) return null;
+			var p = m[1].split(',').map(function(x) { return parseFloat(x); });
+			if (p.length > 3 && p[3] === 0) return null;          /* transparent */
+			return 0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2];
+		}
+		function apply() {
+			var l = luminance(document.body);
+			if (l === null) l = luminance(document.documentElement);
+			if (l === null) {
+				/* nothing opaque to measure, so fall back to the markers */
+				var b = document.body, r = document.documentElement;
+				var marked = !!(b && b.classList && b.classList.contains('dark')) ||
+					!!(r && r.getAttribute && (r.getAttribute('data-darkmode') === 'true' ||
+						r.getAttribute('data-theme') === 'dark'));
+				l = marked ? 0 : 255;
+			}
+			var cls = (l < 128) ? 'add' : 'remove';
+			if (node.classList && node.classList[cls]) node.classList[cls]('tf-dark');
+		}
+		apply();
+		/* the theme can be switched while the page is open */
+		try {
+			var obs = new MutationObserver(apply);
+			var opts = { attributes: true, attributeFilter: [ 'class', 'data-darkmode', 'data-theme' ] };
+			obs.observe(document.documentElement, opts);
+			if (document.body) obs.observe(document.body, opts);
+		} catch (e) { /* no MutationObserver: the first answer stands */ }
+		try {
+			if (window.matchMedia) {
+				var mq = window.matchMedia('(prefers-color-scheme: dark)');
+				if (mq.addEventListener) mq.addEventListener('change', apply);
+				else if (mq.addListener) mq.addListener(apply);
+			}
+		} catch (e2) { /* same */ }
+	}
+
 function injectCss() {
 	if (document.getElementById('tf-css')) return;
 
-	var DARK = '.dark .tf-page, [data-darkmode="true"] .tf-page, [data-theme="dark"] .tf-page';
+	var DARK = '.dark .tf-page, [data-darkmode="true"] .tf-page, [data-theme="dark"] .tf-page, .tf-page.tf-dark';
 	/* A comma-separated selector list cannot be extended by appending a
 	 * descendant: only the last one would get it.  Anything that needs to be
 	 * scoped to dark mode expands the list one selector at a time. */
-	var DARK_ONE = [ '.dark .tf-page', '[data-darkmode="true"] .tf-page', '[data-theme="dark"] .tf-page' ];
+	var DARK_ONE = [ '.dark .tf-page', '[data-darkmode="true"] .tf-page', '[data-theme="dark"] .tf-page', '.tf-page.tf-dark' ];
 	var darkOf = function(sel) {
 		return DARK_ONE.map(function(d) { return d + ' ' + sel; }).join(',');
 	};
