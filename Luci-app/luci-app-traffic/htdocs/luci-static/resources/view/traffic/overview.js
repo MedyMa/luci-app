@@ -343,6 +343,7 @@ function makeLegendRow(name) {
 	var pctEl = el('span', { 'class': 'tf-legend-pct' });
 	var row = el('div', { 'class': 'tf-legend-row' }, [
 		el('span', { 'class': 'tf-legend-dot', 'style': 'background:' + colorFor(name) }),
+		makeIcon(name),
 		el('span', { 'class': 'tf-legend-name' }, [ name ]),
 		pctEl
 	]);
@@ -513,7 +514,15 @@ return view.extend({
 			 * readable block at every width, and the legend can spread sideways
 			 * instead of being squeezed into one column. */
 			el('div', { 'class': 'tf-card tf-donut-card' }, [
-				el('div', { 'class': 'tf-donut-wrap' }, [ this.donutEl, this.legendEl ])
+				el('div', { 'class': 'tf-donut-wrap' }, [
+					this.donutEl,
+					/* The legend is its own labelled block: as a bare list of names
+					 * beside a ring it read as an unlabelled column of text. */
+					el('div', { 'class': 'tf-legend-box' }, [
+						el('div', { 'class': 'tf-legend-cap' }, [ _('Application name') ]),
+						this.legendEl
+					])
+				])
 			]),
 
 			el('div', { 'class': 'tf-card tf-list-card' }, [
@@ -1297,6 +1306,15 @@ function injectCss() {
 		'.tf-page .tf-legend{flex:1 1 22rem;display:grid;min-width:0;',
 		'grid-template-columns:repeat(auto-fill,minmax(13rem,1fr));gap:.3rem 1.1rem;}',
 		'.tf-page .tf-legend-row{display:flex;align-items:center;gap:.45rem;font-size:.82rem;min-width:0;}',
+		/* The legend gets the same marks as the list, miniaturised: at the list
+		 * size (26px) they made every legend row twice as tall as the text in it,
+		 * which is why the ten rows stopped fitting beside the ring. */
+		'.tf-page .tf-legend-box{flex:1 1 22rem;min-width:0;display:flex;flex-direction:column;gap:.4rem;}',
+		'.tf-page .tf-legend-box .tf-legend{flex:0 0 auto;}',
+		'.tf-page .tf-legend-cap{font-size:.72rem;color:var(--tf-dim);letter-spacing:.04em;}',
+		'.tf-page .tf-legend-row .tf-icon,.tf-page .tf-legend-row .tf-icon-img{',
+		'width:16px;height:16px;flex:0 0 16px;border-radius:5px;box-shadow:none;}',
+		'.tf-page .tf-legend-row .tf-icon-letter{font-size:.58rem;}',
 		'.tf-page .tf-legend-dot{width:9px;height:9px;border-radius:50%;flex:0 0 9px;}',
 		'.tf-page .tf-legend-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}',
 		'.tf-page .tf-legend-pct{color:var(--tf-dim);font-variant-numeric:tabular-nums;}',
