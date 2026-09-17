@@ -1318,12 +1318,16 @@ function injectCss() {
 		'width:100%;min-width:40rem;border-collapse:collapse;}',
 		/* the name gets the room the numbers do not need: "528 KiB (32.4%)" is
 		 * the widest figure in the table and it is nowhere near a third of it */
-		'.tf-page .tf-col-app{width:30%;}',
+		/* the name column was 30% and sat half empty while the busiest-client
+		 * column - the one whose content is always the longest - was squeezed.
+		 * The widths now follow the content: a name needs room for about twenty
+		 * characters, a client reading needs room for "Mac 8.09 MiB (104.2%)" */
+		'.tf-page .tf-col-app{width:22%;}',
 		'.tf-page .tf-col-total{width:16%;}',
 		'.tf-page .tf-col-down{width:13%;}',
 		'.tf-page .tf-col-up{width:13%;}',
-		'.tf-page .tf-col-top{width:20%;}',
-		'.tf-page .tf-col-clients{width:8%;}',
+		'.tf-page .tf-col-top{width:26%;}',
+		'.tf-page .tf-col-clients{width:10%;}',
 		'.tf-page .tf-table>thead>tr>th{border-bottom:1px solid rgba(128,150,175,.18);',
 		'font-size:.78rem;font-weight:600;color:var(--tf-dim);letter-spacing:.04em;padding:.5rem .6rem;',
 		'white-space:nowrap;background:transparent;}',
