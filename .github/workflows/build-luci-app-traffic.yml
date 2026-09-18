@@ -64,6 +64,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6.0.2
 
+      - name: Verify the icon set and its manifest
+        run: |
+          set -eux
+          # The package redistributes every icon, so the manifest has to describe
+          # exactly the files that ship, every file has to be a real SVG, and no
+          # file may exist that no manifest row records.  A tree that disagrees
+          # with its own manifest is how a stale directory once shipped 813 files
+          # while the generator reported 751; this fails in seconds instead.
+          node Luci-app/luci-app-traffic/tools/check-icons.js
+
       - name: Install build dependencies
         run: |
           sudo apt-get update
@@ -160,7 +170,7 @@ jobs:
           set -eux
           ./scripts/feeds update -a
 
-      - name: Inject package into the package tree
+      - name: Inject package into LuCI feed
         run: |
           set -eux
           package_makefile="$(find "$GITHUB_WORKSPACE" -type f -name Makefile \

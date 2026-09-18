@@ -104,8 +104,57 @@ async function ghTree(url, cacheName) {
 	return JSON.parse(json);
 }
 
-/** Run `worker` over `items` with a bounded number of concurrent workers. */
-async function pool(items, worker, concurrency) {
+/** Iconify collection index, cached on disk for a week.
+ *
+ *  The API is rate limited, and a 429 is the easiest possible failure to
+ *  misread: fetching the collections four at a time earned a 429 for every one
+ *  of them, the error was swallowed into an empty index, and the run printed a
+ *  line that simply stopped after the third set.  arcticons - 15k application
+ *  icons, the set that matches app names best - was never consulted and nothing
+ *  said so.  Cached, this costs one request per collection per week; when the
+ *  cache is warm the run is deterministic and needs no network for them. */
+async function iconifyCollection(prefix) {
+	const file = path.join(CACHE_DIR, `iconify-${prefix}.json`);
+	if (fs.existsSync(file) && Date.now() - fs.statSync(file).mtimeMs < 7 * 24 * 3600e3) {
+		try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) { /* refetch */ }
+	}
+	/* Two sources for the same data.  The API is the canonical one but it hands
+	 * out 429s in bursts long enough to outlast 10/20/30s of retries, which left
+	 * the whole run without arcticons; the @iconify-json packages on jsdelivr are
+	 * the same collection and are served from a CDN that does not do that.  The
+	 * names are read from `icons` as well as `uncategorized`, so both shapes
+	 * yield the same membership set. */
+	const SOURCES = [
+		`https://api.iconify.design/collection?prefix=${prefix}`,
+		`https://cdn.jsdelivr.net/npm/@iconify-json/${prefix}@latest/icons.json`,
+	];
+	for (const url of SOURCES) {
+		for (let attempt = 1; attempt <= 2; attempt++) {
+			try {
+				const txt = await httpText(url, { tries: 1 });
+				const idx = JSON.parse(txt);
+				fs.writeFileSync(file, txt, 'utf8');
+				return idx;
+			} catch (err) {
+				if (attempt === 2) break;
+				await sleep(6000 * attempt);
+			}
+		}
+	}
+	return null;
+}
+
+/** Every icon name an Iconify collection index offers, whichever shape it has. */
+function iconifyNames(idx) {
+	const s = new Set();
+	for (const n of (idx.uncategorized || [])) s.add(n);
+	for (const arr of Object.values(idx.categories || {})) for (const n of arr) s.add(n);
+	for (const n of Object.keys(idx.icons || {})) s.add(n);
+	for (const n of Object.keys(idx.aliases || {})) s.add(n);
+	return s;
+}
+
+/** Run `worker` over `items` with a bounded number of concurrent workers. */async function pool(items, worker, concurrency) {
 	const results = new Array(items.length);
 	let next = 0;
 	const runners = new Array(Math.min(concurrency, items.length)).fill(0).map(async () => {
@@ -737,29 +786,35 @@ function iconSlug(name) {
  *  harmless - the name keeps its letter avatar, which is the honest answer - but
  *  a wrong one puts the wrong logo on a row, which is worse than no logo. */
 const BRAND_ALIAS = {
-	'58.com': '58dotcom',      /* simple-icons spells the dot out */
-	'Ctrip': 'tripdotcom',     /* the company renamed itself Trip.com */
+	/* Every target below was checked against the sets this generator actually
+	 * queries - dashboard-icons, simple-icons, selfhst/icons and the iconify
+	 * collections - with tools/_probe-slugs.js, so each one exists and can be
+	 * fetched.  A target that was checked and found absent is NOT recorded here:
+	 * a dead alias is a comment that lies, and the name keeps its letter avatar,
+	 * which is the honest answer.  simple-icons has withdrawn a number of
+	 * consumer brands outright (Bloomberg, Tencent, Sohu, Durex, Bridgestone,
+	 * UCloud, Qiniu, 360 were all checked and none is carried by any set now). */
+	'Ctrip': 'tripdotcom',       /* the company renamed itself Trip.com */
+	'XieCheng': 'tripdotcom',    /* the same company under its Chinese name */
+	'Douyin': 'tiktok',          /* the same application under its Chinese name */
 	'theScore': 'thescore',
-	'QiNiuYun': 'qiniu',
-	'UCloud': 'ucloud',
 	'Bestbuy': 'bestbuy',
-	'Bloomberg': 'bloomberg',
-	'Bridgestone': 'bridgestone',
 	'Wildberries': 'wildberries',
-	'Durex': 'durex',
-	'Sohu': 'sohu',
-	/* Names whose parent brand has no mark of its own upstream, only one of its
-	 * apps.  The app's icon is used deliberately - it is the same brand, and a
-	 * letter avatar for a 250-domain name is worse - but it is a judgement, so it
-	 * is recorded here rather than buried in a fuzzy match.  Every one of these was
-	 * checked by searching Iconify; the searches that returned the wrong thing
-	 * were left alone (searching "360" returns the 360-degree UI glyph, not Qihoo
-	 * 360, and "gmo" returns a non-GMO food label). */
 	'Huaweicloud': 'huawei',
-	'Kingsoft': 'kingsoft-documents',
-	'Mailru': 'bulut-mailru',
+	'Kingsoft': 'wpsoffice',     /* Kingsoft is the company behind WPS Office */
+	'Mailru': 'maildotru',
 	'IFlytek': 'iflytek-input',
 	'Reuters': 'reuters',
+	'ChinaTelecom': 'china-telecom',
+	'ICBC': 'icbc',
+	'HuluUSA': 'hulu',
+	'Kuaishou': 'kuaishou',
+	'Genshin Impact': 'genshin-impact',
+	'League of Legends': 'leagueoflegends',
+	'Valorant': 'valorant',
+	'Starlink': 'starlink',
+	'Grok': 'grok',
+	'PlayStation': 'playstation',
 };
 
 /** Public suffixes worth dropping when a row is named after a bare domain.
@@ -841,14 +896,27 @@ async function buildIcons(appNames, glyphNames) {
 	/* Icons kept in the repository rather than fetched.  They exist precisely for
 	 * brands no upstream icon set carries - JD is the example that started this -
 	 * and the file name is the application's slug(), the same key the page looks
-	 * the icon up by, so dropping one in is all that is needed.  The clean below
-	 * keeps them, which is what stops a rebuild from deleting them. */
+	 * the icon up by, so dropping one in is all that is needed. */
 	const LOCAL_DIR = path.join(ROOT, 'tools', 'icons-local');
 	const localNames = new Set(fs.existsSync(LOCAL_DIR)
 		? fs.readdirSync(LOCAL_DIR).filter(f => f.endsWith('.svg'))
 		: []);
-	for (const f of fs.readdirSync(ICON_DIR)) {
-		if (f.endsWith('.svg') && !localNames.has(f)) fs.unlinkSync(path.join(ICON_DIR, f));
+
+	/* The directory is deliberately NOT cleared before fetching.  Clearing it made
+	 * the hit rate depend on the weather: a single rate-limited or timed-out
+	 * request deleted an icon that had been good for months, and the run reported
+	 * success anyway.  Files are now overwritten in place and only a file the
+	 * current catalogue cannot name is removed, at the end.  The previous
+	 * manifest is read first so that a file which survives because this run could
+	 * not re-fetch it keeps the provenance that was recorded for it. */
+	const prevRows = new Map();
+	const prevManifest = path.join(ICON_DIR, 'SOURCES.tsv');
+	if (fs.existsSync(prevManifest)) {
+		for (const line of fs.readFileSync(prevManifest, 'utf8').split('\n')) {
+			if (!line || line.startsWith('#')) continue;
+			const file = line.split('\t')[0];
+			if (file) prevRows.set(file, line);
+		}
 	}
 	for (const f of localNames) fs.copyFileSync(path.join(LOCAL_DIR, f), path.join(ICON_DIR, f));
 	if (localNames.size) log(`  本地图标: ${[...localNames].join(', ')}`);
@@ -868,18 +936,27 @@ async function buildIcons(appNames, glyphNames) {
 	 * gilbarbara/logos (~1.9k brand marks); the rest close the gap that
 	 * simple-icons left when it withdrew a number of consumer brands.
 	 * `arcticons` matters most here: it is a very large set of Android *app*
-	 * icons, which is exactly what an app-level view is naming. */
+	 * icons, which is exactly what an app-level view is naming.
+	 *
+	 * These are fetched ONE AT A TIME.  Fetching them four at a time earned a 429
+	 * for every single collection, and because the failure was swallowed into an
+	 * empty index the run carried on looking successful while arcticons - the
+	 * 15k-icon set that matches application names best - was not consulted at
+	 * all.  That is the quietest possible way to lose hundreds of icons, so a
+	 * collection that still cannot be read now fails the run instead. */
 	const iconify = new Map();
-	await pool(ICONIFY_PREFIXES, async p => {
-		const idx = await httpText(`https://api.iconify.design/collection?prefix=${p}`, { tries: 2 })
-			.then(JSON.parse).catch(() => null);
-		if (!idx) return;
-		const s = new Set();
-		for (const n of (idx.uncategorized || [])) s.add(n);
-		for (const arr of Object.values(idx.categories || {})) for (const n of arr) s.add(n);
-		for (const n of Object.keys(idx.aliases || {})) s.add(n);
+	const iconifyMissing = [];
+	for (const p of ICONIFY_PREFIXES) {
+		const idx = await iconifyCollection(p);
+		if (!idx) { iconifyMissing.push(p); continue; }
+		const s = iconifyNames(idx);
 		if (s.size) iconify.set(p, s);
-	}, 4);
+	}
+	if (iconifyMissing.length)
+		log(`  警告: Iconify 集合本次未参与匹配（读取失败且无缓存）: ${iconifyMissing.join(', ')}`);
+	if (!iconify.size)
+		throw new Error('no Iconify collection could be read, not even from cache - ' +
+			'refusing to build a set that ignores every one of them');
 	const logos = iconify.get('logos') || new Set();
 	log(`  图标索引: dashboard-icons ${dashboard.size}，simple-icons ${simple.size}，` +
 		`selfhst ${selfhst.size}，` +
@@ -1172,8 +1249,48 @@ async function buildIcons(appNames, glyphNames) {
 	}
 	for (const key of glyphSaved)
 		rows.push([key + '.svg', key, 'lucide-static', GLYPHS[key], ...SET_INFO['lucide-static']].join('\t'));
+
+	/* Files this run did not produce but that the catalogue can still name keep
+	 * their place: a fetch may fail for reasons that have nothing to do with the
+	 * icon, and deleting the file would turn a transient outage into a permanently
+	 * missing logo.  Only a file no name maps to - a leftover from an older
+	 * catalogue - is removed. */
+	const produced = new Set([
+		...saved.map(e => e.file),
+		...glyphSaved.map(k => k + '.svg'),
+		...localNames,
+	]);
+	/* buildIcons is handed {name, sourceSlug} entries, not bare names.  Reading
+	 * them as names produced a set holding one junk entry ("object-object.svg"),
+	 * so the first version of this clean deleted 56 icons the catalogue still
+	 * names - Reuters, Youku, iQIYI, Starlink, UCloud and others.  Accept both
+	 * shapes so the check cannot go blind again. */
+	const knownFiles = new Set([
+		...appNames.map(e => slug(typeof e === 'string' ? e : e.name) + '.svg'),
+		...Object.keys(GLYPHS).map(k => k + '.svg'),
+		...Object.values(NAME_TO_GLYPH).map(k => k + '.svg'),
+	]);
+	let carried = 0, dropped = 0;
+	for (const f of fs.readdirSync(ICON_DIR)) {
+		if (!f.endsWith('.svg') || produced.has(f)) continue;
+		/* A file the previous manifest already recorded is kept even when this run
+		 * could not fetch it again: the manifest is the record of what legitimately
+		 * ships, so without this a flaky request silently deletes a logo and the
+		 * hit rate moves with the weather.  Only a file that nothing has ever
+		 * recorded is removed. */
+		if (knownFiles.has(f) || prevRows.has(f)) {
+			carried++;
+			rows.push(prevRows.get(f)
+				|| [f, '', 'unknown', '', 'carried over; provenance not recorded', ''].join('\t'));
+			continue;
+		}
+		fs.unlinkSync(path.join(ICON_DIR, f));
+		dropped++;
+	}
+	if (carried || dropped) log(`  保留未重新抓取: ${carried} 个，清理无用: ${dropped} 个`);
+
 	fs.writeFileSync(path.join(ICON_DIR, 'SOURCES.tsv'), rows.join('\n') + '\n', 'utf8');
-	log(`  来源清单: SOURCES.tsv（${saved.length + glyphSaved.length} 条）`);
+	log(`  来源清单: SOURCES.tsv（${rows.length - 2} 条）`);
 
 	const bytes = fs.readdirSync(ICON_DIR).filter(f => f.endsWith('.svg'))
 		.reduce((sum, f) => sum + fs.statSync(path.join(ICON_DIR, f)).size, 0);
