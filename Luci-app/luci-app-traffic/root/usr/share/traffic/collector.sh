@@ -852,6 +852,13 @@ publish_live_env() {
         printf 'TABLE=%s\n' "$ACCT_TABLE"
     } > "$STATE_DIR/live.env.new" 2>/dev/null &&
         mv -f "$STATE_DIR/live.env.new" "$STATE_DIR/live.env"
+    # A placeholder, so that "the file is not there" can never again be confused
+    # with "nothing has been sampled yet".  After the first round the file always
+    # exists and ready says whether a real sample has landed; the absence of the
+    # file was what made a page that simply was not asking look like a broken
+    # meter.
+    [ -s "$STATE_DIR/live.json" ] ||
+        printf '{"ready":0,"bps_down":0,"bps_up":0,"source":""}\n' > "$STATE_DIR/live.json" 2>/dev/null
     return 0
 }
 

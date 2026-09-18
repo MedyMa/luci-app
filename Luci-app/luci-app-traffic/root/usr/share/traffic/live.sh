@@ -29,6 +29,12 @@
 # writes that timestamp here.  Without a fresh timestamp this script exits after
 # two stat() calls, so a router nobody is watching pays nothing.
 #
+# The window is 60 seconds, not the 10 it started with.  A browser throttles the
+# timers of a tab that is not in the foreground - down to about one call a
+# minute - so a 10-second window meant that looking at another window for a
+# moment stopped the sampling, and the meter then looked broken rather than
+# merely idle.
+#
 # Usage: live.sh          -> writes $STATE_DIR/live.json when it can
 #        live.sh --force  -> sample even when nobody is watching (used by tests)
 
@@ -40,7 +46,7 @@ STATE="$STATE_DIR/live.flows"
 AT="$STATE_DIR/live.at"
 CUR="$STATE_DIR/live.cur"
 OUT="$STATE_DIR/live.json"
-WATCH_AGE=${LIVE_WATCH_AGE:-10}
+WATCH_AGE=${LIVE_WATCH_AGE:-60}
 
 force=0
 [ "${1:-}" = "--force" ] && force=1
