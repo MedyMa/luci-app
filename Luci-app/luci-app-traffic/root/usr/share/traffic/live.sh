@@ -180,12 +180,32 @@ sample_ct() {
 			tu += du; td += dd
 			print k "\t" cu[k] "\t" cd[k] > newst
 		}
-		printf "%d\t%d\n", td, tu
+		# How many flows were matched, first, because the caller has to know
+		# whether this sample is worth keeping as a baseline.
+		printf "%d\t%d\t%d\n", nk, td, tu
 	}' "$CT" 2>/dev/null)
-	[ -f "$STATE_DIR/live.flows.new" ] && mv -f "$STATE_DIR/live.flows.new" "$STATE"
+	# A sample that matched no flow at all must NOT replace the baseline with an
+	# empty file.  The next sample would then see every live flow as new, and an
+	# unknown flow is credited its whole lifetime - which is deliberate, because
+	# that is what keeps a short-lived flow's bytes from being lost.  Against a
+	# wiped baseline it turns every established flow into one, and the meter
+	# jumps: a run of 0 B/s followed by 11 MB/s on a router doing 1 MB/s is that
+	# signature, and it is a reading, not traffic.
+	match=; td=; tu=
+	read -r match td tu <<EOF
+$cur
+EOF
+	case "$match" in ''|*[!0-9]*) match=0 ;; esac
+	case "$td"    in ''|*[!0-9]*) td=0    ;; esac
+	case "$tu"    in ''|*[!0-9]*) tu=0    ;; esac
+	if [ "$match" -gt 0 ]; then
+		[ -f "$STATE_DIR/live.flows.new" ] && mv -f "$STATE_DIR/live.flows.new" "$STATE"
+	else
+		rm -f "$STATE_DIR/live.flows.new"
+	fi
 	[ -n "$cur" ] || return 1
 	[ "$first" = "1" ] && { printf '0\t0\t0\n'; return 0; }
-	printf '1\t%s\n' "$cur"
+	printf '1\t%s\t%s\n' "$td" "$tu"
 }
 
 if [ "$SOURCE" = "nft" ]; then

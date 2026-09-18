@@ -172,5 +172,38 @@ run_live; run_live
 ck "non-LAN client: not counted as down" "0" "$(json)"
 ck "non-LAN client: not counted as up" "0" "$(jsonu)"
 
+# ---- 6. a stale pending state file must not replace the baseline ------------
+# The awk writes the new flow table to live.flows.new and the script moves it
+# over live.flows.  If that move happens when the pending file is empty - the
+# awk matched nothing and never wrote to it, or a run was interrupted - the
+# baseline becomes empty, and the next sample then finds every live flow unknown
+# and credits each one with its whole lifetime.  An unknown flow is given its
+# full count on purpose, so a short-lived flow is not lost; against a wiped
+# baseline that turns every established flow into a spike.  This is the case
+# with the stale file present, which is the only way the guard can be shown to
+# do anything.
+rm -f "$STATE_DIR/live.flows" "$STATE_DIR/live.flows.new"
+cat > "$CT" <<'EOF'
+ipv4 2 tcp 6 100 ESTABLISHED src=192.168.1.5 dst=1.2.3.4 sport=40000 dport=443 packets=12 bytes=1500 src=1.2.3.4 dst=192.168.1.5 sport=443 dport=40000 packets=20 bytes=250000 [ASSURED]
+EOF
+run_live
+ck "stale-pending case: baseline first" "0" "$(ready)"
+
+# a sample that matches nothing, with an empty pending file already lying there
+: > "$STATE_DIR/live.flows.new"
+: > "$CT"
+run_live
+ck "an empty sample still reports zero, not unknown" "1" "$(ready)"
+ck "an empty sample reports no traffic" "0" "$(json)"
+ck "the stale pending file is gone" "absent" "$([ -e "$STATE_DIR/live.flows.new" ] && echo present || echo absent)"
+
+# the same flow returns, having grown by 500 up and 160000 down
+cat > "$CT" <<'EOF'
+ipv4 2 tcp 6 100 ESTABLISHED src=192.168.1.5 dst=1.2.3.4 sport=40000 dport=443 packets=15 bytes=2000 src=1.2.3.4 dst=192.168.1.5 sport=443 dport=40000 packets=25 bytes=410000 [ASSURED]
+EOF
+run_live
+ck_delta "baseline survives an empty sample" "160000" down
+ck_delta "baseline survives an empty sample (up)" "500" up
+
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
