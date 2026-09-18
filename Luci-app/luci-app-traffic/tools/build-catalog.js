@@ -924,6 +924,19 @@ async function buildIcons(appNames, glyphNames) {
 	const localNames = new Set(fs.existsSync(LOCAL_DIR)
 		? fs.readdirSync(LOCAL_DIR).filter(f => f.endsWith('.svg'))
 		: []);
+	/* Some pinned icons do have a real upstream - the Chinese bank marks come
+	 * from an MIT-licensed set - and a pinned file is otherwise recorded as
+	 * "shipped in this repository", which would drop that attribution the next
+	 * time this script runs.  An optional sidecar carries the true source. */
+	const localSource = new Map();
+	const localSidecar = path.join(LOCAL_DIR, 'SOURCES.tsv');
+	if (fs.existsSync(localSidecar)) {
+		for (const line of fs.readFileSync(localSidecar, 'utf8').split('\n')) {
+			if (!line || line.startsWith('#')) continue;
+			const [file, , set, upstream] = line.split('\t');
+			if (file && set) localSource.set(file, { set, upstream });
+		}
+	}
 
 	/* The directory is deliberately NOT cleared before fetching.  Clearing it made
 	 * the hit rate depend on the weather: a single rate-limited or timed-out
@@ -1118,7 +1131,10 @@ async function buildIcons(appNames, glyphNames) {
 		if (!file) return true;
 		/* an icon shipped in the repository is already the answer */
 		if (localNames.has(file)) {
-			saved.push({ name: entry.name, file, from: 'local', src: 'local' });
+			const side = localSource.get(file);
+			saved.push(side
+				? { name: entry.name, file, from: side.upstream, src: side.set }
+				: { name: entry.name, file, from: 'local', src: 'local' });
 			return true;
 		}
 		let tried = iconCandidates(entry.name, entry.sourceSlug);
@@ -1304,6 +1320,8 @@ async function buildIcons(appNames, glyphNames) {
 		'lucide-static': ['ISC', 'https://github.com/lucide-icons/lucide/blob/main/LICENSE'],
 		'local': ['shipped in this repository (marks of their owners)',
 			'tools/icons-local in the luci-app-traffic source tree'],
+		'bank-logos': ['MIT (trademarks remain with the banks)',
+			'https://github.com/icongo/bank-logos'],
 	};
 	function setInfo(src) {
 		if (!src) return ['unknown', ''];

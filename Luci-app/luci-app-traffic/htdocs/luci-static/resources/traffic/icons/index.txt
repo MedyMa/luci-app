@@ -110,6 +110,7 @@ blued
 bluesky
 bmw
 boc
+bocom
 bohemia
 booking
 booking-com
@@ -134,14 +135,21 @@ canon
 canva
 cas
 cbs
+ccb
 cctv
 cdek
 cdn
+ceb
 cerebras
 certificate
+cgb
 chaoxing
+chinamobile
 chinaso
+chinatelecom
+chinaunicom
 cisco
+citic
 civitai
 clarivate
 classic
@@ -150,6 +158,7 @@ cloud-storage
 cloudflare
 cloudinary
 clubhouse
+cmb
 cnet
 cnn
 code
@@ -579,6 +588,7 @@ pearson
 perl
 perplexity
 pinduoduo
+pingan
 pinterest
 pixiv
 playstation
@@ -594,6 +604,7 @@ primevideo
 progress
 protonmail
 proxy
+psbc
 pubg
 public-dns
 pypi

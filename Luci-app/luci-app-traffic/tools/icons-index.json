@@ -1,14 +1,14 @@
 {
  "generated": "2026-09-18",
- "icons": 863,
- "manifestRows": 863,
+ "icons": 874,
+ "manifestRows": 874,
  "catalogue": {
   "rows": 32068,
   "names": 1657
  },
  "coverage": {
-  "names": 47.9,
-  "domains": 76.1
+  "names": 48.6,
+  "domains": 77
  },
  "missingByDomains": [
   {
@@ -34,10 +34,6 @@
   {
    "name": "YuanFuDao",
    "domains": 92
-  },
-  {
-   "name": "ChinaTelecom",
-   "domains": 88
   },
   {
    "name": "No-IP",
@@ -104,10 +100,6 @@
    "domains": 45
   },
   {
-   "name": "ChinaMobile",
-   "domains": 44
-  },
-  {
    "name": "Ctyun",
    "domains": 44
   },
@@ -126,10 +118,6 @@
   {
    "name": "Veet",
    "domains": 43
-  },
-  {
-   "name": "ChinaUnicom",
-   "domains": 40
   },
   {
    "name": "AirWick",
@@ -170,6 +158,18 @@
   {
    "name": "17zuoye",
    "domains": 33
+  },
+  {
+   "name": "CNNIC",
+   "domains": 33
+  },
+  {
+   "name": "Miniso",
+   "domains": 33
+  },
+  {
+   "name": "Verisign",
+   "domains": 33
   }
  ],
  "iconsBySlug": {
@@ -196,14 +196,6 @@
    "upstream": "0x0",
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/token/"
-  },
-  "abc": {
-   "file": "abc.svg",
-   "application": "ABC",
-   "source": "iconify:arcticons",
-   "upstream": "abc",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
   },
   "amp": {
    "file": "amp.svg",
@@ -852,14 +844,6 @@
    "upstream": "bandcamp",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
-  "boc": {
-   "file": "boc.svg",
-   "application": "BOC",
-   "source": "iconify:arcticons",
-   "upstream": "boc",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
   },
   "bangumi": {
    "file": "bangumi.svg",
@@ -6605,14 +6589,6 @@
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/arcticons/"
   },
-  "icbc": {
-   "file": "icbc.svg",
-   "application": "ICBC",
-   "source": "iconify:arcticons",
-   "upstream": "arcticons:icbc",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
-  },
   "ifanr": {
    "file": "ifanr.svg",
    "application": "Ifanr",
@@ -7076,6 +7052,118 @@
    "upstream": "arcticons:smzdm",
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/arcticons/"
+  },
+  "abc": {
+   "file": "abc.svg",
+   "application": "ABC",
+   "source": "bank-logos",
+   "upstream": "abchina-rect",
+   "licence": "MIT (trademarks remain with the banks)",
+   "url": "https://github.com/icongo/bank-logos"
+  },
+  "boc": {
+   "file": "boc.svg",
+   "application": "BOC",
+   "source": "bank-logos",
+   "upstream": "boc-rect",
+   "licence": "MIT (trademarks remain with the banks)",
+   "url": "https://github.com/icongo/bank-logos"
+  },
+  "icbc": {
+   "file": "icbc.svg",
+   "application": "ICBC",
+   "source": "bank-logos",
+   "upstream": "icbc-rect",
+   "licence": "MIT (trademarks remain with the banks)",
+   "url": "https://github.com/icongo/bank-logos"
+  },
+  "ccb": {
+   "file": "ccb.svg",
+   "application": "CCB",
+   "source": "bank-logos",
+   "upstream": "ccb-rect",
+   "licence": "MIT (trademarks remain with the banks)",
+   "url": "https://github.com/icongo/bank-logos"
+  },
+  "bocom": {
+   "file": "bocom.svg",
+   "application": "BOCOM",
+   "source": "bank-logos",
+   "upstream": "bankcomm-rect",
+   "licence": "MIT (trademarks remain with the banks)",
+   "url": "https://github.com/icongo/bank-logos"
+  },
+  "psbc": {
+   "file": "psbc.svg",
+   "application": "PSBC",
+   "source": "bank-logos",
+   "upstream": "psbc-rect",
+   "licence": "MIT (trademarks remain with the banks)",
+   "url": "https://github.com/icongo/bank-logos"
+  },
+  "cmb": {
+   "file": "cmb.svg",
+   "application": "CMB",
+   "source": "bank-logos",
+   "upstream": "cmbchina-rect",
+   "licence": "MIT (trademarks remain with the banks)",
+   "url": "https://github.com/icongo/bank-logos"
+  },
+  "ceb": {
+   "file": "ceb.svg",
+   "application": "CEB",
+   "source": "bank-logos",
+   "upstream": "cebbank-rect",
+   "licence": "MIT (trademarks remain with the banks)",
+   "url": "https://github.com/icongo/bank-logos"
+  },
+  "cgb": {
+   "file": "cgb.svg",
+   "application": "CGB",
+   "source": "bank-logos",
+   "upstream": "cgbchina-rect",
+   "licence": "MIT (trademarks remain with the banks)",
+   "url": "https://github.com/icongo/bank-logos"
+  },
+  "citic": {
+   "file": "citic.svg",
+   "application": "Citic",
+   "source": "bank-logos",
+   "upstream": "citicbank-rect",
+   "licence": "MIT (trademarks remain with the banks)",
+   "url": "https://github.com/icongo/bank-logos"
+  },
+  "pingan": {
+   "file": "pingan.svg",
+   "application": "PingAn",
+   "source": "bank-logos",
+   "upstream": "pingan-rect",
+   "licence": "MIT (trademarks remain with the banks)",
+   "url": "https://github.com/icongo/bank-logos"
+  },
+  "chinamobile": {
+   "file": "chinamobile.svg",
+   "application": "ChinaMobile",
+   "source": "local",
+   "upstream": "local",
+   "licence": "shipped in this repository (marks of their owners)",
+   "url": "tools/icons-local in the luci-app-traffic source tree"
+  },
+  "chinaunicom": {
+   "file": "chinaunicom.svg",
+   "application": "ChinaUnicom",
+   "source": "local",
+   "upstream": "local",
+   "licence": "shipped in this repository (marks of their owners)",
+   "url": "tools/icons-local in the luci-app-traffic source tree"
+  },
+  "chinatelecom": {
+   "file": "chinatelecom.svg",
+   "application": "ChinaTelecom",
+   "source": "local",
+   "upstream": "local",
+   "licence": "shipped in this repository (marks of their owners)",
+   "url": "tools/icons-local in the luci-app-traffic source tree"
   }
  }
 }

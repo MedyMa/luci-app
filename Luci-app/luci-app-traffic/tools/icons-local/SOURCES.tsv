@@ -1,0 +1,13 @@
+# Pinned icons whose bytes came from an upstream set.
+# file	application	source set	upstream slug
+abc.svg	ABC	bank-logos	abchina-rect
+boc.svg	BOC	bank-logos	boc-rect
+icbc.svg	ICBC	bank-logos	icbc-rect
+ccb.svg	CCB	bank-logos	ccb-rect
+bocom.svg	BOCOM	bank-logos	bankcomm-rect
+psbc.svg	PSBC	bank-logos	psbc-rect
+cmb.svg	CMB	bank-logos	cmbchina-rect
+ceb.svg	CEB	bank-logos	cebbank-rect
+cgb.svg	CGB	bank-logos	cgbchina-rect
+citic.svg	Citic	bank-logos	citicbank-rect
+pingan.svg	PingAn	bank-logos	pingan-rect

@@ -2,7 +2,6 @@
 # file	application	source set	upstream slug	licence	source URL	degraded
 2gis.svg	2gis	iconify:arcticons	2gis	see the collection licence	https://icon-sets.iconify.design/arcticons/	
 0x0.svg	0x0	iconify:token	0x0	see the collection licence	https://icon-sets.iconify.design/token/	
-abc.svg	ABC	iconify:arcticons	abc	see the collection licence	https://icon-sets.iconify.design/arcticons/	
 amp.svg	AMP	iconify:logos	amp	see the collection licence	https://icon-sets.iconify.design/logos/	
 apkmirror.svg	APKMirror	iconify:arcticons	apkmirror	see the collection licence	https://icon-sets.iconify.design/arcticons/	
 aol.svg	AOL	iconify:simple-icons	aol	see the collection licence	https://icon-sets.iconify.design/simple-icons/	
@@ -84,7 +83,6 @@ baidu-map.svg	Baidu Map	iconify:arcticons	baidu-map	see the collection licence	h
 baidu-tieba.svg	Baidu Tieba	iconify:arcticons	baidu-tieba	see the collection licence	https://icon-sets.iconify.design/arcticons/	
 baidu-wenku.svg	Baidu Wenku	dashboard-icons	baidu	see upstream LICENSE	https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE	
 bandcamp.svg	Bandcamp	dashboard-icons	bandcamp	see upstream LICENSE	https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE	
-boc.svg	BOC	iconify:arcticons	boc	see the collection licence	https://icon-sets.iconify.design/arcticons/	
 bangumi.svg	Bangumi	dashboard-icons	autobangumi	see upstream LICENSE	https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE	
 beats.svg	Beats	iconify:logos	beats	see the collection licence	https://icon-sets.iconify.design/logos/	
 battle-net.svg	Battle.net	iconify:arcticons	battlenet	see the collection licence	https://icon-sets.iconify.design/arcticons/	
@@ -804,7 +802,6 @@ hibymusic.svg	HibyMusic	iconify:arcticons	arcticons:hibymusic	see the collection
 hkust.svg	Hkust	iconify:arcticons	arcticons:hkust-qr-code	see the collection licence	https://icon-sets.iconify.design/arcticons/	
 hm.svg	Hm	iconify:arcticons	arcticons:hm	see the collection licence	https://icon-sets.iconify.design/arcticons/	
 ibkr.svg	Ibkr	iconify:arcticons	arcticons:ibkr	see the collection licence	https://icon-sets.iconify.design/arcticons/	
-icbc.svg	ICBC	iconify:arcticons	arcticons:icbc	see the collection licence	https://icon-sets.iconify.design/arcticons/	
 ifanr.svg	Ifanr	iconify:material-icon-theme	material-icon-theme:ifanr-cloud	see the collection licence	https://icon-sets.iconify.design/material-icon-theme/	
 iflytek.svg	IFlytek	iconify:arcticons	arcticons:iflytek-input	see the collection licence	https://icon-sets.iconify.design/arcticons/	
 inshot.svg	Inshot	iconify:arcticons	arcticons:inshot	see the collection licence	https://icon-sets.iconify.design/arcticons/	
@@ -863,3 +860,17 @@ sb.svg	Sb	iconify:circle-flags	circle-flags:sb	see the collection licence	https:
 secom.svg	Secom	iconify:arcticons	arcticons:secom-safety-check-report	see the collection licence	https://icon-sets.iconify.design/arcticons/	
 shein.svg	SHEIN	iconify:arcticons	arcticons:shein	see the collection licence	https://icon-sets.iconify.design/arcticons/	
 smzdm.svg	SMZDM	iconify:arcticons	arcticons:smzdm	see the collection licence	https://icon-sets.iconify.design/arcticons/	
+abc.svg	ABC	bank-logos	abchina-rect	MIT (trademarks remain with the banks)	https://github.com/icongo/bank-logos	
+boc.svg	BOC	bank-logos	boc-rect	MIT (trademarks remain with the banks)	https://github.com/icongo/bank-logos	
+icbc.svg	ICBC	bank-logos	icbc-rect	MIT (trademarks remain with the banks)	https://github.com/icongo/bank-logos	
+ccb.svg	CCB	bank-logos	ccb-rect	MIT (trademarks remain with the banks)	https://github.com/icongo/bank-logos	
+bocom.svg	BOCOM	bank-logos	bankcomm-rect	MIT (trademarks remain with the banks)	https://github.com/icongo/bank-logos	
+psbc.svg	PSBC	bank-logos	psbc-rect	MIT (trademarks remain with the banks)	https://github.com/icongo/bank-logos	
+cmb.svg	CMB	bank-logos	cmbchina-rect	MIT (trademarks remain with the banks)	https://github.com/icongo/bank-logos	
+ceb.svg	CEB	bank-logos	cebbank-rect	MIT (trademarks remain with the banks)	https://github.com/icongo/bank-logos	
+cgb.svg	CGB	bank-logos	cgbchina-rect	MIT (trademarks remain with the banks)	https://github.com/icongo/bank-logos	
+citic.svg	Citic	bank-logos	citicbank-rect	MIT (trademarks remain with the banks)	https://github.com/icongo/bank-logos	
+pingan.svg	PingAn	bank-logos	pingan-rect	MIT (trademarks remain with the banks)	https://github.com/icongo/bank-logos	
+chinamobile.svg	ChinaMobile	local	local	shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
+chinaunicom.svg	ChinaUnicom	local	local	shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
+chinatelecom.svg	ChinaTelecom	local	local	shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
