@@ -8,6 +8,7 @@ var callSummary = rpc.declare({ object: 'luci.traffic', method: 'getSummary' });
 var callHourly  = rpc.declare({ object: 'luci.traffic', method: 'getHourly', params: [ 'hours' ] });
 var callSeries  = rpc.declare({ object: 'luci.traffic', method: 'getSeries', params: [ 'range' ] });
 var callResolveNow = rpc.declare({ object: 'luci.traffic', method: 'resolveNow' });
+var callLive    = rpc.declare({ object: 'luci.traffic', method: 'getLive' });
 
 /* Vivid, evenly spaced hues: bright enough to read on a light card and to keep
  * their identity on a dark one. */
@@ -683,6 +684,10 @@ return view.extend({
 			if (this.seriesStale || this.ticks % 6 === 0) this.loadSeries();
 			return this.refresh(false);
 		}, this), 5);
+		/* The realtime meter has its own one-second clock.  poll() already pauses
+		 * while the tab is hidden, so the sampling stops both when the page is
+		 * closed and when it is not being looked at. */
+		poll.add(L.bind(this.pollLive, this), 1);
 		return node;
 	},
 
@@ -1029,8 +1034,37 @@ return view.extend({
 			this.rateDown.removeAttribute('title');
 			this.rateUp.removeAttribute('title');
 		}
+		/* The one-second sampler owns these two numbers while it is working; this
+		 * interval rate is the fallback, not a second opinion.  Writing both made
+		 * the number flick back to a ten-second average once per snapshot, which
+		 * reads as a glitch rather than as a rate. */
+		if (this.liveOn) return;
 		dom.content(this.rateDown, fmtRate(this.rate.down));
 		dom.content(this.rateUp, fmtRate(this.rate.up));
+	},
+
+	/* The realtime meter: one call a second, which is also what tells the backend
+	 * that somebody is looking.  rpcd writes the timestamp live.sh checks, so
+	 * closing the page stops the sampling instead of leaving it running forever.
+	 *
+	 * The ranged views (1h/12h/24h/7d) show a window average and their numbers
+	 * come from the same call as before, so this deliberately does nothing
+	 * unless the session view is selected. */
+	pollLive: function() {
+		if (this.range !== 'session') return Promise.resolve();
+		return callLive().then(L.bind(function(r) {
+			if (!r || Number(r.ready) !== 1) throw new Error('no live sample yet');
+			this.liveMisses = 0;
+			this.liveOn = true;
+			dom.content(this.rateDown, fmtRate(Number(r.bps_down) || 0));
+			dom.content(this.rateUp, fmtRate(Number(r.bps_up) || 0));
+		}, this)).catch(L.bind(function() {
+			/* Three misses in a row is not a hiccup, it is this build running on
+			 * an older backend: hand the two numbers back to the interval rate
+			 * instead of freezing them at the last live value. */
+			this.liveMisses = (this.liveMisses || 0) + 1;
+			if (this.liveMisses >= 3) this.liveOn = false;
+		}, this));
 	},
 
 	renderLive: function(s) {

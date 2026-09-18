@@ -273,10 +273,28 @@ reset_stats() {
 	json_dump
 }
 
+# The page's realtime meter.  The collector rewrites live.json every second, but
+# only while someone is watching - and rpcd is what tells it that someone is:
+# the timestamp written here is read by live.sh, which exits after two stat()
+# calls when it is stale.  That is the whole reason a router with no page open
+# pays nothing for a one-second meter.  The file is a few dozen bytes, so this
+# stays a cat rather than a re-derivation.
+get_live() {
+	printf '%s\n' "$(date +%s 2>/dev/null || echo 0)" > "$STATE_DIR/live.watch.new" 2>/dev/null &&
+		mv -f "$STATE_DIR/live.watch.new" "$STATE_DIR/live.watch"
+	if [ -s "$STATE_DIR/live.json" ]; then
+		cat "$STATE_DIR/live.json"
+	else
+		# no sample yet: the page falls back to the interval rate and says so
+		printf '{"ready":0,"bps_down":0,"bps_up":0,"source":""}\n'
+	fi
+}
+
 case "$1" in
 	list)
 		json_init
 		json_add_object "getSummary"; json_close_object
+		json_add_object "getLive"; json_close_object
 		json_add_object "getHourly"
 		json_add_string "hours" "integer"
 		json_close_object
@@ -304,6 +322,7 @@ case "$1" in
 		# like a healthy object.
 		case "$2" in
 			getSummary) get_summary ;;
+			getLive)    get_live ;;
 			getHourly)  get_hourly "$arg_hours" ;;
 			getConfig)  get_config ;;
 			getSeries)  get_series "$arg_range" ;;

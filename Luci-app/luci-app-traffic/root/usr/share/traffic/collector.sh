@@ -832,6 +832,29 @@ acct_read() {
         }'
 }
 
+# Publish what the one-second sampler needs, so that it does not have to work
+# any of it out for itself.  The LAN prefixes come from the same detection this
+# script uses, and SOURCE names the counter layer that is authoritative on this
+# router: with flow offloading on, the nft counters miss almost everything
+# (measured here at 2.05 MiB against 535 MiB across br-lan for the same period),
+# so a sampler that guessed would publish a number that disagrees with the total
+# sitting next to it on the same page.  A second copy of this decision is
+# exactly how the icon normaliser drifted away from the icon generator and
+# started choosing the wrong marks.
+publish_live_env() {
+    local src
+    if [ "$ACCT_ON" = "1" ]; then src=nft; else src=conntrack; fi
+    {
+        printf 'LAN4=%s\n' "$CFG_LAN4"
+        printf 'LAN6=%s\n' "$CFG_LAN6"
+        printf 'SELF=%s\n' "$CFG_SELF"
+        printf 'SOURCE=%s\n' "$src"
+        printf 'TABLE=%s\n' "$ACCT_TABLE"
+    } > "$STATE_DIR/live.env.new" 2>/dev/null &&
+        mv -f "$STATE_DIR/live.env.new" "$STATE_DIR/live.env"
+    return 0
+}
+
 # Turn the absolute counters into this round deltas and accumulate them per
 # client.  A counter that went backwards means the rules were rebuilt (a
 # firewall reload wipes our table), so the new value is used as the delta.
@@ -1586,6 +1609,9 @@ run() {
         # swallowing the round
         account_clients
         classify
+        # what the one-second sampler needs: the same counters this round read,
+        # and the same decision about which layer is authoritative
+        publish_live_env
         # one clock read per round, shared by the sample and the hour check
         now=$(date +%s 2>/dev/null || echo 0)
         record_sample "$now"
@@ -1603,7 +1629,19 @@ run() {
         # test on a normal round.  It happens here rather than in the browser
         # because the page must never depend on an upstream host being reachable.
         [ "$CFG_ICONS_FETCH" = "1" ] && /usr/share/traffic/fetch-icons.sh
-        sleep "$CFG_INTERVAL"
+        # The page's realtime meter samples once a second, which is finer than a
+        # round.  This is a tick loop rather than `sleep $CFG_INTERVAL` so the
+        # sampler can run between rounds; the round itself keeps its cadence,
+        # because the loop still sleeps CFG_INTERVAL seconds in total.  live.sh
+        # exits after two stat() calls unless the page is open (rpcd writes the
+        # timestamp when it polls), so a router nobody is watching pays nothing
+        # for this.
+        tick=0
+        while [ "$tick" -lt "$CFG_INTERVAL" ]; do
+            [ -x /usr/share/traffic/live.sh ] && /usr/share/traffic/live.sh
+            sleep 1
+            tick=$((tick + 1))
+        done
     done
 }
 
