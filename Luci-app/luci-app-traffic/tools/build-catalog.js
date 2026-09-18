@@ -857,9 +857,17 @@ function iconCandidates(name, sourceSlug) {
 	 * built from is therefore a candidate in its own right - for the glyph names
 	 * it is exactly the glyph key, which is how a row like STUN Servers gets the
 	 * glyph that was already in the directory. */
+	/* The name's own slug comes FIRST.  It is the faithful spelling, and an
+	 * upstream set that files the brand under it is the one we want; the
+	 * NAME_FIX key is the fallback for names whose slug does not exist upstream
+	 * (the icon for "AT&T" is filed as atandt, not at-and-t), so putting it
+	 * second costs nothing there and gains a colour mark elsewhere.  Asking for
+	 * the key first cost exactly that: applemusic exists in simple-icons while
+	 * dashboard-icons carries apple-music, so Apple Music was drawn from the
+	 * monochrome set and the faithful candidate was never tried at all. */
+	push(s);
 	for (const [key, disp] of Object.entries(NAME_FIX))
 		if (disp === name) { push(key); break; }
-	push(s);
 	/* A row the classifier could not name is drawn as the destination it saw,
 	 * which is a bare registrable name such as ctrip-it.com.  Its slug is
 	 * ctrip-it-com, so no upstream set ever matches and the row keeps a letter
@@ -1004,12 +1012,45 @@ async function buildIcons(appNames, glyphNames) {
 	 * Paramount+ were exactly that - present in both the index and the naming
 	 * rules, yet missing on disk.  Each CDN attempt therefore falls back to the
 	 * repository itself, which is the same revision the index was read from. */
+	/* A set carrying a name is a promise that its bytes exist.  When they do not
+	 * arrive, the pipeline used to fall through to the next, lower-quality set
+	 * without a word: Apple Music is in dashboard-icons, asking for it by hand
+	 * returns it, and it still shipped as a monochrome mark because a bulk run of
+	 * thousands of requests got rate limited for a moment.  One more attempt
+	 * after a pause is affordable here and only here - it is made only for a name
+	 * a set is known to have, so a genuine miss costs nothing extra. */
+	async function tryFetchKnown(url, opts) {
+		const body = await tryFetch(url, opts);
+		if (body) return body;
+		await sleep(2000);
+		return tryFetch(url, opts);
+	}
+
+	/* The set that should answer for a name, in preference order.  Comparing it
+	 * with the set that did answer turns a silent degradation into a recorded
+	 * one: the manifest names the set that was skipped, instead of the result
+	 * looking like the only set that ever had the name. */
+	function expectedSource(name) {
+		if (dashboard.has(name)) return 'dashboard-icons';
+		if (logos.has(name)) return 'iconify:logos';
+		/* simple-icons is both an Iconify collection and a CDN set, and they are
+		 * the same artwork: reporting one as a degradation of the other would be
+		 * a false alarm on every icon the CDN served (vivo was the first). */
+		if (simple.has(name)) return 'simple-icons';
+		for (const [p, s] of iconify)
+			if (ICONIFY_COLOUR.includes(p) && p !== 'simple-icons' && s.has(name)) return 'iconify:' + p;
+		if (selfhst.has(name)) return 'selfhst/icons';
+		for (const [p, s] of iconify)
+			if (ICONIFY_LINE.includes(p) && s.has(name)) return 'iconify:' + p;
+		return '';
+	}
+
 	async function fetchBrand(name) {
 		if (cache.has(name)) return cache.get(name);
 		let svg = null, src = '';
 		if (dashboard.has(name)) {
-			svg = await tryFetch(`https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/${name}.svg`)
-				|| await tryFetch(`https://raw.githubusercontent.com/homarr-labs/dashboard-icons/main/svg/${name}.svg`);
+			svg = await tryFetchKnown(`https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/${name}.svg`)
+				|| await tryFetchKnown(`https://raw.githubusercontent.com/homarr-labs/dashboard-icons/main/svg/${name}.svg`);
 			if (svg) src = 'dashboard-icons';
 		}
 		if (!svg && logos.has(name)) {
@@ -1026,14 +1067,14 @@ async function buildIcons(appNames, glyphNames) {
 			if (svg) src = 'iconify:' + p;
 		}
 		if (!svg && selfhst.has(name)) {
-			svg = await tryFetch(`https://cdn.jsdelivr.net/gh/selfhst/icons/svg/${name}.svg`)
-				|| await tryFetch(`https://raw.githubusercontent.com/selfhst/icons/main/svg/${name}.svg`);
+			svg = await tryFetchKnown(`https://cdn.jsdelivr.net/gh/selfhst/icons/svg/${name}.svg`)
+				|| await tryFetchKnown(`https://raw.githubusercontent.com/selfhst/icons/main/svg/${name}.svg`);
 			if (svg) src = 'selfhst/icons';
 		}
 		if (!svg && simple.has(name)) {
-			svg = await tryFetch(`https://cdn.simpleicons.org/${name}`)
-				|| await tryFetch(`https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/${name}.svg`, { mono: true })
-				|| await tryFetch(`https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/${name}.svg`, { mono: true });
+			svg = await tryFetchKnown(`https://cdn.simpleicons.org/${name}`)
+				|| await tryFetchKnown(`https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/${name}.svg`, { mono: true })
+				|| await tryFetchKnown(`https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/${name}.svg`, { mono: true });
 			if (svg) src = 'simple-icons';
 		}
 		/* Line art, last of all.  arcticons carries a great many application
@@ -1271,13 +1312,25 @@ async function buildIcons(appNames, glyphNames) {
 		return ['see the collection licence', `https://icon-sets.iconify.design/${prefix}/`];
 	}
 	const rows = ['# Generated by tools/build-catalog.js - do not edit by hand.',
-		'# file\tapplication\tsource set\tupstream slug\tlicence\tsource URL'];
+		'# file\tapplication\tsource set\tupstream slug\tlicence\tsource URL\tdegraded'];
+	/* A row whose source set is not the set that should have answered is a
+	 * degraded icon: the name is real and a better mark exists, but the bytes did
+	 * not arrive.  Naming the skipped set here is what makes that visible - the
+	 * icon still looks like a normal result otherwise, which is how Apple Music
+	 * was drawn as a monochrome mark for weeks without anyone noticing. */
+	const upstream = new Set(['dashboard-icons', 'iconify:logos', 'selfhst/icons', 'simple-icons',
+		...ICONIFY_PREFIXES.map(p => 'iconify:' + p)]);
 	for (const e of saved) {
 		const [lic, url] = setInfo(e.src);
-		rows.push([e.file, e.name, e.src || 'unknown', e.from, lic, url].join('\t'));
+		let note = '';
+		if (e.src && upstream.has(e.src)) {
+			const want = expectedSource(e.name);
+			if (want && want !== e.src) note = 'degraded: ' + want + ' has it';
+		}
+		rows.push([e.file, e.name, e.src || 'unknown', e.from, lic, url, note].join('\t'));
 	}
 	for (const key of glyphSaved)
-		rows.push([key + '.svg', key, 'lucide-static', GLYPHS[key], ...SET_INFO['lucide-static']].join('\t'));
+		rows.push([key + '.svg', key, 'lucide-static', GLYPHS[key], ...SET_INFO['lucide-static'], ''].join('\t'));
 
 	/* Files this run did not produce but that the catalogue can still name keep
 	 * their place: a fetch may fail for reasons that have nothing to do with the
@@ -1309,8 +1362,14 @@ async function buildIcons(appNames, glyphNames) {
 		 * recorded is removed. */
 		if (knownFiles.has(f) || prevRows.has(f)) {
 			carried++;
-			rows.push(prevRows.get(f)
-				|| [f, '', 'unknown', '', 'carried over; provenance not recorded', ''].join('\t'));
+			/* A carried row is the previous manifest's line, which may predate the
+			 * degraded column; padded so the table stays rectangular.  A ragged
+			 * TSV is not fatal but it is exactly the kind of "close enough"
+			 * that makes a later column-shift bug invisible. */
+			const carriedRow = prevRows.get(f);
+			rows.push(carriedRow
+				? (carriedRow.split('\t').length < 7 ? carriedRow + '\t' : carriedRow)
+				: [f, '', 'unknown', '', 'carried over; provenance not recorded', '', ''].join('\t'));
 			continue;
 		}
 		fs.unlinkSync(path.join(ICON_DIR, f));

@@ -189,6 +189,14 @@
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/arcticons/"
   },
+  "0x0": {
+   "file": "0x0.svg",
+   "application": "0x0",
+   "source": "iconify:token",
+   "upstream": "0x0",
+   "licence": "see the collection licence",
+   "url": "https://icon-sets.iconify.design/token/"
+  },
   "abc": {
    "file": "abc.svg",
    "application": "ABC",
@@ -197,6 +205,30 @@
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/arcticons/"
   },
+  "amp": {
+   "file": "amp.svg",
+   "application": "AMP",
+   "source": "iconify:logos",
+   "upstream": "amp",
+   "licence": "see the collection licence",
+   "url": "https://icon-sets.iconify.design/logos/"
+  },
+  "apkmirror": {
+   "file": "apkmirror.svg",
+   "application": "APKMirror",
+   "source": "iconify:arcticons",
+   "upstream": "apkmirror",
+   "licence": "see the collection licence",
+   "url": "https://icon-sets.iconify.design/arcticons/"
+  },
+  "aol": {
+   "file": "aol.svg",
+   "application": "AOL",
+   "source": "iconify:simple-icons",
+   "upstream": "aol",
+   "licence": "see the collection licence",
+   "url": "https://icon-sets.iconify.design/simple-icons/"
+  },
   "1337x": {
    "file": "1337x.svg",
    "application": "1337x",
@@ -204,14 +236,6 @@
    "upstream": "1337x",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
-  "0x0": {
-   "file": "0x0.svg",
-   "application": "0x0",
-   "source": "iconify:token",
-   "upstream": "0x0",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/token/"
   },
   "amd": {
    "file": "amd.svg",
@@ -229,61 +253,13 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "amp": {
-   "file": "amp.svg",
-   "application": "AMP",
-   "source": "iconify:logos",
-   "upstream": "amp",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/logos/"
-  },
-  "aol": {
-   "file": "aol.svg",
-   "application": "AOL",
-   "source": "iconify:simple-icons",
-   "upstream": "aol",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
-  },
-  "apkmirror": {
-   "file": "apkmirror.svg",
-   "application": "APKMirror",
+  "apkpure": {
+   "file": "apkpure.svg",
+   "application": "APKPure",
    "source": "iconify:arcticons",
-   "upstream": "apkmirror",
+   "upstream": "apkpure",
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/arcticons/"
-  },
-  "aws": {
-   "file": "aws.svg",
-   "application": "AWS",
-   "source": "dashboard-icons",
-   "upstream": "aws",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
-  "accuweather": {
-   "file": "accuweather.svg",
-   "application": "Accuweather",
-   "source": "iconify:simple-icons",
-   "upstream": "accuweather",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
-  },
-  "acer": {
-   "file": "acer.svg",
-   "application": "Acer",
-   "source": "iconify:simple-icons",
-   "upstream": "acer",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
-  },
-  "activision": {
-   "file": "activision.svg",
-   "application": "Activision",
-   "source": "iconify:simple-icons",
-   "upstream": "activision",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
   },
   "at-t": {
    "file": "at-t.svg",
@@ -293,13 +269,21 @@
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/cib/"
   },
-  "apkpure": {
-   "file": "apkpure.svg",
-   "application": "APKPure",
-   "source": "iconify:arcticons",
-   "upstream": "apkpure",
+  "accuweather": {
+   "file": "accuweather.svg",
+   "application": "Accuweather",
+   "source": "iconify:simple-icons",
+   "upstream": "accuweather",
    "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "url": "https://icon-sets.iconify.design/simple-icons/"
+  },
+  "activision-blizzard": {
+   "file": "activision-blizzard.svg",
+   "application": "Activision Blizzard",
+   "source": "iconify:simple-icons",
+   "upstream": "activision",
+   "licence": "see the collection licence",
+   "url": "https://icon-sets.iconify.design/simple-icons/"
   },
   "adblock": {
    "file": "adblock.svg",
@@ -325,13 +309,29 @@
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/simple-icons/"
   },
-  "adobe": {
-   "file": "adobe.svg",
-   "application": "Adobe",
+  "aws": {
+   "file": "aws.svg",
+   "application": "AWS",
    "source": "dashboard-icons",
-   "upstream": "adobe",
+   "upstream": "aws",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  },
+  "acer": {
+   "file": "acer.svg",
+   "application": "Acer",
+   "source": "iconify:simple-icons",
+   "upstream": "acer",
+   "licence": "see the collection licence",
+   "url": "https://icon-sets.iconify.design/simple-icons/"
+  },
+  "activision": {
+   "file": "activision.svg",
+   "application": "Activision",
+   "source": "iconify:simple-icons",
+   "upstream": "activision",
+   "licence": "see the collection licence",
+   "url": "https://icon-sets.iconify.design/simple-icons/"
   },
   "adidas": {
    "file": "adidas.svg",
@@ -341,21 +341,13 @@
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/simple-icons/"
   },
-  "activision-blizzard": {
-   "file": "activision-blizzard.svg",
-   "application": "Activision Blizzard",
-   "source": "iconify:simple-icons",
-   "upstream": "activision",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
-  },
-  "agora": {
-   "file": "agora.svg",
-   "application": "Agora",
-   "source": "iconify:simple-icons",
-   "upstream": "agora",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
+  "adobe": {
+   "file": "adobe.svg",
+   "application": "Adobe",
+   "source": "dashboard-icons",
+   "upstream": "adobe",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
   "adobe-activation": {
    "file": "adobe-activation.svg",
@@ -364,6 +356,14 @@
    "upstream": "adobe",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  },
+  "agora": {
+   "file": "agora.svg",
+   "application": "Agora",
+   "source": "iconify:simple-icons",
+   "upstream": "agora",
+   "licence": "see the collection licence",
+   "url": "https://icon-sets.iconify.design/simple-icons/"
   },
   "afdian": {
    "file": "afdian.svg",
@@ -389,6 +389,14 @@
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/logos/"
   },
+  "akamai": {
+   "file": "akamai.svg",
+   "application": "Akamai",
+   "source": "dashboard-icons",
+   "upstream": "akamai",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  },
   "alfred": {
    "file": "alfred.svg",
    "application": "Alfred",
@@ -413,14 +421,6 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
   },
-  "alibaba-cloud": {
-   "file": "alibaba-cloud.svg",
-   "application": "Alibaba Cloud",
-   "source": "iconify:simple-icons",
-   "upstream": "alibabacloud",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
-  },
   "alipay": {
    "file": "alipay.svg",
    "application": "Alipay",
@@ -429,13 +429,13 @@
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/simple-icons/"
   },
-  "amazon-appstore": {
-   "file": "amazon-appstore.svg",
-   "application": "Amazon Appstore",
-   "source": "iconify:arcticons",
-   "upstream": "amazon-appstore",
+  "alibaba-cloud": {
+   "file": "alibaba-cloud.svg",
+   "application": "Alibaba Cloud",
+   "source": "iconify:simple-icons",
+   "upstream": "alibabacloud",
    "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "url": "https://icon-sets.iconify.design/simple-icons/"
   },
   "amazon": {
    "file": "amazon.svg",
@@ -445,13 +445,21 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "akamai": {
-   "file": "akamai.svg",
-   "application": "Akamai",
+  "aliyun-drive": {
+   "file": "aliyun-drive.svg",
+   "application": "Aliyun Drive",
    "source": "dashboard-icons",
-   "upstream": "akamai",
+   "upstream": "aliyun",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  },
+  "amazon-appstore": {
+   "file": "amazon-appstore.svg",
+   "application": "Amazon Appstore",
+   "source": "iconify:arcticons",
+   "upstream": "amazon-appstore",
+   "licence": "see the collection licence",
+   "url": "https://icon-sets.iconify.design/arcticons/"
   },
   "amc": {
    "file": "amc.svg",
@@ -460,6 +468,14 @@
    "upstream": "amcrest",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
+  },
+  "anaconda": {
+   "file": "anaconda.svg",
+   "application": "Anaconda",
+   "source": "dashboard-icons",
+   "upstream": "anaconda",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
   "anime": {
    "file": "anime.svg",
@@ -485,14 +501,6 @@
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/arcticons/"
   },
-  "aliyun-drive": {
-   "file": "aliyun-drive.svg",
-   "application": "Aliyun Drive",
-   "source": "dashboard-icons",
-   "upstream": "aliyun",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
   "anthropic": {
    "file": "anthropic.svg",
    "application": "Anthropic",
@@ -517,14 +525,6 @@
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/simple-icons/"
   },
-  "anaconda": {
-   "file": "anaconda.svg",
-   "application": "Anaconda",
-   "source": "dashboard-icons",
-   "upstream": "anaconda",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
   "apifox": {
    "file": "apifox.svg",
    "application": "Apifox",
@@ -533,6 +533,14 @@
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/simple-icons/"
   },
+  "app-store": {
+   "file": "app-store.svg",
+   "application": "App Store",
+   "source": "dashboard-icons",
+   "upstream": "app-store",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  },
   "android": {
    "file": "android.svg",
    "application": "Android",
@@ -540,14 +548,6 @@
    "upstream": "android",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
-  "app-store": {
-   "file": "app-store.svg",
-   "application": "App Store",
-   "source": "iconify:simple-icons",
-   "upstream": "appstore",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
   },
   "apple": {
    "file": "apple.svg",
@@ -597,19 +597,19 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "apple-dev": {
-   "file": "apple-dev.svg",
-   "application": "Apple Dev",
-   "source": "dashboard-icons",
-   "upstream": "apple",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
   "apple-firmware": {
    "file": "apple-firmware.svg",
    "application": "Apple Firmware",
    "source": "dashboard-icons",
    "upstream": "apple",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  },
+  "apple-maps": {
+   "file": "apple-maps.svg",
+   "application": "Apple Maps",
+   "source": "dashboard-icons",
+   "upstream": "apple-maps",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
@@ -621,11 +621,11 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "apple-maps": {
-   "file": "apple-maps.svg",
-   "application": "Apple Maps",
+  "apple-music": {
+   "file": "apple-music.svg",
+   "application": "Apple Music",
    "source": "dashboard-icons",
-   "upstream": "apple-maps",
+   "upstream": "apple-music",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
@@ -653,14 +653,6 @@
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/simple-icons/"
   },
-  "apple-music": {
-   "file": "apple-music.svg",
-   "application": "Apple Music",
-   "source": "iconify:simple-icons",
-   "upstream": "applemusic",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
-  },
   "apple-pay": {
    "file": "apple-pay.svg",
    "application": "Apple Pay",
@@ -677,14 +669,6 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "apple-tv": {
-   "file": "apple-tv.svg",
-   "application": "Apple TV",
-   "source": "iconify:simple-icons",
-   "upstream": "appletv",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
-  },
   "aptoide": {
    "file": "aptoide.svg",
    "application": "Aptoide",
@@ -692,6 +676,22 @@
    "upstream": "aptoide",
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/arcticons/"
+  },
+  "apple-tv": {
+   "file": "apple-tv.svg",
+   "application": "Apple TV",
+   "source": "selfhst/icons",
+   "upstream": "apple-tv",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
+  },
+  "apple-dev": {
+   "file": "apple-dev.svg",
+   "application": "Apple Dev",
+   "source": "dashboard-icons",
+   "upstream": "apple",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
   "archive": {
    "file": "archive.svg",
@@ -717,19 +717,19 @@
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/logos/"
   },
-  "artstation": {
-   "file": "artstation.svg",
-   "application": "Artstation",
-   "source": "iconify:simple-icons",
-   "upstream": "artstation",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
-  },
   "asahi": {
    "file": "asahi.svg",
    "application": "Asahi",
    "source": "iconify:simple-icons",
    "upstream": "asahilinux",
+   "licence": "see the collection licence",
+   "url": "https://icon-sets.iconify.design/simple-icons/"
+  },
+  "artstation": {
+   "file": "artstation.svg",
+   "application": "Artstation",
+   "source": "iconify:simple-icons",
+   "upstream": "artstation",
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/simple-icons/"
   },
@@ -749,6 +749,14 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
+  "aviasales": {
+   "file": "aviasales.svg",
+   "application": "Aviasales",
+   "source": "iconify:arcticons",
+   "upstream": "aviasales",
+   "licence": "see the collection licence",
+   "url": "https://icon-sets.iconify.design/arcticons/"
+  },
   "autodesk": {
    "file": "autodesk.svg",
    "application": "Autodesk",
@@ -762,14 +770,6 @@
    "application": "Avito",
    "source": "iconify:arcticons",
    "upstream": "avito",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
-  },
-  "aviasales": {
-   "file": "aviasales.svg",
-   "application": "Aviasales",
-   "source": "iconify:arcticons",
-   "upstream": "aviasales",
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/arcticons/"
   },
@@ -789,13 +789,13 @@
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/simple-icons/"
   },
-  "boc": {
-   "file": "boc.svg",
-   "application": "BOC",
-   "source": "iconify:arcticons",
-   "upstream": "boc",
+  "bahamut": {
+   "file": "bahamut.svg",
+   "application": "Bahamut",
+   "source": "iconify:token",
+   "upstream": "bahamut",
    "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "url": "https://icon-sets.iconify.design/token/"
   },
   "baidu": {
    "file": "baidu.svg",
@@ -813,27 +813,19 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "bahamut": {
-   "file": "bahamut.svg",
-   "application": "Bahamut",
-   "source": "iconify:token",
-   "upstream": "bahamut",
+  "baidu-netdisk": {
+   "file": "baidu-netdisk.svg",
+   "application": "Baidu Netdisk",
+   "source": "iconify:arcticons",
+   "upstream": "baidu-netdisk",
    "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/token/"
+   "url": "https://icon-sets.iconify.design/arcticons/"
   },
   "baidu-map": {
    "file": "baidu-map.svg",
    "application": "Baidu Map",
    "source": "iconify:arcticons",
    "upstream": "baidu-map",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
-  },
-  "baidu-netdisk": {
-   "file": "baidu-netdisk.svg",
-   "application": "Baidu Netdisk",
-   "source": "iconify:arcticons",
-   "upstream": "baidu-netdisk",
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/arcticons/"
   },
@@ -861,6 +853,14 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
+  "boc": {
+   "file": "boc.svg",
+   "application": "BOC",
+   "source": "iconify:arcticons",
+   "upstream": "boc",
+   "licence": "see the collection licence",
+   "url": "https://icon-sets.iconify.design/arcticons/"
+  },
   "bangumi": {
    "file": "bangumi.svg",
    "application": "Bangumi",
@@ -868,14 +868,6 @@
    "upstream": "autobangumi",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
-  "battle-net": {
-   "file": "battle-net.svg",
-   "application": "Battle.net",
-   "source": "iconify:arcticons",
-   "upstream": "battlenet",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
   },
   "beats": {
    "file": "beats.svg",
@@ -885,6 +877,14 @@
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/logos/"
   },
+  "battle-net": {
+   "file": "battle-net.svg",
+   "application": "Battle.net",
+   "source": "iconify:arcticons",
+   "upstream": "battlenet",
+   "licence": "see the collection licence",
+   "url": "https://icon-sets.iconify.design/arcticons/"
+  },
   "bestbuy": {
    "file": "bestbuy.svg",
    "application": "Bestbuy",
@@ -893,17 +893,17 @@
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/arcticons/"
   },
-  "bilibili": {
-   "file": "bilibili.svg",
-   "application": "Bilibili",
+  "bilibili-intl": {
+   "file": "bilibili-intl.svg",
+   "application": "Bilibili (Intl)",
    "source": "dashboard-icons",
    "upstream": "bilibili",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "bilibili-intl": {
-   "file": "bilibili-intl.svg",
-   "application": "Bilibili (Intl)",
+  "bilibili": {
+   "file": "bilibili.svg",
+   "application": "Bilibili",
    "source": "dashboard-icons",
    "upstream": "bilibili",
    "licence": "see upstream LICENSE",
@@ -917,19 +917,19 @@
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/simple-icons/"
   },
-  "bing": {
-   "file": "bing.svg",
-   "application": "Bing",
-   "source": "dashboard-icons",
-   "upstream": "bing",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
   "bitbucket": {
    "file": "bitbucket.svg",
    "application": "Bitbucket",
    "source": "dashboard-icons",
    "upstream": "bitbucket",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  },
+  "bing": {
+   "file": "bing.svg",
+   "application": "Bing",
+   "source": "dashboard-icons",
+   "upstream": "bing",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
@@ -973,14 +973,6 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "bohemia": {
-   "file": "bohemia.svg",
-   "application": "Bohemia",
-   "source": "iconify:simple-icons",
-   "upstream": "bohemiainteractive",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
-  },
   "booking": {
    "file": "booking.svg",
    "application": "Booking",
@@ -988,6 +980,14 @@
    "upstream": "booking",
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/arcticons/"
+  },
+  "bohemia": {
+   "file": "bohemia.svg",
+   "application": "Bohemia",
+   "source": "iconify:simple-icons",
+   "upstream": "bohemiainteractive",
+   "licence": "see the collection licence",
+   "url": "https://icon-sets.iconify.design/simple-icons/"
   },
   "booking-com": {
    "file": "booking-com.svg",
@@ -1013,14 +1013,6 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "box": {
-   "file": "box.svg",
-   "application": "Box",
-   "source": "dashboard-icons",
-   "upstream": "box",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
   "brilliant": {
    "file": "brilliant.svg",
    "application": "Brilliant",
@@ -1029,11 +1021,27 @@
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/arcticons/"
   },
+  "box": {
+   "file": "box.svg",
+   "application": "Box",
+   "source": "dashboard-icons",
+   "upstream": "box",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  },
   "broadcom": {
    "file": "broadcom.svg",
    "application": "Broadcom",
    "source": "dashboard-icons",
    "upstream": "broadcom",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  },
+  "buypass": {
+   "file": "buypass.svg",
+   "application": "Buypass",
+   "source": "dashboard-icons",
+   "upstream": "buypass",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
@@ -1045,13 +1053,13 @@
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/simple-icons/"
   },
-  "buypass": {
-   "file": "buypass.svg",
-   "application": "Buypass",
-   "source": "dashboard-icons",
-   "upstream": "buypass",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  "bytedance": {
+   "file": "bytedance.svg",
+   "application": "ByteDance",
+   "source": "iconify:simple-icons",
+   "upstream": "bytedance",
+   "licence": "see the collection licence",
+   "url": "https://icon-sets.iconify.design/simple-icons/"
   },
   "bybit": {
    "file": "bybit.svg",
@@ -1064,34 +1072,18 @@
   "cas": {
    "file": "cas.svg",
    "application": "CAS",
-   "source": "dashboard-icons",
-   "upstream": "casaos",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
-  "cnn": {
-   "file": "cnn.svg",
-   "application": "CNN",
-   "source": "simple-icons",
-   "upstream": "cnn",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+   "source": "iconify:token",
+   "upstream": "cas",
+   "licence": "see the collection licence",
+   "url": "https://icon-sets.iconify.design/token/"
   },
   "cbs": {
    "file": "cbs.svg",
    "application": "CBS",
-   "source": "simple-icons",
+   "source": "iconify:simple-icons",
    "upstream": "cbs",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
-  "csdn": {
-   "file": "csdn.svg",
-   "application": "CSDN",
-   "source": "simple-icons",
-   "upstream": "csdn",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+   "licence": "see the collection licence",
+   "url": "https://icon-sets.iconify.design/simple-icons/"
   },
   "canon": {
    "file": "canon.svg",
@@ -1101,11 +1093,27 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "bytedance": {
-   "file": "bytedance.svg",
-   "application": "ByteDance",
+  "csdn": {
+   "file": "csdn.svg",
+   "application": "CSDN",
    "source": "simple-icons",
-   "upstream": "bytedance",
+   "upstream": "csdn",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "cnn": {
+   "file": "cnn.svg",
+   "application": "CNN",
+   "source": "simple-icons",
+   "upstream": "cnn",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "call-of-duty": {
+   "file": "call-of-duty.svg",
+   "application": "Call of Duty",
+   "source": "simple-icons",
+   "upstream": "aircall",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
@@ -1116,14 +1124,6 @@
    "upstream": "cisco",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
-  "call-of-duty": {
-   "file": "call-of-duty.svg",
-   "application": "Call of Duty",
-   "source": "simple-icons",
-   "upstream": "aircall",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "chinaso": {
    "file": "chinaso.svg",
@@ -1189,13 +1189,13 @@
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
-  "claude": {
-   "file": "claude.svg",
-   "application": "Claude",
-   "source": "selfhst/icons",
-   "upstream": "claude",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
+  "canva": {
+   "file": "canva.svg",
+   "application": "Canva",
+   "source": "simple-icons",
+   "upstream": "canvas",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "comfy": {
    "file": "comfy.svg",
@@ -1213,21 +1213,13 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "canva": {
-   "file": "canva.svg",
-   "application": "Canva",
-   "source": "simple-icons",
-   "upstream": "canvas",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
-  "cake": {
-   "file": "cake.svg",
-   "application": "Cake",
-   "source": "simple-icons",
-   "upstream": "cakephp",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  "claude": {
+   "file": "claude.svg",
+   "application": "Claude",
+   "source": "selfhst/icons",
+   "upstream": "claude",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
   },
   "codeforces": {
    "file": "codeforces.svg",
@@ -1253,6 +1245,14 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
+  "cake": {
+   "file": "cake.svg",
+   "application": "Cake",
+   "source": "simple-icons",
+   "upstream": "cakephp",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
   "corel": {
    "file": "corel.svg",
    "application": "Corel",
@@ -1261,19 +1261,19 @@
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
-  "codecademy": {
-   "file": "codecademy.svg",
-   "application": "Codecademy",
-   "source": "simple-icons",
-   "upstream": "codecademy",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
   "contentful": {
    "file": "contentful.svg",
    "application": "Contentful",
    "source": "simple-icons",
    "upstream": "contentful",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "codecademy": {
+   "file": "codecademy.svg",
+   "application": "Codecademy",
+   "source": "simple-icons",
+   "upstream": "codecademy",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
@@ -1301,19 +1301,19 @@
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
-  "curseforge": {
-   "file": "curseforge.svg",
-   "application": "Curseforge",
-   "source": "simple-icons",
-   "upstream": "curseforge",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
   "ctrip": {
    "file": "ctrip.svg",
    "application": "Ctrip",
    "source": "simple-icons",
    "upstream": "tripdotcom",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "curseforge": {
+   "file": "curseforge.svg",
+   "application": "Curseforge",
+   "source": "simple-icons",
+   "upstream": "curseforge",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
@@ -1325,14 +1325,6 @@
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
-  "coursera": {
-   "file": "coursera.svg",
-   "application": "Coursera",
-   "source": "selfhst/icons",
-   "upstream": "coursera",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
-  },
   "dmm": {
    "file": "dmm.svg",
    "application": "DMM",
@@ -1340,6 +1332,14 @@
    "upstream": "dmm",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "coursera": {
+   "file": "coursera.svg",
+   "application": "Coursera",
+   "source": "selfhst/icons",
+   "upstream": "coursera",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
   },
   "deepseek": {
    "file": "deepseek.svg",
@@ -1421,6 +1421,14 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
+  "dianping": {
+   "file": "dianping.svg",
+   "application": "Dianping",
+   "source": "simple-icons",
+   "upstream": "dazhongdianping",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
   "disney": {
    "file": "disney.svg",
    "application": "Disney+",
@@ -1436,14 +1444,6 @@
    "upstream": "debian",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
-  },
-  "dianping": {
-   "file": "dianping.svg",
-   "application": "Dianping",
-   "source": "simple-icons",
-   "upstream": "dazhongdianping",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "deviantart": {
    "file": "deviantart.svg",
@@ -1477,14 +1477,6 @@
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
-  "doi": {
-   "file": "doi.svg",
-   "application": "Doi",
-   "source": "simple-icons",
-   "upstream": "doi",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
   "douyin": {
    "file": "douyin.svg",
    "application": "Douyin",
@@ -1493,13 +1485,29 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "doordash": {
-   "file": "doordash.svg",
-   "application": "DoorDash",
-   "source": "selfhst/icons",
-   "upstream": "doordash",
+  "dood": {
+   "file": "dood.svg",
+   "application": "Dood",
+   "source": "simple-icons",
+   "upstream": "jdoodle",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "doi": {
+   "file": "doi.svg",
+   "application": "Doi",
+   "source": "simple-icons",
+   "upstream": "doi",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "download": {
+   "file": "download.svg",
+   "application": "Download",
+   "source": "dashboard-icons",
+   "upstream": "jdownloader",
    "licence": "see upstream LICENSE",
-   "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
   "dropbox": {
    "file": "dropbox.svg",
@@ -1514,14 +1522,6 @@
    "application": "Duckduckgo",
    "source": "dashboard-icons",
    "upstream": "duckduckgo",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
-  "download": {
-   "file": "download.svg",
-   "application": "Download",
-   "source": "dashboard-icons",
-   "upstream": "jdownloader",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
@@ -1541,13 +1541,13 @@
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
-  "dood": {
-   "file": "dood.svg",
-   "application": "Dood",
-   "source": "simple-icons",
-   "upstream": "jdoodle",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  "doordash": {
+   "file": "doordash.svg",
+   "application": "DoorDash",
+   "source": "selfhst/icons",
+   "upstream": "doordash",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
   },
   "dyna": {
    "file": "dyna.svg",
@@ -1621,6 +1621,14 @@
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
+  "elsevier": {
+   "file": "elsevier.svg",
+   "application": "Elsevier",
+   "source": "simple-icons",
+   "upstream": "elsevier",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
   "emby": {
    "file": "emby.svg",
    "application": "Emby",
@@ -1645,27 +1653,27 @@
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
-  "embl": {
-   "file": "embl.svg",
-   "application": "Embl",
+  "epic-games": {
+   "file": "epic-games.svg",
+   "application": "Epic Games",
    "source": "dashboard-icons",
-   "upstream": "docassemble",
+   "upstream": "epic-games",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
-  "elsevier": {
-   "file": "elsevier.svg",
-   "application": "Elsevier",
-   "source": "simple-icons",
-   "upstream": "elsevier",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "espressif": {
    "file": "espressif.svg",
    "application": "Espressif",
    "source": "dashboard-icons",
    "upstream": "espressif",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  },
+  "embl": {
+   "file": "embl.svg",
+   "application": "Embl",
+   "source": "dashboard-icons",
+   "upstream": "docassemble",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
@@ -1717,14 +1725,6 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "epic-games": {
-   "file": "epic-games.svg",
-   "application": "Epic Games",
-   "source": "dashboard-icons",
-   "upstream": "epic-games",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
   "esri": {
    "file": "esri.svg",
    "application": "Esri",
@@ -1741,13 +1741,13 @@
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
-  "fandom": {
-   "file": "fandom.svg",
-   "application": "Fandom",
-   "source": "selfhst/icons",
-   "upstream": "fandom",
+  "fedora": {
+   "file": "fedora.svg",
+   "application": "Fedora",
+   "source": "dashboard-icons",
+   "upstream": "fedora",
    "licence": "see upstream LICENSE",
-   "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
   "feedly": {
    "file": "feedly.svg",
@@ -1757,6 +1757,14 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
+  "fandom": {
+   "file": "fandom.svg",
+   "application": "Fandom",
+   "source": "selfhst/icons",
+   "upstream": "fandom",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
+  },
   "figma": {
    "file": "figma.svg",
    "application": "Figma",
@@ -1765,51 +1773,11 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "farfetch": {
-   "file": "farfetch.svg",
-   "application": "Farfetch",
-   "source": "simple-icons",
-   "upstream": "farfetch",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
   "firebase": {
    "file": "firebase.svg",
    "application": "Firebase",
    "source": "dashboard-icons",
    "upstream": "firebase",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
-  "flatpak": {
-   "file": "flatpak.svg",
-   "application": "Flatpak",
-   "source": "dashboard-icons",
-   "upstream": "flatpak",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
-  "envato": {
-   "file": "envato.svg",
-   "application": "Envato",
-   "source": "simple-icons",
-   "upstream": "envato",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
-  "faceit": {
-   "file": "faceit.svg",
-   "application": "Faceit",
-   "source": "simple-icons",
-   "upstream": "faceit",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
-  "flutter": {
-   "file": "flutter.svg",
-   "application": "Flutter",
-   "source": "dashboard-icons",
-   "upstream": "flutter",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
@@ -1821,6 +1789,30 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
+  "flatpak": {
+   "file": "flatpak.svg",
+   "application": "Flatpak",
+   "source": "dashboard-icons",
+   "upstream": "flatpak",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  },
+  "farfetch": {
+   "file": "farfetch.svg",
+   "application": "Farfetch",
+   "source": "simple-icons",
+   "upstream": "farfetch",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "flutter": {
+   "file": "flutter.svg",
+   "application": "Flutter",
+   "source": "dashboard-icons",
+   "upstream": "flutter",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  },
   "fontawesome": {
    "file": "fontawesome.svg",
    "application": "Fontawesome",
@@ -1829,13 +1821,21 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "fedora": {
-   "file": "fedora.svg",
-   "application": "Fedora",
-   "source": "dashboard-icons",
-   "upstream": "fedora",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  "faceit": {
+   "file": "faceit.svg",
+   "application": "Faceit",
+   "source": "simple-icons",
+   "upstream": "faceit",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "envato": {
+   "file": "envato.svg",
+   "application": "Envato",
+   "source": "simple-icons",
+   "upstream": "envato",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "fastly": {
    "file": "fastly.svg",
@@ -1861,13 +1861,13 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "fonts": {
-   "file": "fonts.svg",
-   "application": "Fonts",
-   "source": "simple-icons",
-   "upstream": "googlefonts",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  "fubotv": {
+   "file": "fubotv.svg",
+   "application": "FuboTV",
+   "source": "selfhst/icons",
+   "upstream": "fubotv",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
   },
   "flipboard": {
    "file": "flipboard.svg",
@@ -1877,19 +1877,27 @@
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
-  "fubotv": {
-   "file": "fubotv.svg",
-   "application": "FuboTV",
-   "source": "selfhst/icons",
-   "upstream": "fubotv",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
+  "fonts": {
+   "file": "fonts.svg",
+   "application": "Fonts",
+   "source": "simple-icons",
+   "upstream": "googlefonts",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "fox": {
    "file": "fox.svg",
    "application": "Fox",
    "source": "simple-icons",
    "upstream": "fox",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "futu": {
+   "file": "futu.svg",
+   "application": "Futu",
+   "source": "simple-icons",
+   "upstream": "futurelearn",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
@@ -1908,14 +1916,6 @@
    "upstream": "gandi",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
-  },
-  "futu": {
-   "file": "futu.svg",
-   "application": "Futu",
-   "source": "simple-icons",
-   "upstream": "futurelearn",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "freecodecamp": {
    "file": "freecodecamp.svg",
@@ -1957,14 +1957,6 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "gog": {
-   "file": "gog.svg",
-   "application": "GOG",
-   "source": "simple-icons",
-   "upstream": "gogdotcom",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
   "github-copilot": {
    "file": "github-copilot.svg",
    "application": "Github Copilot",
@@ -1972,6 +1964,14 @@
    "upstream": "github-copilot",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  },
+  "gog": {
+   "file": "gog.svg",
+   "application": "GOG",
+   "source": "simple-icons",
+   "upstream": "gogdotcom",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "gmail": {
    "file": "gmail.svg",
@@ -2029,11 +2029,19 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "google-fonts": {
-   "file": "google-fonts.svg",
-   "application": "Google Fonts",
+  "google-drive": {
+   "file": "google-drive.svg",
+   "application": "Google Drive",
    "source": "dashboard-icons",
-   "upstream": "google-fonts",
+   "upstream": "google-drive",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  },
+  "google-earth": {
+   "file": "google-earth.svg",
+   "application": "Google Earth",
+   "source": "dashboard-icons",
+   "upstream": "google-earth",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
@@ -2061,14 +2069,6 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "gofundme": {
-   "file": "gofundme.svg",
-   "application": "Gofundme",
-   "source": "simple-icons",
-   "upstream": "gofundme",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
   "google-registry": {
    "file": "google-registry.svg",
    "application": "Google Registry",
@@ -2077,21 +2077,21 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "google-earth": {
-   "file": "google-earth.svg",
-   "application": "Google Earth",
-   "source": "simple-icons",
-   "upstream": "googleearth",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  "google-fonts": {
+   "file": "google-fonts.svg",
+   "application": "Google Fonts",
+   "source": "dashboard-icons",
+   "upstream": "google-fonts",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "google-drive": {
-   "file": "google-drive.svg",
-   "application": "Google Drive",
-   "source": "simple-icons",
-   "upstream": "googledrive",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  "google-play": {
+   "file": "google-play.svg",
+   "application": "Google Play",
+   "source": "dashboard-icons",
+   "upstream": "google-play",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
   "google-trust-services": {
    "file": "google-trust-services.svg",
@@ -2109,11 +2109,67 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
+  "google-scholar": {
+   "file": "google-scholar.svg",
+   "application": "Google Scholar",
+   "source": "dashboard-icons",
+   "upstream": "google-scholar",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  },
   "google-voice": {
    "file": "google-voice.svg",
    "application": "Google Voice",
    "source": "dashboard-icons",
    "upstream": "google-voice",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  },
+  "gree": {
+   "file": "gree.svg",
+   "application": "Gree",
+   "source": "dashboard-icons",
+   "upstream": "greenbone",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  },
+  "gofundme": {
+   "file": "gofundme.svg",
+   "application": "Gofundme",
+   "source": "simple-icons",
+   "upstream": "gofundme",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "grok": {
+   "file": "grok.svg",
+   "application": "Grok",
+   "source": "dashboard-icons",
+   "upstream": "grok",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  },
+  "hbo": {
+   "file": "hbo.svg",
+   "application": "HBO",
+   "source": "dashboard-icons",
+   "upstream": "hbo",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  },
+  "hbo-max": {
+   "file": "hbo-max.svg",
+   "application": "HBO Max",
+   "source": "selfhst/icons",
+   "upstream": "hbo-max",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
+  },
+  "hp": {
+   "file": "hp.svg",
+   "application": "HP",
+   "source": "dashboard-icons",
+   "upstream": "hp",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
@@ -2125,54 +2181,6 @@
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
-  "gree": {
-   "file": "gree.svg",
-   "application": "Gree",
-   "source": "dashboard-icons",
-   "upstream": "greenbone",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
-  "grok": {
-   "file": "grok.svg",
-   "application": "Grok",
-   "source": "dashboard-icons",
-   "upstream": "grok",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
-  "google-play": {
-   "file": "google-play.svg",
-   "application": "Google Play",
-   "source": "simple-icons",
-   "upstream": "googleplay",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
-  "hbo": {
-   "file": "hbo.svg",
-   "application": "HBO",
-   "source": "dashboard-icons",
-   "upstream": "hbo",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
-  "hp": {
-   "file": "hp.svg",
-   "application": "HP",
-   "source": "dashboard-icons",
-   "upstream": "hp",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
-  "google-scholar": {
-   "file": "google-scholar.svg",
-   "application": "Google Scholar",
-   "source": "simple-icons",
-   "upstream": "googlescholar",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
   "grapheneos": {
    "file": "grapheneos.svg",
    "application": "Grapheneos",
@@ -2181,19 +2189,19 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
   },
-  "hbo-max": {
-   "file": "hbo-max.svg",
-   "application": "HBO Max",
-   "source": "selfhst/icons",
-   "upstream": "hbo-max",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
-  },
-  "google-ads": {
-   "file": "google-ads.svg",
-   "application": "Google Ads",
+  "haveibeenpwned": {
+   "file": "haveibeenpwned.svg",
+   "application": "Haveibeenpwned",
    "source": "simple-icons",
-   "upstream": "googleads",
+   "upstream": "haveibeenpwned",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "habr": {
+   "file": "habr.svg",
+   "application": "Habr",
+   "source": "simple-icons",
+   "upstream": "habr",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
@@ -2204,14 +2212,6 @@
    "upstream": "hashicorp",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
-  },
-  "habr": {
-   "file": "habr.svg",
-   "application": "Habr",
-   "source": "simple-icons",
-   "upstream": "habr",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "gravatar": {
    "file": "gravatar.svg",
@@ -2229,11 +2229,11 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "haveibeenpwned": {
-   "file": "haveibeenpwned.svg",
-   "application": "Haveibeenpwned",
+  "google-ads": {
+   "file": "google-ads.svg",
+   "application": "Google Ads",
    "source": "simple-icons",
-   "upstream": "haveibeenpwned",
+   "upstream": "googleads",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
@@ -2261,14 +2261,6 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "honor": {
-   "file": "honor.svg",
-   "application": "Honor",
-   "source": "simple-icons",
-   "upstream": "honor",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
   "haskell": {
    "file": "haskell.svg",
    "application": "Haskell",
@@ -2280,6 +2272,14 @@
   "huawei": {
    "file": "huawei.svg",
    "application": "Huawei",
+   "source": "dashboard-icons",
+   "upstream": "huawei",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  },
+  "huawei-appgallery": {
+   "file": "huawei-appgallery.svg",
+   "application": "Huawei AppGallery",
    "source": "dashboard-icons",
    "upstream": "huawei",
    "licence": "see upstream LICENSE",
@@ -2301,14 +2301,6 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "huawei-appgallery": {
-   "file": "huawei-appgallery.svg",
-   "application": "Huawei AppGallery",
-   "source": "dashboard-icons",
-   "upstream": "huawei",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
   "hugging-face": {
    "file": "hugging-face.svg",
    "application": "Hugging Face",
@@ -2317,27 +2309,11 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "hema": {
-   "file": "hema.svg",
-   "application": "HeMa",
+  "honor": {
+   "file": "honor.svg",
+   "application": "Honor",
    "source": "simple-icons",
-   "upstream": "apachemaven",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
-  "hsbc": {
-   "file": "hsbc.svg",
-   "application": "Hsbc",
-   "source": "simple-icons",
-   "upstream": "hsbc",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
-  "hsbc-cn": {
-   "file": "hsbc-cn.svg",
-   "application": "Hsbc Cn",
-   "source": "simple-icons",
-   "upstream": "hsbc",
+   "upstream": "honor",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
@@ -2357,6 +2333,14 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
+  "hsbc": {
+   "file": "hsbc.svg",
+   "application": "Hsbc",
+   "source": "simple-icons",
+   "upstream": "hsbc",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
   "ibm": {
    "file": "ibm.svg",
    "application": "IBM",
@@ -2365,19 +2349,27 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
+  "hema": {
+   "file": "hema.svg",
+   "application": "HeMa",
+   "source": "simple-icons",
+   "upstream": "apachemaven",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "hsbc-cn": {
+   "file": "hsbc-cn.svg",
+   "application": "Hsbc Cn",
+   "source": "simple-icons",
+   "upstream": "hsbc",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
   "humblebundle": {
    "file": "humblebundle.svg",
    "application": "Humblebundle",
    "source": "simple-icons",
    "upstream": "humblebundle",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
-  "huggingface": {
-   "file": "huggingface.svg",
-   "application": "Huggingface",
-   "source": "simple-icons",
-   "upstream": "huggingface",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
@@ -2397,6 +2389,14 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
+  "huggingface": {
+   "file": "huggingface.svg",
+   "application": "Huggingface",
+   "source": "simple-icons",
+   "upstream": "huggingface",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
   "heroku": {
    "file": "heroku.svg",
    "application": "Heroku",
@@ -2404,6 +2404,14 @@
    "upstream": "heroku",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
+  },
+  "itv": {
+   "file": "itv.svg",
+   "application": "ITV",
+   "source": "simple-icons",
+   "upstream": "itvx",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "inoreader": {
    "file": "inoreader.svg",
@@ -2420,14 +2428,6 @@
    "upstream": "instagram",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
-  "itv": {
-   "file": "itv.svg",
-   "application": "ITV",
-   "source": "simple-icons",
-   "upstream": "itvx",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "imgur": {
    "file": "imgur.svg",
@@ -2565,19 +2565,19 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "kaggle": {
-   "file": "kaggle.svg",
-   "application": "Kaggle",
-   "source": "simple-icons",
-   "upstream": "kaggle",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
   "khanacademy": {
    "file": "khanacademy.svg",
    "application": "Khanacademy",
    "source": "simple-icons",
    "upstream": "khanacademy",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "kaggle": {
+   "file": "kaggle.svg",
+   "application": "Kaggle",
+   "source": "simple-icons",
+   "upstream": "kaggle",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
@@ -2653,13 +2653,13 @@
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
-  "kuaishou": {
-   "file": "kuaishou.svg",
-   "application": "Kuaishou",
-   "source": "simple-icons",
-   "upstream": "kuaishou",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  "laracasts": {
+   "file": "laracasts.svg",
+   "application": "Laracasts",
+   "source": "dashboard-icons",
+   "upstream": "laracasts",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
   "lark": {
    "file": "lark.svg",
@@ -2677,11 +2677,11 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "lg": {
-   "file": "lg.svg",
-   "application": "LG",
+  "kuaishou": {
+   "file": "kuaishou.svg",
+   "application": "Kuaishou",
    "source": "simple-icons",
-   "upstream": "lg",
+   "upstream": "kuaishou",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
@@ -2693,35 +2693,35 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "laracasts": {
-   "file": "laracasts.svg",
-   "application": "Laracasts",
-   "source": "dashboard-icons",
-   "upstream": "laracasts",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
-  "line": {
-   "file": "line.svg",
-   "application": "LINE",
+  "lg": {
+   "file": "lg.svg",
+   "application": "LG",
    "source": "simple-icons",
-   "upstream": "line",
+   "upstream": "lg",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
-  "letv": {
-   "file": "letv.svg",
-   "application": "LeTV",
-   "source": "iconify:simple-icons",
-   "upstream": "appletv",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
   },
   "kucoin": {
    "file": "kucoin.svg",
    "application": "Kucoin",
    "source": "simple-icons",
    "upstream": "kucoin",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "leju": {
+   "file": "leju.svg",
+   "application": "LeJu",
+   "source": "simple-icons",
+   "upstream": "googlejules",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "line": {
+   "file": "line.svg",
+   "application": "LINE",
+   "source": "simple-icons",
+   "upstream": "line",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
@@ -2741,11 +2741,19 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "leju": {
-   "file": "leju.svg",
-   "application": "LeJu",
+  "launchpad": {
+   "file": "launchpad.svg",
+   "application": "Launchpad",
    "source": "simple-icons",
-   "upstream": "googlejules",
+   "upstream": "launchpad",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "letv": {
+   "file": "letv.svg",
+   "application": "LeTV",
+   "source": "simple-icons",
+   "upstream": "appletv",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
@@ -2754,14 +2762,6 @@
    "application": "League of Legends",
    "source": "simple-icons",
    "upstream": "leagueoflegends",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
-  "launchpad": {
-   "file": "launchpad.svg",
-   "application": "Launchpad",
-   "source": "simple-icons",
-   "upstream": "launchpad",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
@@ -2813,6 +2813,14 @@
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
+  "livejournal": {
+   "file": "livejournal.svg",
+   "application": "Livejournal",
+   "source": "simple-icons",
+   "upstream": "livejournal",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
   "macpaw": {
    "file": "macpaw.svg",
    "application": "MacPaw",
@@ -2829,14 +2837,6 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
   },
-  "livejournal": {
-   "file": "livejournal.svg",
-   "application": "Livejournal",
-   "source": "simple-icons",
-   "upstream": "livejournal",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
   "mega": {
    "file": "mega.svg",
    "application": "MEGA",
@@ -2845,14 +2845,6 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
   },
-  "matrix": {
-   "file": "matrix.svg",
-   "application": "Matrix",
-   "source": "dashboard-icons",
-   "upstream": "matrix",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
   "mailru": {
    "file": "mailru.svg",
    "application": "Mailru",
@@ -2860,6 +2852,14 @@
    "upstream": "maildotru",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "matrix": {
+   "file": "matrix.svg",
+   "application": "Matrix",
+   "source": "dashboard-icons",
+   "upstream": "matrix",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
   "mcdonalds": {
    "file": "mcdonalds.svg",
@@ -2877,14 +2877,6 @@
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
-  "mastercard": {
-   "file": "mastercard.svg",
-   "application": "Mastercard",
-   "source": "selfhst/icons",
-   "upstream": "mastercard",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
-  },
   "mapbox": {
    "file": "mapbox.svg",
    "application": "Mapbox",
@@ -2892,6 +2884,14 @@
    "upstream": "mapbox",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "mastercard": {
+   "file": "mastercard.svg",
+   "application": "Mastercard",
+   "source": "selfhst/icons",
+   "upstream": "mastercard",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
   },
   "meta": {
    "file": "meta.svg",
@@ -2917,11 +2917,11 @@
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
-  "meizu": {
-   "file": "meizu.svg",
-   "application": "MeiZu",
+  "meitu": {
+   "file": "meitu.svg",
+   "application": "MeiTu",
    "source": "simple-icons",
-   "upstream": "meizu",
+   "upstream": "meituan",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
@@ -2941,13 +2941,13 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "meituan": {
-   "file": "meituan.svg",
-   "application": "Meituan",
-   "source": "simple-icons",
-   "upstream": "meituan",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  "microsoft-azure": {
+   "file": "microsoft-azure.svg",
+   "application": "Microsoft Azure",
+   "source": "dashboard-icons",
+   "upstream": "microsoft-azure",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
   "microsoft-pki": {
    "file": "microsoft-pki.svg",
@@ -2957,11 +2957,19 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "microsoft-azure": {
-   "file": "microsoft-azure.svg",
-   "application": "Microsoft Azure",
+  "meizu": {
+   "file": "meizu.svg",
+   "application": "MeiZu",
+   "source": "simple-icons",
+   "upstream": "meizu",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "microsoft-edge": {
+   "file": "microsoft-edge.svg",
+   "application": "Microsoft Edge",
    "source": "dashboard-icons",
-   "upstream": "azure",
+   "upstream": "microsoft-edge",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
@@ -2973,17 +2981,9 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "migu": {
-   "file": "migu.svg",
-   "application": "Migu",
-   "source": "local",
-   "upstream": "local",
-   "licence": "shipped in this repository (marks of their owners)",
-   "url": "tools/icons-local in the luci-app-traffic source tree"
-  },
-  "meitu": {
-   "file": "meitu.svg",
-   "application": "MeiTu",
+  "meituan": {
+   "file": "meituan.svg",
+   "application": "Meituan",
    "source": "simple-icons",
    "upstream": "meituan",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
@@ -3013,14 +3013,6 @@
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
-  "midjourney": {
-   "file": "midjourney.svg",
-   "application": "Midjourney",
-   "source": "selfhst/icons",
-   "upstream": "midjourney",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
-  },
   "misskey": {
    "file": "misskey.svg",
    "application": "Misskey",
@@ -3036,6 +3028,14 @@
    "upstream": "misskey",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  },
+  "midjourney": {
+   "file": "midjourney.svg",
+   "application": "Midjourney",
+   "source": "selfhst/icons",
+   "upstream": "midjourney",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
   },
   "mihoyo-cn": {
    "file": "mihoyo-cn.svg",
@@ -3053,14 +3053,6 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "mini": {
-   "file": "mini.svg",
-   "application": "Mini",
-   "source": "simple-icons",
-   "upstream": "mini",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
   "modrinth": {
    "file": "modrinth.svg",
    "application": "Modrinth",
@@ -3069,13 +3061,13 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "microsoft-edge": {
-   "file": "microsoft-edge.svg",
-   "application": "Microsoft Edge",
-   "source": "dashboard-icons",
-   "upstream": "microsoft-edge",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  "mini": {
+   "file": "mini.svg",
+   "application": "Mini",
+   "source": "simple-icons",
+   "upstream": "mini",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "miraheze": {
    "file": "miraheze.svg",
@@ -3165,13 +3157,13 @@
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
-  "netease": {
-   "file": "netease.svg",
-   "application": "NetEase",
-   "source": "simple-icons",
-   "upstream": "neteasecloudmusic",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  "mozilla": {
+   "file": "mozilla.svg",
+   "application": "Mozilla",
+   "source": "selfhst/icons",
+   "upstream": "mozilla",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
   },
   "naver": {
    "file": "naver.svg",
@@ -3181,13 +3173,13 @@
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
-  "mozilla": {
-   "file": "mozilla.svg",
-   "application": "Mozilla",
-   "source": "selfhst/icons",
-   "upstream": "mozilla",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
+  "netease": {
+   "file": "netease.svg",
+   "application": "NetEase",
+   "source": "simple-icons",
+   "upstream": "neteasecloudmusic",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "netflix": {
    "file": "netflix.svg",
@@ -3197,11 +3189,11 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "newegg": {
-   "file": "newegg.svg",
-   "application": "Newegg",
+  "netlify": {
+   "file": "netlify.svg",
+   "application": "Netlify",
    "source": "dashboard-icons",
-   "upstream": "newegg",
+   "upstream": "netlify",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
@@ -3213,13 +3205,21 @@
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
-  "netlify": {
-   "file": "netlify.svg",
-   "application": "Netlify",
+  "newegg": {
+   "file": "newegg.svg",
+   "application": "Newegg",
    "source": "dashboard-icons",
-   "upstream": "netlify",
+   "upstream": "newegg",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  },
+  "netcup": {
+   "file": "netcup.svg",
+   "application": "Netcup",
+   "source": "simple-icons",
+   "upstream": "netcup",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "nginx": {
    "file": "nginx.svg",
@@ -3237,11 +3237,11 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "netcup": {
-   "file": "netcup.svg",
-   "application": "Netcup",
+  "nexo": {
+   "file": "nexo.svg",
+   "application": "Nexo",
    "source": "simple-icons",
-   "upstream": "netcup",
+   "upstream": "nexon",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
@@ -3250,14 +3250,6 @@
    "application": "Newgrounds",
    "source": "simple-icons",
    "upstream": "newgrounds",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
-  "nexo": {
-   "file": "nexo.svg",
-   "application": "Nexo",
-   "source": "simple-icons",
-   "upstream": "nexon",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
@@ -3277,6 +3269,14 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
+  "nic-ru": {
+   "file": "nic-ru.svg",
+   "application": "Nic Ru",
+   "source": "simple-icons",
+   "upstream": "nicehash",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
   "niconico": {
    "file": "niconico.svg",
    "application": "Niconico",
@@ -3293,30 +3293,6 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
   },
-  "nixos": {
-   "file": "nixos.svg",
-   "application": "Nixos",
-   "source": "dashboard-icons",
-   "upstream": "nixos",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
-  "nodejs": {
-   "file": "nodejs.svg",
-   "application": "Nodejs",
-   "source": "dashboard-icons",
-   "upstream": "nodejs",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
-  "nic-ru": {
-   "file": "nic-ru.svg",
-   "application": "Nic Ru",
-   "source": "simple-icons",
-   "upstream": "nicehash",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
   "nike": {
    "file": "nike.svg",
    "application": "Nike",
@@ -3324,6 +3300,14 @@
    "upstream": "nike",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
+  },
+  "nixos": {
+   "file": "nixos.svg",
+   "application": "Nixos",
+   "source": "dashboard-icons",
+   "upstream": "nixos",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
   "nordvpn": {
    "file": "nordvpn.svg",
@@ -3349,19 +3333,19 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
+  "nodejs": {
+   "file": "nodejs.svg",
+   "application": "Nodejs",
+   "source": "dashboard-icons",
+   "upstream": "nodejs",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  },
   "nikke": {
    "file": "nikke.svg",
    "application": "Nikke",
    "source": "dashboard-icons",
    "upstream": "snikket",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
-  "onedrive": {
-   "file": "onedrive.svg",
-   "application": "OneDrive",
-   "source": "dashboard-icons",
-   "upstream": "microsoft-onedrive",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
@@ -3372,6 +3356,14 @@
    "upstream": "oppo",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "onedrive": {
+   "file": "onedrive.svg",
+   "application": "OneDrive",
+   "source": "dashboard-icons",
+   "upstream": "microsoft-onedrive",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
   "nintendo": {
    "file": "nintendo.svg",
@@ -3421,14 +3413,6 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "openstreetmap": {
-   "file": "openstreetmap.svg",
-   "application": "Openstreetmap",
-   "source": "dashboard-icons",
-   "upstream": "openstreetmap",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
   "oneplus": {
    "file": "oneplus.svg",
    "application": "OnePlus",
@@ -3436,6 +3420,14 @@
    "upstream": "oneplus",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "openstreetmap": {
+   "file": "openstreetmap.svg",
+   "application": "Openstreetmap",
+   "source": "dashboard-icons",
+   "upstream": "openstreetmap",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
   "opera": {
    "file": "opera.svg",
@@ -3461,13 +3453,13 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "openjsfoundation": {
-   "file": "openjsfoundation.svg",
-   "application": "Openjsfoundation",
-   "source": "simple-icons",
-   "upstream": "openjsfoundation",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  "origin": {
+   "file": "origin.svg",
+   "application": "Origin",
+   "source": "dashboard-icons",
+   "upstream": "origin",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
   "osu": {
    "file": "osu.svg",
@@ -3477,19 +3469,19 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
+  "openjsfoundation": {
+   "file": "openjsfoundation.svg",
+   "application": "Openjsfoundation",
+   "source": "simple-icons",
+   "upstream": "openjsfoundation",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
   "omni-group": {
    "file": "omni-group.svg",
    "application": "Omni Group",
    "source": "dashboard-icons",
    "upstream": "omnidb",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
-  "origin": {
-   "file": "origin.svg",
-   "application": "Origin",
-   "source": "dashboard-icons",
-   "upstream": "origin",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
@@ -3541,6 +3533,14 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
+  "panasonic": {
+   "file": "panasonic.svg",
+   "application": "Panasonic",
+   "source": "simple-icons",
+   "upstream": "panasonic",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
   "paypal": {
    "file": "paypal.svg",
    "application": "PayPal",
@@ -3557,14 +3557,6 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "panasonic": {
-   "file": "panasonic.svg",
-   "application": "Panasonic",
-   "source": "simple-icons",
-   "upstream": "panasonic",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
   "perl": {
    "file": "perl.svg",
    "application": "Perl",
@@ -3578,22 +3570,6 @@
    "application": "Perplexity",
    "source": "dashboard-icons",
    "upstream": "perplexity",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
-  "overcast": {
-   "file": "overcast.svg",
-   "application": "Overcast",
-   "source": "simple-icons",
-   "upstream": "overcast",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
-  "pinterest": {
-   "file": "pinterest.svg",
-   "application": "Pinterest",
-   "source": "dashboard-icons",
-   "upstream": "pinterest",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
@@ -3612,6 +3588,14 @@
    "upstream": "autozone",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "pinterest": {
+   "file": "pinterest.svg",
+   "application": "Pinterest",
+   "source": "dashboard-icons",
+   "upstream": "pinterest",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
   "playstation": {
    "file": "playstation.svg",
@@ -3637,13 +3621,13 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "pandora": {
-   "file": "pandora.svg",
-   "application": "Pandora",
-   "source": "selfhst/icons",
-   "upstream": "pandora",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
+  "overcast": {
+   "file": "overcast.svg",
+   "application": "Overcast",
+   "source": "simple-icons",
+   "upstream": "overcast",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "pearson": {
    "file": "pearson.svg",
@@ -3652,6 +3636,14 @@
    "upstream": "pearson",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "pandora": {
+   "file": "pandora.svg",
+   "application": "Pandora",
+   "source": "selfhst/icons",
+   "upstream": "pandora",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
   },
   "positive-technologies": {
    "file": "positive-technologies.svg",
@@ -3709,19 +3701,19 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "python": {
-   "file": "python.svg",
-   "application": "Python",
-   "source": "dashboard-icons",
-   "upstream": "python",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
   "qq": {
    "file": "qq.svg",
    "application": "QQ",
    "source": "dashboard-icons",
    "upstream": "qq",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  },
+  "python": {
+   "file": "python.svg",
+   "application": "Python",
+   "source": "dashboard-icons",
+   "upstream": "python",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
@@ -3749,19 +3741,19 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "protonmail": {
-   "file": "protonmail.svg",
-   "application": "Protonmail",
-   "source": "simple-icons",
-   "upstream": "protonmail",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
   "progress": {
    "file": "progress.svg",
    "application": "Progress",
    "source": "simple-icons",
    "upstream": "progress",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "protonmail": {
+   "file": "protonmail.svg",
+   "application": "Protonmail",
+   "source": "simple-icons",
+   "upstream": "protonmail",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
@@ -3789,14 +3781,6 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "reddit": {
-   "file": "reddit.svg",
-   "application": "Reddit",
-   "source": "dashboard-icons",
-   "upstream": "reddit",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
   "rakuten": {
    "file": "rakuten.svg",
    "application": "Rakuten",
@@ -3804,6 +3788,14 @@
    "upstream": "rakuten",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
+  },
+  "reddit": {
+   "file": "reddit.svg",
+   "application": "Reddit",
+   "source": "dashboard-icons",
+   "upstream": "reddit",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
   "redis-labs": {
    "file": "redis-labs.svg",
@@ -3813,6 +3805,14 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
+  "qt": {
+   "file": "qt.svg",
+   "application": "Qt",
+   "source": "simple-icons",
+   "upstream": "qt",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
   "razer": {
    "file": "razer.svg",
    "application": "Razer",
@@ -3821,11 +3821,11 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
   },
-  "qt": {
-   "file": "qt.svg",
-   "application": "Qt",
+  "qualcomm": {
+   "file": "qualcomm.svg",
+   "application": "Qualcomm",
    "source": "simple-icons",
-   "upstream": "qt",
+   "upstream": "qualcomm",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
@@ -3836,14 +3836,6 @@
    "upstream": "remnawave",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
-  "qualcomm": {
-   "file": "qualcomm.svg",
-   "application": "Qualcomm",
-   "source": "simple-icons",
-   "upstream": "qualcomm",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "riot-games": {
    "file": "riot-games.svg",
@@ -3877,14 +3869,6 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
   },
-  "ruby": {
-   "file": "ruby.svg",
-   "application": "Ruby",
-   "source": "dashboard-icons",
-   "upstream": "ruby",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
   "roblox": {
    "file": "roblox.svg",
    "application": "Roblox",
@@ -3892,14 +3876,6 @@
    "upstream": "roblox",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
-  },
-  "rockstar": {
-   "file": "rockstar.svg",
-   "application": "Rockstar",
-   "source": "simple-icons",
-   "upstream": "rockstargames",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "rumble": {
    "file": "rumble.svg",
@@ -3909,11 +3885,11 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "renren": {
-   "file": "renren.svg",
-   "application": "Renren",
+  "rockstar": {
+   "file": "rockstar.svg",
+   "application": "Rockstar",
    "source": "simple-icons",
-   "upstream": "renren",
+   "upstream": "rockstargames",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
@@ -3922,6 +3898,22 @@
    "application": "Roku",
    "source": "simple-icons",
    "upstream": "roku",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "ruby": {
+   "file": "ruby.svg",
+   "application": "Ruby",
+   "source": "dashboard-icons",
+   "upstream": "ruby",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  },
+  "renren": {
+   "file": "renren.svg",
+   "application": "Renren",
+   "source": "simple-icons",
+   "upstream": "renren",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
@@ -4005,17 +3997,25 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "samsung-galaxy-store": {
-   "file": "samsung-galaxy-store.svg",
-   "application": "Samsung Galaxy Store",
+  "setapp": {
+   "file": "setapp.svg",
+   "application": "Setapp",
    "source": "simple-icons",
-   "upstream": "samsung",
+   "upstream": "setapp",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "samsung": {
    "file": "samsung.svg",
    "application": "Samsung",
+   "source": "simple-icons",
+   "upstream": "samsung",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "samsung-galaxy-store": {
+   "file": "samsung-galaxy-store.svg",
+   "application": "Samsung Galaxy Store",
    "source": "simple-icons",
    "upstream": "samsung",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
@@ -4029,11 +4029,11 @@
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
-  "setapp": {
-   "file": "setapp.svg",
-   "application": "Setapp",
+  "sky": {
+   "file": "sky.svg",
+   "application": "Sky",
    "source": "simple-icons",
-   "upstream": "setapp",
+   "upstream": "sky",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
@@ -4042,14 +4042,6 @@
    "application": "Scp",
    "source": "simple-icons",
    "upstream": "scpfoundation",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
-  "sky": {
-   "file": "sky.svg",
-   "application": "Sky",
-   "source": "simple-icons",
-   "upstream": "sky",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
@@ -4093,14 +4085,6 @@
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
-  "sketch": {
-   "file": "sketch.svg",
-   "application": "Sketch",
-   "source": "simple-icons",
-   "upstream": "sketch",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
   "slideshare": {
    "file": "slideshare.svg",
    "application": "SlideShare",
@@ -4108,6 +4092,14 @@
    "upstream": "slideshare",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "snapp": {
+   "file": "snapp.svg",
+   "application": "Snapp",
+   "source": "dashboard-icons",
+   "upstream": "snappymail",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
   "snap": {
    "file": "snap.svg",
@@ -4133,13 +4125,13 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "snapp": {
-   "file": "snapp.svg",
-   "application": "Snapp",
-   "source": "dashboard-icons",
-   "upstream": "snappymail",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  "sketch": {
+   "file": "sketch.svg",
+   "application": "Sketch",
+   "source": "simple-icons",
+   "upstream": "sketch",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "snapcraft": {
    "file": "snapcraft.svg",
@@ -4157,14 +4149,6 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "sony": {
-   "file": "sony.svg",
-   "application": "Sony",
-   "source": "selfhst/icons",
-   "upstream": "sony",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
-  },
   "spiceworks": {
    "file": "spiceworks.svg",
    "application": "Spiceworks",
@@ -4181,19 +4165,19 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
+  "sony": {
+   "file": "sony.svg",
+   "application": "Sony",
+   "source": "selfhst/icons",
+   "upstream": "sony",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
+  },
   "spaceship": {
    "file": "spaceship.svg",
    "application": "Spaceship",
    "source": "simple-icons",
    "upstream": "spaceship",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
-  "sourceforge": {
-   "file": "sourceforge.svg",
-   "application": "SourceForge",
-   "source": "simple-icons",
-   "upstream": "sourceforge",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
@@ -4205,11 +4189,11 @@
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
-  "spacex": {
-   "file": "spacex.svg",
-   "application": "Spacex",
+  "sourceforge": {
+   "file": "sourceforge.svg",
+   "application": "SourceForge",
    "source": "simple-icons",
-   "upstream": "spacex",
+   "upstream": "sourceforge",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
@@ -4221,14 +4205,6 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "steam-china": {
-   "file": "steam-china.svg",
-   "application": "Steam China",
-   "source": "dashboard-icons",
-   "upstream": "steam",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
   "steam": {
    "file": "steam.svg",
    "application": "Steam",
@@ -4237,11 +4213,11 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "sto-express": {
-   "file": "sto-express.svg",
-   "application": "Sto Express",
+  "steam-china": {
+   "file": "steam-china.svg",
+   "application": "Steam China",
    "source": "dashboard-icons",
-   "upstream": "stoat",
+   "upstream": "steam",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
@@ -4252,6 +4228,22 @@
    "upstream": "starbucks",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "spacex": {
+   "file": "spacex.svg",
+   "application": "Spacex",
+   "source": "simple-icons",
+   "upstream": "spacex",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "sto-express": {
+   "file": "sto-express.svg",
+   "application": "Sto Express",
+   "source": "dashboard-icons",
+   "upstream": "stoat",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
   "stripe": {
    "file": "stripe.svg",
@@ -4325,14 +4317,6 @@
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
-  "steemit": {
-   "file": "steemit.svg",
-   "application": "Steemit",
-   "source": "simple-icons",
-   "upstream": "steemit",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
   "symantec-pki": {
    "file": "symantec-pki.svg",
    "application": "Symantec Pki",
@@ -4362,6 +4346,14 @@
    "application": "TVer",
    "source": "simple-icons",
    "upstream": "circuitverse",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "steemit": {
+   "file": "steemit.svg",
+   "application": "Steemit",
+   "source": "simple-icons",
+   "upstream": "steemit",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
@@ -4445,6 +4437,14 @@
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
+  "tencent-cloud": {
+   "file": "tencent-cloud.svg",
+   "application": "Tencent Cloud",
+   "source": "simple-icons",
+   "upstream": "tencenthy",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
   "teamviewer": {
    "file": "teamviewer.svg",
    "application": "TeamViewer",
@@ -4453,9 +4453,9 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
   },
-  "tencent-cloud": {
-   "file": "tencent-cloud.svg",
-   "application": "Tencent Cloud",
+  "tencent-dev": {
+   "file": "tencent-dev.svg",
+   "application": "Tencent Dev",
    "source": "simple-icons",
    "upstream": "tencenthy",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
@@ -4466,14 +4466,6 @@
    "application": "Ted",
    "source": "simple-icons",
    "upstream": "ted",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
-  "tencent-dev": {
-   "file": "tencent-dev.svg",
-   "application": "Tencent Dev",
-   "source": "simple-icons",
-   "upstream": "tencenthy",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
@@ -4525,11 +4517,27 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
+  "theboringcompany": {
+   "file": "theboringcompany.svg",
+   "application": "Theboringcompany",
+   "source": "simple-icons",
+   "upstream": "theboringcompany",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
   "theguardian": {
    "file": "theguardian.svg",
    "application": "Theguardian",
    "source": "simple-icons",
    "upstream": "theguardian",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "tesla": {
+   "file": "tesla.svg",
+   "application": "Tesla",
+   "source": "simple-icons",
+   "upstream": "tesla",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
@@ -4540,22 +4548,6 @@
    "upstream": "tmdb",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
-  "tesla": {
-   "file": "tesla.svg",
-   "application": "Tesla",
-   "source": "simple-icons",
-   "upstream": "tesla",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
-  "theboringcompany": {
-   "file": "theboringcompany.svg",
-   "application": "Theboringcompany",
-   "source": "simple-icons",
-   "upstream": "theboringcompany",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "tilda": {
    "file": "tilda.svg",
@@ -4597,14 +4589,6 @@
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
-  "trip-com": {
-   "file": "trip-com.svg",
-   "application": "Trip.com",
-   "source": "simple-icons",
-   "upstream": "tripdotcom",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
   "tvdb": {
    "file": "tvdb.svg",
    "application": "Tvdb",
@@ -4612,38 +4596,6 @@
    "upstream": "tvdb",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
-  "twitch": {
-   "file": "twitch.svg",
-   "application": "Twitch",
-   "source": "dashboard-icons",
-   "upstream": "twitch",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
-  "twitter": {
-   "file": "twitter.svg",
-   "application": "Twitter",
-   "source": "dashboard-icons",
-   "upstream": "twitter",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
-  "tokyo-toshokan": {
-   "file": "tokyo-toshokan.svg",
-   "application": "Tokyo Toshokan",
-   "source": "simple-icons",
-   "upstream": "tokyometro",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
-  "tubi": {
-   "file": "tubi.svg",
-   "application": "Tubi",
-   "source": "simple-icons",
-   "upstream": "tubi",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "tokyo-sports": {
    "file": "tokyo-sports.svg",
@@ -4653,11 +4605,27 @@
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
-  "ubiquiti": {
-   "file": "ubiquiti.svg",
-   "application": "Ubiquiti",
+  "trip-com": {
+   "file": "trip-com.svg",
+   "application": "Trip.com",
+   "source": "simple-icons",
+   "upstream": "tripdotcom",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "tokyo-toshokan": {
+   "file": "tokyo-toshokan.svg",
+   "application": "Tokyo Toshokan",
+   "source": "simple-icons",
+   "upstream": "tokyometro",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "twitch": {
+   "file": "twitch.svg",
+   "application": "Twitch",
    "source": "dashboard-icons",
-   "upstream": "ubiquiti",
+   "upstream": "twitch",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
@@ -4669,6 +4637,30 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
+  "tubi": {
+   "file": "tubi.svg",
+   "application": "Tubi",
+   "source": "simple-icons",
+   "upstream": "tubi",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "ubiquiti": {
+   "file": "ubiquiti.svg",
+   "application": "Ubiquiti",
+   "source": "dashboard-icons",
+   "upstream": "ubiquiti",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  },
+  "twitter": {
+   "file": "twitter.svg",
+   "application": "Twitter",
+   "source": "dashboard-icons",
+   "upstream": "twitter",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  },
   "ubi": {
    "file": "ubi.svg",
    "application": "UBI",
@@ -4676,6 +4668,14 @@
    "upstream": "ubisoft",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "udemy": {
+   "file": "udemy.svg",
+   "application": "Udemy",
+   "source": "dashboard-icons",
+   "upstream": "udemy",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
   "uber": {
    "file": "uber.svg",
@@ -4685,11 +4685,11 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
   },
-  "udemy": {
-   "file": "udemy.svg",
-   "application": "Udemy",
+  "unity": {
+   "file": "unity.svg",
+   "application": "Unity",
    "source": "dashboard-icons",
-   "upstream": "udemy",
+   "upstream": "unity",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
@@ -4709,14 +4709,6 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
   },
-  "unity": {
-   "file": "unity.svg",
-   "application": "Unity",
-   "source": "dashboard-icons",
-   "upstream": "unity",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
   "vmware": {
    "file": "vmware.svg",
    "application": "VMware",
@@ -4725,11 +4717,11 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "valorant": {
-   "file": "valorant.svg",
-   "application": "Valorant",
+  "udacity": {
+   "file": "udacity.svg",
+   "application": "Udacity",
    "source": "simple-icons",
-   "upstream": "valorant",
+   "upstream": "udacity",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
@@ -4741,35 +4733,19 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
   },
-  "udacity": {
-   "file": "udacity.svg",
-   "application": "Udacity",
+  "valorant": {
+   "file": "valorant.svg",
+   "application": "Valorant",
    "source": "simple-icons",
-   "upstream": "udacity",
+   "upstream": "valorant",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
-  "verizon": {
-   "file": "verizon.svg",
-   "application": "Verizon",
-   "source": "dashboard-icons",
-   "upstream": "verizon",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
   "vercel": {
    "file": "vercel.svg",
    "application": "Vercel",
    "source": "dashboard-icons",
    "upstream": "vercel",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
-  "viber": {
-   "file": "viber.svg",
-   "application": "Viber",
-   "source": "dashboard-icons",
-   "upstream": "viber",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
@@ -4781,6 +4757,14 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
   },
+  "viber": {
+   "file": "viber.svg",
+   "application": "Viber",
+   "source": "dashboard-icons",
+   "upstream": "viber",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  },
   "vk": {
    "file": "vk.svg",
    "application": "VK",
@@ -4788,6 +4772,22 @@
    "upstream": "vk",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "verizon": {
+   "file": "verizon.svg",
+   "application": "Verizon",
+   "source": "dashboard-icons",
+   "upstream": "verizon",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  },
+  "vodafone": {
+   "file": "vodafone.svg",
+   "application": "Vodafone",
+   "source": "dashboard-icons",
+   "upstream": "vodafone",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
   "visa": {
    "file": "visa.svg",
@@ -4804,14 +4804,6 @@
    "upstream": "voxmedia-coral",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
-  },
-  "vodafone": {
-   "file": "vodafone.svg",
-   "application": "Vodafone",
-   "source": "dashboard-icons",
-   "upstream": "vodafone",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
   "vultr": {
    "file": "vultr.svg",
@@ -4853,14 +4845,6 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
   },
-  "weibo": {
-   "file": "weibo.svg",
-   "application": "Weibo",
-   "source": "dashboard-icons",
-   "upstream": "weibo",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
   "w3schools": {
    "file": "w3schools.svg",
    "application": "W3schools",
@@ -4868,6 +4852,14 @@
    "upstream": "w3schools",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "weibo": {
+   "file": "weibo.svg",
+   "application": "Weibo",
+   "source": "dashboard-icons",
+   "upstream": "weibo",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
   "whatsapp": {
    "file": "whatsapp.svg",
@@ -4901,19 +4893,19 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "wikidot": {
-   "file": "wikidot.svg",
-   "application": "Wikidot",
-   "source": "simple-icons",
-   "upstream": "wikidotgg",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
   "wix": {
    "file": "wix.svg",
    "application": "WIX",
    "source": "simple-icons",
    "upstream": "wix",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "wikidot": {
+   "file": "wikidot.svg",
+   "application": "Wikidot",
+   "source": "simple-icons",
+   "upstream": "wikidotgg",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
@@ -4941,6 +4933,14 @@
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
+  "wistia": {
+   "file": "wistia.svg",
+   "application": "Wistia",
+   "source": "simple-icons",
+   "upstream": "wistia",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
   "wink": {
    "file": "wink.svg",
    "application": "Wink",
@@ -4948,14 +4948,6 @@
    "upstream": "twinkly",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
-  "x-twitter": {
-   "file": "x-twitter.svg",
-   "application": "X (Twitter)",
-   "source": "dashboard-icons",
-   "upstream": "twitter",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
   "xbox": {
    "file": "xbox.svg",
@@ -4973,14 +4965,6 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "wistia": {
-   "file": "wistia.svg",
-   "application": "Wistia",
-   "source": "simple-icons",
-   "upstream": "wistia",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
   "wise": {
    "file": "wise.svg",
    "application": "Wise",
@@ -4989,6 +4973,14 @@
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
+  "xianyu": {
+   "file": "xianyu.svg",
+   "application": "Xianyu",
+   "source": "local",
+   "upstream": "local",
+   "licence": "shipped in this repository (marks of their owners)",
+   "url": "tools/icons-local in the luci-app-traffic source tree"
+  },
   "wwe": {
    "file": "wwe.svg",
    "application": "Wwe",
@@ -4996,6 +4988,14 @@
    "upstream": "wwe",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
+  "x-twitter": {
+   "file": "x-twitter.svg",
+   "application": "X (Twitter)",
+   "source": "dashboard-icons",
+   "upstream": "twitter",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
   "xda": {
    "file": "xda.svg",
@@ -5037,6 +5037,14 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
+  "ycombinator": {
+   "file": "ycombinator.svg",
+   "application": "Ycombinator",
+   "source": "dashboard-icons",
+   "upstream": "ycombinator",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  },
   "xiaomi": {
    "file": "xiaomi.svg",
    "application": "Xiaomi",
@@ -5045,13 +5053,13 @@
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
-  "xiaomi-getapps": {
-   "file": "xiaomi-getapps.svg",
-   "application": "Xiaomi GetApps",
-   "source": "simple-icons",
-   "upstream": "xiaomi",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  "youtube-music": {
+   "file": "youtube-music.svg",
+   "application": "YouTube Music",
+   "source": "dashboard-icons",
+   "upstream": "youtube-music",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
   "youtube": {
    "file": "youtube.svg",
@@ -5061,11 +5069,27 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
+  "xiaomi-getapps": {
+   "file": "xiaomi-getapps.svg",
+   "application": "Xiaomi GetApps",
+   "source": "simple-icons",
+   "upstream": "xiaomi",
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+  },
   "zalo": {
    "file": "zalo.svg",
    "application": "Zalo",
    "source": "dashboard-icons",
    "upstream": "zalo",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  },
+  "zendesk": {
+   "file": "zendesk.svg",
+   "application": "Zendesk",
+   "source": "dashboard-icons",
+   "upstream": "zendesk",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
@@ -5085,22 +5109,6 @@
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
-  "zendesk": {
-   "file": "zendesk.svg",
-   "application": "Zendesk",
-   "source": "dashboard-icons",
-   "upstream": "zendesk",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
-  "ycombinator": {
-   "file": "ycombinator.svg",
-   "application": "Ycombinator",
-   "source": "dashboard-icons",
-   "upstream": "ycombinator",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
   "zoho": {
    "file": "zoho.svg",
    "application": "Zoho",
@@ -5116,14 +5124,6 @@
    "upstream": "zoom",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
-  "youtube-music": {
-   "file": "youtube-music.svg",
-   "application": "YouTube Music",
-   "source": "simple-icons",
-   "upstream": "youtubemusic",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "zscaler": {
    "file": "zscaler.svg",
@@ -5149,19 +5149,19 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "ebay": {
-   "file": "ebay.svg",
-   "application": "eBay",
-   "source": "dashboard-icons",
-   "upstream": "ebay",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
   "icloud-mail": {
    "file": "icloud-mail.svg",
    "application": "iCloud Mail",
    "source": "dashboard-icons",
    "upstream": "icloud",
+   "licence": "see upstream LICENSE",
+   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+  },
+  "ebay": {
+   "file": "ebay.svg",
+   "application": "eBay",
+   "source": "dashboard-icons",
+   "upstream": "ebay",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
@@ -5213,14 +5213,6 @@
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
-  "secom": {
-   "file": "secom.svg",
-   "application": "Secom",
-   "source": "iconify:arcticons",
-   "upstream": "arcticons:secom-safety-check-report",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
-  },
   "sling": {
    "file": "sling.svg",
    "application": "Sling",
@@ -5261,14 +5253,6 @@
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/circle-flags/"
   },
-  "stackpath": {
-   "file": "stackpath.svg",
-   "application": "Stackpath",
-   "source": "iconify:mdi",
-   "upstream": "mdi:stackpath",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/mdi/"
-  },
   "starlink": {
    "file": "starlink.svg",
    "application": "Starlink",
@@ -5276,6 +5260,14 @@
    "upstream": "arcticons:starlink",
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/arcticons/"
+  },
+  "stackpath": {
+   "file": "stackpath.svg",
+   "application": "Stackpath",
+   "source": "iconify:mdi",
+   "upstream": "mdi:stackpath",
+   "licence": "see the collection licence",
+   "url": "https://icon-sets.iconify.design/mdi/"
   },
   "taboola": {
    "file": "taboola.svg",
@@ -5293,19 +5285,19 @@
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/material-icon-theme/"
   },
-  "technogym": {
-   "file": "technogym.svg",
-   "application": "Technogym",
-   "source": "iconify:arcticons",
-   "upstream": "arcticons:technogym",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
-  },
   "tbank-ru": {
    "file": "tbank-ru.svg",
    "application": "Tbank Ru",
    "source": "iconify:arcticons",
    "upstream": "arcticons:outbank",
+   "licence": "see the collection licence",
+   "url": "https://icon-sets.iconify.design/arcticons/"
+  },
+  "technogym": {
+   "file": "technogym.svg",
+   "application": "Technogym",
+   "source": "iconify:arcticons",
+   "upstream": "arcticons:technogym",
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/arcticons/"
   },
@@ -5325,19 +5317,19 @@
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/arcticons/"
   },
-  "termux": {
-   "file": "termux.svg",
-   "application": "Termux",
-   "source": "iconify:arcticons",
-   "upstream": "arcticons:termux",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
-  },
   "tianyancha": {
    "file": "tianyancha.svg",
    "application": "Tianyancha",
    "source": "iconify:arcticons",
    "upstream": "arcticons:tianyancha",
+   "licence": "see the collection licence",
+   "url": "https://icon-sets.iconify.design/arcticons/"
+  },
+  "termux": {
+   "file": "termux.svg",
+   "application": "Termux",
+   "source": "iconify:arcticons",
+   "upstream": "arcticons:termux",
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/arcticons/"
   },
@@ -5493,14 +5485,6 @@
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/codicon/"
   },
-  "xianyu": {
-   "file": "xianyu.svg",
-   "application": "Xianyu",
-   "source": "iconify:arcticons",
-   "upstream": "arcticons:xianyu",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
-  },
   "xiaomi-ai": {
    "file": "xiaomi-ai.svg",
    "application": "Xiaomi AI",
@@ -5581,17 +5565,17 @@
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/logos/"
   },
-  "iqiyi-intl": {
-   "file": "iqiyi-intl.svg",
-   "application": "iQIYI (Intl)",
+  "iqiyi": {
+   "file": "iqiyi.svg",
+   "application": "iQIYI",
    "source": "iconify:arcticons",
    "upstream": "arcticons:iqiyi",
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/arcticons/"
   },
-  "iqiyi": {
-   "file": "iqiyi.svg",
-   "application": "iQIYI",
+  "iqiyi-intl": {
+   "file": "iqiyi-intl.svg",
+   "application": "iQIYI (Intl)",
    "source": "iconify:arcticons",
    "upstream": "arcticons:iqiyi",
    "licence": "see the collection licence",
@@ -6813,6 +6797,14 @@
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/arcticons/"
   },
+  "migu": {
+   "file": "migu.svg",
+   "application": "Migu",
+   "source": "iconify:arcticons",
+   "upstream": "arcticons:migu",
+   "licence": "see the collection licence",
+   "url": "https://icon-sets.iconify.design/arcticons/"
+  },
   "mixi": {
    "file": "mixi.svg",
    "application": "Mixi",
@@ -7060,6 +7052,14 @@
    "upstream": "circle-flags:sb",
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/circle-flags/"
+  },
+  "secom": {
+   "file": "secom.svg",
+   "application": "Secom",
+   "source": "iconify:arcticons",
+   "upstream": "arcticons:secom-safety-check-report",
+   "licence": "see the collection licence",
+   "url": "https://icon-sets.iconify.design/arcticons/"
   },
   "shein": {
    "file": "shein.svg",
