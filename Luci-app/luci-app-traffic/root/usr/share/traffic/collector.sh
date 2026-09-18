@@ -1180,7 +1180,8 @@ record_peak() {
 # minute tier is the sum of the 10 s points inside it, flushed when the minute
 # rolls over.
 record_sample() {
-    local ts="${1:-}" d u m cur_m cd cu n    [ -n "$ts" ] || ts=$(date +%s 2>/dev/null || echo 0)
+    local ts="${1:-}" d u m cur_m cd cu n
+    [ -n "$ts" ] || ts=$(date +%s 2>/dev/null || echo 0)
     d=0; u=0
     if [ -s "$STATE_DIR/sample.tsv" ]; then
         { read -r d; read -r u; } < "$STATE_DIR/sample.tsv"
