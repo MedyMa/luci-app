@@ -78,4 +78,30 @@ while IFS='	' read -r name rest; do
     fi
 done < "$STATE_DIR/totals.tsv"
 
+# Publish what the cache actually holds.
+#
+# The page asks for this one small file instead of probing a URL per name.  A
+# name that is not listed is simply not requested, which is the whole point: on
+# a real router the page was producing 381 404s per load - one for every
+# application without a shipped icon - and that buried every other message in the
+# console and made a working page look broken.
+#
+# The list is rebuilt from the directory rather than appended to, so it cannot
+# drift away from what is on disk, and it is only replaced when it changed: this
+# runs every round, and rewriting a file in flash for nothing is how a tmpfs
+# habit wears out an overlay.
+write_index() {
+    [ -d "$CACHE" ] || return 0
+    for f in "$CACHE"/*.svg; do
+        [ -f "$f" ] || continue
+        b=${f##*/}
+        printf '%s\n' "${b%.svg}"
+    done | sort -u > "$STATE_DIR/icons.index.new" 2>/dev/null || return 0
+    cmp -s "$STATE_DIR/icons.index.new" "$CACHE/index.txt" 2>/dev/null ||
+        mv -f "$STATE_DIR/icons.index.new" "$CACHE/index.txt"
+    rm -f "$STATE_DIR/icons.index.new"
+    return 0
+}
+write_index
+
 exit 0

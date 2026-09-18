@@ -82,7 +82,7 @@ PATH="$T/bin:$PATH" CAN="$T/can.svg" CAN_BAD="$T/bad.txt" \
 TRAFFIC_ICONS_FETCH=1 TRAFFIC_ICONS_DIR="$T/cache" TRAFFIC_ICONS_PKG="$T/pkg" \
 TRAFFIC_ICONS_PER_RUN=10 STATE_DIR="$T/state" \
 TRAFFIC_ICONS_URL="https://example.invalid" sh "$SRC"
-chk 'no refetch on a second run' 0 "$([ -d "$T/cache" ] && ls "$T/cache" | wc -l | tr -d ' ' || echo 0)"
+chk 'no refetch on a second run' 0 "$([ -d "$T/cache" ] && ls "$T/cache"/*.svg 2>/dev/null | wc -l | tr -d ' ' || echo 0)"
 
 # Switched off, nothing happens at all.
 rm -rf "$T/cache" "$T/state/icons.tried"
@@ -93,7 +93,7 @@ chk 'disabled: no attempts' 0 "$([ -f "$T/state/icons.tried" ] && echo 1 || echo
 # The per-run cap bounds a burst: one name per round, and the rest next round.
 rm -rf "$T/cache" "$T/state/icons.tried"
 run 1 1
-chk 'cap: exactly one fetched' 1 "$([ -d "$T/cache" ] && ls "$T/cache" | wc -l | tr -d ' ' || echo 0)"
+chk 'cap: exactly one fetched' 1 "$([ -d "$T/cache" ] && ls "$T/cache"/*.svg 2>/dev/null | wc -l | tr -d ' ' || echo 0)"
 
 [ "$fail" = 0 ] || exit 1
 echo 'fetch-icons-selftest: all checks passed'

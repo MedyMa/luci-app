@@ -123,6 +123,34 @@ function fmtRate(bps) {
 	return fmtBytes(bps) + '/s';
 }
 
+/* Icons fetched on the router land in /traffic-icons, which the web server
+ * serves because it lives under /www.  The package ships an empty index.txt
+ * beside them, so reading the index always succeeds - and that matters, because
+ * asking for a per-name file that is not there does not: with ~975 names
+ * uncovered, the page was issuing 381 doomed requests per load, one for every
+ * application without a shipped icon.  That filled the console with failures and
+ * made a working page look broken.  One small request replaces all of them.
+ *
+ * Until the list arrives the cache is treated as empty, which means a letter
+ * avatar for a moment rather than a request that is certain to fail. */
+var cacheIndex = null;
+function ensureCacheIndex() {
+	if (cacheIndex) return cacheIndex;
+	cacheIndex = {};
+	return fetch('/traffic-icons/index.txt')
+		.then(function(r) { return r.ok ? r.text() : ''; })
+		.then(function(t) {
+			var m = {};
+			t.split('\n').forEach(function(l) {
+				l = l.trim();
+				if (l) m[l] = 1;
+			});
+			cacheIndex = m;
+			return m;
+		})
+		.catch(function() { return cacheIndex; });
+}
+
 function slug(name) {
 	return String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
@@ -174,9 +202,11 @@ function makeIcon(name) {
 	}, [ E('span', { 'class': 'tf-icon-letter' }, [ (name || '?').charAt(0).toUpperCase() ]) ]);
 
 	var tries = [
-		L.resource('traffic/icons/' + slug(name) + '.svg'),
-		'/traffic-icons/' + slug(name) + '.svg'
+		L.resource('traffic/icons/' + slug(name) + '.svg')
 	];
+	/* only a name the index lists has a file worth asking for */
+	if (cacheIndex && cacheIndex[slug(name)])
+		tries.push('/traffic-icons/' + slug(name) + '.svg');
 	var img = new Image();
 	img.onload = function() {
 		box.textContent = '';
@@ -671,6 +701,8 @@ return view.extend({
 		]);
 
 		injectCss();
+		/* the list of icons fetched on the router, read once per page */
+		ensureCacheIndex();
 		/* the page works out its own dark mode; see watchTheme() */
 		watchTheme(node);
 		this.refresh(false);
