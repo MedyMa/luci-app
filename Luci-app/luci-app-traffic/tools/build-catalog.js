@@ -48,7 +48,22 @@ const SELFHST_TREE = 'https://api.github.com/repos/selfhst/icons/git/trees/main?
  * almost never reach, and the flood of requests got the API to rate-limit the
  * ones that would have succeeded.  Kept for a second pass over what the first
  * pass could not resolve, where a miss costs nothing and the rate stays low. */
-const ICONIFY_PREFIXES = [ 'logos', 'arcticons', 'cib', 'token', 'devicon', 'skill-icons', 'simple-icons' ];
+/* Several Iconify collections carry brand and application marks.  `logos` is
+ * gilbarbara/logos (~1.9k brand marks); the rest close the gap that
+ * simple-icons left when it withdrew a number of consumer brands.
+ *
+ * ORDER MATTERS, and it is not by quality of the set but by its STYLE.  These
+ * were previously consulted in the order they are listed inside fetchBrand, and
+ * arcticons came first among them - so a name arcticons happened to carry was
+ * drawn as its thin-line Android outline instead of the proper brand mark that
+ * selfhst or simple-icons would have supplied.  Apple Music, Youku, iQIYI,
+ * Pinduoduo, Xianyu and Migu were all shipped that way, and 105 of the 863
+ * icons came from arcticons in total.  Colour brand sets are therefore tried
+ * first and the line-art sets last: an outline is a worse answer than a faded
+ * colour mark, and both are worse than the real logo. */
+const ICONIFY_COLOUR = [ 'logos', 'devicon', 'skill-icons', 'simple-icons', 'cib', 'token' ];
+const ICONIFY_LINE = [ 'arcticons' ];
+const ICONIFY_PREFIXES = ICONIFY_COLOUR.concat(ICONIFY_LINE);
 
 const argv = process.argv.slice(2);
 const opt = {
@@ -1001,9 +1016,12 @@ async function buildIcons(appNames, glyphNames) {
 			svg = await tryFetch(`https://api.iconify.design/logos/${name}.svg`);
 			if (svg) src = 'iconify:logos';
 		}
+		/* colour collections only: the line-art sets are tried at the very end,
+		 * after selfhst and simple-icons, because an outline is the wrong answer
+		 * for a brand mark */
 		for (const [p, s] of iconify) {
 			if (svg) break;
-			if (p === 'logos' || !s.has(name)) continue;
+			if (p === 'logos' || !ICONIFY_COLOUR.includes(p) || !s.has(name)) continue;
 			svg = await tryFetch(`https://api.iconify.design/${p}/${name}.svg`);
 			if (svg) src = 'iconify:' + p;
 		}
@@ -1017,6 +1035,17 @@ async function buildIcons(appNames, glyphNames) {
 				|| await tryFetch(`https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/${name}.svg`, { mono: true })
 				|| await tryFetch(`https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/${name}.svg`, { mono: true });
 			if (svg) src = 'simple-icons';
+		}
+		/* Line art, last of all.  arcticons carries a great many application
+		 * names and almost nothing else does, so it is genuinely useful - but its
+		 * icons are thin outlines, and for Apple Music, Youku, iQIYI, Pinduoduo,
+		 * Xianyu and Migu it was supplying one while a proper mark existed
+		 * elsewhere.  It is a fallback, not a preference. */
+		for (const [p, s] of iconify) {
+			if (svg) break;
+			if (p === 'logos' || !ICONIFY_LINE.includes(p) || !s.has(name)) continue;
+			svg = await tryFetch(`https://api.iconify.design/${p}/${name}.svg`);
+			if (svg) src = 'iconify:' + p;
 		}
 		const out = { svg, src };
 		cache.set(name, out);
