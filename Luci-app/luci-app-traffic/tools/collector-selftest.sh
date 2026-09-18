@@ -41,13 +41,34 @@ echo "=== sh -n ==="
 # shell, and sh -n reports a syntax error far from the real cause.  It has been
 # written three times in this file's history, so it gets its own check that
 # names the offending line.
+#
+# The check tracks whether an odd number of quotes has been opened, rather than
+# entering an "inawk" state and leaving it again.  The state version carried an
+# exit rule that required the closing quote to be followed by a space after at
+# most four spaces of indent, so every TAB-indented closer and every eight-space
+# closer in this file missed it.  inawk was therefore set by the first awk
+# invocation and never cleared, and from there on it reported every ordinary
+# shell comment that happened to contain an apostrophe - the day's, session's,
+# hour's, page's.  That made the file fail its lint, and this suite exits on
+# that failure, so it never reached a single functional assertion.  Which is how
+# a joined-up line in record_sample shipped and crash-looped the collector
+# without any test noticing.
+#
+# A line that starts with # while no quoted region is open is a shell comment:
+# the shell does not look inside it for quotes at all, so it can neither open
+# nor close an awk program and an apostrophe in it is harmless.
 apostrophes=$(awk '
-    /awk[[:space:]].*-v |awk -F.*\x27$/ { inawk = 1 }
-    inawk && /^[[:space:]]*#/ {
+    BEGIN { q = 0 }
+    {
+        if (q % 2 == 0 && $0 ~ /^[[:space:]]*#/) next
         line = $0
-        if (gsub(/\x27/, "\x27", line) > 0) { printf "  line %d: %s\n", NR, $0; hits++ }
+        n = gsub(/\x27/, "\x27", line)
+        if (q % 2 == 1 && $0 ~ /^[[:space:]]*#/ && n > 0) {
+            printf "  line %d: %s\n", NR, $0
+            hits++
+        }
+        q += n
     }
-    inawk && /^(    )?.\x27 / { inawk = 0 }
     END { exit (hits > 0 ? 1 : 0) }
 ' "$COLLECTOR")
 if [ -n "$apostrophes" ]; then

@@ -74,6 +74,27 @@ jobs:
           # while the generator reported 751; this fails in seconds instead.
           node Luci-app/luci-app-traffic/tools/check-icons.js
 
+      - name: Run the self-tests
+        run: |
+          set -eux
+          # These suites existed and passed, but nothing ran them: this workflow
+          # only built the package, so router-side code had no automated gate at
+          # all.  A collector that died on its first round therefore shipped four
+          # times - procd crash loop, no snapshot, no sampling, and a realtime
+          # meter stuck at zero - while every suite that would have caught it sat
+          # unrun in tools/.  Anything that can fail in seconds is a gate now.
+          cd Luci-app/luci-app-traffic
+          sh  tools/live-selftest.sh
+          sh  tools/rpcd-selftest.sh
+          sh  tools/peak-selftest.sh
+          sh  tools/fetch-icons-selftest.sh
+          node tools/page-render-selftest.js
+          # tools/collector-selftest.sh is deliberately NOT here yet: it runs
+          # minutes of 30-second collector rounds, and three of its assertions in
+          # the on-demand-resolution section fail.  Adding it now would turn every
+          # build red for a reason nobody has diagnosed; it joins this list once
+          # the failures are understood.
+
       - name: Install build dependencies
         run: |
           sudo apt-get update
