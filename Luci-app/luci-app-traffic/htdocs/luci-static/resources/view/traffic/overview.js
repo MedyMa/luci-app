@@ -1106,28 +1106,22 @@ return view.extend({
 	 * that somebody is looking.  rpcd writes the timestamp live.sh checks, so
 	 * closing the page stops the sampling instead of leaving it running forever.
 	 *
-	 * The request is made in EVERY range, but only the session view shows what
-	 * comes back.  Asking only in the session view was a mistake that cost real
-	 * debugging time: a page sitting on the 24-hour range stopped asking, so the
-	 * sampler stopped, the file behind it disappeared, and the meter looked
-	 * broken rather than simply not selected.  The ranged views still show their
-	 * window averages - this changes when we ask, not what is displayed. */
+	 * These two numbers are the one-second rate in EVERY range.  They used to
+	 * depend on the selected range - the session view showed the live rate and
+	 * every other range showed a ten-second interval value - and that was a
+	 * hidden mode: a page left on the 24-hour range looked like a meter that had
+	 * stopped refreshing, twice, to the person using it.  A number that means
+	 * something different depending on a control elsewhere on the page is a
+	 * worse idea than a number that always means the same thing.  The window
+	 * averages are still in the chart's own subtitle, where they belong. */
 	pollLive: function() {
-		var showLive = (this.range === 'session');
-		if (!showLive) {
-			/* hand the two numbers back to the window average that updateRate()
-			 * paints from the summary */
-			this.liveOn = false;
-		}
 		return callLive().then(L.bind(function(r) {
-			if (!showLive) return;
 			if (!r || Number(r.ready) !== 1) throw new Error('no live sample yet');
 			this.liveMisses = 0;
 			this.liveOn = true;
 			dom.content(this.rateDown, fmtRate(Number(r.bps_down) || 0));
 			dom.content(this.rateUp, fmtRate(Number(r.bps_up) || 0));
 		}, this)).catch(L.bind(function() {
-			if (!showLive) return;
 			/* Three misses in a row is not a hiccup, it is this build running on
 			 * an older backend: hand the two numbers back to the interval rate
 			 * instead of freezing them at the last live value. */
