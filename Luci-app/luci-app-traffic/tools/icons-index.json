@@ -1,14 +1,14 @@
 {
  "generated": "2026-09-18",
- "icons": 876,
- "manifestRows": 876,
+ "icons": 879,
+ "manifestRows": 879,
  "catalogue": {
   "rows": 32068,
   "names": 1657
  },
  "coverage": {
-  "names": 48.6,
-  "domains": 77
+  "names": 48.8,
+  "domains": 77.1
  },
  "missingByDomains": [
   {
@@ -7180,6 +7180,30 @@
    "upstream": "649521",
    "licence": "seeklogo: reference use only, not an open licence (trademark of the owner)",
    "url": "https://seeklogo.com/vector-logo/649521/mango-tv"
+  },
+  "gaode": {
+   "file": "gaode.svg",
+   "application": "GaoDe",
+   "source": "iconify:arcticons",
+   "upstream": "autonavi",
+   "licence": "see the collection licence",
+   "url": "https://icon-sets.iconify.design/arcticons/"
+  },
+  "amap": {
+   "file": "amap.svg",
+   "application": "Amap",
+   "source": "iconify:arcticons",
+   "upstream": "autonavi",
+   "licence": "see the collection licence",
+   "url": "https://icon-sets.iconify.design/arcticons/"
+  },
+  "hoyoverse": {
+   "file": "hoyoverse.svg",
+   "application": "HoYoverse",
+   "source": "iconify:thesvg-color",
+   "upstream": "mihoyo",
+   "licence": "see the collection licence",
+   "url": "https://icon-sets.iconify.design/thesvg-color/"
   }
  }
 }

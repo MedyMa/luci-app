@@ -30,6 +30,7 @@ aliexpress
 alipay
 aliyun-drive
 alphabet
+amap
 amazon
 amazon-appstore
 amc
@@ -294,6 +295,7 @@ futu
 gaijin
 games
 gandi
+gaode
 garena
 geely
 geetest
@@ -355,6 +357,7 @@ hkust
 hm
 homebrew
 honor
+hoyoverse
 hp
 hpe
 hsbc

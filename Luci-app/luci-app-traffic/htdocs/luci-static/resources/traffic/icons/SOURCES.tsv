@@ -876,3 +876,6 @@ tencent.svg	Tencent	iconify:thesvg-color	tencent	see the collection licence	http
 chinabroadnet.svg	Chinabroadnet	local	local	shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
 speedtest-cn.svg	speedtest.cn	local	local	shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
 mango-tv.svg	Mango TV	seeklogo	649521	seeklogo: reference use only, not an open licence (trademark of the owner)	https://seeklogo.com/vector-logo/649521/mango-tv	cropped to the emblem
+gaode.svg	GaoDe	iconify:arcticons	autonavi	see the collection licence	https://icon-sets.iconify.design/arcticons/	
+amap.svg	Amap	iconify:arcticons	autonavi	see the collection licence	https://icon-sets.iconify.design/arcticons/	
+hoyoverse.svg	HoYoverse	iconify:thesvg-color	mihoyo	see the collection licence	https://icon-sets.iconify.design/thesvg-color/	
