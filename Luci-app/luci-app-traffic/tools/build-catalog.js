@@ -714,10 +714,48 @@ function iconSlug(name) {
 	return slug(String(name).replace(/\+/g, ' plus ').replace(/&/g, ' and '));
 }
 
+/** Names whose upstream icon is filed under a slug no spelling of the name can
+ *  reach.  Tried before every derived candidate, so an entry here also beats a
+ *  fuzzy near-miss and saves the search pass an API call.
+ *
+ *  The search pass cannot cover these by itself: it gives up unless the
+ *  normalised query is at least three characters long, so a numeric brand like
+ *  58.com (query "58") is structurally out of its reach - which is why those
+ *  names sat at the top of the missing list with hundreds of domains each.
+ *
+ *  Keep this short and hand-checked.  An entry that does not exist upstream is
+ *  harmless - the name keeps its letter avatar, which is the honest answer - but
+ *  a wrong one puts the wrong logo on a row, which is worse than no logo. */
+const BRAND_ALIAS = {
+	'58.com': '58dotcom',      /* simple-icons spells the dot out */
+	'Ctrip': 'tripdotcom',     /* the company renamed itself Trip.com */
+	'theScore': 'thescore',
+	'QiNiuYun': 'qiniu',
+	'UCloud': 'ucloud',
+	'Bestbuy': 'bestbuy',
+	'Bloomberg': 'bloomberg',
+	'Bridgestone': 'bridgestone',
+	'Wildberries': 'wildberries',
+	'Durex': 'durex',
+	'Sohu': 'sohu',
+};
+
 function iconCandidates(name, sourceSlug) {
 	const out = [];
 	const push = v => { if (v && v.length > 1 && !out.includes(v)) out.push(v); };
 	const s = iconSlug(name);
+	/* an explicit alias beats anything derived from the name */
+	const alias = BRAND_ALIAS[name];
+	if (alias) push(alias);
+	/* The display name is derived from an upstream slug by NAME_FIX, and that
+	 * round trip is not the identity: the icon for "AT&T" is filed upstream as
+	 * atandt while the name slugs to at-and-t, and "NTP Service" came from
+	 * ntpservice while the name slugs to ntp-service.  The slug the name was
+	 * built from is therefore a candidate in its own right - for the glyph names
+	 * it is exactly the glyph key, which is how a row like STUN Servers gets the
+	 * glyph that was already in the directory. */
+	for (const [key, disp] of Object.entries(NAME_FIX))
+		if (disp === name) { push(key); break; }
 	push(s);
 	push(s.replace(/-/g, ''));
 	if (sourceSlug) {
@@ -816,27 +854,51 @@ async function buildIcons(appNames, glyphNames) {
 	}
 	/* Ordered by how good the result looks in the list: full-colour brand marks
 	 * first, monochrome last (an <img> cannot inherit the page colour, so those
-	 * are pinned to the muted grey the page uses). */
+	 * are pinned to the muted grey the page uses).
+	 *
+	 * Returns the icon and the set that supplied it.  Which set won is not
+	 * trivia: the licence differs per set, and the package redistributes these
+	 * files, so it is recorded for the SOURCES.tsv manifest rather than thrown
+	 * away the moment the bytes arrive. */
+	/* The set indexes are built from the GitHub trees, which are current, but the
+	 * bytes come from CDNs, which are not necessarily: jsdelivr serves a
+	 * repository at the commit it last cached, so an icon that the index lists can
+	 * 404 there and the name silently stays a letter avatar.  Disney+ and
+	 * Paramount+ were exactly that - present in both the index and the naming
+	 * rules, yet missing on disk.  Each CDN attempt therefore falls back to the
+	 * repository itself, which is the same revision the index was read from. */
 	async function fetchBrand(name) {
 		if (cache.has(name)) return cache.get(name);
-		let svg = null;
-		if (dashboard.has(name))
-			svg = await tryFetch(`https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/${name}.svg`);
-		if (!svg && logos.has(name))
+		let svg = null, src = '';
+		if (dashboard.has(name)) {
+			svg = await tryFetch(`https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/${name}.svg`)
+				|| await tryFetch(`https://raw.githubusercontent.com/homarr-labs/dashboard-icons/main/svg/${name}.svg`);
+			if (svg) src = 'dashboard-icons';
+		}
+		if (!svg && logos.has(name)) {
 			svg = await tryFetch(`https://api.iconify.design/logos/${name}.svg`);
+			if (svg) src = 'iconify:logos';
+		}
 		for (const [p, s] of iconify) {
 			if (svg) break;
 			if (p === 'logos' || !s.has(name)) continue;
 			svg = await tryFetch(`https://api.iconify.design/${p}/${name}.svg`);
+			if (svg) src = 'iconify:' + p;
 		}
-		if (!svg && selfhst.has(name))
-			svg = await tryFetch(`https://cdn.jsdelivr.net/gh/selfhst/icons/svg/${name}.svg`);
-		if (!svg && simple.has(name))
-			svg = await tryFetch(`https://cdn.simpleicons.org/${name}`);
-		if (!svg && simple.has(name))
-			svg = await tryFetch(`https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/${name}.svg`, { mono: true });
-		cache.set(name, svg);
-		return svg;
+		if (!svg && selfhst.has(name)) {
+			svg = await tryFetch(`https://cdn.jsdelivr.net/gh/selfhst/icons/svg/${name}.svg`)
+				|| await tryFetch(`https://raw.githubusercontent.com/selfhst/icons/main/svg/${name}.svg`);
+			if (svg) src = 'selfhst/icons';
+		}
+		if (!svg && simple.has(name)) {
+			svg = await tryFetch(`https://cdn.simpleicons.org/${name}`)
+				|| await tryFetch(`https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/${name}.svg`, { mono: true })
+				|| await tryFetch(`https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/${name}.svg`, { mono: true });
+			if (svg) src = 'simple-icons';
+		}
+		const out = { svg, src };
+		cache.set(name, out);
+		return out;
 	}
 
 	const saved = [], missed = [];
@@ -864,7 +926,7 @@ async function buildIcons(appNames, glyphNames) {
 		if (!file) return true;
 		/* an icon shipped in the repository is already the answer */
 		if (localNames.has(file)) {
-			saved.push({ name: entry.name, file, from: 'local' });
+			saved.push({ name: entry.name, file, from: 'local', src: 'local' });
 			return true;
 		}
 		let tried = iconCandidates(entry.name, entry.sourceSlug);
@@ -873,15 +935,15 @@ async function buildIcons(appNames, glyphNames) {
 		for (const cand of tried) for (const n of fuzzyIconNames(indexes, cand)) fuzzy.push(n);
 		tried = tried.concat(fuzzy);
 		for (const cand of tried) {
-			const svg = await fetchBrand(cand);
-			if (!svg) {
+			const got = await fetchBrand(cand);
+			if (!got.svg) {
 				/* the second pass paces itself: it is the pass that can trip the
 				 * API's rate limit, and it only runs on what pass one missed */
 				if (pause) await sleep(pause);
 				continue;
 			}
-			fs.writeFileSync(path.join(ICON_DIR, file), svg.trim().replace(/\r/g, ''), 'utf8');
-			saved.push({ name: entry.name, file, from: cand });
+			fs.writeFileSync(path.join(ICON_DIR, file), got.svg.trim().replace(/\r/g, ''), 'utf8');
+			saved.push({ name: entry.name, file, from: cand, src: got.src });
 			return true;
 		}
 		return false;
@@ -920,7 +982,14 @@ async function buildIcons(appNames, glyphNames) {
 	const norm = s => String(s).toLowerCase().replace(/[^a-z0-9]/g, '');
 	async function searchIcon(query) {
 		const want = norm(query);
-		if (want.length < 3) return null;
+		/* Two characters are enough.  The acceptance test below requires the
+		 * icon's own name to normalise to exactly this string - or, for longer
+		 * queries, to contain it - so a short query cannot return something
+		 * unrelated.  The three-character floor is what made numeric brands
+		 * unreachable: "58.com" searches for "58" and was refused before the
+		 * request was even made, which is why 58.com, 360 and 17173 sat at the
+		 * top of the missing list with hundreds of domains each. */
+		if (want.length < 2) return null;
 		try {
 			const txt = await httpText('https://api.iconify.design/search?limit=12&query=' +
 				encodeURIComponent(query), { tries: 2 });
@@ -955,7 +1024,8 @@ async function buildIcons(appNames, glyphNames) {
 		const file = slug(entry.name) + '.svg';
 		if (!file) return;
 		fs.writeFileSync(path.join(ICON_DIR, file), svg.trim().replace(/\r/g, ''), 'utf8');
-		saved.push({ name: entry.name, file, from: hit.prefix + ':' + hit.name });
+		saved.push({ name: entry.name, file, from: hit.prefix + ':' + hit.name,
+			src: 'iconify:' + hit.prefix });
 		searched++;
 	}, 2);
 	missed.length = 0;
@@ -978,6 +1048,68 @@ async function buildIcons(appNames, glyphNames) {
 			glyphMissed.push(key);
 		}
 	}
+
+	/* Some application names in the catalogue are not brands at all: the
+	 * classifier names a row "STUN Servers" or "NTP Service" when the traffic is
+	 * that protocol, and a brand logo would be the wrong answer for those rows.
+	 * Their glyph already exists under the category key, but the page looks an
+	 * icon up by the application's own slug, so the glyph is published under that
+	 * slug too.  STUN Servers carries more domains than any other name in the
+	 * catalogue - 350 of them - and it was showing a letter avatar while its
+	 * glyph sat in the directory beside it. */
+	const NAME_TO_GLYPH = {
+		'STUN Servers': 'stun',
+		'NTP Service': 'ntp',
+	};
+	let glyphAliased = 0;
+	for (const [appName, key] of Object.entries(NAME_TO_GLYPH)) {
+		const from = path.join(ICON_DIR, key + '.svg');
+		const sl = slug(appName);
+		if (!sl || !fs.existsSync(from)) continue;
+		fs.copyFileSync(from, path.join(ICON_DIR, sl + '.svg'));
+		saved.push({ name: appName, file: sl + '.svg', from: key, src: 'lucide-static' });
+		glyphAliased++;
+	}
+	if (glyphAliased) log(`  类别名沿用线稿: ${glyphAliased} 个`);
+
+	/* ---- provenance manifest ---------------------------------------------
+	 * The package redistributes every one of these files and they come from six
+	 * different projects whose licences are not the same, so "icons belong to
+	 * their owners" in the README cannot answer "under what terms is this file
+	 * here".  The generator knows the answer per icon while it is fetching, and
+	 * forgets it the moment it exits - so it writes it down.
+	 *
+	 * The licence is filled in only where the upstream project states one
+	 * plainly.  Everywhere else the row says so and gives the URL to check
+	 * instead of guessing: a wrong licence in a manifest is worse than an
+	 * honest "check upstream". */
+	const SET_INFO = {
+		'dashboard-icons': ['see upstream LICENSE',
+			'https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE'],
+		'selfhst/icons': ['see upstream LICENSE',
+			'https://github.com/selfhst/icons/blob/main/LICENSE'],
+		'simple-icons': ['CC0-1.0 (trademarks: see DISCLAIMER.md)',
+			'https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md'],
+		'lucide-static': ['ISC', 'https://github.com/lucide-icons/lucide/blob/main/LICENSE'],
+		'local': ['shipped in this repository (marks of their owners)',
+			'tools/icons-local in the luci-app-traffic source tree'],
+	};
+	function setInfo(src) {
+		if (!src) return ['unknown', ''];
+		if (SET_INFO[src]) return SET_INFO[src];
+		const prefix = String(src).replace(/^iconify:/, '');
+		return ['see the collection licence', `https://icon-sets.iconify.design/${prefix}/`];
+	}
+	const rows = ['# Generated by tools/build-catalog.js - do not edit by hand.',
+		'# file\tapplication\tsource set\tupstream slug\tlicence\tsource URL'];
+	for (const e of saved) {
+		const [lic, url] = setInfo(e.src);
+		rows.push([e.file, e.name, e.src || 'unknown', e.from, lic, url].join('\t'));
+	}
+	for (const key of glyphSaved)
+		rows.push([key + '.svg', key, 'lucide-static', GLYPHS[key], ...SET_INFO['lucide-static']].join('\t'));
+	fs.writeFileSync(path.join(ICON_DIR, 'SOURCES.tsv'), rows.join('\n') + '\n', 'utf8');
+	log(`  来源清单: SOURCES.tsv（${saved.length + glyphSaved.length} 条）`);
 
 	const bytes = fs.readdirSync(ICON_DIR).filter(f => f.endsWith('.svg'))
 		.reduce((sum, f) => sum + fs.statSync(path.join(ICON_DIR, f)).size, 0);
