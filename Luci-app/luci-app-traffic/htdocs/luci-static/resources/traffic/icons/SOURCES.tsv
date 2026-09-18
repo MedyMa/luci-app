@@ -525,7 +525,6 @@ telekom.svg	Telekom	dashboard-icons	telekom	see upstream LICENSE	https://github.
 temu.svg	Temu	selfhst/icons	temu	see upstream LICENSE	https://github.com/selfhst/icons/blob/main/LICENSE	
 target.svg	Target	selfhst/icons	target	see upstream LICENSE	https://github.com/selfhst/icons/blob/main/LICENSE	
 temp-mail.svg	Temp Mail	dashboard-icons	tempo	see upstream LICENSE	https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE	
-tencent.svg	Tencent	simple-icons	tencenthy	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
 tencent-games.svg	Tencent Games	simple-icons	tencenthy	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
 tencent-meeting.svg	Tencent Meeting	simple-icons	tencenthy	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
 tencent-tme.svg	Tencent Tme	simple-icons	tencenthy	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
@@ -874,3 +873,5 @@ pingan.svg	PingAn	bank-logos	pingan-rect	MIT (trademarks remain with the banks)	
 chinamobile.svg	ChinaMobile	local	local	shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
 chinaunicom.svg	ChinaUnicom	local	local	shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
 chinatelecom.svg	ChinaTelecom	local	local	shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
+tencent.svg	Tencent	iconify:thesvg-color	tencent	see the collection licence	https://icon-sets.iconify.design/thesvg-color/	
+chinabroadnet.svg	Chinabroadnet	local	local	shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	

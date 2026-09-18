@@ -1,7 +1,7 @@
 {
  "generated": "2026-09-18",
- "icons": 874,
- "manifestRows": 874,
+ "icons": 875,
+ "manifestRows": 875,
  "catalogue": {
   "rows": 32068,
   "names": 1657
@@ -4381,14 +4381,6 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "tencent": {
-   "file": "tencent.svg",
-   "application": "Tencent",
-   "source": "simple-icons",
-   "upstream": "tencenthy",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
   "tencent-games": {
    "file": "tencent-games.svg",
    "application": "Tencent Games",
@@ -7160,6 +7152,22 @@
   "chinatelecom": {
    "file": "chinatelecom.svg",
    "application": "ChinaTelecom",
+   "source": "local",
+   "upstream": "local",
+   "licence": "shipped in this repository (marks of their owners)",
+   "url": "tools/icons-local in the luci-app-traffic source tree"
+  },
+  "tencent": {
+   "file": "tencent.svg",
+   "application": "Tencent",
+   "source": "iconify:thesvg-color",
+   "upstream": "tencent",
+   "licence": "see the collection licence",
+   "url": "https://icon-sets.iconify.design/thesvg-color/"
+  },
+  "chinabroadnet": {
+   "file": "chinabroadnet.svg",
+   "application": "Chinabroadnet",
    "source": "local",
    "upstream": "local",
    "licence": "shipped in this repository (marks of their owners)",
