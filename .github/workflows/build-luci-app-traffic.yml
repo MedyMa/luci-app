@@ -205,6 +205,14 @@ jobs:
             -path '*/root/usr/libexec/*' \
           \) -exec sed -i 's/\r$//' {} +
 
+          # The SDK decides whether CONFIG_PACKAGE_luci-app-traffic exists at all by
+          # scanning package/** and caching the result under tmp/ by timestamp.
+          # rsync -a preserves the checkout's timestamps, so the injected tree can be
+          # newer in content but not in mtime, the cache is reused, and the package
+          # never reaches the generated configuration.  Touching the tree makes it
+          # unmistakably newer than the cache.
+          find "$sdk_feed_dir" -exec touch {} +
+
           ln -sfn "../../../feeds/luci/applications/luci-app-traffic" "$sdk_pkg_dir"
           test -f "$sdk_feed_dir/Makefile"
           test -f "$sdk_pkg_dir/Makefile"
@@ -228,6 +236,21 @@ jobs:
           echo 'CONFIG_PACKAGE_luci-app-traffic=y' >> .config
 
           make defconfig
+
+          # A missing symbol here means a missing artifact, and the difference between
+          # "the scan never saw the package" and "defconfig turned it off" is invisible
+          # unless every view is printed before the failure.
+          echo '--- injected package dir ---'
+          ls -ld --time-style=full-iso package/feeds/luci/luci-app-traffic || true
+          ls -l --time-style=full-iso package/feeds/luci/luci-app-traffic/Makefile || true
+          echo '--- cached scan metadata ---'
+          ls -l --time-style=full-iso tmp/.packageinfo tmp/.config-package.in 2>/dev/null || true
+          echo '--- package metadata entry (0 = scan missed the package) ---'
+          grep -c '^Package: luci-app-traffic$' tmp/.packageinfo 2>/dev/null || true
+          echo '--- generated symbol (0 = not offered to the config) ---'
+          grep -c 'PACKAGE_luci-app-traffic' tmp/.config-package.in 2>/dev/null || true
+          echo '--- every mention of the package in .config ---'
+          grep -n 'luci-app-traffic' .config || echo '(no mention at all)'
 
           grep '^CONFIG_PACKAGE_luci-app-traffic=' .config
 
