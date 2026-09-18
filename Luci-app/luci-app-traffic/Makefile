@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-traffic
-PKG_VERSION:=0.1.54
+PKG_VERSION:=0.1.55
 PKG_RELEASE:=1
 PKG_LICENSE:=Apache-2.0
 LUCI_PKGARCH:=all
@@ -61,3 +61,8 @@ exit 0
 endef
 
 include $(TOPDIR)/feeds/luci/luci.mk
+
+# include/scan.mk finds packages by grepping their Makefile for "call
+# BuildPackage", so this marker is what makes the package discoverable at all -
+# without it the SDK skips the directory silently and the package is not built.
+# call BuildPackage - OpenWrt buildroot signature
