@@ -340,11 +340,20 @@ echo "=== 按需解析（页面打开时不等节流窗口）==="
 printf '%s\n' "$(date +%s)" > "$T/state/nmtime"
 printf '192.168.2.138\tnewhost.meituan.com\t10.20.30.40\n' >> "$T/state/dnsmap.tsv"
 printf '1\n' > "$T/state/pending"
-run_collector 30
+# The throttle window has to outlast the run or this phase cannot mean anything.
+# CFG_RESOLVE defaults to 30 and run_collector was asked for 30 seconds, so the
+# window expired while the collector was still running and the name resolved -
+# the assertion expected the opposite and had presumably been red since the day
+# it was written.  Widening the window to an hour makes the run sit well inside
+# it, so "the throttle held the name back" is a statement about the throttle and
+# not about how long this phase happened to take.
+run_collector 30 TRAFFIC_RESOLVE=3600
 chk "19 节流生效：新主机名暂不解析"        ""                  "$(nm 'newhost.meituan.com')"
 chk "19a 待解析数量会上报"                 "1"                 "$(sed -n '1p' "$T/state/pending")"
 : > "$T/state/resolve.now"
-run_collector 30
+# resolve.now has to beat the throttle, so it is checked against the same wide
+# window that just held the name back
+run_collector 30 TRAFFIC_RESOLVE=3600
 chk "19b resolveNow 让页面立刻拿到名称"    "app Meituan"       "$(nm 'newhost.meituan.com')"
 chk "19c 标记被消费后清除"                 "no"                "$( [ -f "$T/state/resolve.now" ] && echo yes || echo no )"
 chk "19d 解析完成后待解析归零"             "0"                 "$(sed -n '1p' "$T/state/pending")"

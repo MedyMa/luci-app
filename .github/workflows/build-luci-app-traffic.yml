@@ -88,12 +88,17 @@ jobs:
           sh  tools/rpcd-selftest.sh
           sh  tools/peak-selftest.sh
           sh  tools/fetch-icons-selftest.sh
+          sh  tools/collector-selftest.sh
           node tools/page-render-selftest.js
-          # tools/collector-selftest.sh is deliberately NOT here yet: it runs
-          # minutes of 30-second collector rounds, and three of its assertions in
-          # the on-demand-resolution section fail.  Adding it now would turn every
-          # build red for a reason nobody has diagnosed; it joins this list once
-          # the failures are understood.
+          # collector-selftest is the slow one - minutes of thirty second
+          # collector rounds - and it is the reason this step exists.  It is the
+          # only suite that runs record_sample, resolve_names and the series
+          # aggregation, which is the file where two statements got joined onto
+          # one line and crash-looped the collector through four releases with no
+          # gate to catch it.  It sat out the first version of this step because
+          # three of its assertions were failing; those are fixed (the throttle
+          # window was thirty seconds and the phase ran for thirty, so the
+          # assertion could never hold) and it now passes 116/0.
 
       - name: Install build dependencies
         run: |

@@ -6717,14 +6717,6 @@
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/arcticons/"
   },
-  "mango-tv": {
-   "file": "mango-tv.svg",
-   "application": "Mango TV",
-   "source": "iconify:dinkie-icons",
-   "upstream": "dinkie-icons:mango",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/dinkie-icons/"
-  },
   "manorama": {
    "file": "manorama.svg",
    "application": "Manorama",
@@ -7180,6 +7172,14 @@
    "upstream": "local",
    "licence": "shipped in this repository (marks of their owners)",
    "url": "tools/icons-local in the luci-app-traffic source tree"
+  },
+  "mango-tv": {
+   "file": "mango-tv.svg",
+   "application": "Mango TV",
+   "source": "seeklogo",
+   "upstream": "649521",
+   "licence": "seeklogo: reference use only, not an open licence (trademark of the owner)",
+   "url": "https://seeklogo.com/vector-logo/649521/mango-tv"
   }
  }
 }
