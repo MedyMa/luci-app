@@ -812,7 +812,7 @@ insider.svg	Insider	iconify:arcticons	arcticons:callinsider	see the collection l
 jetbrains-ai.svg	Jetbrains AI	iconify:devicon	devicon:jetbrains	see the collection licence	https://icon-sets.iconify.design/devicon/	
 jtexpress.svg	Jtexpress	iconify:cbi	cbi:jtexpress	see the collection licence	https://icon-sets.iconify.design/cbi/	
 kernel.svg	Kernel	iconify:iconmind	iconmind:kernel-duotone-bold	see the collection licence	https://icon-sets.iconify.design/iconmind/	
-kingsoft.svg	Kingsoft	iconify:arcticons	arcticons:kingsoft-documents	see the collection licence	https://icon-sets.iconify.design/arcticons/	
+kingsoft.svg	Kingsoft	local	local	shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
 lantern.svg	Lantern	iconify:mingcute	mingcute:lantern-fill	see the collection licence	https://icon-sets.iconify.design/mingcute/	
 lastfm.svg	LastFM	iconify:logos	logos:lastfm	see the collection licence	https://icon-sets.iconify.design/logos/	
 libgen.svg	Libgen	iconify:arcticons	arcticons:libgen	see the collection licence	https://icon-sets.iconify.design/arcticons/	

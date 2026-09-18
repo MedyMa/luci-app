@@ -6672,10 +6672,10 @@
   "kingsoft": {
    "file": "kingsoft.svg",
    "application": "Kingsoft",
-   "source": "iconify:arcticons",
-   "upstream": "arcticons:kingsoft-documents",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "source": "local",
+   "upstream": "local",
+   "licence": "shipped in this repository (marks of their owners)",
+   "url": "tools/icons-local in the luci-app-traffic source tree"
   },
   "lantern": {
    "file": "lantern.svg",
