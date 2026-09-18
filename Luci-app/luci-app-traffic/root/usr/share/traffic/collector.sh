@@ -1637,17 +1637,33 @@ run() {
         # because the page must never depend on an upstream host being reachable.
         [ "$CFG_ICONS_FETCH" = "1" ] && /usr/share/traffic/fetch-icons.sh
         # The page's realtime meter samples once a second, which is finer than a
-        # round.  This is a tick loop rather than `sleep $CFG_INTERVAL` so the
-        # sampler can run between rounds; the round itself keeps its cadence,
-        # because the loop still sleeps CFG_INTERVAL seconds in total.  live.sh
-        # exits after two stat() calls unless the page is open (rpcd writes the
-        # timestamp when it polls), so a router nobody is watching pays nothing
-        # for this.
+        # round.  This is a tick loop rather than one `sleep $CFG_INTERVAL` so the
+        # sampler can run between rounds.  live.sh exits after two stat() calls
+        # unless the page is open (rpcd writes the timestamp when it polls), so a
+        # router nobody is watching pays nothing for this.
+        #
+        # The deadline is taken from the START of the round, not from the end of
+        # the previous tick.  Sleeping a fixed second AFTER the sampler made every
+        # tick 1s + whatever the sampler cost: at about a second per sample the
+        # meter moved only every two seconds, and the round - which is supposed to
+        # be CFG_INTERVAL seconds - silently took twice as long, so the history
+        # and the rates were built on an interval nobody had configured.
         tick=0
+        round_at=$(date +%s 2>/dev/null)
+        case "$round_at" in ''|*[!0-9]*) round_at= ;; esac
         while [ "$tick" -lt "$CFG_INTERVAL" ]; do
             [ -x /usr/share/traffic/live.sh ] && /usr/share/traffic/live.sh
-            sleep 1
             tick=$((tick + 1))
+            wait_s=1
+            if [ -n "$round_at" ]; then
+                now_at=$(date +%s 2>/dev/null)
+                case "$now_at" in ''|*[!0-9]*) now_at= ;; esac
+                if [ -n "$now_at" ]; then
+                    wait_s=$((round_at + tick - now_at))
+                    [ "$wait_s" -lt 0 ] && wait_s=0
+                fi
+            fi
+            [ "$wait_s" -gt 0 ] && sleep "$wait_s"
         done
     done
 }

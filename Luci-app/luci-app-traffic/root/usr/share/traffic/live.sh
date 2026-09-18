@@ -55,7 +55,8 @@ now=$(date +%s 2>/dev/null || echo 0)
 case "$now" in ''|*[!0-9]*) now=0 ;; esac
 
 if [ "$force" != "1" ]; then
-	seen=$(cat "$WATCH" 2>/dev/null)
+	seen=
+	read -r seen < "$WATCH" 2>/dev/null
 	case "$seen" in ''|*[!0-9]*) seen=0 ;; esac
 	# nobody is looking, so there is nothing to publish
 	[ "$now" -gt 0 ] && [ $((now - seen)) -le "$WATCH_AGE" ] || exit 0
@@ -67,9 +68,21 @@ fi
 # layout and the firewall), and a second copy of it would drift away from the
 # first.
 [ -f "$ENVF" ] || exit 0
-val() { sed -n "s/^$1=//p" "$ENVF" 2>/dev/null | head -n1; }
-LAN4=$(val LAN4); LAN6=$(val LAN6); SELF=$(val SELF)
-SOURCE=$(val SOURCE); TABLE=$(val TABLE)
+# One pass over the file instead of five sed+head pairs, which matters here
+# because this runs once a second and every process spawn is charged to the tick
+# that the meter is timed against.  publish_live_env writes each key exactly
+# once.  SELF holds a space-separated address list, and it survives because the
+# separator below is `=` alone.
+LAN4=; LAN6=; SELF=; SOURCE=; TABLE=
+while IFS='=' read -r key value; do
+	case "$key" in
+	LAN4)   LAN4=$value ;;
+	LAN6)   LAN6=$value ;;
+	SELF)   SELF=$value ;;
+	SOURCE) SOURCE=$value ;;
+	TABLE)  TABLE=$value ;;
+	esac
+done < "$ENVF"
 TABLE=${TABLE:-inet traffic_acct}
 
 # ---------------------------------------------------------------- nft counters
@@ -182,17 +195,25 @@ else
 fi
 [ -n "$cur" ] || exit 0
 
-# ready / down delta / up delta, parsed with awk because the separator is a tab
-# and a literal tab in a ${var%%...} pattern is the kind of thing an editor
-# turns into spaces without anyone noticing.
-ready=$(printf '%s\n' "$cur" | awk -F'\t' '{ print $1 + 0 }')
-down=$(printf '%s\n' "$cur" | awk -F'\t' '{ print $2 + 0 }')
-up=$(printf '%s\n' "$cur" | awk -F'\t' '{ print $3 + 0 }')
+# ready / down / up, parsed by the shell rather than by three more awk
+# processes.  The separator is a tab and every value is an integer, so the
+# default IFS is already the right one - which is also why no literal tab is
+# written here: a tab in a pattern is exactly what an editor turns into spaces
+# without anyone noticing.  A here-document does not word-split, so the tabs
+# reach `read` intact.  The non-numeric guards replace the `+ 0` the awk did.
+ready=; down=; up=
+read -r ready down up <<EOF
+$cur
+EOF
+case "$ready" in ''|*[!0-9]*) ready=0 ;; esac
+case "$down"  in ''|*[!0-9]*) down=0  ;; esac
+case "$up"    in ''|*[!0-9]*) up=0    ;; esac
 
 # The bytes were counted over however long it has been since the previous
 # sample, which is a second only when nothing delayed the tick; dividing by the
 # real elapsed time is what keeps a slow round from inflating the rate.
-prev_at=$(cat "$AT" 2>/dev/null)
+prev_at=
+read -r prev_at < "$AT" 2>/dev/null
 case "$prev_at" in ''|*[!0-9]*) prev_at=0 ;; esac
 printf '%s\n' "$now" > "$AT.new" && mv -f "$AT.new" "$AT"
 dt=$((now - prev_at))
