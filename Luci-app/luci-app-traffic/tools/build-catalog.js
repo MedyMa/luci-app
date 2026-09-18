@@ -1322,6 +1322,14 @@ async function buildIcons(appNames, glyphNames) {
 			'tools/icons-local in the luci-app-traffic source tree'],
 		'bank-logos': ['MIT (trademarks remain with the banks)',
 			'https://github.com/icongo/bank-logos'],
+		/* Pinned icons whose bytes came from somewhere that is not an icon set.
+		 * Without an entry here the sidecar still records the upstream, but the
+		 * licence column falls back to the iconify wording and calls a public
+		 * domain Commons file part of a collection it has nothing to do with. */
+		'wikimedia-commons': ['see the licence on the file page (public domain for CCTVNewLogo)',
+			'https://commons.wikimedia.org/'],
+		'seeklogo': ['seeklogo: reference use only, not an open licence (trademark of the owner)',
+			'https://seeklogo.com/'],
 	};
 	function setInfo(src) {
 		if (!src) return ['unknown', ''];

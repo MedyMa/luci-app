@@ -6221,14 +6221,6 @@
    "licence": "carried over; provenance not recorded",
    "url": ""
   },
-  "cctv": {
-   "file": "cctv.svg",
-   "application": "",
-   "source": "unknown",
-   "upstream": "",
-   "licence": "carried over; provenance not recorded",
-   "url": ""
-  },
   "cdek": {
    "file": "cdek.svg",
    "application": "",
@@ -7204,6 +7196,14 @@
    "upstream": "mihoyo",
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/thesvg-color/"
+  },
+  "cctv": {
+   "file": "cctv.svg",
+   "application": "CCTV",
+   "source": "wikimedia-commons",
+   "upstream": "CCTVNewLogo cropped",
+   "licence": "see the licence on the file page (public domain for CCTVNewLogo)",
+   "url": "https://commons.wikimedia.org/wiki/File:CCTVNewLogo_cropped.svg"
   }
  }
 }
