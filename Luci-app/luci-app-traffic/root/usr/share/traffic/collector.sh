@@ -1116,7 +1116,11 @@ classify() {
 # tick, which is the cost the meter was already fixed for once.
 peak_read() {
     local lj d u
-    PEAK_LINE=
+    # Tested before the read, not left to the redirect: a failed redirection is
+    # reported by the shell itself, so the 2>/dev/null on the read does not
+    # silence it, and this runs every second - a router that logged a missing
+    # file once a tick would write 86400 lines a day about nothing.
+    [ -r "$STATE_DIR/live.json" ] || return 0
     IFS= read -r lj < "$STATE_DIR/live.json" 2>/dev/null || return 0
     case "$lj" in
         *'"ready":1'*) ;;
