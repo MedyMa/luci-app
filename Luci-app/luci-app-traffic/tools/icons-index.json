@@ -5552,10 +5552,10 @@
   "youku": {
    "file": "youku.svg",
    "application": "Youku",
-   "source": "iconify:arcticons",
-   "upstream": "arcticons:youku",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "source": "local",
+   "upstream": "local",
+   "licence": "shipped in this repository (marks of their owners)",
+   "url": "tools/icons-local in the luci-app-traffic source tree"
   },
   "zeplin": {
    "file": "zeplin.svg",
@@ -5568,10 +5568,10 @@
   "iqiyi": {
    "file": "iqiyi.svg",
    "application": "iQIYI",
-   "source": "iconify:arcticons",
-   "upstream": "arcticons:iqiyi",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "source": "local",
+   "upstream": "local",
+   "licence": "shipped in this repository (marks of their owners)",
+   "url": "tools/icons-local in the luci-app-traffic source tree"
   },
   "iqiyi-intl": {
    "file": "iqiyi-intl.svg",
@@ -6800,10 +6800,10 @@
   "migu": {
    "file": "migu.svg",
    "application": "Migu",
-   "source": "iconify:arcticons",
-   "upstream": "arcticons:migu",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "source": "local",
+   "upstream": "local",
+   "licence": "shipped in this repository (marks of their owners)",
+   "url": "tools/icons-local in the luci-app-traffic source tree"
   },
   "mixi": {
    "file": "mixi.svg",
@@ -6952,10 +6952,10 @@
   "pinduoduo": {
    "file": "pinduoduo.svg",
    "application": "Pinduoduo",
-   "source": "iconify:arcticons",
-   "upstream": "arcticons:pinduoduo",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "source": "local",
+   "upstream": "local",
+   "licence": "shipped in this repository (marks of their owners)",
+   "url": "tools/icons-local in the luci-app-traffic source tree"
   },
   "primevideo": {
    "file": "primevideo.svg",
@@ -6984,10 +6984,10 @@
   "qq-music": {
    "file": "qq-music.svg",
    "application": "QQ Music",
-   "source": "iconify:arcticons",
-   "upstream": "arcticons:qq-music",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "source": "local",
+   "upstream": "local",
+   "licence": "shipped in this repository (marks of their owners)",
+   "url": "tools/icons-local in the luci-app-traffic source tree"
   },
   "qunar": {
    "file": "qunar.svg",
