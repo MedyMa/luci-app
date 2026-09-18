@@ -748,6 +748,18 @@ const BRAND_ALIAS = {
 	'Wildberries': 'wildberries',
 	'Durex': 'durex',
 	'Sohu': 'sohu',
+	/* Names whose parent brand has no mark of its own upstream, only one of its
+	 * apps.  The app's icon is used deliberately - it is the same brand, and a
+	 * letter avatar for a 250-domain name is worse - but it is a judgement, so it
+	 * is recorded here rather than buried in a fuzzy match.  Every one of these was
+	 * checked by searching Iconify; the searches that returned the wrong thing
+	 * were left alone (searching "360" returns the 360-degree UI glyph, not Qihoo
+	 * 360, and "gmo" returns a non-GMO food label). */
+	'Huaweicloud': 'huawei',
+	'Kingsoft': 'kingsoft-documents',
+	'Mailru': 'bulut-mailru',
+	'IFlytek': 'iflytek-input',
+	'Reuters': 'reuters',
 };
 
 /** Public suffixes worth dropping when a row is named after a bare domain.
