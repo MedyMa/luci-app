@@ -11023,7 +11023,7 @@ Fontawesome	fortawesome.com	S
 Braveux	forthebadge.com	S
 HBO	forthethrone.com	S
 Epic Games	fortnite-vod.akamaized.net	S
-Epic Games	fortnite.com	S
+Fortnite	fortnite.com	S
 Forza	forza.net	S
 Xbox	forzamotorsport.net	S
 Xbox	forzaracingchampionship.com	S
@@ -12904,7 +12904,7 @@ Hpe	greenlakehybridcloud.com	S
 Dell	greenplum.net	S
 Gree	greeyun.com	S
 Google	gridaware.app	S
-X (Twitter)	grok.com	S
+Grok	grok.com	S
 Xai	grok.x.com	S
 Xai	grokipedia.com	S
 Groq	groq.com	S
@@ -16883,7 +16883,7 @@ Huaweicloud	le5vb.cn	S
 Riot Games	leaguehighschool.com	S
 Riot Games	leagueoflegends.ca	S
 Riot Games	leagueoflegends.cn	S
-Riot Games	leagueoflegends.co.kr	S
+League of Legends	leagueoflegends.co.kr	S
 Riot Games	leagueoflegends.com	S
 Riot Games	leagueoflegends.info	S
 Riot Games	leagueoflegends.kr	S
@@ -17244,7 +17244,7 @@ Riot Games	lolpcs.com	S
 Riot Games	lolshop.co.kr	S
 Riot Games	lolstatic-a.akamaihd.net	S
 Riot Games	lolstatic-a.akamaihd.net	H
-Riot Games	lolstatic.com	S
+League of Legends	lolstatic.com	S
 Riot Games	lolusercontent.com	S
 Bloomberg	londonmithraeum.com	S
 LondonReal	londonreal.tv	S
@@ -19931,7 +19931,7 @@ Falungong	ninecommentaries.com	S
 9News	ninemediaroom.com.au	S
 9News	ninemsn.com.au	S
 Nintendo	nintendo-europe-sales.com	S
-Nintendo	nintendo-europe.com	S
+Nintendo Switch	nintendo-europe.com	S
 Nintendo	nintendo.at	S
 Nintendo	nintendo.be	S
 Nintendo	nintendo.ch	S
@@ -21545,8 +21545,8 @@ Sony	playshow.io	S
 Sony	playshowtv.com	S
 PlayStation	playstation.com	S
 PlayStation	playstation.net	S
-PlayStation	playstationnetwork.com	S
-Riot Games	playvalorant.com	S
+PlayStation Network	playstationnetwork.com	S
+Valorant	playvalorant.com	S
 Blizzard	playwarcraft3.com	S
 Bridgestone	playz.jp	S
 Plex	plex.com	S
@@ -21891,6 +21891,7 @@ X (Twitter)	pscp.tv	S
 Picsee	pse.is	S
 Microsoft Dev	psg-int-centralus.cloudapp.net	H
 Microsoft Dev	psg-int-eastus.cloudapp.net	H
+PS Store	psn.com	S
 178	psnine.com	S
 Naver	pstatic.net	S
 ByteDance	pstatp.com	S
@@ -24489,7 +24490,7 @@ Sony	sonybuilding.jp	S
 Sony	sonyclassics.com	S
 Sony	sonydesign.com	S
 Sony	sonydna.com	S
-PlayStation	sonyentertainmentnetwork.com	S
+Sony	sonyentertainmentnetwork.com	S
 Sony	sonyged.com.cn	S
 Sony	sonyglobalsolutions.jp	S
 Sony	sonykigyo.jp	S
@@ -24828,7 +24829,7 @@ Nintendo	starfox.com	S
 Yostar	stargazer-games.com	S
 Pearson	stark-verlag.ch	S
 Tencent	starlakelab.com	S
-Spacex	starlink.com	S
+Starlink	starlink.com	S
 Disney+	starott.com	S
 Falungong	starp2p.com	S
 Disney+	starplus.com	S
@@ -24971,6 +24972,7 @@ Bridgestone	store-bridgestonesports.com	S
 Xiaomi	store-cdn.huami.com	S
 Xbox	store-images.s-microsoft.com	H
 Apple	store.apple.com.edgekey.net	S
+PS Store	store.playstation.com	H
 eBay	storesense.com	S
 BaoFengYingYin	stormshow.cn	S
 Newscorp	storyful.com	S
@@ -28076,6 +28078,7 @@ Kuaishou	vacepcvu.com	S
 HashiCorp	vagrantcloud.com	S
 HashiCorp	vagrantup.com	S
 Globo	valor.com.br	S
+Valorant	valorant.com	S
 Globo	valoreconomico.com.br	S
 Globo	valorinveste.com	S
 Globo	valorinveste.com.br	S
@@ -30240,7 +30243,7 @@ Tencent	wzrygcht.com	S
 Alibaba	wztianshanfs.com	S
 360	wztsy.cn	S
 360	wztsy.com	S
-Xai	x.ai	S
+Grok	x.ai	S
 Godaddy	x.co	S
 Twitter	x.com	S
 Google	x.company	S
@@ -30296,6 +30299,7 @@ Xbox	xboxgamepass.com	S
 Xbox	xboxgamestudios.com	S
 Xbox	xboxlive.cn	S
 Microsoft	xboxlive.com	S
+Xbox Live	xboxlive.com	H
 Xbox	xboxone.co	S
 Xbox	xboxone.com	S
 Xbox	xboxone.eu	S

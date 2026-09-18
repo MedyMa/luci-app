@@ -17,6 +17,14 @@ config traffic 'settings'
 	#   uci set dhcp.@dnsmasq[0].logfacility='/tmp/dnsmasq.log'
 	#   uci commit dhcp && /etc/init.d/dnsmasq restart
 	option dnsmasq_log ''
+	# Fetch an icon for an application the package does not ship one for.  Off by
+	# default: the package carries ~700 icons and a page must never depend on an
+	# upstream host being reachable.  When it is on, the collector fetches up to
+	# five per round into /www/traffic-icons, which the web server already serves,
+	# and a name it cannot fetch keeps its letter avatar.
+	option icons_fetch '0'
+	# where those icons come from; a name is asked for as <base>/<slug>/<colour>
+	option icons_url 'https://cdn.simpleicons.org'
 	# leave empty to auto-detect from the LAN interface
 	option lan4 ''
 	option lan6 ''

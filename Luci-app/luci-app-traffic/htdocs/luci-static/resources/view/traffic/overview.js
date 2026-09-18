@@ -158,13 +158,24 @@ function colorFor(name) {
 }
 
 /* Icon: a bundled SVG if one exists for this name, else a letter avatar in the
- * app's own colour.  Same box size either way, so rows never jump. */
+ * app's own colour.  Same box size either way, so rows never jump.
+ *
+ * There are two places an icon can come from: the ~700 shipped inside the
+ * package, and a cache the router may have filled at runtime.  The packaged one
+ * wins; the cache is only consulted when it is missing, and the letter avatar
+ * stays when neither has it.  Nothing here reaches the network - a page must not
+ * depend on an upstream icon host being reachable, which is the whole reason the
+ * fetching, when it is enabled at all, happens on the router and not here. */
 function makeIcon(name) {
 	var box = E('span', {
 		'class': 'tf-icon',
 		'style': 'background:' + colorFor(name)
 	}, [ E('span', { 'class': 'tf-icon-letter' }, [ (name || '?').charAt(0).toUpperCase() ]) ]);
 
+	var tries = [
+		L.resource('traffic/icons/' + slug(name) + '.svg'),
+		'/traffic-icons/' + slug(name) + '.svg'
+	];
 	var img = new Image();
 	img.onload = function() {
 		box.textContent = '';
@@ -173,7 +184,10 @@ function makeIcon(name) {
 		img.className = 'tf-icon-img';
 		box.appendChild(img);
 	};
-	img.src = L.resource('traffic/icons/' + slug(name) + '.svg');
+	img.onerror = function() {
+		if (tries.length) img.src = tries.shift();
+	};
+	img.src = tries.shift();
 	return box;
 }
 

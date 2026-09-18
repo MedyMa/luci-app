@@ -84,6 +84,8 @@ CFG_CATEGORIES=$CFG_DATADIR/categories.tsv
 CFG_RETENTION=7
 CFG_TOP_APPS=300
 CFG_TOP_CLIENTS=20
+CFG_ICONS_FETCH=0
+CFG_ICONS_URL=https://cdn.simpleicons.org
 # Minimum seconds between catalogue reads.  Fresh host names keep arriving while
 # someone browses, and re-reading an 80k-key catalogue for every one of them
 # would cost more than the accounting itself; inside this window they simply
@@ -145,6 +147,8 @@ uci_get() {
         resolve_interval) v=${TRAFFIC_RESOLVE:-} ;;
         dnsmap_max)     v=${TRAFFIC_DNSMAP_MAX:-} ;;
         purge_size_mb)  v=${TRAFFIC_PURGE_MB:-} ;;
+        icons_fetch)    v=${TRAFFIC_ICONS_FETCH:-} ;;
+        icons_url)      v=${TRAFFIC_ICONS_URL:-} ;;
     esac
     if [ -n "$v" ]; then printf '%s\n' "$v"; return 0; fi
 
@@ -268,6 +272,8 @@ load_config() {
     v=$(uci_get retention_days); [ -n "$v" ] && CFG_RETENTION=$v
     v=$(uci_get top_apps);       [ -n "$v" ] && CFG_TOP_APPS=$v
     v=$(uci_get top_clients);    [ -n "$v" ] && CFG_TOP_CLIENTS=$v
+    v=$(uci_get icons_fetch);    [ -n "$v" ] && CFG_ICONS_FETCH=$v
+    v=$(uci_get icons_url);      [ -n "$v" ] && CFG_ICONS_URL=$v
     v=$(uci_get resolve_interval); [ -n "$v" ] && CFG_RESOLVE=$v
     v=$(uci_get dnsmap_max);     [ -n "$v" ] && CFG_DNSMAP_MAX=$v
     v=$(uci_get purge_size_mb);  [ -n "$v" ] && CFG_PURGE_MB=$v
@@ -278,6 +284,7 @@ load_config() {
     case "$CFG_RETENTION" in ''|*[!0-9]*) CFG_RETENTION=7 ;; esac
     case "$CFG_TOP_APPS" in ''|*[!0-9]*) CFG_TOP_APPS=300 ;; esac
     case "$CFG_TOP_CLIENTS" in ''|*[!0-9]*) CFG_TOP_CLIENTS=20 ;; esac
+    case "$CFG_ICONS_FETCH" in 1) ;; *) CFG_ICONS_FETCH=0 ;; esac
     case "$CFG_RESOLVE" in ''|*[!0-9]*) CFG_RESOLVE=30 ;; esac
     case "$CFG_DNSMAP_MAX" in ''|*[!0-9]*) CFG_DNSMAP_MAX=50000 ;; esac
     case "$CFG_PURGE_MB" in ''|*[!0-9]*) CFG_PURGE_MB=100 ;; esac
@@ -1591,6 +1598,11 @@ run() {
         printf '%s\n' "$ROUNDS" > "$STATE_DIR/rounds"
         publish_current
         write_summary
+        # Icons for applications the package does not ship one for.  Off by
+        # default, and the script exits at once when it is, so this costs one
+        # test on a normal round.  It happens here rather than in the browser
+        # because the page must never depend on an upstream host being reachable.
+        [ "$CFG_ICONS_FETCH" = "1" ] && /usr/share/traffic/fetch-icons.sh
         sleep "$CFG_INTERVAL"
     done
 }

@@ -446,6 +446,16 @@ const CURATED = [
 	['GOG', 'gog.com'], ['Xbox', 'xbox.com'], ['Xbox', 'xboxlive.com'],
 	['PlayStation', 'playstation.com'], ['PlayStation', 'playstation.net'],
 	['Nintendo', 'nintendo.com'], ['Nintendo', 'nintendo.net'], ['Roblox', 'roblox.com'],
+	/* Games, and the storefront and network hosts a console lives on.  The icon
+	 * sets carry these brands; the domain lists never named them, so the traffic
+	 * showed as a bare domain with a letter avatar. */
+	['Fortnite', 'fortnite.com'], ['Valorant', 'playvalorant.com'], ['Valorant', 'valorant.com'],
+	['League of Legends', 'leagueoflegends.co.kr'], ['League of Legends', 'lolstatic.com'],
+	['Grok', 'grok.com'], ['Grok', 'x.ai'], ['Starlink', 'starlink.com'],
+	['Sony', 'sony.com'], ['Sony', 'sony.net'], ['Sony', 'sonyentertainmentnetwork.com'],
+	['PS Store', 'store.playstation.com', 'H'], ['PS Store', 'psn.com'],
+	['PlayStation Network', 'playstationnetwork.com'],
+	['Xbox Live', 'xboxlive.com', 'H'], ['Nintendo Switch', 'nintendo-europe.com'],
 	['Roblox', 'rbxcdn.com'], ['Minecraft', 'minecraft.net'], ['Mojang', 'mojang.com'],
 	['HoYoverse', 'hoyoverse.com'], ['HoYoverse', 'mihoyo.com'], ['HoYoverse', 'hoyolab.com'],
 	['Genshin Impact', 'genshinimpact.com'], ['Garena', 'garena.com'], ['Garena', 'garenanow.com'],
@@ -740,6 +750,17 @@ const BRAND_ALIAS = {
 	'Sohu': 'sohu',
 };
 
+/** Public suffixes worth dropping when a row is named after a bare domain.
+ *  Only the ones that actually appear in this catalogue's traffic; the list is
+ *  not a suffix database and does not need to be. */
+const TLDS = new Set([
+	'com', 'net', 'org', 'cn', 'io', 'co', 'tv', 'me', 'info', 'biz', 'ru', 'de',
+	'fr', 'uk', 'jp', 'kr', 'in', 'br', 'au', 'ca', 'xyz', 'app', 'dev', 'cloud',
+	'site', 'online', 'top', 'cc', 'gg', 'to', 'us', 'eu', 'asia', 'mobi', 'name',
+	'pro', 'shop', 'store', 'tech', 'live', 'news', 'media', 'group', 'club',
+	'wang', 'xin', 'ltd', 'org.cn', 'com.cn', 'net.cn', 'co.uk', 'com.au',
+]);
+
 function iconCandidates(name, sourceSlug) {
 	const out = [];
 	const push = v => { if (v && v.length > 1 && !out.includes(v)) out.push(v); };
@@ -757,6 +778,18 @@ function iconCandidates(name, sourceSlug) {
 	for (const [key, disp] of Object.entries(NAME_FIX))
 		if (disp === name) { push(key); break; }
 	push(s);
+	/* A row the classifier could not name is drawn as the destination it saw,
+	 * which is a bare registrable name such as ctrip-it.com.  Its slug is
+	 * ctrip-it-com, so no upstream set ever matches and the row keeps a letter
+	 * avatar for good.  Dropping the public suffix, and then the leading label,
+	 * gives the brand underneath a chance: ctrip-it-com -> ctrip-it -> ctrip. */
+	const labels = s.split('-').filter(Boolean);
+	if (labels.length > 1 && TLDS.has(labels[labels.length - 1])) {
+		const bare = labels.slice(0, -1);
+		push(bare.join('-'));
+		push(bare.join(''));
+		if (bare.length > 1) push(bare[0]);
+	}
 	push(s.replace(/-/g, ''));
 	if (sourceSlug) {
 		push(slug(sourceSlug));
@@ -945,6 +978,25 @@ async function buildIcons(appNames, glyphNames) {
 			fs.writeFileSync(path.join(ICON_DIR, file), got.svg.trim().replace(/\r/g, ''), 'utf8');
 			saved.push({ name: entry.name, file, from: cand, src: got.src });
 			return true;
+		}
+		/* Nothing matched.  A miss that should have been a hit - the name is in the
+		 * catalogue and an upstream set does carry the icon - is otherwise
+		 * indistinguishable from a name no set carries, which is how Genshin
+		 * Impact went unexplained: a catalogue name, an arcticons icon for it, and
+		 * no file on disk.  Set EXPLAIN_ICONS=1 to have every miss name the sets
+		 * that hold one of its candidates. */
+		if (process.env.EXPLAIN_ICONS) {
+			const near = [];
+			for (const cand of tried) {
+				if (dashboard.has(cand)) near.push('dashboard-icons:' + cand);
+				if (logos.has(cand)) near.push('iconify:logos:' + cand);
+				for (const [p, s] of iconify)
+					if (p !== 'logos' && s.has(cand)) near.push('iconify:' + p + ':' + cand);
+				if (selfhst.has(cand)) near.push('selfhst/icons:' + cand);
+				if (simple.has(cand)) near.push('simple-icons:' + cand);
+			}
+			log(`  miss "${entry.name}" tried [${tried.join(', ')}] ` +
+				(near.length ? `upstream has: ${near.join(', ')}` : 'upstream has none of these'));
 		}
 		return false;
 	}
