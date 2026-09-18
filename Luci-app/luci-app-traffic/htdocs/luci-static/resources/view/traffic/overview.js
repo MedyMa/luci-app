@@ -684,9 +684,16 @@ return view.extend({
 			if (this.seriesStale || this.ticks % 6 === 0) this.loadSeries();
 			return this.refresh(false);
 		}, this), 5);
-		/* The realtime meter has its own one-second clock.  poll() already pauses
-		 * while the tab is hidden, so the sampling stops both when the page is
-		 * closed and when it is not being looked at. */
+		/* The realtime meter has its own one-second clock.  LuCI's poll scheduler
+		 * ticks on a 1000 ms setInterval and treats the interval as a number of
+		 * ticks, so 1 is valid and fires on every tick.
+		 *
+		 * It does NOT stop while the tab is hidden - luci.js has no
+		 * visibilitychange handler at all; the slowdown in a background tab is
+		 * the browser throttling its own timers, so a hidden page still samples,
+		 * just far less often.  What ends the sampling is closing the page,
+		 * because then nothing calls getLive and the timestamp live.sh checks
+		 * goes stale. */
 		poll.add(L.bind(this.pollLive, this), 1);
 		return node;
 	},
