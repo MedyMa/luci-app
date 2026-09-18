@@ -1103,6 +1103,68 @@ classify() {
     return 0
 }
 
+# ------------------------------------------------------------ 1 s peak tracker
+# The peak statistic on the page has to be a peak the data can actually support.
+# The series the chart draws holds one average per round, so the highest thing in
+# it is the highest round average: a 991 Mbps speed test that lasted about a
+# second divided by a ten second round reads 12.9 MiB/s, and the note beside the
+# curve called that the peak.  The one second samples are taken here anyway, so
+# the maximum of them is kept and published separately.
+
+# Parse the sample the tick loop just asked for.  This runs once a second, so it
+# is pure shell: a sed or an awk here would be another process charged to every
+# tick, which is the cost the meter was already fixed for once.
+peak_read() {
+    local lj d u
+    PEAK_LINE=
+    IFS= read -r lj < "$STATE_DIR/live.json" 2>/dev/null || return 0
+    case "$lj" in
+        *'"ready":1'*) ;;
+        *) return 0 ;;
+    esac
+    d=${lj#*'"bps_down":'}; d=${d%%[!0-9]*}
+    u=${lj#*'"bps_up":'};   u=${u%%[!0-9]*}
+    case "$d" in ''|*[!0-9]*) return 0 ;; esac
+    case "$u" in ''|*[!0-9]*) u=0 ;; esac
+    [ "$d" -gt "${PEAK_D:-0}" ] && PEAK_D=$d
+    [ "$u" -gt "${PEAK_U:-0}" ] && PEAK_U=$u
+    PEAK_N=$(( ${PEAK_N:-0} + 1 ))
+    return 0
+}
+
+# Fold this round's maximum into the minute bucket the chart reads.  A maximum
+# aggregates losslessly across tiers, which is why the peak is carried beside the
+# series rather than inside its three files: summing tiers is where a silent
+# arithmetic bug would hide, taking a maximum cannot be got wrong.
+record_peak() {
+    local b
+    [ "${PEAK_N:-0}" -gt 0 ] || return 0
+    b=$(( ${PEAK_AT:-$(date +%s 2>/dev/null || echo 0)} / 60 * 60 ))
+    case "$b" in ''|*[!0-9]*) return 0 ;; esac
+    [ -f "$STATE_DIR/peaks.tsv" ] || : > "$STATE_DIR/peaks.tsv"
+    awk -F'\t' -v b="$b" -v d="$PEAK_D" -v u="$PEAK_U" -v n="$PEAK_N" -v keep="${PEAK_MAX:-10080}" '
+        { line[NR] = $0 }
+        END {
+            if (NR > 0) {
+                split(line[NR], f, "\t")
+                # the buckets only ever grow, so an equal bucket is the last row
+                if (f[1] + 0 == b) {
+                    if (f[2] + 0 > d) d = f[2] + 0
+                    if (f[3] + 0 > u) u = f[3] + 0
+                    n += f[4] + 0
+                    NR--
+                }
+            }
+            start = NR - keep + 1
+            if (start < 1) start = 1
+            for (i = start; i <= NR; i++) print line[i]
+            printf "%s\t%s\t%s\t%s\n", b, d, u, n
+        }' "$STATE_DIR/peaks.tsv" > "$STATE_DIR/peaks.new" 2>/dev/null &&
+        mv -f "$STATE_DIR/peaks.new" "$STATE_DIR/peaks.tsv"
+    PEAK_D=0; PEAK_U=0; PEAK_N=0
+    return 0
+}
+
 # ---------------------------------------------------------------- throughput series
 # One point per poll, in two tiers:
 #
@@ -1114,8 +1176,7 @@ classify() {
 # minute tier is the sum of the 10 s points inside it, flushed when the minute
 # rolls over.
 record_sample() {
-    local ts="${1:-}" d u m cur_m cd cu n
-    [ -n "$ts" ] || ts=$(date +%s 2>/dev/null || echo 0)
+    local ts="${1:-}" d u m cur_m cd cu n    [ -n "$ts" ] || ts=$(date +%s 2>/dev/null || echo 0)
     d=0; u=0
     if [ -s "$STATE_DIR/sample.tsv" ]; then
         { read -r d; read -r u; } < "$STATE_DIR/sample.tsv"
@@ -1651,8 +1712,16 @@ run() {
         tick=0
         round_at=$(date +%s 2>/dev/null)
         case "$round_at" in ''|*[!0-9]*) round_at= ;; esac
+        PEAK_D=0; PEAK_U=0; PEAK_N=0
         while [ "$tick" -lt "$CFG_INTERVAL" ]; do
             [ -x /usr/share/traffic/live.sh ] && /usr/share/traffic/live.sh
+            # The one-second sample is the only reading fine enough to see a
+            # burst.  A gigabit speed test lasting a second is a tenth of a
+            # round, so a round average can only ever show a tenth of it - which
+            # is how a 991 Mbps test was published as a peak of 12.9 MiB/s.  Keep
+            # the maximum of this round and its sample count here; record_peak
+            # folds them into the minute bucket the chart reads.
+            peak_read
             tick=$((tick + 1))
             wait_s=1
             if [ -n "$round_at" ]; then
@@ -1665,6 +1734,8 @@ run() {
             fi
             [ "$wait_s" -gt 0 ] && sleep "$wait_s"
         done
+        # the maximum of this round, folded into its minute bucket
+        record_peak
     done
 }
 

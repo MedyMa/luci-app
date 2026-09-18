@@ -471,6 +471,11 @@ function makeChart(series) {
 	for (var i = 0; i < n; i++) {
 		if (series[i].down > peak) peak = series[i].down;
 		if (series[i].up > peak) peak = series[i].up;
+		/* A one second peak can be far above every average on the curve, and the
+		 * axis has to hold it or the top gridline would sit below the number the
+		 * note quotes. */
+		if (series[i].pk > peak) peak = series[i].pk;
+		if (series[i].pu > peak) peak = series[i].pu;
 	}
 	var top = niceTop(peak);
 
@@ -794,7 +799,8 @@ return view.extend({
 		/* An empty chart still gets its frame: a card with nothing in it reads
 		 * as broken, a flat line at the floor reads as "no traffic yet". */
 		var series = pts.map(function(p) {
-			return { t: Number(p[0]) || 0, down: (Number(p[1]) || 0) / iv, up: (Number(p[2]) || 0) / iv };
+			return { t: Number(p[0]) || 0, down: (Number(p[1]) || 0) / iv, up: (Number(p[2]) || 0) / iv,
+				pk: Number(p[3]) || 0, pu: Number(p[4]) || 0, pn: Number(p[5]) || 0 };
 		});
 		var now = Math.floor(Date.now() / 1000);
 		if (!series.length) {
@@ -811,14 +817,25 @@ return view.extend({
 			return;
 		}
 
-		var peak = 0, sumD = 0, sumU = 0;
+		/* The peak is quoted from the one second samples whenever a point has any,
+		 * and the label says which of the two it is showing.  The highest round
+		 * average is not a peak: a gigabit burst inside one round reads a tenth
+		 * of what it was, which is how a 991 Mbps speed test was published as
+		 * 12.9 MiB/s while the live rate beside it read higher than its own
+		 * "peak".  Where no one second sample exists - nobody had the page open,
+		 * or the router rebooted and the session tier went with it - the round
+		 * average is the only honest number and it is labelled as such. */
+		var peak = 0, peakN = 0, sumD = 0, sumU = 0;
 		series.forEach(function(p) {
 			if (p.down > peak) peak = p.down;
 			if (p.up > peak) peak = p.up;
+			if (p.pk > peak) peak = p.pk;
+			if (p.pu > peak) peak = p.pu;
+			peakN += p.pn;
 			sumD += p.down; sumU += p.up;
 		});
 		var first = series[0].t, last = series[series.length - 1].t;
-		this.chartNote.textContent = _('Peak') + ' ' + fmtRate(peak) +
+		this.chartNote.textContent = (peakN > 0 ? _('Peak (1 s)') : _('Peak (interval avg)')) + ' ' + fmtRate(peak) +
 			' · ' + _('avg down') + ' ' + fmtRate(sumD / series.length) +
 			' / ' + _('up') + ' ' + fmtRate(sumU / series.length) +
 			' · ' + hhmm(first) + '–' + hhmm(last);

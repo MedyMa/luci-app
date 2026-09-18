@@ -125,8 +125,19 @@ for r in 1h 12h 24h 7d; do
     chk "7 getSeries $r 回显档位"          "$r"    "$(rng "$(ser "$r")")"
 done
 chk "7a 未指定档位默认 1h"                 "1h"    "$(rng "$(PATH="$T:$PATH" STATE_DIR="$T/state" sh "$T/lt.sh" call getSeries < /dev/null)")"
-chk "7b 7d 读取 series1h.tsv"             "[[1000,100,10],[2000,200,20]]" \
+chk "7b 7d 读取 series1h.tsv"             "[[1000,100,10,0,0,0],[2000,200,20,0,0,0]]" \
     "$(ser 7d | sed -n 's/.*"points":\(.*\)}$/\1/p')"
+# The one second peak rides beside the round average so the chart can quote a
+# real peak.  The bucket is the minute, so a peak recorded for minute 960 has to
+# reach the point at 1000 and must not reach the one at 2000.
+printf '960\t9000\t800\t7\n' > "$T/state/peaks.tsv"
+chk "7g 1 秒峰值并入它那一分钟"            "[[1000,100,10,9000,800,7],[2000,200,20,0,0,0]]" \
+    "$(ser 7d | sed -n 's/.*"points":\(.*\)}$/\1/p')"
+# A peak of a later minute must not leak backwards into an earlier point.
+printf '960\t9000\t800\t7\n1980\t5000\t400\t3\n' > "$T/state/peaks.tsv"
+chk "7h 峰值只落进自己的分钟"              "[[1000,100,10,9000,800,7],[2000,200,20,5000,400,3]]" \
+    "$(ser 7d | sed -n 's/.*"points":\(.*\)}$/\1/p')"
+: > "$T/state/peaks.tsv"
 chk "7c 12h 间隔 60 秒"                    "60"    "$(ser 12h | sed -n 's/.*"interval":\([0-9]*\).*/\1/p')"
 chk "7d 7d 间隔 3600 秒"                   "3600"  "$(ser 7d | sed -n 's/.*"interval":\([0-9]*\).*/\1/p')"
 chk "7e 12h 截断到 720 点"                 "720"   "$(( $(npts "$(ser 12h)") - 1 ))"

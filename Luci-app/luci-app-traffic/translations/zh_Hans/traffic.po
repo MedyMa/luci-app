@@ -112,6 +112,18 @@ msgid "Peak"
 msgstr "峰值"
 
 #: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Peak (1 s)"
+msgstr "峰值（1 秒）"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Peak (interval avg)"
+msgstr "峰值（区间均值）"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Peak (1 s)"
+msgstr "峰值（1 秒）"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "avg down"
 msgstr "下行均值"
 

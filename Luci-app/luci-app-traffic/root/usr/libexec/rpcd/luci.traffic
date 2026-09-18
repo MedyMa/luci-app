@@ -240,10 +240,41 @@ get_series() {
 			max=$((3600 / iv)); [ "$max" -lt 10 ] && max=10 ;;
 	esac
 
+	[ -f "$STATE_DIR/peaks.tsv" ] || : > "$STATE_DIR/peaks.tsv"
 	printf '{"range":"%s","interval":%s,"points":[' "$range" "$iv"
-	awk -F'\t' 'NF >= 3 && $1 != "" && $1 ~ /^[0-9]+$/ { print }' "$f" 2>/dev/null \
-		| tail -n "$max" \
-		| awk -F'\t' 'BEGIN { n = 0 } { if (n++) printf ","; printf "[%s,%s,%s]", $1, $2 + 0, $3 + 0 }'
+	# Each point carries the one second peak of its minute beside the round
+	# average.  The chart draws the average and quotes the peak, so a 991 Mbps
+	# test that lasted a second is no longer published as the highest round
+	# average, which read 12.9 MiB/s.  A point with no one second sample keeps
+	# zeroes, and the page says so rather than presenting an average as a peak.
+	#
+	# peaks.tsv is matched by FILENAME rather than NR==FNR: with an empty or
+	# missing first file awk starts the second at NR==FNR==1 and every series
+	# row would be swallowed as a peak row.
+	awk -F'\t' -v iv="$iv" -v max="$max" -v pf="$STATE_DIR/peaks.tsv" '
+		FILENAME == pf {
+			if (NF >= 4 && $1 ~ /^[0-9]+$/) {
+				b = $1 + 0
+				if ($2 + 0 > pk[b]) pk[b] = $2 + 0
+				if ($3 + 0 > pu[b]) pu[b] = $3 + 0
+				pn[b] += $4 + 0
+			}
+			next
+		}
+		NF >= 3 && $1 ~ /^[0-9]+$/ { line[++n] = $0 }
+		END {
+			start = n - max + 1
+			if (start < 1) start = 1
+			c = 0
+			for (i = start; i <= n; i++) {
+				split(line[i], f, "\t")
+				# the peak buckets are minutes, so a ten second point resolves
+				# to the minute that contains it
+				b = int((f[1] + 0) / 60) * 60
+				if (c++) printf ","
+				printf "[%s,%s,%s,%s,%s,%s]", f[1], f[2] + 0, f[3] + 0, pk[b] + 0, pu[b] + 0, pn[b] + 0
+			}
+		}' "$STATE_DIR/peaks.tsv" "$f" 2>/dev/null
 	printf ']}\n'
 }
 
