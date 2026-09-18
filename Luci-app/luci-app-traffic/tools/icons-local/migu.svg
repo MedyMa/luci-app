@@ -12,14 +12,12 @@
        the wrong namespace the file renders as nothing at all in an <img>, which
        is how it would have shipped. -->
   <g transform="translate(25, 25)">
-    <!-- The diagonal is drawn FIRST and the red uprights over it.  It was
-         originally painted last with mix-blend-mode: multiply, which needs an
-         opaque backdrop to blend against: with the background rect removed the
-         crossing multiplied against transparency and came out BLACK, which is
-         not the mark.  Ordering instead of blending needs no backdrop, and the
-         result is the same solid blue-through-red the original had. -->
-    <line x1="110" y1="390" x2="390" y2="110" stroke="#008BE3" stroke-width="56"
-          stroke-linecap="round" />
+    <!-- The red uprights first, the blue diagonal LAST and opaque, so it crosses
+         over them - which is what the mark does.  The original used
+         mix-blend-mode: multiply for the crossing, and multiply needs an opaque
+         backdrop: with the background rect removed it blended against
+         transparency and came out black.  Plain opaque blue on top needs no
+         backdrop, matches the reference art, and survives any theme. -->
     <!-- left upright of the M -->
     <path d="M 110 330 L 110 140 A 30 30 0 0 1 161 119 L 245 175"
           fill="none" stroke="#E2231A" stroke-width="56"
@@ -28,5 +26,8 @@
     <path d="M 270 210 L 340 160 A 30 30 0 0 1 390 185 L 390 390"
           fill="none" stroke="#E2231A" stroke-width="56"
           stroke-linecap="round" stroke-linejoin="round" />
+    <!-- the diagonal, on top -->
+    <line x1="110" y1="390" x2="390" y2="110" stroke="#1E9BE8" stroke-width="56"
+          stroke-linecap="round" />
   </g>
 </svg>
