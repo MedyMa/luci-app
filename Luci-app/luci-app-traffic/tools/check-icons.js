@@ -95,6 +95,26 @@ for (const f of have) {
  * predictably, so this is reported and not failed. */
 if (offenders.length) warnings.push(`${offenders.length} icon(s) have no viewBox: ${offenders.slice(0, 5).join(', ')}${offenders.length > 5 ? ', ...' : ''}`);
 
+/* ---- the index the page consults must match the directory ---------------
+ * The page reads icons/index.txt and asks only for what it lists, which is what
+ * keeps a page load from emitting one 404 per application without an icon.  A
+ * stale index would silently turn into "those icons do not exist", so it is
+ * checked here and refreshed by --write. */
+const SHIPPED_INDEX = path.join(ICON_DIR, 'index.txt');
+const wantIndex = [...have].map(f => f.slice(0, -4)).sort();
+const gotIndex = fs.existsSync(SHIPPED_INDEX)
+	? fs.readFileSync(SHIPPED_INDEX, 'utf8').split('\n').map(s => s.trim()).filter(Boolean)
+	: [];
+if (wantIndex.join('\n') !== gotIndex.join('\n')) {
+	const msg = `icons/index.txt lists ${gotIndex.length} entries but the directory holds ${wantIndex.length}`;
+	if (write) {
+		fs.writeFileSync(SHIPPED_INDEX, wantIndex.join('\n') + '\n', 'utf8');
+		warnings.push(msg + ' - refreshed by --write');
+	} else {
+		problems.push(msg + ' (re-run with --write)');
+	}
+}
+
 /* ---- publish ------------------------------------------------------------- */
 const bySlug = {};
 for (const r of manifestRows) bySlug[r.file.replace(/\.svg$/, '')] = r;

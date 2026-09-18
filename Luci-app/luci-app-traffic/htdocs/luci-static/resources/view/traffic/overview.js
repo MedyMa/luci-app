@@ -123,32 +123,44 @@ function fmtRate(bps) {
 	return fmtBytes(bps) + '/s';
 }
 
-/* Icons fetched on the router land in /traffic-icons, which the web server
- * serves because it lives under /www.  The package ships an empty index.txt
- * beside them, so reading the index always succeeds - and that matters, because
- * asking for a per-name file that is not there does not: with ~975 names
- * uncovered, the page was issuing 381 doomed requests per load, one for every
- * application without a shipped icon.  That filled the console with failures and
- * made a working page look broken.  One small request replaces all of them.
+/* Which icons exist, so the page never asks for one that does not.
  *
- * Until the list arrives the cache is treated as empty, which means a letter
- * avatar for a moment rather than a request that is certain to fail. */
-var cacheIndex = null;
-function ensureCacheIndex() {
-	if (cacheIndex) return cacheIndex;
-	cacheIndex = {};
-	return fetch('/traffic-icons/index.txt')
-		.then(function(r) { return r.ok ? r.text() : ''; })
+ * There are two sets: the ~860 shipped inside the package and whatever the
+ * router has fetched into /traffic-icons.  Each has an index beside it, and each
+ * index is one small request, so a page load costs two requests instead of one
+ * doomed request per application without an icon - 381 of them on a real router,
+ * which buried every other console message and made a working page look broken.
+ *
+ * The fallback differs on purpose.  An unreadable cache index means "the router
+ * has fetched nothing", which is the honest answer and costs only a letter
+ * avatar.  An unreadable SHIPPED index would mean showing no icons at all for a
+ * whole page load, far worse than a few 404s, so in that case the URL is tried
+ * as before. */
+var shippedIcons = null, cachedIcons = null, shippedIndexFailed = false;
+
+function loadIndex(url, onFail) {
+	return fetch(url)
+		.then(function(r) { return r.ok ? r.text() : null; })
 		.then(function(t) {
+			if (t === null) { onFail(); return {}; }
 			var m = {};
 			t.split('\n').forEach(function(l) {
 				l = l.trim();
 				if (l) m[l] = 1;
 			});
-			cacheIndex = m;
 			return m;
 		})
-		.catch(function() { return cacheIndex; });
+		.catch(function() { onFail(); return {}; });
+}
+
+function ensureIconIndexes() {
+	if (shippedIcons) return;
+	shippedIcons = {};
+	cachedIcons = {};
+	loadIndex(L.resource('traffic/icons/index.txt'), function() { shippedIndexFailed = true; })
+		.then(function(m) { shippedIcons = m; });
+	loadIndex('/traffic-icons/index.txt', function() {})
+		.then(function(m) { cachedIcons = m; });
 }
 
 function slug(name) {
@@ -201,12 +213,19 @@ function makeIcon(name) {
 		'style': 'background:' + colorFor(name)
 	}, [ E('span', { 'class': 'tf-icon-letter' }, [ (name || '?').charAt(0).toUpperCase() ]) ]);
 
-	var tries = [
-		L.resource('traffic/icons/' + slug(name) + '.svg')
-	];
-	/* only a name the index lists has a file worth asking for */
-	if (cacheIndex && cacheIndex[slug(name)])
+	var tries = [];
+	/* ask only for what an index says exists; if the shipped index could not be
+	 * read, fall back to asking, because a failed index must not cost the whole
+	 * page its icons */
+	if (shippedIndexFailed || !shippedIcons || shippedIcons[slug(name)])
+		tries.push(L.resource('traffic/icons/' + slug(name) + '.svg'));
+	if (cachedIcons && cachedIcons[slug(name)])
 		tries.push('/traffic-icons/' + slug(name) + '.svg');
+	/* Nothing is known to exist.  Do not create an <img> at all: an empty src
+	 * makes the browser request the page itself, which is a worse request to
+	 * emit than the one this was meant to avoid.  The letter avatar above is
+	 * already the right answer. */
+	if (!tries.length) return box;
 	var img = new Image();
 	img.onload = function() {
 		box.textContent = '';
@@ -701,8 +720,9 @@ return view.extend({
 		]);
 
 		injectCss();
-		/* the list of icons fetched on the router, read once per page */
-		ensureCacheIndex();
+		/* which icons exist, shipped and fetched: one small request each, so the
+		 * page never asks for an icon that is not there */
+		ensureIconIndexes();
 		/* the page works out its own dark mode; see watchTheme() */
 		watchTheme(node);
 		this.refresh(false);
