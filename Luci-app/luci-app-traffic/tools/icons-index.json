@@ -1,7 +1,7 @@
 {
  "generated": "2026-09-18",
- "icons": 875,
- "manifestRows": 875,
+ "icons": 876,
+ "manifestRows": 876,
  "catalogue": {
   "rows": 32068,
   "names": 1657
@@ -7168,6 +7168,14 @@
   "chinabroadnet": {
    "file": "chinabroadnet.svg",
    "application": "Chinabroadnet",
+   "source": "local",
+   "upstream": "local",
+   "licence": "shipped in this repository (marks of their owners)",
+   "url": "tools/icons-local in the luci-app-traffic source tree"
+  },
+  "speedtest-cn": {
+   "file": "speedtest-cn.svg",
+   "application": "speedtest.cn",
    "source": "local",
    "upstream": "local",
    "licence": "shipped in this repository (marks of their owners)",

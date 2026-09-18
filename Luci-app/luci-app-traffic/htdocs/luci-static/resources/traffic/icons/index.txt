@@ -698,6 +698,7 @@ spaceship
 spacex
 spark
 speed-test
+speedtest-cn
 spiceworks
 spotify
 springer
