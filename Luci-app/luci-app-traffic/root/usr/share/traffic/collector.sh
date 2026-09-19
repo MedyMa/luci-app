@@ -52,6 +52,12 @@ SELF_DIR=${SELF_DIR:-/usr/share/traffic}
 CT=${CT:-/proc/net/nf_conntrack}
 LUA=${LUA:-/usr/bin/lua}
 UCI=${UCI:-/usr/bin/uci}
+# The device counters, and the routing tables that name the device to read.  The
+# paths are overridable for the same reason STATE_DIR is: the offline suite has
+# to be able to drive them without a router.
+PROC_NET_DEV=${TRAFFIC_PROC_NET_DEV:-/proc/net/dev}
+PROC_NET_ROUTE=${TRAFFIC_PROC_NET_ROUTE:-/proc/net/route}
+PROC_NET_ROUTE6=${TRAFFIC_PROC_NET_ROUTE6:-/proc/net/ipv6_route}
 
 CFG_ENABLED=1
 CFG_INTERVAL=10
@@ -79,6 +85,10 @@ ACCT_ON=0
 # traffic.  Declared here because the summary is built even on a round where
 # account_clients() returned before reaching the assignment.
 ACCT_OFFLOAD=0
+# The device whose counters are the authoritative total.  Resolved once, by
+# wan_if(); empty means no device could be identified, and then the attributed
+# numbers are all there is to publish.
+WAN_IF=
 CFG_APPMAP=$CFG_DATADIR/apps.tsv
 CFG_CATEGORIES=$CFG_DATADIR/categories.tsv
 CFG_RETENTION=7
@@ -119,7 +129,12 @@ CFG_PURGE_MB=100
 # forever, because that row is already in clients.tsv and is only ever added to.
 # On a mismatch the live counters are dropped and rebuilt; the history in
 # <datadir> (series60, hourly) is left alone.
-STATE_VERSION=1
+# 2: the series, the peak and the published total come from the WAN interface
+# counters rather than from the attribution, which under flow offloading is a
+# small fraction of the traffic.  The state that carries the old meaning is
+# dropped on upgrade - including the device baseline, because a delta measured
+# against a reading taken before the upgrade is not a delta of this session.
+STATE_VERSION=2
 
 log() { logger -t traffic "$*"; }
 
@@ -137,6 +152,7 @@ uci_get() {
         lan4)           v=${TRAFFIC_LAN4:-} ;;
         lan6)           v=${TRAFFIC_LAN6:-} ;;
         self)           v=${TRAFFIC_SELF:-} ;;
+        wan_if)         v=${TRAFFIC_WAN_IF:-} ;;
         accounting)     v=${TRAFFIC_ACCOUNTING:-} ;;
         dnsmasq_log)    v=${TRAFFIC_DNSLOG:-} ;;
         appmap)         v=${TRAFFIC_APPMAP:-} ;;
@@ -360,7 +376,8 @@ init_state() {
         # flow from zero once.
         rm -f "$STATE_DIR/totals.tsv" "$STATE_DIR/clients.tsv" "$STATE_DIR/router.tsv" \
               "$STATE_DIR/stat.tsv" "$STATE_DIR/ac.tsv" \
-              "$STATE_DIR/acct.tsv" "$STATE_DIR/acct.abs" "$STATE_DIR/acct.hosts"
+              "$STATE_DIR/acct.tsv" "$STATE_DIR/acct.abs" "$STATE_DIR/acct.hosts" \
+              "$STATE_DIR/wan.abs" "$STATE_DIR/wan.tsv" "$STATE_DIR/wan.delta"
         # the counters these snapshots were taken from are gone, so they would
         # only produce a clamped-to-zero delta for the hour they are lost in
         rm -rf "$STATE_DIR/arch"
@@ -850,6 +867,11 @@ publish_live_env() {
         printf 'SELF=%s\n' "$CFG_SELF"
         printf 'SOURCE=%s\n' "$src"
         printf 'TABLE=%s\n' "$ACCT_TABLE"
+        # The device the one-second sampler measures.  It publishes total
+        # throughput rather than attribution, and the interface counters are the
+        # only source for that which survives flow offloading - the same reason
+        # the series comes from here.
+        printf 'WAN_IF=%s\n' "$WAN_IF"
     } > "$STATE_DIR/live.env.new" 2>/dev/null &&
         mv -f "$STATE_DIR/live.env.new" "$STATE_DIR/live.env"
     # A placeholder, so that "the file is not there" can never again be confused
@@ -933,6 +955,129 @@ account_clients() {
             "$STATE_DIR/acct.tsv" > "$STATE_DIR/clients.new" 2>/dev/null \
             && mv -f "$STATE_DIR/clients.new" "$STATE_DIR/clients.tsv"
     fi
+    return 0
+}
+
+# ------------------------------------------------------- WAN interface counters
+# Everything the attribution layer reports is a subset of the traffic, and on a
+# firewall that offloads it is a small one.  Established forwarded flows are
+# handed to a fast path that sits below the netfilter hooks the nft counters hang
+# on and below the point where conntrack accounts a flow's bytes, so both layers
+# only ever see the flows that did not take that path.  Measured on a real
+# router: conntrack recorded 147 MiB while the WAN device carried 2579 MiB over
+# the same window, i.e. 5.7%.  Turning the hardware offload off did not help
+# (208 MiB against 3063 MiB) because the software flowtable bypasses the same
+# hooks - which is why this cannot be fixed by telling the user to change a
+# firewall setting, and why the previous fallback from the nft counters to
+# conntrack, taken when offloading was detected, improved nothing at all.
+#
+# /proc/net/dev is maintained by the driver underneath that fast path, so it is
+# the one number that stays right whether or not the firewall offloads.  It
+# cannot say which application the traffic belonged to - that is what the
+# attribution is for - so the two are published side by side: the interface
+# counters are the total, and the attribution is a share of it.
+iface_stat() {
+    # "<rx_bytes> <tx_bytes>" for a device, or nothing when it is not there.
+    # One line, because default field splitting does the work: awk drops the
+    # leading blanks of a /proc/net/dev row and splits on runs of whitespace, so
+    # $1 is "eth2:" and $2 / $10 are the two byte counters.
+    awk -v d="$1:" '$1 == d { print $2 " " $10; exit }' "$PROC_NET_DEV" 2>/dev/null
+}
+
+# The default route names the device that carries the traffic.  Read from
+# /proc/net/route rather than by running "ip route": this costs one process per
+# round on the path that has to stay cheap, and the parse is exact.  An explicit
+# setting wins over the guess, because a guess that cannot be overridden is worse
+# than no guess at all.
+wan_if() {
+    local d
+
+    d=$(uci_get wan_if)
+    if [ -n "$d" ]; then
+        case "$d" in *@*) d=${d##*@} ;; esac
+        if [ -n "$(iface_stat "$d")" ]; then WAN_IF=$d; return 0; fi
+    fi
+
+    d=
+    [ -r "$PROC_NET_ROUTE" ] &&
+        d=$(awk '$2 == "00000000" && $4 != "0000" { print $1; exit }' "$PROC_NET_ROUTE" 2>/dev/null)
+    if [ -z "$d" ] && [ -r "$PROC_NET_ROUTE6" ]; then
+        # the IPv6 default route: all-zero destination, zero prefix length
+        d=$(awk 'length($1) == 32 && $1 ~ /^0+$/ && $2 == "00" { print $10; exit }' "$PROC_NET_ROUTE6" 2>/dev/null)
+    fi
+    if [ -z "$d" ]; then
+        d=$(uci -q get network.wan.device 2>/dev/null)
+        case "$d" in *@*) d=${d##*@} ;; esac
+    fi
+    # Only a name that /proc/net/dev knows can be measured.  Anything else has to
+    # leave WAN_IF empty, so that the page falls back to the attributed numbers
+    # instead of being handed a total of zero.
+    [ -n "$d" ] || return 1
+    [ "$d" != "lo" ] || return 1
+    [ -n "$(iface_stat "$d")" ] || return 1
+    WAN_IF=$d
+}
+
+# Fold the device counters into this session's totals.  Three files, all in RAM:
+#   wan.abs    the absolute reading the next delta is measured against
+#   wan.tsv    this session's cumulative <down>/<up>
+#   wan.delta  this round's increment, which is what the series is built from
+iface_account() {
+    local raw nd nu pd pu td tu cd cu
+
+    # Cleared first, so that wan.delta existing means one thing only: it is this
+    # round's interface delta.  Every path below that cannot measure this round
+    # returns with the file gone, and the series then falls back to the attributed
+    # sample - without this, a device that disappeared mid-session would leave the
+    # last delta on disk and the chart would keep drawing it every round.
+    rm -f "$STATE_DIR/wan.delta"
+    [ -n "$WAN_IF" ] || wan_if || return 0
+    raw=$(iface_stat "$WAN_IF")
+    [ -n "$raw" ] || return 0
+    read -r nd nu <<EOF
+$raw
+EOF
+    # A counter that is not a number is not a zero: leave the state alone rather
+    # than replacing a real total with one.
+    case "$nd" in ''|*[!0-9]*) return 0 ;; esac
+    case "$nu" in ''|*[!0-9]*) return 0 ;; esac
+
+    pd=; pu=
+    if [ -s "$STATE_DIR/wan.abs" ]; then
+        { read -r pd; read -r pu; } < "$STATE_DIR/wan.abs"
+    fi
+    case "$pd" in ''|*[!0-9]*) pd= ;; esac
+    case "$pu" in ''|*[!0-9]*) pu= ;; esac
+
+    # The very first reading is a baseline and contributes nothing.  These
+    # counters are the device's since it came up, which on a router that has been
+    # running for a week is a week of traffic; counting that as the session's
+    # first round would publish a total that never happened.
+    if [ -z "$pd" ] || [ -z "$pu" ]; then
+        cd=0; cu=0
+    elif [ "$nd" -lt "$pd" ] || [ "$nu" -lt "$pu" ]; then
+        # The device was taken down and re-created, so its counters started over.
+        # What it has counted since is traffic nothing has accounted for yet, and
+        # counting it is the only option that neither loses the round nor comes
+        # back as a negative delta added to an unsigned total.
+        cd=$nd; cu=$nu
+    else
+        cd=$((nd - pd)); cu=$((nu - pu))
+    fi
+
+    td=0; tu=0
+    if [ -s "$STATE_DIR/wan.tsv" ]; then
+        { read -r td; read -r tu; } < "$STATE_DIR/wan.tsv"
+    fi
+    case "$td" in ''|*[!0-9]*) td=0 ;; esac
+    case "$tu" in ''|*[!0-9]*) tu=0 ;; esac
+
+    printf '%s\n%s\n' "$((td + cd))" "$((tu + cu))" > "$STATE_DIR/wan.tsv.new" 2>/dev/null &&
+        mv -f "$STATE_DIR/wan.tsv.new" "$STATE_DIR/wan.tsv"
+    printf '%s\n%s\n' "$cd" "$cu" > "$STATE_DIR/wan.delta.new" 2>/dev/null &&
+        mv -f "$STATE_DIR/wan.delta.new" "$STATE_DIR/wan.delta"
+    printf '%s\n%s\n' "$nd" "$nu" > "$STATE_DIR/wan.abs.new" 2>/dev/null &&
+        mv -f "$STATE_DIR/wan.abs.new" "$STATE_DIR/wan.abs"
     return 0
 }
 
@@ -1182,12 +1327,26 @@ record_peak() {
 record_sample() {
     local ts="${1:-}" d u m cur_m cd cu n
     [ -n "$ts" ] || ts=$(date +%s 2>/dev/null || echo 0)
-    d=0; u=0
-    if [ -s "$STATE_DIR/sample.tsv" ]; then
-        { read -r d; read -r u; } < "$STATE_DIR/sample.tsv"
+    # The point this series keeps is what the box actually carried, so it comes
+    # from the interface counters.  The attribution cannot supply it: it is a
+    # subset of the traffic, and a small one while the firewall offloads, which is
+    # what made a gigabit transfer draw as a flat line.  The attributed sample is
+    # kept as the fallback for the case where no WAN device could be identified,
+    # where it is still better than publishing a series of zeroes.
+    d=; u=
+    if [ -s "$STATE_DIR/wan.delta" ]; then
+        { read -r d; read -r u; } < "$STATE_DIR/wan.delta"
     fi
-    case "$d" in ''|*[!0-9]*) d=0 ;; esac
-    case "$u" in ''|*[!0-9]*) u=0 ;; esac
+    case "$d" in ''|*[!0-9]*) d= ;; esac
+    case "$u" in ''|*[!0-9]*) u= ;; esac
+    if [ -z "$d" ] || [ -z "$u" ]; then
+        d=0; u=0
+        if [ -s "$STATE_DIR/sample.tsv" ]; then
+            { read -r d; read -r u; } < "$STATE_DIR/sample.tsv"
+        fi
+        case "$d" in ''|*[!0-9]*) d=0 ;; esac
+        case "$u" in ''|*[!0-9]*) u=0 ;; esac
+    fi
 
     printf '%s\t%s\t%s\n' "$ts" "$d" "$u" >> "$STATE_DIR/series10.tsv"
     # The ring only needs trimming once it can have overrun, and counting the
@@ -1513,7 +1672,7 @@ prune_hourly() {
 json_escape() { printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'; }
 
 write_summary() {
-    local hour flows dnsmap
+    local hour flows dnsmap wd wu
     hour=$(cat "$STATE_DIR/hour" 2>/dev/null)
     # wc -l, not "grep -c . || echo 0": an empty file makes grep print 0 *and*
     # exit non-zero, so the fallback would append a second 0 and the "field":
@@ -1543,6 +1702,28 @@ write_summary() {
                 "$STATE_DIR/acct.tsv" 2>/dev/null || printf '"down":0,"up":0}'
         fi
         [ -s "$STATE_DIR/acct.off" ] && printf ',"acct_error":"%s"' "$(json_escape "$(sed -n '1p' "$STATE_DIR/acct.off")")"
+        # The total the box actually carried, read from the WAN device's own
+        # counters.  Published beside the attribution instead of folded into it,
+        # because the two answer different questions: this is how much traffic
+        # there was, while "totals" is how much of it the attribution could name.
+        # Offloading does not touch it, which is what makes it the number to trust
+        # on a router whose firewall forwards in the fast path.
+        #
+        # Written only when a WAN device was identified.  The absence of "iface"
+        # is what tells the page to fall back to the attributed numbers rather
+        # than show a total of zero.
+        if [ -n "$WAN_IF" ] && [ -s "$STATE_DIR/wan.tsv" ]; then
+            wd=0; wu=0
+            { read -r wd; read -r wu; } < "$STATE_DIR/wan.tsv"
+            case "$wd" in ''|*[!0-9]*) wd=0 ;; esac
+            case "$wu" in ''|*[!0-9]*) wu=0 ;; esac
+            printf ',"iface":{"dev":"%s","down":%s,"up":%s}' "$(json_escape "$WAN_IF")" "$wd" "$wu"
+        fi
+        # Whether the firewall offloads, always published: the attribution is
+        # partial when it does, and the page has to be able to say so even in the
+        # shipped "auto" accounting mode, where the nft counters never end up
+        # being the layer being reported.
+        printf ',"offload":%s' "$ACCT_OFFLOAD"
         printf ',"pending":%s' "$(sed -n '1p' "$STATE_DIR/pending" 2>/dev/null || echo 0)"
         printf ',"rounds":%s' "$(sed -n '1p' "$STATE_DIR/rounds" 2>/dev/null || echo 0)"
         # which addresses count as the box itself: shown by the page, and the
@@ -1580,6 +1761,14 @@ write_summary() {
                   }
               }
               close(leases)
+              # The names below are not applications at all.  They are the last
+              # resort of the attribution - what the protocol and port alone said
+              # about a flow whose destination never got a name - and together they
+              # carried about a third of the attributed traffic.  Listed among the
+              # applications they read as if an app called "SSL/TLS" had been used,
+              # so the page is told which of these rows are protocol buckets.
+              npb = split("SSL/TLS QUIC HTTP DNS STUN RTSP Email ICMP Other", pbl, " ")
+              for (pi = 1; pi <= npb; pi++) proto[pbl[pi]] = 1
               n = 0
           }
           {
@@ -1601,8 +1790,8 @@ write_summary() {
                   who = act[key[i]]; wb = acb[key[i]]
                   disp = (who in lname) ? lname[who] : who
                   if (i > 1) printf ","
-                  printf "{\"name\":\"%s\",\"down\":%d,\"up\":%d,\"clients\":%d,\"top\":\"%s\",\"top_bytes\":%d}",
-                         key[i], dnv[i], upv[i], acn[key[i]], disp, wb
+                  printf "{\"name\":\"%s\",\"down\":%d,\"up\":%d,\"clients\":%d,\"top\":\"%s\",\"top_bytes\":%d%s}",
+                         key[i], dnv[i], upv[i], acn[key[i]], disp, wb, (key[i] in proto) ? ",\"proto\":1" : ""
               }
           }' "$STATE_DIR/totals.tsv" 2>/dev/null
         printf '],"clients":['
@@ -1667,6 +1856,10 @@ run() {
     # stalls in its first round looks identical to one that never started, which
     # is the state that is hardest to tell apart from the outside.
     account_clients
+    # The interface counters are read before anything publishes a snapshot, so
+    # that even the very first one carries the total the box really carried
+    # rather than an empty one the page would have to explain.
+    iface_account
     publish_current
     write_summary
 
@@ -1681,6 +1874,10 @@ run() {
         # totals come from, and reading them first keeps a rule rebuild from
         # swallowing the round
         account_clients
+        # The authoritative total is read in the same round as the attribution it
+        # is published beside, so that the share the page shows describes one
+        # window rather than two.
+        iface_account
         classify
         # what the one-second sampler needs: the same counters this round read,
         # and the same decision about which layer is authoritative

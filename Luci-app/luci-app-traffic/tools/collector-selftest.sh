@@ -33,6 +33,12 @@ set -u
 
 SELF="$(cd "$(dirname "$0")" && pwd)"
 COLLECTOR="$(cd "$SELF/.." && pwd)/root/usr/share/traffic/collector.sh"
+# The collector's live-counter schema, read from the collector rather than written
+# out here.  A phase that seeds a counter file has to also seed a matching version,
+# or init_state() treats the state as older and drops exactly what was seeded -
+# which is how the WAN baseline phase first failed.  Deriving it means the next
+# bump cannot silently break these phases.
+SCHEMA=$(sed -n 's/^STATE_VERSION=//p' "$COLLECTOR")
 [ -f "$COLLECTOR" ] || { echo "collector.sh not found next to $SELF" >&2; exit 1; }
 
 echo "=== sh -n ==="
@@ -398,7 +404,7 @@ printf '999\n' > "$T/state3/version"
 run_collector_at 30 "$T/state3" "$T/data3" "$T/ct" "$T/ql"
 c3() { awk -F'\t' -v ip="$1" '$1==ip {print $2}' "$T/state3/clients.tsv"; }
 chk "21 旧版本的存量客户端行被清除"         ""                  "$(c3 '192.168.2.1')"
-chk "21a 新版本号已写入"                    "1"                 "$(sed -n '1p' "$T/state3/version")"
+chk "21a 新版本号已写入"                    "2"                 "$(sed -n '1p' "$T/state3/version")"
 chk "21b 计数器是从新数据重建的"            "72600"             "$(c3 '192.168.2.138')"
 # second run: the schema now matches, so the totals must survive it untouched
 run_collector_at 30 "$T/state3" "$T/data3" "$T/ct" "$T/ql"
@@ -631,7 +637,7 @@ echo "=== 整点滚动：hourly.tsv 与 series1h.tsv ==="
 # epoch a sample is stamped with) still goes to the real clock.
 REALDATE=$(command -v date)
 mkdir -p "$T/bin" "$T/state9" "$T/data9"
-printf '1\n' > "$T/state9/version"       # matching schema, so what is seeded stays
+printf '%s\n' "$SCHEMA" > "$T/state9/version"   # matching schema, so what is seeded stays
 printf 'YouTube\t1000\t5000\n' > "$T/state9/totals.tsv"   # name, up, down
 printf '192.168.2.99\t6000\n'  > "$T/state9/clients.tsv"
 printf '777\n'                 > "$T/state9/router.tsv"
@@ -700,6 +706,161 @@ chk "26h series1h 无流量的小时为 0"         "0/0"       "$(sed -n '2p' "$
 chk "26i 第二次滚动不重复归档"              "3"         "$(grep -c . "$h9")"
 chk "26j 整点不再清空应用累计"              "5000"      "$(awk -F'\t' '$1=="YouTube"{print $3}' "$T/state9/totals.tsv")"
 chk "26k 整点不再清空路由器累计"            "777"       "$(sed -n '1p' "$T/state9/router.tsv")"
+
+echo
+echo "=== WAN 接口计数器：权威总量与曲线 ==="
+# Under flow offloading the attribution layer only sees a fraction of what the
+# box carried - measured on the router, conntrack recorded 147 MiB while the WAN
+# device carried 2579 MiB, 5.7% - so the totals, the series and the peak are
+# taken from the WAN device's own counters instead.  Both the routing table that
+# names the device and /proc/net/dev itself are overridable, which is what lets
+# this run without a router.  eth2 carries rx=5000000, tx=800000.
+#
+# Every phase here is deterministic on purpose: the fake device counters never
+# change, so a round contributes either the seeded difference or nothing at all,
+# and the assertions hold however many rounds the collector manages to finish
+# before it is stopped.
+mkdir -p "$T/state10" "$T/data10" "$T/state11" "$T/data11" \
+         "$T/state12" "$T/data12" "$T/state13" "$T/data13"
+cat > "$T/netdev" <<'EOF'
+Inter-|   Receive                                                |  Transmit
+ face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed
+    lo:    1000       10    0    0    0     0          0         0     1000       10    0    0    0     0       0          0
+  eth2: 5000000     4000    0    0    0     0          0         0   800000     3000    0    0    0     0       0          0
+EOF
+: > "$T/netdev-noif"
+printf 'Iface\tDestination\tGateway \tFlags\tRefCnt\tUse\tMetric\tMask\t\tMTU\tWindow\tIRTT\n' > "$T/route"
+printf 'eth2\t00000000\t0102A8C1\t0003\t0\t0\t0\t00000000\t0\t0\t0\n' >> "$T/route"
+NETW="TRAFFIC_PROC_NET_DEV=$T/netdev"
+RTW="TRAFFIC_PROC_NET_ROUTE=$T/route"
+NO6="TRAFFIC_PROC_NET_ROUTE6=/nonexistent"
+
+# No explicit device setting: the default route is what names it, so this covers
+# the /proc/net/route parse as well.
+run_collector_at 30 "$T/state10" "$T/data10" "$T/ct2" /nonexistent "$NETW" "$RTW" "$NO6"
+chk "27  默认路由识别出 WAN 设备"            "eth2" \
+    "$(sed -n 's/.*"iface":{"dev":"\([^"]*\)".*/\1/p' "$T/state10/summary.json")"
+# The device has counted 5000000 bytes since it came up.  None of that is this
+# session's traffic, and a first round that added it would publish a total the
+# box never carried in the session being shown.
+chk "27a 首次读取只做基线不累加"             "0/0" \
+    "$(sed -n 's/.*"iface":{[^}]*"down":\([0-9]*\),"up":\([0-9]*\).*/\1\/\2/p' "$T/state10/summary.json")"
+chk "27b 首次读取不写负值"                   "0" "$(grep -c -- '-' "$T/state10/wan.tsv")"
+
+# The curve is the whole point of this fix: it has to be the traffic the box
+# carried, because that is what a speed test looks like on the chart.  Its own
+# device file is used so the bump below cannot disturb the phases around it, and
+# the conntrack file for this phase is empty - so the attributed sample for a
+# round is zero, and a series point that is not zero can only have come from the
+# interface counters.  The device counters are bumped between two rounds, which
+# makes the size of that point exactly the bump: the pass before the first round
+# absorbs the starting values as its baseline, and round two is the only round
+# that sees the change.
+cat > "$T/netdev11" <<'EOF'
+Inter-|   Receive                                                |  Transmit
+ face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed
+  eth2: 5000000     4000    0    0    0     0          0         0   800000     3000    0    0    0     0       0          0
+EOF
+: > "$T/ctempty11"
+env UCI=/bin/true LUA="$T/bin/lua" CT="$T/ctempty11" \
+  TRAFFIC_QUERYLOG=/nonexistent TRAFFIC_LAN4=192.168.2. TRAFFIC_INTERVAL=2 \
+  TRAFFIC_DATADIR="$T/data11" TRAFFIC_APPMAP="$T/apps.tsv" \
+  TRAFFIC_CATEGORIES="$T/categories.tsv" STATE_DIR="$T/state11" \
+  SELF_DIR="$(cd "$SELF/../root/usr/share/traffic" && pwd)" \
+  "TRAFFIC_PROC_NET_DEV=$T/netdev11" "TRAFFIC_PROC_NET_ROUTE=$T/route" \
+  TRAFFIC_PROC_NET_ROUTE6=/nonexistent \
+  sh "$COLLECTOR" >/dev/null 2>&1 &
+i11=$!
+wait_rounds "$T/state11" 1
+cat > "$T/netdev11" <<'EOF'
+Inter-|   Receive                                                |  Transmit
+ face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed
+  eth2: 5005000     4100    0    0    0     0          0         0   801000     3000    0    0    0     0       0          0
+EOF
+wait_rounds "$T/state11" 2
+kill "$i11" 2>/dev/null
+wait "$i11" 2>/dev/null
+sleep 0.3
+chk "27c 会话总量取自接口计数器的增量"       "5000/1000" \
+    "$(sed -n '1p' "$T/state11/wan.tsv")/$(sed -n '2p' "$T/state11/wan.tsv")"
+chk "27d 快照总量取自接口计数器"             "5000/1000" \
+    "$(sed -n 's/.*"iface":{[^}]*"down":\([0-9]*\),"up":\([0-9]*\).*/\1\/\2/p' "$T/state11/summary.json")"
+chk "27e 曲线点取自接口增量而非归属值"       "5000/1000" \
+    "$(sed -n '2p' "$T/state11/series10.tsv" | cut -f2,3 | tr '\t' '/')"
+
+# A counter that went backwards means the device was re-created.  Its new reading
+# is traffic nothing has accounted for yet; what this guards against is arithmetic
+# on unsigned values, which turns a negative difference into an enormous total.
+# The version file has to match, or init_state() drops the seeded baseline as
+# stale state and the phase would silently test the first-reading path instead.
+printf '%s\n' "$SCHEMA" > "$T/state12/version"
+printf '9999999\n9999999\n' > "$T/state12/wan.abs"
+run_collector_at 30 "$T/state12" "$T/data12" "$T/ct2" /nonexistent "$NETW" "$RTW" "$NO6"
+chk "27f 计数回退后按新读数计"               "$(printf '5000000/800000')" \
+    "$(sed -n '1p' "$T/state12/wan.tsv")/$(sed -n '2p' "$T/state12/wan.tsv")"
+chk "27g 计数回退后没有负值"                 "0" "$(grep -c -- '-' "$T/state12/wan.tsv")"
+
+# No device to measure: the key is not published at all, which is what the page
+# reads as "fall back to the attributed numbers" rather than "the total is zero".
+run_collector_at 30 "$T/state13" "$T/data13" "$T/ct2" /nonexistent \
+    "TRAFFIC_PROC_NET_DEV=$T/netdev-noif" "TRAFFIC_WAN_IF=eth2" \
+    "TRAFFIC_PROC_NET_ROUTE=/nonexistent" "$NO6"
+chk "27h 设备不存在时不发布 iface"           "0" "$(grep -c '"iface"' "$T/state13/summary.json")"
+chk "27i 设备不存在时不写接口累计"           "no" \
+    "$([ -f "$T/state13/wan.tsv" ] && echo yes || echo no)"
+
+# Whether the firewall offloads is always published, because it is what decides
+# whether the attribution beside the total is a large share or a small one.
+chk "27j 快照发布卸载状态"                   "0" \
+    "$(sed -n 's/.*"offload":\([0-9]*\).*/\1/p' "$T/state10/summary.json")"
+
+# The protocol buckets are the attribution's last resort, not applications: at
+# about a third of the attributed traffic, listed among the applications they read
+# as if an app called "SSL/TLS" had been used.
+protoflag() {
+    awk -v w="$1" 'BEGIN { RS = "{" }
+        index($0, "\"name\":\"" w "\"") > 0 {
+            print (index($0, "\"proto\":1") > 0) ? 1 : 0; exit
+        }' "$2"
+}
+chk "27k 协议桶被打上 proto 标记"            "1" "$(protoflag 'SSL/TLS' "$T/state/summary.json")"
+chk "27l 真实应用没有 proto 标记"            "0" "$(protoflag 'NetEase Music' "$T/state/summary.json")"
+
+# A device that disappears mid-session.  The delta of the round it vanished in
+# must not sit on disk and be drawn again by every later round - with an empty
+# conntrack file the fallback sample is zero, so a repeated 5000 would mean the
+# stale delta was reused, and the session total would keep growing on a device
+# nobody can measure any more.
+cat > "$T/netdev14" <<'EOF'
+Inter-|   Receive                                                |  Transmit
+ face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed
+  eth2: 5000000     4000    0    0    0     0          0         0   800000     3000    0    0    0     0       0          0
+EOF
+env UCI=/bin/true LUA="$T/bin/lua" CT="$T/ctempty11" \
+  TRAFFIC_QUERYLOG=/nonexistent TRAFFIC_LAN4=192.168.2. TRAFFIC_INTERVAL=2 \
+  TRAFFIC_DATADIR="$T/data14" TRAFFIC_APPMAP="$T/apps.tsv" \
+  TRAFFIC_CATEGORIES="$T/categories.tsv" STATE_DIR="$T/state14" \
+  SELF_DIR="$(cd "$SELF/../root/usr/share/traffic" && pwd)" \
+  "TRAFFIC_PROC_NET_DEV=$T/netdev14" "TRAFFIC_PROC_NET_ROUTE=$T/route" \
+  TRAFFIC_PROC_NET_ROUTE6=/nonexistent \
+  sh "$COLLECTOR" >/dev/null 2>&1 &
+i14=$!
+wait_rounds "$T/state14" 1
+cat > "$T/netdev14" <<'EOF'
+Inter-|   Receive                                                |  Transmit
+ face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed
+  eth2: 5005000     4100    0    0    0     0          0         0   801000     3000    0    0    0     0       0          0
+EOF
+wait_rounds "$T/state14" 2
+: > "$T/netdev14"
+wait_rounds "$T/state14" 3
+kill "$i14" 2>/dev/null
+wait "$i14" 2>/dev/null
+sleep 0.3
+chk "27m 设备消失后不再复用上一轮增量"       "0/0" \
+    "$(sed -n '3p' "$T/state14/series10.tsv" | cut -f2,3 | tr '\t' '/')"
+chk "27n 设备消失后会话总量不再增长"         "5000/1000" \
+    "$(sed -n '1p' "$T/state14/wan.tsv")/$(sed -n '2p' "$T/state14/wan.tsv")"
 
 echo
 if [ "$fail" = 0 ]; then echo "=== 全部通过 ==="; else echo "=== 有失败 ==="; fi

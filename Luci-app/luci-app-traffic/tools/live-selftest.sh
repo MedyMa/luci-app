@@ -56,13 +56,16 @@ chmod +x "$T/bin/nft"
 PATH="$T/bin:$PATH"
 export PATH
 
-write_env() { # write_env <source>
+# write_env <source> [wan_if]: WAN_IF is always written, empty when the
+# collector could not identify a WAN device - which is the signal to fall back.
+write_env() {
 	cat > "$STATE_DIR/live.env" <<EOF
 LAN4=192.168.1.
 LAN6=
 SELF=192.168.1.1
 SOURCE=$1
 TABLE=inet traffic_acct
+WAN_IF=${2:-}
 EOF
 }
 
@@ -74,6 +77,7 @@ json()  { sed -n 's/.*"bps_down":\([0-9]*\).*/\1/p' "$STATE_DIR/live.json"; }
 jsonu() { sed -n 's/.*"bps_up":\([0-9]*\).*/\1/p' "$STATE_DIR/live.json"; }
 ready() { sed -n 's/.*"ready":\([0-9]*\).*/\1/p' "$STATE_DIR/live.json"; }
 dts()   { sed -n 's/.*"dt":\([0-9]*\).*/\1/p' "$STATE_DIR/live.json"; }
+src()   { sed -n 's/.*"source":"\([^"]*\)".*/\1/p' "$STATE_DIR/live.json"; }
 
 # Assert the interval delta, not the rate: the rate is over whatever the real
 # elapsed time turned out to be.  The published rate is an integer, so it is the
@@ -204,6 +208,135 @@ EOF
 run_live
 ck_delta "baseline survives an empty sample" "160000" down
 ck_delta "baseline survives an empty sample (up)" "500" up
+
+# ---- 7. the WAN device counters are the authoritative source ----------------
+# With flow offloading on, both counter layers the script used to read are
+# bypassed: measured on a real router, conntrack had seen 147 MiB in the window
+# in which the WAN device carried 2579 MiB (5.7%).  The device counters live in
+# the driver, below the fast path, so when the collector has named a WAN device
+# the meter reads that device.  TRAFFIC_PROC_NET_DEV points the reader at a fake
+# table, which is how this suite stays off a real router.
+export TRAFFIC_PROC_NET_DEV="$T/netdev"
+
+netdev() { # netdev <rx> <tx>
+	cat > "$T/netdev" <<EOF
+Inter-|   Receive                                                |  Transmit
+ face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed
+  eth2: $1 11 0 0 0 0 0 0 $2 22 0 0 0 0 0 0
+ br-lan: 999 1 0 0 0 0 0 0 888 1 0 0 0 0 0 0
+EOF
+}
+
+# The nft counters move in the same window, and deliberately by a DIFFERENT
+# amount: a fallback to them must not be mistakable for the interface answer.
+write_env nft eth2
+rm -f "$STATE_DIR/live.wan" "$STATE_DIR/live.cur" "$STATE_DIR/live.json" "$STATE_DIR/live.flows"
+echo 1000 > "$STATE_DIR/pre.bytes"; echo 5000 > "$STATE_DIR/post.bytes"
+netdev 1000000 2000000
+# Baselines left over from the counter layers, from before the interface path
+# took over.  If either survived the interface era, the first sample after the
+# device disappeared would measure the whole gap as one interval: conntrack
+# would find every established flow unknown and credit each one with its whole
+# lifetime, and the absolute nft counters would report everything the table had
+# gained meanwhile.  Either way it is a spike, and it would become the peak.
+printf 'stale\t1\t2\n' > "$STATE_DIR/live.flows"
+printf '1\t2\n' > "$STATE_DIR/live.cur"
+run_live
+ck "device baseline: source is the interface" "iface" "$(src)"
+ck "device baseline: not a rate yet"          "0"     "$(ready)"
+if [ -e "$STATE_DIR/live.flows" ] || [ -e "$STATE_DIR/live.cur" ]; then stale=present; else stale=absent; fi
+ck "device baseline: stale counter baselines dropped" "absent" "$stale"
+
+netdev 1300000 2700000
+echo 2000 > "$STATE_DIR/pre.bytes"; echo 9000 > "$STATE_DIR/post.bytes"
+run_live
+ck_delta "device download = rx growth"        "300000" down
+ck_delta "device upload = tx growth"          "700000" up
+ck "device sample: source is the interface"   "iface"  "$(src)"
+ck "device sample is ready"                   "1"      "$(ready)"
+
+# ---- 8. a device that was recreated restarted its counters ------------------
+# The same case as the nft counter reset above, from the other source: the
+# absolute reading goes backwards, and negative traffic is not a reading.
+netdev 1000 2000
+echo 12000 > "$STATE_DIR/pre.bytes"; echo 19000 > "$STATE_DIR/post.bytes"
+run_live
+ck "device restart: down is zero, not negative" "0" "$(json)"
+ck "device restart: up is zero, not negative"   "0" "$(jsonu)"
+ck "device restart: still the interface"        "iface" "$(src)"
+
+# ---- 9. the interface answer does not depend on a counter layer -------------
+# Neither nft nor conntrack can be reached here, and the meter must still
+# report: that is the whole point of reading a layer that offloading cannot
+# bypass.  The stale ready:1 placeholder is written first so a run that falls
+# back and publishes nothing cannot be read as a pass.
+write_env conntrack eth2
+export CT="$T/absent-conntrack"
+rm -f "$STATE_DIR/live.wan" "$STATE_DIR/live.cur"
+printf '{"at":0,"bps_down":1,"bps_up":1,"source":"conntrack","ready":1,"dt":1}\n' > "$STATE_DIR/live.json"
+netdev 5000000 6000000
+run_live
+netdev 5123456 6654321
+run_live
+ck "interface source does not need conntrack" "iface"  "$(src)"
+ck_delta "interface download without conntrack" "123456" down
+ck_delta "interface upload without conntrack"   "654321" up
+
+# ---- 10. the device can be absent while the collector still names one -------
+# A WAN that is down, or a name the collector derived from a route that has
+# since gone: the description in live.env is not re-checked, so the reader has
+# to notice and fall back to the old path on its own.
+write_env conntrack eth2
+export CT="$T/conntrack"
+rm -f "$STATE_DIR/live.flows" "$STATE_DIR/live.wan"
+cat > "$T/netdev" <<'EOF'
+Inter-|   Receive                                                |  Transmit
+ face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed
+ br-lan: 999 1 0 0 0 0 0 0 888 1 0 0 0 0 0 0
+EOF
+cat > "$CT" <<'EOF'
+ipv4 2 tcp 6 100 ESTABLISHED src=192.168.1.5 dst=1.2.3.4 sport=41000 dport=443 packets=3 bytes=700 src=1.2.3.4 dst=192.168.1.5 sport=443 dport=41000 packets=4 bytes=99000 [ASSURED]
+EOF
+run_live
+ck "absent device: first sample is a baseline" "0"         "$(ready)"
+ck "absent device: source is conntrack"        "conntrack" "$(src)"
+cat > "$CT" <<'EOF'
+ipv4 2 tcp 6 100 ESTABLISHED src=192.168.1.5 dst=1.2.3.4 sport=41000 dport=443 packets=3 bytes=1200 src=1.2.3.4 dst=192.168.1.5 sport=443 dport=41000 packets=4 bytes=199000 [ASSURED]
+EOF
+run_live
+ck_delta "absent device: conntrack still counts down" "100000" down
+ck_delta "absent device: conntrack still counts up"   "500"    up
+ck "absent device: source stays conntrack"            "conntrack" "$(src)"
+ck "absent device: no interface state written"        "absent" "$([ -e "$STATE_DIR/live.wan" ] && echo present || echo absent)"
+
+# ---- 11. an empty WAN_IF is the old behaviour, unchanged --------------------
+write_env conntrack
+rm -f "$STATE_DIR/live.flows" "$STATE_DIR/live.wan" "$STATE_DIR/live.json"
+cat > "$CT" <<'EOF'
+ipv4 2 tcp 6 100 ESTABLISHED src=192.168.1.5 dst=1.2.3.4 sport=42000 dport=443 packets=3 bytes=800 src=1.2.3.4 dst=192.168.1.5 sport=443 dport=42000 packets=4 bytes=50000 [ASSURED]
+EOF
+run_live
+cat > "$CT" <<'EOF'
+ipv4 2 tcp 6 100 ESTABLISHED src=192.168.1.5 dst=1.2.3.4 sport=42000 dport=443 packets=3 bytes=1300 src=1.2.3.4 dst=192.168.1.5 sport=443 dport=42000 packets=4 bytes=150000 [ASSURED]
+EOF
+run_live
+ck_delta "empty WAN_IF: conntrack download" "100000" down
+ck_delta "empty WAN_IF: conntrack upload"   "500"    up
+ck "empty WAN_IF: source is conntrack"      "conntrack" "$(src)"
+ck "empty WAN_IF: no interface state"       "absent" "$([ -e "$STATE_DIR/live.wan" ] && echo present || echo absent)"
+
+# ---- 12. a missing state file must not log ---------------------------------
+# The reads were left to fail on their own, and the shell reports a failed
+# redirection itself, so the 2>/dev/null beside them never silenced it.  These
+# run every second, and the files do not exist until rpcd has been polled once,
+# so a router with the page closed wrote a line a second about nothing - the
+# same class of noise already fixed in the collector.
+rm -f "$STATE_DIR/live.watch"
+err=$(sh "$live" 2>&1 >/dev/null)
+ck "no watch file: nothing on stderr" "" "$err"
+rm -f "$STATE_DIR/live.at"
+err=$(sh "$live" --force 2>&1 >/dev/null)
+ck "no timestamp file: nothing on stderr" "" "$err"
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

@@ -95,6 +95,51 @@ var BUCKETS = {
 
 function isBucket(name) { return BUCKETS[name] === 1; }
 
+/* The names the collector marks with "proto":1.  They are not applications and
+ * never were: they are the transport or the infrastructure label the attribution
+ * falls back to when a flow's destination never got a name, and together they
+ * carried about a third of the attributed traffic.  The flag is what decides;
+ * this list is the same one collector.sh carries and covers the archived hours,
+ * whose rows are rebuilt from a name and carry no flag. */
+var PROTO_NAMES = {
+	'SSL/TLS': 1, 'QUIC': 1, 'HTTP': 1, 'DNS': 1, 'STUN': 1,
+	'RTSP': 1, 'Email': 1, 'ICMP': 1, 'Other': 1
+};
+
+function isProto(item) {
+	if (!item) return false;
+	if (item.proto !== undefined && item.proto !== null) return Number(item.proto) === 1;
+	return PROTO_NAMES[item.name] === 1;
+}
+
+/* The headline total of the session: what the box actually carried.
+ *
+ * It comes from the interface counters the collector publishes as summary.iface
+ * (read from /proc/net/dev).  Those sit in the driver, below the fast path that
+ * flow offloading uses, so they count the forwarded traffic that never reaches
+ * netfilter or conntrack - which is why the old headline, the sum of the
+ * per-application attribution (summary.totals), understated the traffic by about
+ * twenty times on a router with offloading on.
+ *
+ * summary.totals is the fallback for a router whose WAN device could not be
+ * identified, and it is a *session* reading either way: there is no interface
+ * counter for a range, so the ranged view must never call this.
+ *
+ * Numbers, never NaN: a missing or non-numeric field falls back, and the source
+ * is returned so the caller can label the figure honestly. */
+function headlineTotals(s) {
+	var t = (s && s.totals) || {};
+	var ifc = s && s.iface;
+	if (ifc) {
+		var d = Number(ifc.down), u = Number(ifc.up);
+		if (isFinite(d) && isFinite(u) && d >= 0 && u >= 0)
+			return { down: d, up: u, total: d + u, source: 'iface' };
+	}
+	d = Number(t.down) || 0;
+	u = Number(t.up) || 0;
+	return { down: d, up: u, total: d + u, source: 'totals' };
+}
+
 /* Address to device name, taken from the live snapshot, which carries the names
  * a DHCP lease gave.  The archive stores the address it saw; turning that into a
  * name is presentation, and the live map is the one place that knows it. */
@@ -392,7 +437,11 @@ function makeRow(name, bucket) {
 		total: el('td', { 'class': 'tf-num tf-total' }),
 		down:  el('td', { 'class': 'tf-num tf-down' }),
 		up:    el('td', { 'class': 'tf-num tf-up' }),
-		top:   el('td', { 'class': 'tf-top' }),
+		/* the cell says which window its figure belongs to: the recorded top
+		 * client is a current-run reading, the byte columns beside it may cover
+		 * the selected range */
+		top:   el('td', { 'class': 'tf-top',
+			'title': _('the busiest client of each application is recorded for the current run, while the byte columns can cover the selected range') }),
 		clients: el('td', { 'class': 'tf-num' })
 	};
 	var tr = el('tr', { 'class': bucket ? 'tf-isbucket' : '' }, [
@@ -414,17 +463,26 @@ function updateRow(row, a, total) {
 	setText(row.cells.up, fmtBytes(a.up));
 	var topText = '—';
 	if (a.top) {
-		var ts = a.bytes ? (100 * (a.top_bytes || 0) / a.bytes) : 0;
-		topText = clientName(a.top) + ' ' + fmtBytes(a.top_bytes || 0) + ' (' + ts.toFixed(1) + '%)';
+		var tb = a.top_bytes || 0;
+		/* The recorded top client is a current-run figure while this row's own
+		 * bytes can cover the selected range (the archive stores the session
+		 * counters a range view cannot reconcile).  A ratio taken across the two
+		 * windows is not a share, so above 100% it is left off rather than
+		 * printed - 2458.0% in a 总量 column beside "30 MiB" is what it looked
+		 * like on a real page. */
+		topText = clientName(a.top) + ' ' + fmtBytes(tb) +
+			(a.bytes && tb <= a.bytes ? ' (' + (100 * tb / a.bytes).toFixed(1) + '%)' : '');
 	}
 	setText(row.cells.top, topText);
 	setText(row.cells.clients, a.clients === undefined ? '—' : String(a.clients));
 }
 
-/* The legend rows are reused the same way: only the percentage moves. */
-function makeLegendRow(name) {
+/* The legend rows are reused the same way: only the percentage moves.  A
+ * protocol bucket gets the same mark the table gives it, so the ring's key
+ * cannot read as a list of applications either. */
+function makeLegendRow(name, proto) {
 	var pctEl = el('span', { 'class': 'tf-legend-pct' });
-	var row = el('div', { 'class': 'tf-legend-row' }, [
+	var row = el('div', { 'class': 'tf-legend-row' + (proto ? ' tf-isbucket' : '') }, [
 		el('span', { 'class': 'tf-legend-dot', 'style': 'background:' + colorFor(name) }),
 		makeIcon(name),
 		el('span', { 'class': 'tf-legend-name' }, [ name ]),
@@ -609,11 +667,29 @@ return view.extend({
 			this.donutFigEl,
 			el('div', { 'class': 'tf-donut-center' }, [
 				this.donutTotalEl,
-				el('div', { 'class': 'tf-donut-cap' }, [ _('Total volume') ])
+				/* The ring is always the composition of the *attributed* traffic -
+				 * it is built from the application rows - so its own reading is
+				 * that sum and it says so.  Under flow offloading the headline
+				 * above it is the larger interface total; two readings that differ
+				 * under one word would be the same lie in a new place. */
+				el('div', { 'class': 'tf-donut-cap' }, [ _('Attributed') ])
 			])
 		]);
 		this.legendEl = el('div', { 'class': 'tf-legend' });
 		this.rowsEl   = el('tbody');
+		/* The protocol buckets live under the table rather than in it: they are
+		 * real attributed bytes - the ring above still counts them - but they are
+		 * not applications, and a table whose column header says 应用 must not
+		 * list a transport protocol as one.  Built here so a refresh only moves
+		 * the text. */
+		this.protoTitleEl = el('span', { 'class': 'tf-proto-title' }, [ _('Protocols (not applications)') ]);
+		this.protoSumEl   = el('span', { 'class': 'tf-proto-sum' });
+		this.protoListEl  = el('div', { 'class': 'tf-proto-list' });
+		this.protoEl = el('div', { 'class': 'tf-proto' }, [
+			el('div', { 'class': 'tf-proto-cap' }, [ this.protoTitleEl, this.protoSumEl ]),
+			this.protoListEl
+		]);
+		this.protoEl.style.display = 'none';
 		this.diagEl   = el('div', { 'class': 'tf-diag' });
 		this.chartEl  = el('div', { 'class': 'tf-chart' });
 		this.chartNote = el('span', { 'class': 'tf-chart-note' });
@@ -649,7 +725,11 @@ return view.extend({
 			 * a grid rather than three caption/reading pairs. */
 			el('div', { 'class': 'tf-card tf-hero' }, [
 				el('div', { 'class': 'tf-hero-stats' }, [
-					el('div', { 'class': 'tf-hero-cap' }, [ _('total') ]),
+					/* The caption follows the reading: 总计 only while the number
+					 * under it really is everything the box carried (the interface
+					 * counters), 已归属 when it is the attributed sum - which is
+					 * all a ranged view or a router without a WAN device can show. */
+					this.heroCapEl = el('div', { 'class': 'tf-hero-cap' }, [ _('total') ]),
 					el('div', { 'class': 'tf-hero-cap' }, [ _('Received') ]),
 					el('div', { 'class': 'tf-hero-cap' }, [ _('Sent') ]),
 					this.totalEl,
@@ -689,7 +769,11 @@ return view.extend({
 					/* The legend is its own labelled block: as a bare list of names
 					 * beside a ring it read as an unlabelled column of text. */
 					el('div', { 'class': 'tf-legend-box' }, [
-						el('div', { 'class': 'tf-legend-cap' }, [ _('Application name') ]),
+						/* The ring's key lists whatever the attributed traffic is
+						 * made of, protocol buckets included - so it cannot be
+						 * captioned 应用 the way the table's name column is: that
+						 * is exactly how "SSL/TLS" came to read as an application. */
+						el('div', { 'class': 'tf-legend-cap' }, [ _('Attributed traffic') ]),
 						this.legendEl
 					])
 				])
@@ -714,11 +798,22 @@ return view.extend({
 						el('th', { 'class': 'tf-num' }, [ _('Total traffic') ]),
 						el('th', { 'class': 'tf-num' }, [ _('Received') ]),
 						el('th', { 'class': 'tf-num' }, [ _('Sent') ]),
-						el('th', { 'class': 'tf-top-h' }, [ _('Top client') ]),
+						/* The per-application client figure is recorded for the
+						 * current run - the archive keeps the correlation it was
+						 * built from, which is the session counters - while the
+						 * byte columns beside it can cover the selected range.  The
+						 * column says which window it belongs to, because a
+						 * percentage taken across the two is what printed 114.7%
+						 * and 2458% on a real page. */
+						el('th', { 'class': 'tf-top-h',
+							'title': _('the busiest client of each application is recorded for the current run, while the byte columns can cover the selected range') },
+							[ _('Top client (this session)') ]),
 						el('th', { 'class': 'tf-num' }, [ _('Client count') ])
 					]) ]),
 					this.rowsEl
-				])
+				]),
+				/* the protocol buckets, out of the application list and below it */
+				this.protoEl
 			]),
 
 			this.diagCardEl
@@ -1009,7 +1104,7 @@ return view.extend({
 	 * collector.  Without it an empty page is a dead end: the reader cannot tell
 	 * "no traffic yet" from "the service is not running" or "the query log path
 	 * is wrong". */
-	drawStatus: function(s, items) {
+	drawStatus: function(s, items, sessionScope) {
 		var now = Math.floor(Date.now() / 1000);
 		var at = Number(s.collected_at) || 0;
 		var age = at ? (now - at) : -1;
@@ -1059,11 +1154,29 @@ return view.extend({
 			diag.push({ cap: _('Waiting to resolve'), val: String(Number(s.pending)), warn: true });
 		if (!s.acct && s.acct_error)
 			diag.push({ cap: _('Counter error'), val: s.acct_error, warn: true });
-		/* The counters are the nft ones and the firewall offloads: the forwarded
-		 * traffic bypasses the hooks they hang on, so the client figures are a
-		 * fraction of what the box actually carried.  Said out loud, because
-		 * nothing else on the page looks wrong when it happens. */
-		if (s.acct_offload)
+		/* The counters hang on the netfilter hooks and the firewall offloads: the
+		 * forwarded traffic bypasses them, so the attribution is a fraction of
+		 * what the box actually carried.  Said out loud, because nothing else on
+		 * the page looks wrong when it happens.
+		 *
+		 * The gate used to be acct_offload, which the shipped auto mode never
+		 * sets - the collector turns the nft counters off when it sees offloading
+		 * - so the warning could not fire on the router it was written for.  The
+		 * collector reports the condition itself now, in s.offload.
+		 *
+		 * Which wording is true depends on what the cards are showing: in the
+		 * session view the totals come from the interface counters and are exact,
+		 * in a ranged view they are the range's attributed bytes and nothing
+		 * more.  One sentence for both would be a new wrong number in the place
+		 * this fix is about. */
+		if (Number(s.offload) === 1) {
+			var exact = !!sessionScope && !!s.iface;
+			diag.push({ cap: _('Counter mode'), warn: true,
+				val: exact
+					? _('flow offloading is on: the app breakdown only accounts for part of the traffic, while the totals above come from the interface counters and are exact')
+					: _('flow offloading is on: the accounting layer only sees part of the forwarded traffic, so the figures below are a share of what the box carried') });
+		}
+		else if (s.acct_offload)
 			diag.push({ cap: _('Counter mode'),
 				val: _('flow offloading is on: the nft counters miss client traffic'), warn: true });
 		/* The hour being accumulated is not a note.  It is a raw bucket label
@@ -1092,14 +1205,22 @@ return view.extend({
 	 * rate now.  The window's own average is not lost: it is the window total
 	 * divided by the bucket count, both of which the strip already shows. */
 	updateRate: function(s) {
-		var t = (s && s.totals) || {};
-		var down = Number(t.down) || 0, up = Number(t.up) || 0;
+		/* The two figures under 下载/上传 describe the moment, not the window, so
+		 * they come from the authoritative counters whenever those exist: an
+		 * interface delta is what the box really moved between the two snapshots,
+		 * where an attributed delta only counts what the accounting layer saw.
+		 * The source is part of the reading - differencing an interface reading
+		 * against an attributed one would report the gap between two different
+		 * meters as traffic - so a change of source between two snapshots keeps
+		 * the previous figure instead. */
+		var cur = headlineTotals(s);
+		var down = cur.down, up = cur.up;
 		/* rates come from the difference between two snapshots */
 		if (this.prev) {
+			var prev = headlineTotals(this.prev);
 			var dt = (Number(s.collected_at) || 0) - (Number(this.prev.collected_at) || 0);
-			var pd = Number(this.prev.totals.down) || 0, pu = Number(this.prev.totals.up) || 0;
-			if (dt > 0 && down >= pd && up >= pu)
-				this.rate = { down: (down - pd) / dt, up: (up - pu) / dt };
+			if (dt > 0 && prev.source === cur.source && down >= prev.down && up >= prev.up)
+				this.rate = { down: (down - prev.down) / dt, up: (up - prev.up) / dt };
 		}
 		this.prev = s;
 
@@ -1149,12 +1270,28 @@ return view.extend({
 
 	renderLive: function(s) {
 		var t = s.totals || {};
-		var down = Number(t.down) || 0, up = Number(t.up) || 0;
+		/* The headline of the session: the interface counters when the collector
+		 * identified the WAN device, the attributed sum when it did not.  Both
+		 * readings here describe the same window - since the collector started -
+		 * which is what makes iface usable at all; a ranged view has no interface
+		 * counter and must not borrow this one. */
+		var head = headlineTotals(s);
+		var down = head.down, up = head.up;
+		/* The attributed session total: what the application and client rows can
+		 * name.  It is the denominator of every share the table and the ring show
+		 * - those rows are a breakdown of this sum, not of the traffic the box
+		 * carried - and it is not the headline. */
+		var accDown = Number(t.down) || 0, accUp = Number(t.up) || 0;
+		var accTotal = accDown + accUp;
 
 		var items = (s.apps || []).map(function(a) {
 			var d = Number(a.down) || 0, u = Number(a.up) || 0;
 			return {
 				name: a.name, down: d, up: u, bytes: d + u,
+				/* the collector's own marking of a protocol bucket.  It is left
+				 * undefined when the collector did not send one, so isProto()
+				 * falls back to the name list instead of calling it a real app. */
+				proto: (a.proto === undefined ? undefined : Number(a.proto)),
 				clients: (a.clients === undefined) ? undefined : Number(a.clients),
 				top: a.top || '',
 				top_bytes: Number(a.top_bytes) || 0
@@ -1168,7 +1305,7 @@ return view.extend({
 		 * signature does not change while the collector is stuck - so skipping
 		 * it would mean the page never gets to say "stale", and a dead collector
 		 * would look exactly like a quiet network. */
-		this.drawStatus(s, items);
+		this.drawStatus(s, items, true);
 
 		/* The collector writes a snapshot every interval while the page polls
 		 * twice as often, so half the refreshes have nothing new in them: skip
@@ -1181,19 +1318,30 @@ return view.extend({
 		 * view calls the same method so the two agree */
 		this.updateRate(s);
 
-		/* the grand-total row carries the busiest client overall; down+up is the
-		 * same client-side total the footer breaks down by kind */
-		var clientTotal = down + up;
+		/* The grand-total row carries the busiest client overall.  Its share is
+		 * of the attributed total - the same sum the row's own byte columns
+		 * describe.  A figure above 100% is not a share at all: the client bytes
+		 * and the application bytes come from different counters, so the ratio is
+		 * left off rather than printed (it was the source of the 114.7%). */
+		var clientTotal = accTotal;
 		var topClient = (s.clients && s.clients.length) ? s.clients[0] : null;
 		var topText = '—';
 		if (topClient && clientTotal > 0) {
-			topText = (topClient.name || topClient.ip) + ' ' + fmtBytes(topClient.bytes) +
-				' (' + (100 * Number(topClient.bytes) / clientTotal).toFixed(1) + '%)';
+			var tb = Number(topClient.bytes) || 0;
+			topText = (topClient.name || topClient.ip) + ' ' + fmtBytes(tb) +
+				(tb <= clientTotal ? ' (' + (100 * tb / clientTotal).toFixed(1) + '%)' : '');
 		}
 
 		this.draw(items, {
-			total: clientTotal, down: down, up: up,
+			total: head.total, down: head.down, up: head.up,
+			totalSource: head.source,
+			/* the shares the ring and the table show are shares of the attributed
+			 * sum, which is a smaller number than the headline whenever the
+			 * interface counters answered */
+			shareTotal: clientTotal,
 			topText: topText,
+			/* the grand row's client is the current run's, like the app cells */
+			topScope: 'session',
 			clientCount: (t.client_count === undefined) ? undefined : Number(t.client_count)
 		});
 
@@ -1226,19 +1374,35 @@ return view.extend({
 			{ cap: _('Browser clients'), val: fmtBytes(all) },
 			{ cap: _('Router and tunnel'), val: fmtBytes(t.router) },
 			{ cap: _('Devices'), val: String(Number(t.client_count) || 0) },
-			{ cap: _('Apps'), val: String(items.length) }
+			/* the applications the table is listing: the protocol buckets are not
+			 * applications and no longer sit in that table */
+			{ cap: _('Apps'), val: String(items.filter(function(a) { return !isProto(a); }).length) }
 		]);
 
+		/* The two numbers that belong together: what the box carried (the
+		 * interface counters, and the headline above) and what the attribution
+		 * could name (totals, and every byte in the table).  Their ratio is the
+		 * one reading that says how much of the traffic the app and client lists
+		 * actually explain - a few percent under flow offloading, where before
+		 * the page showed the fraction as if it were the whole.  It is a session
+		 * reading on both sides, so it belongs to this view and not to a range. */
+		var diag = [];
+		var ifc = s.iface;
+		var carried = ifc ? (Number(ifc.down) || 0) + (Number(ifc.up) || 0) : 0;
+		if (carried > 0) {
+			var share = accTotal / carried;
+			diag.push({ cap: _('Attributed'), val: (100 * share).toFixed(1) + '%',
+				title: _('share of the traffic the router carried that the app and client accounting could name'),
+				warn: share < 0.5 });
+		}
 		/* How much of the traffic the page managed to name, which is the only
-		 * reading that says whether the DNS lookup is working at all.  It lives
-		 * in the session counters and the ranged history does not store it, so
-		 * these notes appear in the session view and nowhere else. */
-		var diag = [
+		 * reading that says whether the DNS lookup is working at all. */
+		diag.push(
 			{ cap: _('Domain identified'), val: pct(named),
 			  title: _('by client DNS') + ': ' + pct(namedE) + ', ' + _('by any client DNS') + ': ' + pct(namedA) },
 			{ cap: _('Categorised'), val: pct(bucket) },
 			{ cap: _('Other'), val: pct(residual), warn: true }
-		];
+		);
 		if (acctAll > 0) {
 			diag.push({ cap: _('Counter total'), val: fmtBytes(acctAll),
 				title: _('every packet counted at the LAN interface, proxied traffic included') });
@@ -1322,8 +1486,18 @@ return view.extend({
 				' (' + (100 * cl[0].bytes / clTotal).toFixed(1) + '%)';
 		}
 		this.draw(items, {
+			/* The range's own attributed totals, exactly as before.  summary.iface
+			 * is deliberately NOT used here: it is a session cumulative count from
+			 * /proc/net/dev, and the archived hours are built from the attribution
+			 * layer (roll_hour archives totals.tsv), so there is no interface total
+			 * for a range.  Showing the session number under a 7-day label would
+			 * be a new wrong number of exactly the kind this page is being fixed
+			 * for; draw() labels every ranged figure 已归属 instead of 总计. */
 			total: total, down: gd, up: gu,
-			topText: topText, clientCount: cl.length
+			topText: topText, clientCount: cl.length,
+			/* this row's client comes from the range's own client rows, so the
+			 * cell must not claim to be the current run's */
+			topScope: 'range'
 		});
 		/* The two rates are deliberately not written here.  They describe the
 		 * sampling interval rather than the window, exactly as in the session
@@ -1344,18 +1518,37 @@ return view.extend({
 			{ cap: _('Browser clients'), val: fmtBytes(total) },
 			{ cap: _('Router and tunnel'), val: fmtBytes(rt) },
 			{ cap: _('Devices'), val: String(cl.length) },
-			{ cap: _('Apps'), val: String(items.length) }
+			{ cap: _('Apps'), val: String(items.filter(function(a) { return !isProto(a); }).length) }
 		]);
 		/* nothing to add here: every note this view has is already in the strip */
 		this.drawDiag([]);
 	},
 
 	draw: function(items, stats) {
+		/* Protocol buckets are not applications.  They are the transport or the
+		 * infrastructure label the attribution falls back to, and listed among
+		 * the applications they read as if an app called "QUIC" had been used.
+		 * They keep their share of the ring above, where the composition of the
+		 * attributed traffic is the point; the table below lists applications, so
+		 * they are drawn in their own block under it. */
+		var apps = items.filter(function(a) { return !isProto(a); });
+		var protos = items.filter(isProto);
+
 		/* one palette assignment for everything drawn this round, so the donut,
 		 * the legend and the table cannot disagree about a colour */
 		colorMap = assignColors(items.slice(0, 30));
 		var top = items.slice(0, 10);
+		/* the headline: what the box carried in the session view, or the window's
+		 * own attributed total in a ranged view */
 		var total = stats.total;
+		/* The shares the ring and the table show are shares *of the attributed
+		 * traffic* - the sum their own rows are part of.  The headline can be the
+		 * larger interface total, and dividing the rows by that would have turned
+		 * every application into a fraction of a percent. */
+		var shareTotal = (stats.shareTotal === undefined) ? total : stats.shareTotal;
+		/* 总计 is only true when the number really is everything the box carried;
+		 * otherwise the reading is the attributed sum and says so. */
+		var exact = stats.totalSource === 'iface';
 		var self = this;
 
 		/* Everything below updates what is already on the page rather than
@@ -1364,24 +1557,27 @@ return view.extend({
 		if (!this.rowCache) { this.rowCache = {}; this.rowNames = []; this.legendCache = {}; }
 
 		setText(this.totalEl, fmtBytes(total));
+		if (this.heroCapEl) setText(this.heroCapEl, exact ? _('total') : _('Attributed'));
 
-		/* The total is also the answer the ring is a breakdown of, so it sits in
-		 * the ring's hole rather than only in the hero above.  It moves on every
-		 * refresh, which is why it is its own node: folding it into the SVG would
-		 * mean rebuilding the ring on every poll to change one line of text. */
-		setText(this.donutTotalEl, fmtBytes(total));
+		/* The ring is the answer the ring center is a breakdown of, so it sits in
+		 * the hole rather than only in the hero above.  It moves on every refresh,
+		 * which is why it is its own node: folding it into the SVG would mean
+		 * rebuilding the ring on every poll to change one line of text.  Its
+		 * reading is the attributed sum, which is a smaller number than the
+		 * headline when the interface counters answered. */
+		setText(this.donutTotalEl, fmtBytes(shareTotal));
 		var off = (this.donutEl.className.indexOf('tf-donut-off') >= 0);
-		if ((total <= 0) !== off)
-			this.donutEl.className = total > 0 ? 'tf-donut' : 'tf-donut tf-donut-off';
+		if ((shareTotal <= 0) !== off)
+			this.donutEl.className = shareTotal > 0 ? 'tf-donut' : 'tf-donut tf-donut-off';
 
 		/* donut: redrawn only when its composition changed, not when the bytes
 		 * behind the slices moved */
 		var donutSig = top.map(function(a) {
-			return a.name + ':' + (total ? Math.round(1000 * a.bytes / total) : 0);
+			return a.name + ':' + (shareTotal ? Math.round(1000 * a.bytes / shareTotal) : 0);
 		}).join('|');
 		if (donutSig !== this.donutSig) {
 			this.donutSig = donutSig;
-			dom.content(this.donutFigEl, makeDonut(top, total));
+			dom.content(this.donutFigEl, makeDonut(top, shareTotal));
 		}
 
 		/* legend, keyed by name so the rows survive a reshuffle */
@@ -1390,10 +1586,10 @@ return view.extend({
 			legendSeen[a.name] = 1;
 			var lr = self.legendCache[a.name];
 			if (!lr) {
-				lr = makeLegendRow(a.name);
+				lr = makeLegendRow(a.name, isProto(a));
 				self.legendCache[a.name] = lr;
 			}
-			setText(lr.pct, (total ? (100 * a.bytes / total) : 0).toFixed(1) + '%');
+			setText(lr.pct, (shareTotal ? (100 * a.bytes / shareTotal) : 0).toFixed(1) + '%');
 		});
 		Object.keys(this.legendCache).forEach(function(n) {
 			if (legendSeen[n]) return;
@@ -1421,19 +1617,32 @@ return view.extend({
 				top:   el('td', { 'class': 'tf-top' }),
 				clients: el('td', { 'class': 'tf-num' })
 			};
+			/* the label follows the same rule as the hero caption: 所有流量 only
+			 * while the row's figures are the whole of what the box carried */
+			var glabel = el('span', { 'class': 'tf-app-name' }, [ _('All traffic') ]);
 			this.grandRow = {
 				tr: el('tr', { 'class': 'tf-grand' }, [
-					el('td', { 'class': 'tf-app' }, [ el('span', { 'class': 'tf-app-name' }, [ _('All traffic') ]) ]),
+					el('td', { 'class': 'tf-app' }, [ glabel ]),
 					gc.total, gc.down, gc.up, gc.top, gc.clients
 				]),
+				label: glabel,
 				cells: gc
 			};
 			this.rowsEl.appendChild(this.grandRow.tr);
 		}
+		setText(this.grandRow.label, exact ? _('All traffic') : _('Attributed'));
 		setText(this.grandRow.cells.total, fmtBytes(total));
 		setText(this.grandRow.cells.down, fmtBytes(stats.down));
 		setText(this.grandRow.cells.up, fmtBytes(stats.up));
 		setText(this.grandRow.cells.top, stats.topText || '—');
+		/* The grand row's client belongs to the window the row itself describes -
+		 * the current run in the session view, the selected range in a ranged one
+		 * (the archived client rows) - while the per-application cells above it
+		 * are always the current run.  The column says which one, and so does the
+		 * cell, so neither window is read as the other. */
+		this.grandRow.cells.top.setAttribute('title', stats.topScope === 'range'
+			? _('the busiest client of the selected range, from the archived client rows')
+			: _('the busiest client overall, for the current run'));
 		setText(this.grandRow.cells.clients, stats.clientCount === undefined ? '—' : String(stats.clientCount));
 
 		/* the 300 heaviest applications, each row created once and then only
@@ -1441,8 +1650,9 @@ return view.extend({
 		 * ceiling matches the number the collector publishes (top_apps), so the
 		 * session view is never showing fewer rows than the page is willing to
 		 * draw; the ranged view builds its own rows from the archive, which
-		 * keeps every application it saw. */
-		var wanted = items.slice(0, 300);
+		 * keeps every application it saw.  Only applications: the protocol
+		 * buckets are not rows of this table. */
+		var wanted = apps.slice(0, 300);
 		var seen = {}, order = [];
 		wanted.forEach(function(a) {
 			seen[a.name] = 1;
@@ -1453,7 +1663,7 @@ return view.extend({
 				self.rowCache[a.name] = row;
 				self.rowsEl.appendChild(row.tr);
 			}
-			updateRow(row, a, total);
+			updateRow(row, a, shareTotal);
 		});
 		Object.keys(this.rowCache).forEach(function(n) {
 			if (seen[n]) return;
@@ -1470,14 +1680,60 @@ return view.extend({
 			order.forEach(function(n) { self.rowsEl.appendChild(self.rowCache[n].tr); });
 		}
 
-		if (!items.length && !this.emptyRow) {
+		if (!apps.length && !protos.length && !this.emptyRow) {
 			this.emptyRow = el('tr', {}, [ el('td', { 'colspan': 6, 'class': 'tf-empty' }, [ _('No traffic recorded yet.') ]) ]);
 			this.rowsEl.appendChild(this.emptyRow);
 		}
-		else if (items.length && this.emptyRow) {
+		else if ((apps.length || protos.length) && this.emptyRow) {
 			if (this.emptyRow.parentNode) this.emptyRow.parentNode.removeChild(this.emptyRow);
 			this.emptyRow = null;
 		}
+
+		/* and the protocol buckets, in their own labelled block under the table */
+		this.renderProto(protos, shareTotal);
+	},
+
+	/* The protocol buckets: real attributed bytes, so the ring above counts them,
+	 * but not applications, so they are not rows of the application table.  They
+	 * get a muted block of their own under it, with the count and their share of
+	 * the attributed total, and something else in the table's place would have to
+	 * be a lie about what an application is. */
+	renderProto: function(list, total) {
+		if (!this.protoEl) return;
+		var self = this;
+		if (!this.protoRows) this.protoRows = {};
+
+		var rows = list.slice().sort(function(a, b) { return b.bytes - a.bytes; });
+		var sum = 0;
+		rows.forEach(function(a) { sum += a.bytes; });
+
+		var seen = {};
+		rows.forEach(function(a) {
+			seen[a.name] = 1;
+			var r = self.protoRows[a.name];
+			if (!r) {
+				var nm = el('span', { 'class': 'tf-proto-name', 'title': a.name }, [ a.name ]);
+				var by = el('span', { 'class': 'tf-proto-bytes' });
+				r = { name: nm, bytes: by,
+					row: el('div', { 'class': 'tf-proto-row' }, [ makeIcon(a.name), nm, by ]) };
+				self.protoRows[a.name] = r;
+			}
+			setText(r.bytes, fmtBytes(a.bytes) + ' (' +
+				(total ? (100 * a.bytes / total).toFixed(1) : '0.0') + '%)');
+			self.protoListEl.appendChild(r.row);
+		});
+		Object.keys(this.protoRows).forEach(function(n) {
+			if (seen[n]) return;
+			var r = self.protoRows[n];
+			if (r.row.parentNode) r.row.parentNode.removeChild(r.row);
+			delete self.protoRows[n];
+		});
+
+		if (this.protoSumEl)
+			setText(this.protoSumEl, rows.length
+				? String(rows.length) + ' · ' + fmtBytes(sum)
+				: '');
+		this.protoEl.style.display = rows.length ? '' : 'none';
 	},
 
 	handleSave: null,
@@ -1931,6 +2187,9 @@ function injectCss() {
 		 * so it never reads as if it were an application */
 		'.tf-page .tf-isbucket .tf-app-name{color:var(--tf-dim);font-style:italic;}',
 		'.tf-page .tf-isbucket .tf-total{font-weight:400;color:var(--tf-dim);}',
+		/* the same mark on the ring's key, where a protocol bucket would otherwise
+		 * look exactly like an application */
+		'.tf-page .tf-legend-row.tf-isbucket .tf-legend-name{color:var(--tf-dim);font-style:italic;}',
 		/* nowrap on both axes: the tag is two characters wide, and letting it
 		 * wrap is what stacked it as 类 over 型 in a narrow row */
 		'.tf-page .tf-tag{flex:0 0 auto;white-space:nowrap;margin-left:.15rem;padding:.05rem .34rem;',
@@ -1944,6 +2203,25 @@ function injectCss() {
 
 		'.tf-page .tf-warn{color:#ff8f1f;}',
 		'.tf-page .tf-empty{text-align:center;color:var(--tf-dim);padding:1.2rem 0;}',
+		/* The protocol buckets, under the table rather than in it.  They are a
+		 * kind of traffic and not a product, so the block is muted and separated
+		 * by the same hairline the table header uses - visibly a footnote to the
+		 * list above, not a second page of applications. */
+		'.tf-page .tf-proto{border-top:1px solid var(--tf-line);margin-top:.35rem;',
+		'padding:.45rem .6rem .5rem;display:flex;flex-direction:column;gap:.25rem;}',
+		'.tf-page .tf-proto-cap{display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap;',
+		'font-size:.72rem;color:var(--tf-dim);letter-spacing:.04em;}',
+		'.tf-page .tf-proto-title{font-weight:600;}',
+		'.tf-page .tf-proto-sum{font-variant-numeric:tabular-nums;}',
+		'.tf-page .tf-proto-list{display:grid;gap:.15rem 1.1rem;',
+		'grid-template-columns:repeat(auto-fill,minmax(15rem,1fr));}',
+		'.tf-page .tf-proto-row{display:flex;align-items:center;gap:.45rem;min-width:0;',
+		'font-size:.8rem;color:var(--tf-dim);font-style:italic;}',
+		'.tf-page .tf-proto-name{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+		'.tf-page .tf-proto-bytes{white-space:nowrap;font-variant-numeric:tabular-nums;}',
+		'.tf-page .tf-proto-row .tf-icon,.tf-page .tf-proto-row .tf-icon-img{',
+		'width:16px;height:16px;flex:0 0 16px;border-radius:5px;box-shadow:none;}',
+		'.tf-page .tf-proto-row .tf-icon-letter{font-size:.58rem;}',
 		/* controls: every chip and field is a pill, so the toolbar reads as one
 		 * row of soft shapes rather than as mismatched theme widgets.
 		 *

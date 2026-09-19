@@ -96,6 +96,44 @@ PEAK_D=7; PEAK_U=8; PEAK_N=9
 record_peak
 ck "the recorded row has four fields"        "4"          "$(awk -F'\t' 'END{print NF}' "$STATE_DIR/peaks.tsv")"
 
+# ---- 11. an interface sample reaches the peak at the same scale -------------
+# live.sh takes its number from the WAN device counters when the collector has
+# named one, and this peak is folded from whatever live.sh publishes.  So the
+# sampler is run for real here, against a fake /proc/net/dev, and its published
+# sample is handed to peak_read: the peak has to come out in the same unit as
+# the meter beside it - bytes per second - or the page would show a maximum
+# taken from a different scale than the live rate under it.
+LIVE="$here/../root/usr/share/traffic/live.sh"
+LD="$T/live"
+mkdir -p "$LD"
+export TRAFFIC_PROC_NET_DEV="$T/netdev"
+printf 'Inter-|   Receive                                                |  Transmit\n face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed\n  eth2: 1000000 11 0 0 0 0 0 0 2000000 22 0 0 0 0 0 0\n' > "$T/netdev"
+cat > "$LD/live.env" <<'EOF'
+LAN4=192.168.1.
+LAN6=
+SELF=192.168.1.1
+SOURCE=conntrack
+TABLE=inet traffic_acct
+WAN_IF=eth2
+EOF
+# conntrack is left unreachable on purpose: the interface path must not need it
+CT="$T/absent-conntrack" STATE_DIR="$LD" sh "$LIVE" --force
+printf 'Inter-|   Receive                                                |  Transmit\n face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed\n  eth2: 1300000 11 0 0 0 0 0 0 2720000 22 0 0 0 0 0 0\n' > "$T/netdev"
+CT="$T/absent-conntrack" STATE_DIR="$LD" sh "$LIVE" --force
+
+STATE_DIR="$LD"
+PEAK_D=0; PEAK_U=0; PEAK_N=0
+peak_read
+ck "an interface sample is counted as a sample" "1" "$PEAK_N"
+# The published rate is an integer floor of delta/dt, so the check is the delta
+# the peak implies, not an equality that an odd interval would break.
+dt=$(sed -n 's/.*"dt":\([0-9]*\).*/\1/p' "$STATE_DIR/live.json")
+case "$dt" in ''|*[!0-9]*) dt=1 ;; esac
+ck "the peak keeps the interface download rate" "yes" \
+	"$([ $((PEAK_D * dt)) -le 300000 ] && [ $((300000 - PEAK_D * dt)) -lt "$dt" ] && echo yes || echo no)"
+ck "the peak keeps the interface upload rate" "yes" \
+	"$([ $((PEAK_U * dt)) -le 720000 ] && [ $((720000 - PEAK_U * dt)) -lt "$dt" ] && echo yes || echo no)"
+
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 rm -rf "$T"
 [ "$fail" -eq 0 ]

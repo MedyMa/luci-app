@@ -282,3 +282,54 @@ msgstr "总流量"
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "up"
 msgstr "上行"
+
+# --- 0.1.90: 接口计数器成为权威总量 -----------------------------------------
+# 「总计/下载/上传」现在优先取 /proc/net/dev 的接口计数（summary.iface），它不受
+# 流卸载影响；归属值（应用/客户端明细之和）只作为占比呈现，因此不能再自称「总计」。
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Attributed"
+msgstr "已归属"
+
+# 已归属占比的说明：路由器实际承载的流量里，应用与客户端归属能说出名字的部分。
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "share of the traffic the router carried that the app and client accounting could name"
+msgstr "在路由器实际承载的流量中，应用与客户端归属能说出名字的部分所占比例"
+
+# 会话视图的卸载告警：这里的总量来自接口计数（准确），明细只是其中一部分。
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "flow offloading is on: the app breakdown only accounts for part of the traffic, while the totals above come from the interface counters and are exact"
+msgstr "已开启流量卸载：应用明细只覆盖了其中一部分流量，上方总计来自接口计数器，是准确的"
+
+# 范围视图的卸载告警：归档小时来自归属层，没有对应的接口总量，所以不能说「总量准确」。
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "flow offloading is on: the accounting layer only sees part of the forwarded traffic, so the figures below are a share of what the box carried"
+msgstr "已开启流量卸载：记账层只能看到转发流量的一部分，下方数字只是实际承载量的一份占比"
+
+# 协议桶（SSL/TLS、QUIC、HTTP、DNS、STUN 等）不是应用，单独成块列出。
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Protocols (not applications)"
+msgstr "协议（非应用）"
+
+# 环形图右侧那份清单是「已归属流量」的构成（协议桶也在其中），不能沿用表头那份
+# 「应用」文案，否则 SSL/TLS 又会被读成一个应用。
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Attributed traffic"
+msgstr "已归属流量"
+
+# 热门客户端是本次运行的累计值，而旁边的字节列可能只覆盖所选范围，两个窗口不同。
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Top client (this session)"
+msgstr "热门客户端（本次运行）"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "the busiest client of each application is recorded for the current run, while the byte columns can cover the selected range"
+msgstr "每个应用的热门客户端记录的是本次运行的累计值，而字节列可能只覆盖所选时间范围，两者不是同一个统计窗口"
+
+# 合计行的热门客户端属于该行自己的窗口：会话视图看本次运行，范围视图看归档的客户端行。
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "the busiest client overall, for the current run"
+msgstr "整体最忙的客户端，统计自本次运行"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "the busiest client of the selected range, from the archived client rows"
+msgstr "所选时间范围内最忙的客户端，取自归档的客户端记录"

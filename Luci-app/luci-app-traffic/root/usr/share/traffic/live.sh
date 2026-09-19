@@ -25,6 +25,16 @@
 #     therefore report an interval delta, and the only arithmetic left here is
 #     dividing by the elapsed time.
 #
+# The source of the number is chosen per tick, not per build.  When the
+# collector has identified the WAN device, this reads that device's own counters
+# in /proc/net/dev: they sit in the driver, below the fast path a firewall takes
+# when flow offloading is on, so they count every byte whether or not offloading
+# is enabled.  Measured on a real router with flow_offloading=1, the conntrack
+# layer had seen 147 MiB in the window in which the WAN device carried 2579 MiB
+# (5.7%) - and a peak taken from a layer that blind is a peak of the wrong
+# quantity.  When there is no WAN device to read, the conntrack/nft paths below
+# are unchanged and still in charge.
+#
 # Cost control: the page tells rpcd it is open by polling getLive, and rpcd
 # writes that timestamp here.  Without a fresh timestamp this script exits after
 # two stat() calls, so a router nobody is watching pays nothing.
@@ -40,11 +50,21 @@
 
 STATE_DIR=${STATE_DIR:-/tmp/traffic}
 CT=${CT:-/proc/net/nf_conntrack}
+# Where the authoritative device counters come from.  Overridable so the offline
+# suite can drive the interface path against a file it owns, with no device and
+# no root - the same reason CT is a variable.  The environment wins over the
+# config, which is the convention the collector's own detection is written to.
+NETDEV=${TRAFFIC_PROC_NET_DEV:-/proc/net/dev}
 WATCH="$STATE_DIR/live.watch"
 ENVF="$STATE_DIR/live.env"
 STATE="$STATE_DIR/live.flows"
 AT="$STATE_DIR/live.at"
 CUR="$STATE_DIR/live.cur"
+# The previous absolute reading of the WAN device, one line per direction.  It
+# is not the collector's wan.abs: this runs ten times as often as the collector,
+# and two writers on one baseline would hand each other a delta covering the
+# wrong interval.
+WANABS="$STATE_DIR/live.wan"
 OUT="$STATE_DIR/live.json"
 WATCH_AGE=${LIVE_WATCH_AGE:-60}
 
@@ -56,24 +76,29 @@ case "$now" in ''|*[!0-9]*) now=0 ;; esac
 
 if [ "$force" != "1" ]; then
 	seen=
-	read -r seen < "$WATCH" 2>/dev/null
+	# Tested before the read, not left to the redirect: a failed redirection is
+	# reported by the shell itself, so the 2>/dev/null beside the read does not
+	# silence it, and this runs once a second.  The file only exists after rpcd
+	# has been polled once, so a router with the page closed would log a line a
+	# second about nothing.
+	[ -r "$WATCH" ] && read -r seen < "$WATCH"
 	case "$seen" in ''|*[!0-9]*) seen=0 ;; esac
 	# nobody is looking, so there is nothing to publish
 	[ "$now" -gt 0 ] && [ $((now - seen)) -le "$WATCH_AGE" ] || exit 0
 fi
 
 # What the collector detected on its last round: the LAN prefixes, the router
-# addresses and which counter layer is authoritative.  The collector writes this
-# because the detection is not trivial (it reads the network config, the bridge
-# layout and the firewall), and a second copy of it would drift away from the
-# first.
+# addresses, which counter layer is authoritative and which device the WAN
+# actually is.  The collector writes this because the detection is not trivial
+# (it reads the network config, the bridge layout and the firewall), and a
+# second copy of it would drift away from the first.
 [ -f "$ENVF" ] || exit 0
-# One pass over the file instead of five sed+head pairs, which matters here
+# One pass over the file instead of six sed+head pairs, which matters here
 # because this runs once a second and every process spawn is charged to the tick
 # that the meter is timed against.  publish_live_env writes each key exactly
 # once.  SELF holds a space-separated address list, and it survives because the
 # separator below is `=` alone.
-LAN4=; LAN6=; SELF=; SOURCE=; TABLE=
+LAN4=; LAN6=; SELF=; SOURCE=; TABLE=; WAN_IF=
 while IFS='=' read -r key value; do
 	case "$key" in
 	LAN4)   LAN4=$value ;;
@@ -81,9 +106,66 @@ while IFS='=' read -r key value; do
 	SELF)   SELF=$value ;;
 	SOURCE) SOURCE=$value ;;
 	TABLE)  TABLE=$value ;;
+	WAN_IF) WAN_IF=$value ;;
 	esac
 done < "$ENVF"
 TABLE=${TABLE:-inet traffic_acct}
+
+# ---------------------------------------------------------- device counters
+# The preferred source: the WAN device's own counters.  They are read in the
+# driver, below the forwarding fast path, so they keep counting while flow
+# offloading hands established flows past netfilter entirely - measured on a
+# real router, conntrack had seen 147 MiB in the window in which the WAN device
+# carried 2579 MiB.  rx is what the device received (download) and tx is what it
+# sent (upload), and the caller divides the delta by the real elapsed time
+# exactly as it does for the other two paths.
+sample_iface() {
+	[ -n "$WAN_IF" ] || return 1
+	[ -r "$NETDEV" ] || return 1
+	local cur rx tx prx ptx dd du
+	# Field 1 is the device name with its colon, field 2 is rx_bytes and field
+	# 10 is tx_bytes.  No match means the device is not in the table at all - a
+	# WAN that is down, or a name the collector derived from a route that has
+	# since gone - and the caller falls back to a counter layer instead.
+	cur=$(awk -v dev="$WAN_IF" '
+		$1 == dev ":" { print $2 "\t" $10; found = 1; exit }
+		END { if (!found) exit 1 }' "$NETDEV" 2>/dev/null) || return 1
+	rx=; tx=
+	read -r rx tx <<EOF
+$cur
+EOF
+	# A reading that is not a number is a broken file, not traffic: refuse it
+	# rather than publish something computed from nothing.
+	case "$rx" in ''|*[!0-9]*) return 1 ;; esac
+	case "$tx" in ''|*[!0-9]*) return 1 ;; esac
+	# Two lines, read with two reads rather than with a literal tab in a
+	# pattern - a tab in this file is exactly what an editor turns into spaces
+	# without anyone noticing.
+	prx=; ptx=
+	if [ -s "$WANABS" ]; then
+		{
+			read -r prx
+			read -r ptx
+		} < "$WANABS"
+	fi
+	# These are absolute counters since the device came up, so the delta is
+	# this interval and the file holds the latest reading rather than a sum.
+	# Atomic, like every other file written here: an interrupted sample must
+	# not leave half a baseline behind.
+	printf '%s\n%s\n' "$rx" "$tx" > "$WANABS.new" && mv -f "$WANABS.new" "$WANABS"
+	case "$prx" in ''|*[!0-9]*) prx= ;; esac
+	case "$ptx" in ''|*[!0-9]*) ptx= ;; esac
+	# No usable previous reading means this sample only establishes the
+	# baseline, the same first-sample rule the other two paths follow.
+	[ -n "$prx" ] && [ -n "$ptx" ] || { printf '0\t0\t0\n'; return 0; }
+	dd=$((rx - prx)); du=$((tx - ptx))
+	# The device was recreated (a pppoe session torn down and rebuilt, a veth
+	# replaced) and its counters restarted at zero.  Negative traffic is not a
+	# reading.
+	[ "$dd" -lt 0 ] && dd=0
+	[ "$du" -lt 0 ] && du=0
+	printf '1\t%s\t%s\n' "$dd" "$du"
+}
 
 # ---------------------------------------------------------------- nft counters
 # One counter per client per direction, so these are absolute counters since the
@@ -208,9 +290,25 @@ EOF
 	printf '1\t%s\t%s\n' "$td" "$tu"
 }
 
-if [ "$SOURCE" = "nft" ]; then
+# The interface counters are the authoritative source whenever the collector has
+# identified a WAN device, so they are tried first and a counter layer is the
+# fallback.  Both counter-layer baselines are dropped while this path is in
+# charge.  Left alone they would age for as long as the interface stays usable,
+# and the first sample after the device goes away would measure the whole gap as
+# one interval: conntrack would find every established flow unknown and credit
+# each one with its whole lifetime, and the absolute nft counters would report
+# everything the table gained meanwhile - the same fictional spike from either
+# side.  Dropping them makes that first fallback sample a baseline instead, the
+# rule the guard in sample_ct above already follows for a first sample.
+if cur=$(sample_iface); then
+	SRC=iface
+	[ -e "$STATE" ] && rm -f "$STATE"
+	[ -e "$CUR" ] && rm -f "$CUR"
+elif [ "$SOURCE" = "nft" ]; then
+	SRC=$SOURCE
 	cur=$(sample_nft) || exit 0
 else
+	SRC=$SOURCE
 	cur=$(sample_ct) || exit 0
 fi
 [ -n "$cur" ] || exit 0
@@ -233,21 +331,25 @@ case "$up"    in ''|*[!0-9]*) up=0    ;; esac
 # sample, which is a second only when nothing delayed the tick; dividing by the
 # real elapsed time is what keeps a slow round from inflating the rate.
 prev_at=
-read -r prev_at < "$AT" 2>/dev/null
+# Tested before the read for the same reason as the watch file above: this runs
+# once a second and the first tick has no file yet.
+[ -r "$AT" ] && read -r prev_at < "$AT"
 case "$prev_at" in ''|*[!0-9]*) prev_at=0 ;; esac
 printf '%s\n' "$now" > "$AT.new" && mv -f "$AT.new" "$AT"
 dt=$((now - prev_at))
 [ "$dt" -lt 1 ] && dt=1
 
 if [ "$ready" != "1" ]; then
-	printf '{"at":%s,"bps_down":0,"bps_up":0,"source":"%s","ready":0}\n' "$now" "$SOURCE" > "$OUT.new" \
+	printf '{"at":%s,"bps_down":0,"bps_up":0,"source":"%s","ready":0}\n' "$now" "$SRC" > "$OUT.new" \
 		&& mv -f "$OUT.new" "$OUT"
 	exit 0
 fi
 
 # Bytes in the interval divided by the seconds in it, as integers: the page
-# formats them, so the two cannot disagree about what the number means.
+# formats them, so the two cannot disagree about what the number means.  The
+# unit does not depend on which source produced the delta: all three report
+# bytes since the previous sample.
 printf '{"at":%s,"bps_down":%s,"bps_up":%s,"source":"%s","ready":1,"dt":%s}\n' \
-	"$now" "$((down / dt))" "$((up / dt))" "$SOURCE" "$dt" > "$OUT.new" \
+	"$now" "$((down / dt))" "$((up / dt))" "$SRC" "$dt" > "$OUT.new" \
 	&& mv -f "$OUT.new" "$OUT"
 exit 0

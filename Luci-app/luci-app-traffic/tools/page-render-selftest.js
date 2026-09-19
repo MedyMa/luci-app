@@ -91,7 +91,11 @@ function freshView(){
            rowsEl:E('tbody'), donutEl:donutEl, donutFigEl:donutFigEl, donutTotalEl:E('div'),
            legendEl:E('div'), totalEl:E('div'), diagEl:E('div'), diagCardEl:E('div'),
            statusEl:E('div'), chartEl:E('div'), chartNote:E('span'),
-           rateDown:E('b'), rateUp:E('b') });
+           rateDown:E('b'), rateUp:E('b'),
+           // the protocol-bucket block under the table and the hero caption, which
+           // render() builds and draw() rewrites; these tests drive draw directly
+           protoEl:E('div'), protoListEl:E('div'), protoSumEl:E('span'),
+           heroCapEl:E('div') });
 }
 const items=[{name:'YouTube',down:1e6,up:1e5,bytes:11e5,clients:3,top:'192.168.2.5',top_bytes:5e5},
              {name:'Google',down:9e5,up:9e4,bytes:99e4,clients:5,top:'192.168.2.7',top_bytes:4e5},
@@ -425,6 +429,186 @@ chk(/data:image\/svg\+xml/.test(css), '用了内联 SVG 箭头（无额外请求
 const darkRules=(css.match(/\.dark \.tf-page \.tf-range/g)||[]).length;
 chk(darkRules>=1, '深色模式箭头单独覆盖');
 chk(!/\.tf-page, \[data-darkmode[^{]*\.tf-range/.test(css), '深色后代选择器没有错误地只作用于列表最后一项');
+
+console.log('=== 权威总量：有 iface 用接口计数，无 iface 回退归属值 ===');
+// 页面此前把各应用归属字节的求和当作「总计」显示。开流卸载时 netfilter/conntrack
+// 被绕过，那个求和只有实际承载量的百分之几（实测 147 MiB vs 2579 MiB），而页面上
+// 没有任何东西说明这一点。采集器现在把 /proc/net/dev 的接口计数放进 summary.iface，
+// 那是开不开卸载都准确的会话总量；没有该字段时必须原样回退到 totals。
+const TOT={down:2.0e8,up:5.0e7,router:1e7,client_count:7,exact:10,bucket:5,residual:3};
+const IFACE={dev:'eth2',down:3.0e9,up:1.0e9};
+const ATTR=TOT.down+TOT.up, CARRIED=IFACE.down+IFACE.up;
+const sharePct=(100*ATTR/CARRIED).toFixed(1)+'%';
+const sumOf=(o)=>Object.assign({collected_at:1700000000,interval:10,flows:10,dnsmap_lines:10,
+  pending:0,acct:1,version:'0.1.90-r1',hour:'2026-09-17T10',totals:TOT,
+  clients:[{name:'Mac',ip:'192.168.2.21',bytes:1.5e8}],apps:[]},o||{});
+
+const vIf=mkView({});
+view.renderLive.call(vIf, sumOf({iface:IFACE,offload:1}));
+chk(flat(vIf.totalEl)==='3.73 GiB', `总计取接口计数而不是归属值（${flat(vIf.totalEl)}）`);
+chk(flat(vIf.grandRow.cells.down)==='2.79 GiB' && flat(vIf.grandRow.cells.up)==='954 MiB',
+    `总行下载/上传也取接口计数（${flat(vIf.grandRow.cells.down)} / ${flat(vIf.grandRow.cells.up)}）`);
+chk(flat(vIf.heroCapEl)==='total', `总计确实来自接口时标题才是「总计」（${flat(vIf.heroCapEl)}）`);
+// 环形图的读数与它的扇形同源（归属值），不能跟着总量一起变成接口计数。标题直接
+// 取自 render() 真正建出来的节点，而不是测试自己搭的替身。
+const pageIf=view.render.call(Object.assign(Object.create(view),freshView()),{});
+const dcap=[]; walk(pageIf,n=>{ if((n.attrs||{}).class==='tf-donut-cap') dcap.push(n); });
+chk(flat(vIf.donutTotalEl)==='238 MiB' && dcap.length===1 && flat(dcap[0])==='Attributed',
+    `环形图中心仍是归属值并标注为已归属（${flat(vIf.donutTotalEl)} / ${flat(dcap[0])}）`);
+// 环形图右侧的清单标题不能沿用表头那份「应用」
+const lcap=[]; walk(pageIf,n=>{ if((n.attrs||{}).class==='tf-legend-cap') lcap.push(n); });
+chk(lcap.length===1 && flat(lcap[0])==='Attributed traffic',
+    `环形图清单标题是「已归属流量」而不是「应用」（${flat(lcap[0])}）`);
+// 已归属 X%：本次运行里归属层能说出名字的流量占实际承载的比例
+chk(txt(vIf.diagEl).indexOf('Attributed')>=0 && txt(vIf.diagEl).indexOf(sharePct)>=0,
+    `诊断行给出已归属占比 ${sharePct}（${txt(vIf.diagEl).trim()}）`);
+const aRow=(vIf.diagRows||[]).filter(r=>r.k&&r.k._text==='Attributed')[0];
+chk(aRow && /tf-warn/.test(aRow.v.className), '占比过低时该行是告警色（不是静默）');
+// offload=1 现在是采集器直接报的条件；此前门控在 acct_offload 上，而 shipped 自动
+// 模式永远不会给它赋值，所以这条告警在目标路由器上根本不可能出现
+chk(txt(vIf.diagEl).indexOf('flow offloading is on')>=0 &&
+    txt(vIf.diagEl).indexOf('interface counters')>=0,
+    'offload=1 时会话视图告警且说明总量来自接口计数');
+const vIf0=mkView({});
+view.renderLive.call(vIf0, sumOf({iface:IFACE,offload:0}));
+chk(txt(vIf0.diagEl).indexOf('flow offloading is on')===-1, 'offload=0 时不告警（不是无条件显示）');
+
+const vNo=mkView({});
+view.renderLive.call(vNo, sumOf({}));
+chk(flat(vNo.totalEl)==='238 MiB' && flat(vNo.grandRow.cells.total)==='238 MiB',
+    `没有 iface 时回退到 totals（${flat(vNo.totalEl)}）`);
+// 边界：iface 存在但计数全为 0（刚开机/刚重置）以及 iface 里是垃圾值，都不能变成 NaN
+const vZero=mkView({});
+view.renderLive.call(vZero, sumOf({iface:{dev:'eth2',down:0,up:0}}));
+chk(flat(vZero.totalEl)==='0 B' && flat(vZero.totalEl).indexOf('NaN')===-1,
+    `计数为 0 时是 0 B 而不是 NaN（${flat(vZero.totalEl)}）`);
+chk(txt(vZero.diagEl).indexOf('Attributed')===-1, '承载量为 0 时不给出除零的占比');
+const vJunk=mkView({});
+view.renderLive.call(vJunk, sumOf({iface:{dev:'eth2',down:'x',up:null}}));
+chk(flat(vJunk.totalEl)==='238 MiB' && flat(vJunk.totalEl).indexOf('NaN')===-1,
+    `iface 是非法值时回退到 totals（${flat(vJunk.totalEl)}）`);
+chk(flat(vNo.heroCapEl)==='Attributed' && flat(vNo.grandRow.label)==='Attributed',
+    `归属值不再自称「总计」（${flat(vNo.heroCapEl)} / ${flat(vNo.grandRow.label)}）`);
+chk(txt(vNo.diagEl).indexOf('Attributed')===-1 && flat(vNo.donutTotalEl)==='238 MiB',
+    '没有 iface 时不编造已归属占比，环形图读数不变');
+
+console.log('=== 实时速率：优先接口增量，且不跨来源相减 ===');
+const rIf=mkView({});
+view.updateRate.call(rIf, sumOf({iface:IFACE}));
+view.updateRate.call(rIf, sumOf({collected_at:1700000010,
+  iface:{dev:'eth2',down:IFACE.down+20480,up:IFACE.up+1024}}));
+chk(/KiB\/s/.test(flat(rIf.rateDown)) && /B\/s/.test(flat(rIf.rateUp)),
+    `速率由接口增量算出（${flat(rIf.rateDown)} / ${flat(rIf.rateUp)}）`);
+// 接口计数不变而归属值暴涨：若速率还从 totals 取，这里会读出一个巨大的假速率
+const rMix=mkView({});
+view.updateRate.call(rMix, {collected_at:1700000000,iface:{down:1000,up:100},totals:{down:0,up:0}});
+view.updateRate.call(rMix, {collected_at:1700000010,iface:{down:1000,up:100},totals:{down:1e9,up:1e8}});
+chk(flat(rMix.rateDown)==='0 B/s' && flat(rMix.rateUp)==='0 B/s',
+    `接口计数没动就是 0（${flat(rMix.rateDown)} / ${flat(rMix.rateUp)}）`);
+
+console.log('=== 协议桶不再冒充应用 ===');
+// SSL/TLS、QUIC、HTTP、DNS、STUN 这些「应用名」其实是归属的兜底标签，占了归属流量
+// 的三分之一左右；列在表头写着「应用」的表里，读者会以为有个叫 QUIC 的 App。
+const PICKS=[{name:'YouTube',down:1e6,up:1e5,clients:3,top:'192.168.2.5',top_bytes:5e5},
+             {name:'QUIC',down:6e5,up:1e4,proto:1},
+             {name:'DNS',down:2e5,up:1e4,proto:1}];
+const vP=mkView({});
+view.renderLive.call(vP, sumOf({apps:PICKS,clients:[{name:'Mac',ip:'192.168.2.21',bytes:1e6}]}));
+chk(!(vP.rowCache||{})['QUIC'] && !(vP.rowCache||{})['DNS'],
+    `协议桶不再是应用表里的行（${Object.keys(vP.rowCache||{}).join('|')}）`);
+chk(!!vP.protoRows && !!vP.protoRows['QUIC'] && !!vP.protoRows['DNS'] && !!vP.rowCache['YouTube'],
+    '协议桶归到独立的协议区块，真应用仍在表里');
+chk(flat(vP.protoListEl).indexOf('QUIC')>=0 && flat(vP.protoListEl).indexOf('DNS')>=0 &&
+    txt(vP.rowsEl).indexOf('QUIC')===-1,
+    `协议区块列出协议桶，应用表里没有它（协议区：${flat(vP.protoListEl).trim()}）`);
+chk(vP.protoEl.style.display==='', '有协议桶时协议区块可见');
+chk((boxes(vP.statusEl).filter(b=>b.cap==='Apps')[0]||{}).val==='1',
+    `「应用」格只数应用（${(boxes(vP.statusEl).filter(b=>b.cap==='Apps')[0]||{}).val}）`);
+// 环形图的清单同样是「已归属流量」的构成，协议桶在里面也要带桶的标记，
+// 否则图上那份清单又会把 QUIC 读成应用
+const legProto=(vP.legendCache||{})['QUIC'];
+chk(!!legProto && /tf-isbucket/.test((legProto.row.attrs||{}).class||''),
+    `环形图清单里协议桶带桶标记（${legProto&&legProto.row.attrs.class}）`);
+const vP0=mkView({});
+view.renderLive.call(vP0, sumOf({apps:[{name:'YouTube',down:1e6,up:1e5}]}));
+chk(!!vP0.protoEl && vP0.protoEl.style.display==='none' &&
+    Object.keys(vP0.protoRows||{}).length===0, '没有协议桶时整个区块隐藏');
+// 归档的小时行只有名字、没有 proto 标记，同样不能把 QUIC 当应用
+const vPH=mkView({});
+view.renderHourly.call(vPH,{hours:[{hour:'h0',apps:[{name:'YouTube',down:36000,up:18000},
+  {name:'QUIC',down:1000,up:500}],clients:[],router:0}]});
+chk(!(vPH.rowCache||{})['QUIC'] && !!(vPH.protoRows||{})['QUIC'],
+    '范围视图按名字识别协议桶，同样不进应用表');
+
+console.log('=== 热门客户端：跨窗口的荒谬百分比不再印出 ===');
+// 归档里的 apptop 存的是会话累计的客户端字节，而同一行的小时字节只是那一小时；
+// 两者相除就是 114.7%/2458% 这种「占比」的来源。
+const vT=mkView({});
+view.draw.call(vT,[{name:'YouTube',down:1e6,up:0,bytes:1e6,clients:2,top:'192.168.2.9',top_bytes:5e8}],
+  {total:1e6,down:1e6,up:0,topText:'—',clientCount:2});
+chk(/%/.test(flat(vT.rowCache['YouTube'].cells.top))===false &&
+    flat(vT.rowCache['YouTube'].cells.top).indexOf('192.168.2.9')>=0,
+    `客户端字节大于本行字节时不再给出比例（${flat(vT.rowCache['YouTube'].cells.top)}）`);
+const vT2=mkView({});
+view.draw.call(vT2,[{name:'YouTube',down:1e6,up:0,bytes:1e6,clients:2,top:'192.168.2.9',top_bytes:5e5}],
+  {total:1e6,down:1e6,up:0,topText:'—',clientCount:2});
+chk(/\(50\.0%\)/.test(flat(vT2.rowCache['YouTube'].cells.top)),
+    `同一窗口内的比例照常给出（${flat(vT2.rowCache['YouTube'].cells.top)}）`);
+const vG=mkView({});
+view.renderLive.call(vG, sumOf({clients:[{name:'Mac',ip:'192.168.2.21',bytes:4e8}]}));
+chk(/%/.test(flat(vG.grandRow.cells.top))===false && flat(vG.grandRow.cells.top).indexOf('Mac')>=0,
+    `总行的客户端占比超过 100% 时同样不印（${flat(vG.grandRow.cells.top)}）`);
+const vG2=mkView({});
+view.renderLive.call(vG2, sumOf({clients:[{name:'Mac',ip:'192.168.2.21',bytes:1.5e8}]}));
+chk(/\(60\.0%\)/.test(flat(vG2.grandRow.cells.top)),
+    `总行正常占比保留（${flat(vG2.grandRow.cells.top)}）`);
+// 合计行的热门客户端属于该行自己的窗口，单元格自己说明是哪一个
+chk(String((vG2.grandRow.cells.top.attrs||{}).title||'').indexOf('current run')>=0,
+    `会话视图合计行的客户端标注为本次运行（${(vG2.grandRow.cells.top.attrs||{}).title}）`);
+
+console.log('=== 会话/范围分界：范围视图绝不借用会话 iface ===');
+// iface 是 /proc/net/dev 的会话累计，归档小时来自归属层（roll_hour 存的是
+// totals.tsv），所以范围视图没有对应的接口总量。把会话总量放到 7 天标签下会是
+// 一个新造的错误数字——正是这次要修的这类问题。
+const RSU=sumOf({iface:IFACE,offload:1});
+const vR=mkView({summary:RSU});
+view.renderHourly.call(vR,{hours:[{hour:'h0',apps:[{name:'YouTube',down:36000,up:18000},
+  {name:'QUIC',down:1000,up:500}],clients:[{ip:'192.168.2.5',bytes:50000}],router:0}]});
+view.drawStatus.call(vR, RSU, vR.lastItems||[]);
+chk(flat(vR.totalEl)==='54.2 KiB' && flat(vR.totalEl)!=='3.73 GiB',
+    `范围视图用本范围的归属字节（${flat(vR.totalEl)}）`);
+chk(flat(vR.heroCapEl)==='Attributed' && flat(vR.grandRow.label)==='Attributed',
+    `范围视图的总量标注为已归属（${flat(vR.heroCapEl)} / ${flat(vR.grandRow.label)}）`);
+chk(txt(vR.diagEl).indexOf('Attributed')===-1,
+    `范围视图不显示会话级的已归属占比（${txt(vR.diagEl).trim()}）`);
+chk(txt(vR.diagEl).indexOf('flow offloading is on')>=0 &&
+    txt(vR.diagEl).indexOf('interface counters')===-1,
+    '范围视图的卸载告警不说总量来自接口计数');
+chk(String((vR.grandRow.cells.top.attrs||{}).title||'').indexOf('selected range')>=0,
+    `范围视图合计行的客户端标注为所选范围（${(vR.grandRow.cells.top.attrs||{}).title}）`);
+
+console.log('=== 文案：页面里的 _() 都有中文条目 ===');
+// 新文案必须同时进 catalogs，否则中文界面上会露出英文 msgid
+function loadCatalog(file){
+  const map={}; const unesc=s=>s.replace(/\\n/g,'\n').replace(/\\"/g,'"').replace(/\\\\/g,'\\');
+  const unq=s=>{ const m=/^\s*"([\s\S]*)"\s*$/.exec(s); return m?m[1]:''; };
+  let id=null,str=null,mode=null;
+  const put=()=>{ if(id&&str) map[unesc(id)]=unesc(str); id=null; str=null; mode=null; };
+  for(const raw of fs.readFileSync(file,'utf8').split(/\r?\n/)){
+    const line=raw.trim();
+    if(!line||line[0]==='#') continue;
+    if(line.startsWith('msgid ')){ put(); id=unq(line.slice(6)); mode='id'; }
+    else if(line.startsWith('msgstr ')){ str=unq(line.slice(7)); mode='str'; }
+    else if(line[0]==='"'){ if(mode==='id') id+=unq(line); else if(mode==='str') str+=unq(line); }
+  }
+  put(); return map;
+}
+const PO=loadCatalog(path.join(__dirname,'..','translations','zh_Hans','traffic.po'));
+const ids=new Set();
+for(const m of src.matchAll(/_\(\s*'([^']*)'/g)) ids.add(m[1]);
+const missing=[...ids].filter(s=>s&&PO[s]===undefined);
+chk(ids.size>40, `页面用了 ${ids.size} 条 _() 文案`);
+chk(missing.length===0, `每条 _() 文案都在 traffic.po 里（缺 ${missing.length}${missing.length?': '+missing.slice(0,4).join(' | '):''}）`);
 
 console.log(fail?`\n  ${fail} 项失败`:'\n  页面渲染验证全部通过');
 process.exit(fail?1:0);
