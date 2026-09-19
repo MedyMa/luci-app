@@ -2324,7 +2324,7 @@ ChinaMobile	andfx.cn	S
 ChinaMobile	andfx.net	S
 Google Firebase	android.apis.google.com	H
 Google Play	android.clients.google.com	H
-Google	android.com	S
+Android	android.com	S
 Android	android.googlesource.com	H
 Huawei	androidga.com	S
 Google	androidify.com	S
@@ -3454,7 +3454,7 @@ Microsoft	azure-mobile.net	S
 Microsoft	azure-sphere.com	S
 Microsoft	azure-test.net	S
 Microsoft	azure.cn	S
-Microsoft	azure.com	S
+Microsoft Azure	azure.com	S
 Microsoft Azure	azure.microsoft.com	H
 Microsoft	azure.net	S
 Microsoft	azurecomcdn.net	S
@@ -3559,20 +3559,20 @@ Baidu	baidu.hk	S
 Baidu	baidu.mobi	S
 Baidu	baiduads.com	S
 Baidu	baiduapp.com	S
-Baidu	baidubce.cn	S
-Baidu	baidubce.com	S
-Baidu	baidubce.com.cn	S
-Baidu	baidubce.net.cn	S
-Baidu	baidubcr.com	S
-Baidu	baidubos.com	S
-Baidu	baiducloudapi.com	S
+Baidu AI Cloud	baidubce.cn	S
+Baidu AI Cloud	baidubce.com	S
+Baidu AI Cloud	baidubce.com.cn	S
+Baidu AI Cloud	baidubce.net.cn	S
+Baidu AI Cloud	baidubcr.com	S
+Baidu AI Cloud	baidubos.com	S
+Baidu AI Cloud	baiducloudapi.com	S
 Baidu	baiducontent.com	S
 Baidu	baiduhui.com	S
 LanZouYun	baidupan.com	S
-Baidu	baidupcs.cn	S
-Baidu	baidupcs.com	S
-Baidu	baidupcs.com.cn	S
-Baidu	baidupcs.net	S
+Baidu Netdisk	baidupcs.cn	S
+Baidu Netdisk	baidupcs.com	S
+Baidu Netdisk	baidupcs.com.cn	S
+Baidu Netdisk	baidupcs.net	S
 Baidu	baidustatic.com	S
 Baidu	baiduux.com	S
 Baidu	baiduwaf.com	S
@@ -3580,13 +3580,13 @@ Baidu	baiduwebgame.com	S
 Baidu	baiduxiaodai.cn	S
 Baidu	baiduxiaodai.com	S
 Baidu	baiduyangguang.org	S
-Baidu	baiduyuncdn.cn	S
-Baidu	baiduyuncdn.com	S
-Baidu	baiduyuncdn.net	S
-Baidu	baiduyundns.cn	S
-Baidu	baiduyundns.com	S
-Baidu	baiduyundns.net	S
-Baidu	baiduyunwaf.com	S
+Baidu AI Cloud	baiduyuncdn.cn	S
+Baidu AI Cloud	baiduyuncdn.com	S
+Baidu AI Cloud	baiduyuncdn.net	S
+Baidu AI Cloud	baiduyundns.cn	S
+Baidu AI Cloud	baiduyundns.com	S
+Baidu AI Cloud	baiduyundns.net	S
+Baidu AI Cloud	baiduyunwaf.com	S
 Baidu	baifae.com	S
 BaiFenDian	baifendian.com	S
 Baidu	baifubao.com	S
@@ -3760,7 +3760,7 @@ Baidu	bce-cdn.cn	S
 Baidu	bce-cdn.com	S
 Baidu	bce-cdn.net	S
 Baidu	bceapp.com	S
-Baidu	bcebos.com	S
+Baidu AI Cloud	bcebos.com	S
 Baidu	bcedns.cn	S
 Baidu	bcedns.com	S
 Baidu	bcedns.net	S
@@ -3771,7 +3771,7 @@ Baidu	bceidaas.com	S
 Baidu	bceimg.cn	S
 Baidu	bceimg.com	S
 Baidu	bcelive.com	S
-Baidu	bcevod.com	S
+Baidu AI Cloud	bcevod.com	S
 Baidu	bcewaf.com	S
 Tencent	bcfmglobal.com	S
 Baidu	bchdemo.site	S
@@ -6334,7 +6334,7 @@ Xiaoheihe	chat.top	S
 Chatango	chatango.com	S
 Yuewen	chatdrama.cn	S
 Yuewen	chatdrama.net	S
-OpenAI	chatgpt.com	S
+ChatGPT	chatgpt.com	S
 OpenAI	chatgpt.livekit.cloud	S
 OpenAI	chatgpt.site	S
 DtDNS	chatnook.com	S
@@ -6677,7 +6677,7 @@ Supercell	clashroyale.com	S
 Supercell	clashroyaleapp.com	S
 Nike	classicnike.com	S
 Anthropic	clau.de	S
-Anthropic	claude.ai	S
+Claude	claude.ai	S
 Anthropic	claude.com	S
 Anthropic	claudemcpclient.com	S
 Anthropic	claudemcpcontent.com	S
@@ -12795,7 +12795,7 @@ Google	googletraveladservices.com	S
 Google	googleusercontent.com	S
 Google	googlevads-cn.com	S
 Google	googleventures.com	S
-Google	googlevideo.com	S
+YouTube	googlevideo.com	S
 YouTube	googlevideo.com	H
 Google	googlezip.net	S
 Google	googlr.com	S
@@ -20357,7 +20357,7 @@ Microsoft	office.com	S
 Microsoft	office.net	S
 Microsoft	office365-net.cn	S
 Microsoft	office365.cn	S
-Microsoft	office365.com	S
+Microsoft 365	office365.com	S
 Microsoft	office365love.com	S
 Microsoft	office365tw.com	S
 Microsoft	officecdn-microsoft-com.akamaized.net	S
@@ -20462,7 +20462,7 @@ Microsoft	onecollector.cloudapp.aria	S
 Mastercard	onedinesfree.com	S
 Microsoft	onedrive.co	S
 Microsoft	onedrive.co.uk	S
-Microsoft	onedrive.com	S
+OneDrive	onedrive.com	S
 Microsoft	onedrive.eu	S
 OneDrive	onedrive.live.com	S
 Microsoft	onedrive.net	S
@@ -20793,7 +20793,7 @@ Microsoft	outingsapp.com	S
 Beats	outletbeatsshop.com	S
 Nike	outletnike.com	S
 Microsoft	outlook.cn	S
-Microsoft	outlook.com	S
+Outlook	outlook.com	S
 Microsoft	outlookgroups.ms	S
 Microsoft	outlookmobile.com	S
 Kuaishou	ovaqrzcw.com	S
@@ -23836,7 +23836,7 @@ Progress	sharefile.com	S
 Hugecore	shareintelli.com	S
 Bilibili	sharejoytech.com	S
 Microsoft	sharepoint.cn	S
-Microsoft	sharepoint.com	S
+OneDrive	sharepoint.com	S
 OneDrive	sharepointonline.com	S
 Zhangtao	sharesdk.cn	S
 Sharethis	sharethis.com	S
@@ -24160,7 +24160,7 @@ Sky	skyoceanrescue.com	S
 Sky	skyoceanrescue.de	S
 Sky	skyoceanrescue.it	S
 Microsoft	skype-edf.akadns.net	S
-Microsoft	skype.com	S
+Skype	skype.com	S
 Microsoft	skype.net	S
 Microsoft	skypeassets.com	S
 Microsoft	skypeassets.net	S
@@ -25676,7 +25676,7 @@ Tbank Ru	t-technologies.ru	S
 Tencent	t-tlearning.com	S
 Tbank Ru	t-tolk.ru	S
 Sina	t.cn	S
-Twitter	t.co	S
+X (Twitter)	t.co	S
 Tbank Ru	t.finance	S
 Telegram	t.me	S
 Sohu	t.sohu	S
@@ -27488,7 +27488,7 @@ Sina	twgame.com.cn	S
 Twilio	twilio.com	S
 Twilio	twilio.jp	S
 X (Twitter)	twimg.co	S
-Twitter	twimg.com	S
+X (Twitter)	twimg.com	S
 X (Twitter)	twimg.org	S
 Epic Games	twinmotion.com	S
 Salesforce	twinprime.com	S
@@ -27500,7 +27500,7 @@ Twitch	twitchcon.com	S
 Twitch	twitchsvc.net	S
 X (Twitter)	twitpic.com	S
 X (Twitter)	twitter.biz	S
-Twitter	twitter.com	S
+X (Twitter)	twitter.com	S
 X (Twitter)	twitter.jp	S
 X (Twitter)	twitter.map.fastly.net	S
 X (Twitter)	twittercommunity.com	S
@@ -30245,7 +30245,7 @@ Alibaba	wztianshanfs.com	S
 360	wztsy.com	S
 Grok	x.ai	S
 Godaddy	x.co	S
-Twitter	x.com	S
+X (Twitter)	x.com	S
 Google	x.company	S
 Google	x.team	S
 Kuaishou	x1047xv8b4.com	S
@@ -30298,7 +30298,7 @@ Xbox	xboxab.net	S
 Xbox	xboxgamepass.com	S
 Xbox	xboxgamestudios.com	S
 Xbox	xboxlive.cn	S
-Microsoft	xboxlive.com	S
+Xbox Live	xboxlive.com	S
 Xbox Live	xboxlive.com	H
 Xbox	xboxone.co	S
 Xbox	xboxone.com	S

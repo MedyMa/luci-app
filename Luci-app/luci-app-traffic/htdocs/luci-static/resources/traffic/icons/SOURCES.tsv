@@ -77,8 +77,9 @@ bmw.svg	BMW	iconify:simple-icons	bmw	see the collection licence	https://icon-set
 bbc.svg	BBC	iconify:simple-icons	bbc	see the collection licence	https://icon-sets.iconify.design/simple-icons/	
 bahamut.svg	Bahamut	iconify:token	bahamut	see the collection licence	https://icon-sets.iconify.design/token/	
 baidu.svg	Baidu	dashboard-icons	baidu	see upstream LICENSE	https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE	
+baidu-ai-cloud.svg	Baidu AI Cloud	local	local	supplied by the user, shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
 baidu-zhidao.svg	Baidu Zhidao	dashboard-icons	baidu	see upstream LICENSE	https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE	
-baidu-netdisk.svg	Baidu Netdisk	iconify:arcticons	baidu-netdisk	see the collection licence	https://icon-sets.iconify.design/arcticons/	
+baidu-netdisk.svg	Baidu Netdisk	local	local	supplied by the user, shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
 baidu-map.svg	Baidu Map	iconify:arcticons	baidu-map	see the collection licence	https://icon-sets.iconify.design/arcticons/	
 baidu-tieba.svg	Baidu Tieba	iconify:arcticons	baidu-tieba	see the collection licence	https://icon-sets.iconify.design/arcticons/	
 baidu-wenku.svg	Baidu Wenku	dashboard-icons	baidu	see upstream LICENSE	https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE	

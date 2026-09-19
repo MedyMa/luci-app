@@ -84,6 +84,7 @@ avito
 aws
 bahamut
 baidu
+baidu-ai-cloud
 baidu-map
 baidu-netdisk
 baidu-tieba
