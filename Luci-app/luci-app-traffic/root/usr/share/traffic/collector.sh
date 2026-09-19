@@ -1005,8 +1005,41 @@ iface_stat() {
 # round on the path that has to stay cheap, and the parse is exact.  An explicit
 # setting wins over the guess, because a guess that cannot be overridden is worse
 # than no guess at all.
+# A bridge's own counters do not see the frames the forwarding fast path moves.
+# Measured on the router this was written for: br-wan read 33.5 GiB received
+# against the member port's 100.1 GiB, and 1.0 GiB sent against 14.0 GiB - so
+# measuring the bridge under-reports by 3x in one direction and 13x in the other.
+# OpenWrt bridges the WAN by default (the route names br-wan), which means the
+# default was wrong on every such router and the only cure was a setting nobody
+# knows to make.  When the device the route names turns out to be a bridge, the
+# member port that has carried the most is the device actually moving traffic.
+#
+# The busiest member is chosen on cumulative bytes, not on this round's delta:
+# during a download the LAN-side port mirrors the same traffic, and a per-round
+# comparison could pick it and then keep switching between the two.
+bridge_member() {
+    local base=${TRAFFIC_SYS_NET:-/sys/class/net} m st rd tu v best= bestv=0
+
+    [ -d "$base/$1/brif" ] || return 1
+    for m in "$base/$1/brif"/*; do
+        [ -e "$m" ] || continue
+        m=${m##*/}
+        st=$(iface_stat "$m")
+        [ -n "$st" ] || continue
+        read -r rd tu <<EOF
+$st
+EOF
+        case "$rd" in ''|*[!0-9]*) continue ;; esac
+        case "$tu" in ''|*[!0-9]*) tu=0 ;; esac
+        v=$((rd + tu))
+        if [ -z "$best" ] || [ "$v" -gt "$bestv" ]; then best=$m; bestv=$v; fi
+    done
+    [ -n "$best" ] || return 1
+    printf '%s\n' "$best"
+}
+
 wan_if() {
-    local d
+    local d m
 
     d=$(uci_get wan_if)
     if [ -n "$d" ]; then
@@ -1031,6 +1064,9 @@ wan_if() {
     [ -n "$d" ] || return 1
     [ "$d" != "lo" ] || return 1
     [ -n "$(iface_stat "$d")" ] || return 1
+    # A bridge is measured through the port that is really carrying the traffic.
+    m=$(bridge_member "$d")
+    [ -n "$m" ] && d=$m
     WAN_IF=$d
 }
 
