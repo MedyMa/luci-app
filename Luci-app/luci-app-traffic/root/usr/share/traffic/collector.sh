@@ -51,7 +51,15 @@ STATE_DIR=${STATE_DIR:-/tmp/traffic}
 SELF_DIR=${SELF_DIR:-/usr/share/traffic}
 CT=${CT:-/proc/net/nf_conntrack}
 LUA=${LUA:-/usr/bin/lua}
-UCI=${UCI:-/usr/bin/uci}
+# uci is not in the same place on every build.  It is /sbin/uci on OpenWrt and
+# ImmortalWrt, and the hard-coded /usr/bin/uci this used to carry does not fail
+# loudly when it is wrong: uci_get() simply returns nothing, so every setting
+# silently falls back to its default.  That is how traffic.settings.wan_if could
+# be set, committed and read back correctly by hand (uci get prints it), and the
+# collector still ignored it and measured the default-route device instead.
+UCI=${UCI:-}
+[ -n "$UCI" ] || UCI=$(command -v uci 2>/dev/null)
+[ -n "$UCI" ] || UCI=/sbin/uci
 # The device counters, and the routing tables that name the device to read.  The
 # paths are overridable for the same reason STATE_DIR is: the offline suite has
 # to be able to drive them without a router.
