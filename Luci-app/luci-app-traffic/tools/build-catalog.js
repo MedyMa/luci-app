@@ -210,6 +210,7 @@ const NAME_FIX = {
 	'ea': 'EA', 'ebay': 'eBay', 'electron': 'Electron', 'epic': 'Epic Games', 'epicgames': 'Epic Games',
 	'facebook': 'Facebook', 'fastly': 'Fastly', 'figma': 'Figma', 'firebase': 'Firebase',
 	'garena': 'Garena', 'github': 'GitHub', 'gitlab': 'GitLab', 'gmail': 'Gmail', 'gog': 'GOG',
+	'microsoft-365-copilot': 'Microsoft 365 Copilot',
 	'google': 'Google', 'googleai': 'Google AI', 'googlecloud': 'Google Cloud',
 	'googledeepmind': 'Google DeepMind', 'googledrive': 'Google Drive', 'googleearth': 'Google Earth',
 	'googlefcm': 'Google Firebase', 'googleplay': 'Google Play', 'googlescholar': 'Google Scholar',
@@ -473,6 +474,10 @@ const CURATED = [
 	['Microsoft', 'windowsupdate.com'], ['Microsoft', 'live.com'], ['Microsoft', 'msn.com'],
 	['Microsoft', 'bing.com'], ['Microsoft', 'office.com'], ['Microsoft', 'office.net'],
 	['Microsoft 365', 'office365.com'], ['OneDrive', 'onedrive.com'], ['OneDrive', 'sharepoint.com'],
+	/* Copilot 是微软的 Copilot；Microsoft 365 Copilot 是另一个产品，另占一行。
+	 * 域名不与上面那行重合，免得又变成两个名字抢同一批域名。 */
+	['Microsoft 365 Copilot', 'm365.cloud.microsoft', 'H'],
+	['Microsoft 365 Copilot', 'm365copilot.com'],
 	['Outlook', 'outlook.com'], ['Microsoft Azure', 'azure.com'], ['Microsoft Azure', 'azurewebsites.net'],
 	['Microsoft Azure', 'windows.net'], ['Microsoft Teams', 'teams.microsoft.com', 'H'],
 	['LinkedIn', 'linkedin.com'], ['LinkedIn', 'licdn.com'], ['Skype', 'skype.com'],
