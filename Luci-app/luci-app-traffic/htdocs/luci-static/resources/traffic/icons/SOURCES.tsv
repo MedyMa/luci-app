@@ -160,7 +160,6 @@ deviantart.svg	Deviantart	simple-icons	deviantart	CC0-1.0 (trademarks: see DISCL
 docker.svg	Docker	dashboard-icons	docker	see upstream LICENSE	https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE	
 digitalocean.svg	DigitalOcean	selfhst/icons	digitalocean	see upstream LICENSE	https://github.com/selfhst/icons/blob/main/LICENSE	
 dji.svg	Dji	simple-icons	dji	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
-douyin.svg	Douyin	dashboard-icons	tiktok	see upstream LICENSE	https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE	
 dood.svg	Dood	simple-icons	jdoodle	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
 doi.svg	Doi	simple-icons	doi	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
 download.svg	Download	dashboard-icons	jdownloader	see upstream LICENSE	https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE	
@@ -310,7 +309,6 @@ konami.svg	Konami	simple-icons	konami	CC0-1.0 (trademarks: see DISCLAIMER.md)	ht
 laracasts.svg	Laracasts	dashboard-icons	laracasts	see upstream LICENSE	https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE	
 lark.svg	Lark	dashboard-icons	lark	see upstream LICENSE	https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE	
 lark-global.svg	Lark Global	dashboard-icons	lark	see upstream LICENSE	https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE	
-kuaishou.svg	Kuaishou	simple-icons	kuaishou	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
 lastpass.svg	LastPass	dashboard-icons	lastpass	see upstream LICENSE	https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE	
 lg.svg	LG	simple-icons	lg	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
 kucoin.svg	Kucoin	simple-icons	kucoin	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
@@ -538,7 +536,6 @@ test.svg	Test	simple-icons	testin	CC0-1.0 (trademarks: see DISCLAIMER.md)	https:
 threads.svg	Threads	dashboard-icons	threads	see upstream LICENSE	https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE	
 test-ipv6.svg	Test Ipv6	simple-icons	testin	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
 tidal.svg	Tidal	dashboard-icons	tidal	see upstream LICENSE	https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE	
-tiktok.svg	TikTok	dashboard-icons	tiktok	see upstream LICENSE	https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE	
 theboringcompany.svg	Theboringcompany	simple-icons	theboringcompany	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
 theguardian.svg	Theguardian	simple-icons	theguardian	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
 tesla.svg	Tesla	simple-icons	tesla	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
@@ -581,7 +578,6 @@ wechat.svg	WeChat	dashboard-icons	wechat	see upstream LICENSE	https://github.com
 vrchat.svg	Vrchat	simple-icons	vrchat	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
 walmart.svg	Walmart	selfhst/icons	walmart	see upstream LICENSE	https://github.com/selfhst/icons/blob/main/LICENSE	
 w3schools.svg	W3schools	simple-icons	w3schools	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
-weibo.svg	Weibo	dashboard-icons	weibo	see upstream LICENSE	https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE	
 whatsapp.svg	WhatsApp	dashboard-icons	whatsapp	see upstream LICENSE	https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE	
 vimeo.svg	Vimeo	selfhst/icons	vimeo	see upstream LICENSE	https://github.com/selfhst/icons/blob/main/LICENSE	
 wikimedia.svg	Wikimedia	dashboard-icons	wikimedia	see upstream LICENSE	https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE	
@@ -879,3 +875,10 @@ gaode.svg	GaoDe	iconify:arcticons	autonavi	see the collection licence	https://ic
 amap.svg	Amap	iconify:arcticons	autonavi	see the collection licence	https://icon-sets.iconify.design/arcticons/	
 hoyoverse.svg	HoYoverse	iconify:thesvg-color	mihoyo	see the collection licence	https://icon-sets.iconify.design/thesvg-color/	
 cctv.svg	CCTV	wikimedia-commons	CCTVNewLogo cropped	see the licence on the file page (public domain for CCTVNewLogo)	https://commons.wikimedia.org/wiki/File:CCTVNewLogo_cropped.svg	
+hupu.svg	Hupu	local	local	supplied by the user, shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
+weibo.svg	Weibo	local	local	supplied by the user, shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
+tiktok.svg	TikTok	local	local	supplied by the user, shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
+douyin.svg	Douyin	local	local	supplied by the user, shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
+douyu.svg	Douyu	local	local	supplied by the user, shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
+kuaishou.svg	Kuaishou	local	local	supplied by the user, shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
+feishu.svg	Feishu	local	local	supplied by the user, shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	

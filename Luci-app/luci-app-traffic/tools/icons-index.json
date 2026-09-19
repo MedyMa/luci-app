@@ -1,14 +1,14 @@
 {
- "generated": "2026-09-18",
- "icons": 879,
- "manifestRows": 879,
+ "generated": "2026-09-19",
+ "icons": 882,
+ "manifestRows": 882,
  "catalogue": {
   "rows": 32068,
   "names": 1657
  },
  "coverage": {
-  "names": 48.8,
-  "domains": 77.1
+  "names": 49,
+  "domains": 77.3
  },
  "missingByDomains": [
   {
@@ -104,10 +104,6 @@
    "domains": 44
   },
   {
-   "name": "Feishu",
-   "domains": 43
-  },
-  {
    "name": "Jlc",
    "domains": 43
   },
@@ -170,6 +166,10 @@
   {
    "name": "Verisign",
    "domains": 33
+  },
+  {
+   "name": "X5",
+   "domains": 32
   }
  ],
  "iconsBySlug": {
@@ -1461,14 +1461,6 @@
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
-  "douyin": {
-   "file": "douyin.svg",
-   "application": "Douyin",
-   "source": "dashboard-icons",
-   "upstream": "tiktok",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
   "dood": {
    "file": "dood.svg",
    "application": "Dood",
@@ -2660,14 +2652,6 @@
    "upstream": "lark",
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
-  "kuaishou": {
-   "file": "kuaishou.svg",
-   "application": "Kuaishou",
-   "source": "simple-icons",
-   "upstream": "kuaishou",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "lastpass": {
    "file": "lastpass.svg",
@@ -4485,14 +4469,6 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
-  "tiktok": {
-   "file": "tiktok.svg",
-   "application": "TikTok",
-   "source": "dashboard-icons",
-   "upstream": "tiktok",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
   "theboringcompany": {
    "file": "theboringcompany.svg",
    "application": "Theboringcompany",
@@ -4828,14 +4804,6 @@
    "upstream": "w3schools",
    "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
    "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
-  },
-  "weibo": {
-   "file": "weibo.svg",
-   "application": "Weibo",
-   "source": "dashboard-icons",
-   "upstream": "weibo",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
   },
   "whatsapp": {
    "file": "whatsapp.svg",
@@ -7204,6 +7172,62 @@
    "upstream": "CCTVNewLogo cropped",
    "licence": "see the licence on the file page (public domain for CCTVNewLogo)",
    "url": "https://commons.wikimedia.org/wiki/File:CCTVNewLogo_cropped.svg"
+  },
+  "hupu": {
+   "file": "hupu.svg",
+   "application": "Hupu",
+   "source": "local",
+   "upstream": "local",
+   "licence": "supplied by the user, shipped in this repository (marks of their owners)",
+   "url": "tools/icons-local in the luci-app-traffic source tree"
+  },
+  "weibo": {
+   "file": "weibo.svg",
+   "application": "Weibo",
+   "source": "local",
+   "upstream": "local",
+   "licence": "supplied by the user, shipped in this repository (marks of their owners)",
+   "url": "tools/icons-local in the luci-app-traffic source tree"
+  },
+  "tiktok": {
+   "file": "tiktok.svg",
+   "application": "TikTok",
+   "source": "local",
+   "upstream": "local",
+   "licence": "supplied by the user, shipped in this repository (marks of their owners)",
+   "url": "tools/icons-local in the luci-app-traffic source tree"
+  },
+  "douyin": {
+   "file": "douyin.svg",
+   "application": "Douyin",
+   "source": "local",
+   "upstream": "local",
+   "licence": "supplied by the user, shipped in this repository (marks of their owners)",
+   "url": "tools/icons-local in the luci-app-traffic source tree"
+  },
+  "douyu": {
+   "file": "douyu.svg",
+   "application": "Douyu",
+   "source": "local",
+   "upstream": "local",
+   "licence": "supplied by the user, shipped in this repository (marks of their owners)",
+   "url": "tools/icons-local in the luci-app-traffic source tree"
+  },
+  "kuaishou": {
+   "file": "kuaishou.svg",
+   "application": "Kuaishou",
+   "source": "local",
+   "upstream": "local",
+   "licence": "supplied by the user, shipped in this repository (marks of their owners)",
+   "url": "tools/icons-local in the luci-app-traffic source tree"
+  },
+  "feishu": {
+   "file": "feishu.svg",
+   "application": "Feishu",
+   "source": "local",
+   "upstream": "local",
+   "licence": "supplied by the user, shipped in this repository (marks of their owners)",
+   "url": "tools/icons-local in the luci-app-traffic source tree"
   }
  }
 }

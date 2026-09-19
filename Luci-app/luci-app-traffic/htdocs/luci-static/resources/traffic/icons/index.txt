@@ -221,6 +221,7 @@ doordash
 douban
 doubao
 douyin
+douyu
 download
 dribbble
 dropbox
@@ -267,6 +268,7 @@ farfetch
 fastly
 fedora
 feedly
+feishu
 figma
 finance
 findmy
@@ -372,6 +374,7 @@ huggingface
 hulu
 huluusa
 humblebundle
+hupu
 ibkr
 ibm
 icbc
