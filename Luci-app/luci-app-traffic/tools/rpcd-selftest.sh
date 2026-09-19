@@ -18,7 +18,10 @@
 set -u
 
 SELF="$(cd "$(dirname "$0")" && pwd)"
-RPCD="$(cd "$SELF/.." && pwd)/root/usr/libexec/rpcd/luci.traffic"
+# RPCD_SRC points the same assertions at another revision of the backend: an
+# assertion that cannot be made to fail on the code it was written against
+# proves nothing, and the only honest way to check that is to run it there.
+RPCD="${RPCD_SRC:-$(cd "$SELF/.." && pwd)/root/usr/libexec/rpcd/luci.traffic}"
 [ -f "$RPCD" ] || { echo "luci.traffic not found next to $SELF" >&2; exit 1; }
 
 echo "=== sh -n ==="
@@ -228,6 +231,102 @@ printf 'Solo\t70\t30\n' >> "$T/state/cur.apps"
 out=$(hr 24)
 chk "9c 缺客户端字段时仍是三字段行" '{"name":"Solo","down":70,"up":30}' \
     "$(printf '%s' "$out" | grep -o '{"name":"Solo"[^}]*}')"
+
+echo
+echo "=== 范围总量：每小时的网卡口径 ==="
+# The archive's app rows are the attribution, which under flow offloading is a
+# small fraction of what the box carried (measured: 147 MiB against 2579 MiB on
+# the WAN device).  roll_hour therefore also archives one device row per hour as
+# <hour> wan - <down> <up>, and the backend has to publish it on the bucket as
+# iface so a range view can total up a real number.  Two things are asserted
+# together, because each is a wrong page on its own:
+#
+#   - the field must be there when the archive has the row (else the range view
+#     keeps showing a fraction of the traffic as its total);
+#   - the field must be absent when the archive has no such row (an archive
+#     written before this existed).  A zero standing in for the total is worse
+#     than no field: the page cannot tell it from a quiet range.
+#
+# Every assertion is on a whole bucket object rather than on a substring, so a
+# wrong implementation that leaks the row into the app list changes the string
+# and fails here too.  "},{" separates two applications inside a bucket as well
+# as two buckets, so the split is done by counting braces - splitting on the
+# text would cut a bucket in half.
+buckets() {
+    printf '%s' "$1" | awk '
+        { for (i = 1; i <= length($0); i++) {
+              c = substr($0, i, 1)
+              if (c == "{") { d++; if (d >= 2) buf = buf c }
+              else if (c == "}") { if (d >= 2) buf = buf c; d--; if (d == 1) { print buf; buf = "" } }
+              else if (d >= 2) { buf = buf c }
+          } }'
+}
+one() { buckets "$1" | grep "^$2" | head -n 1; }
+
+# The hour in progress is off for these: it is appended whenever it has rows, and
+# that would put a second bucket in the answer.
+: > "$T/state/cur.apps"; : > "$T/state/cur.clients"
+printf '0\n' > "$T/state/cur.router"; : > "$T/state/cur.hour"
+rm -f "$T/state/cur.iface"
+
+# An archived hour that carries the device row.  Seeded asymmetrically: equal
+# numbers would hide a swap between the two directions.
+{
+    printf 'h1\tapp\tOpenAI\t1000\t500\n'
+    printf 'h1\twan\t-\t9000\t700\n'
+} > "$T/data/hourly.tsv"
+out=$(hr 24)
+chk "10 归档小时的网卡总量发到桶上（含未错位）" \
+    '{"hour":"h1","apps":[{"name":"OpenAI","down":1000,"up":500}],"clients":[],"router":0,"iface":{"down":9000,"up":700}}' \
+    "$(one "$out" '{"hour":"h1"')"
+chk "10a 网卡行不冒充应用"                   "0" \
+    "$(printf '%s' "$out" | grep -c '"name":"-"')"
+chk "10b 网卡行不冒充客户端"                 "0" \
+    "$(printf '%s' "$out" | grep -c '"ip":"-"')"
+
+# An archive written before the device rows existed: no row for the hour, so no
+# field on the bucket.  The page reads that absence as "fall back to the
+# attributed bytes", which is what keeps an upgraded router honest instead of
+# showing it a total of zero.
+printf 'h1\tapp\tNoWan\t1000\t500\n' > "$T/data/hourly.tsv"
+out=$(hr 24)
+chk "10c 旧归档的桶不下发 iface"             \
+    '{"hour":"h1","apps":[{"name":"NoWan","down":1000,"up":500}],"clients":[],"router":0}' \
+    "$(one "$out" '{"hour":"h1"')"
+chk "10d 缺 iface 时仍是合法 JSON"           '{"hours":' "$(printf '%s' "$out" | cut -c1-9)"
+
+# The hour in progress: publish_current writes cur.iface, the difference between
+# the live device counters and what is already archived.  Without it the current
+# hour would be the one bucket a range could never total from the device, and
+# since the range always contains the current hour, no range could ever use it.
+printf 'YouTube\t60000\t3600\n' > "$T/state/cur.apps"
+printf '2026-09-17T10\n'        > "$T/state/cur.hour"
+printf '500\n'                  > "$T/state/cur.router"
+printf '7000\n900\n'            > "$T/state/cur.iface"
+: > "$T/data/hourly.tsv"
+out=$(hr 24)
+chk "10e 进行中的小时也带上网卡总量" \
+    '{"hour":"2026-09-17T10","apps":[{"name":"YouTube","down":60000,"up":3600}],"clients":[],"router":500,"iface":{"down":7000,"up":900}}' \
+    "$(one "$out" '{"hour":"2026-09-17T10"')"
+
+# The collector removes cur.iface when it could not measure a device this round,
+# and a half-written or non-numeric file must not become a total either: a real
+# down beside an up of zero reads as a direction that carried nothing.
+rm -f "$T/state/cur.iface"
+out=$(hr 24)
+chk "10f 没有接口计数时不编造总量" \
+    '{"hour":"2026-09-17T10","apps":[{"name":"YouTube","down":60000,"up":3600}],"clients":[],"router":500}' \
+    "$(one "$out" '{"hour":"2026-09-17T10"')"
+printf '7000\n' > "$T/state/cur.iface"
+out=$(hr 24)
+chk "10g 半截的 cur.iface 不下发 iface" \
+    '{"hour":"2026-09-17T10","apps":[{"name":"YouTube","down":60000,"up":3600}],"clients":[],"router":500}' \
+    "$(one "$out" '{"hour":"2026-09-17T10"')"
+printf 'nope\n900\n' > "$T/state/cur.iface"
+out=$(hr 24)
+chk "10h 非数字的 cur.iface 不下发 iface" \
+    '{"hour":"2026-09-17T10","apps":[{"name":"YouTube","down":60000,"up":3600}],"clients":[],"router":500}' \
+    "$(one "$out" '{"hour":"2026-09-17T10"')"
 
 echo
 if [ "$fail" = 0 ]; then echo "=== 全部通过 ==="; else echo "=== 有失败 ==="; fi

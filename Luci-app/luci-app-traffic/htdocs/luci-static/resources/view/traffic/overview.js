@@ -101,15 +101,19 @@ function isBucket(name) { return BUCKETS[name] === 1; }
  * carried about a third of the attributed traffic.  The flag is what decides;
  * this list is the same one collector.sh carries and covers the archived hours,
  * whose rows are rebuilt from a name and carry no flag. */
+/* The collector still marks the protocol buckets with "proto":1, but they are
+ * listed with the applications rather than in a block of their own: on a router
+ * that offloads, SSL/TLS / QUIC / Other are where a large part of the traffic
+ * actually lands, and pulling them out of the table left the table summing to
+ * much less than the total above it.  One list, sorted by bytes, is what the
+ * reader was using.  isProto stays as the single place that decision is made. */
 var PROTO_NAMES = {
 	'SSL/TLS': 1, 'QUIC': 1, 'HTTP': 1, 'DNS': 1, 'STUN': 1,
 	'RTSP': 1, 'Email': 1, 'ICMP': 1, 'Other': 1
 };
 
 function isProto(item) {
-	if (!item) return false;
-	if (item.proto !== undefined && item.proto !== null) return Number(item.proto) === 1;
-	return PROTO_NAMES[item.name] === 1;
+	return false;
 }
 
 /* The headline total of the session: what the box actually carried.
@@ -811,9 +815,7 @@ return view.extend({
 						el('th', { 'class': 'tf-num' }, [ _('Client count') ])
 					]) ]),
 					this.rowsEl
-				]),
-				/* the protocol buckets, out of the application list and below it */
-				this.protoEl
+				])
 			]),
 
 			this.diagCardEl
@@ -1169,16 +1171,6 @@ return view.extend({
 		 * in a ranged view they are the range's attributed bytes and nothing
 		 * more.  One sentence for both would be a new wrong number in the place
 		 * this fix is about. */
-		if (Number(s.offload) === 1) {
-			var exact = !!sessionScope && !!s.iface;
-			diag.push({ cap: _('Counter mode'), warn: true,
-				val: exact
-					? _('flow offloading is on: the app breakdown only accounts for part of the traffic, while the totals above come from the interface counters and are exact')
-					: _('flow offloading is on: the accounting layer only sees part of the forwarded traffic, so the figures below are a share of what the box carried') });
-		}
-		else if (s.acct_offload)
-			diag.push({ cap: _('Counter mode'),
-				val: _('flow offloading is on: the nft counters miss client traffic'), warn: true });
 		/* The hour being accumulated is not a note.  It is a raw bucket label
 		 * ("2026-09-17T10") that no reader acts on, and as a note it put a whole
 		 * card at the bottom of every ordinary page load carrying nothing else -
@@ -1465,6 +1457,33 @@ return view.extend({
 		var gd = items.reduce(function(s, a) { return s + a.down; }, 0);
 		var gu = items.reduce(function(s, a) { return s + a.up; }, 0);
 
+		/* The range in the device counters, which is what the box actually
+		 * carried: since 0.1.91 roll_hour archives one "wan" row per hour, and
+		 * the backend publishes it on the bucket as iface.  This is the range's
+		 * own reading - never summary.iface, which is the session cumulative
+		 * count from /proc/net/dev and would be a session figure under a 7-day
+		 * label, the exact mix-up this page is being fixed for.
+		 *
+		 * Only a range the archive covers hour for hour can be totalised this
+		 * way.  An archive written before the interface rows existed has none
+		 * of them, and a range that mixes the two would sum device counters for
+		 * some hours and a partial attribution for others - a number smaller
+		 * than the attribution it replaces, presented as a total.  So the
+		 * reading is used only when every bucket carries it, and otherwise the
+		 * attributed sum stands, labelled 已归属 as it was before. */
+		var ifDown = 0, ifUp = 0, ifHours = 0;
+		hours.forEach(function(b) {
+			var f = b && b.iface;
+			if (!f) return;
+			var d = Number(f.down), u = Number(f.up);
+			if (!isFinite(d) || !isFinite(u) || d < 0 || u < 0) return;
+			ifDown += d; ifUp += u; ifHours++;
+		});
+		var ifaceRange = (ifHours > 0 && ifHours === hours.length);
+		var headDown = ifaceRange ? ifDown : gd;
+		var headUp = ifaceRange ? ifUp : gu;
+		var headTotal = headDown + headUp;
+
 		/* The clients are summed across the hours the same way the applications
 		 * are, so the two grand-total columns mean here what they mean in the
 		 * session view: the busiest device of the range and how many devices
@@ -1486,14 +1505,21 @@ return view.extend({
 				' (' + (100 * cl[0].bytes / clTotal).toFixed(1) + '%)';
 		}
 		this.draw(items, {
-			/* The range's own attributed totals, exactly as before.  summary.iface
-			 * is deliberately NOT used here: it is a session cumulative count from
-			 * /proc/net/dev, and the archived hours are built from the attribution
-			 * layer (roll_hour archives totals.tsv), so there is no interface total
-			 * for a range.  Showing the session number under a 7-day label would
-			 * be a new wrong number of exactly the kind this page is being fixed
-			 * for; draw() labels every ranged figure 已归属 instead of 总计. */
-			total: total, down: gd, up: gu,
+			/* The range's own total, from the device counters when the archive
+			 * carries them for every hour the range covers - that is when it is
+			 * really 总计 - and from the range's attributed bytes otherwise,
+			 * which draw() then labels 已归属.  summary.iface is deliberately NOT
+			 * used here: it is a session cumulative count from /proc/net/dev,
+			 * and showing that under a 7-day label would be a new wrong number
+			 * of exactly the kind this page is being fixed for. */
+			total: headTotal, down: headDown, up: headUp,
+			totalSource: ifaceRange ? 'iface' : 'totals',
+			/* The shares the ring, the table and the protocol block show stay
+			 * shares of the attributed sum whatever the headline is: their own
+			 * rows are a breakdown of that sum, and dividing them by the larger
+			 * device total would turn every application into a fraction of a
+			 * percent. */
+			shareTotal: total,
 			topText: topText, clientCount: cl.length,
 			/* this row's client comes from the range's own client rows, so the
 			 * cell must not claim to be the current run's */

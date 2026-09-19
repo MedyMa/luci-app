@@ -90,7 +90,7 @@ get_hourly() {
 	sel=$(printf '%s ' $list)
 	awk -F'\t' -v sel="$sel" -v cur="$STATE_DIR/cur.apps" \
 		-v curc="$STATE_DIR/cur.clients" -v curr="$STATE_DIR/cur.router" \
-		-v curh="$STATE_DIR/cur.hour" '
+		-v curi="$STATE_DIR/cur.iface" -v curh="$STATE_DIR/cur.hour" '
 		# Names come from the generated catalogue, so a quote is the only thing
 		# that could break the JSON; the & form is what makes gsub put a real
 		# backslash in front of the match instead of eating it.
@@ -104,8 +104,22 @@ get_hourly() {
 			#   cur.apps    <name> <down> <up>
 			#   cur.clients <ip> <bytes>
 			#   cur.router  one number     cur.hour  the hour it belongs to
+			#   cur.iface   <down> <up>    the same hour in the WAN counters
 			if ((getline l < curh) > 0) { sub(/\r?\n$/, "", l); curhour = l }
 			close(curh)
+			# The device counters are a two-line file and the two lines are read
+			# with the same handle, so both have to be numbers before the field
+			# is published at all: a half-read pair would put a real down beside
+			# an up of zero, which reads as a direction that carried nothing.
+			if ((getline l < curi) > 0) {
+				sub(/\r?\n$/, "", l)
+				cd1 = l
+				if ((getline l < curi) > 0) {
+					sub(/\r?\n$/, "", l)
+					if (cd1 ~ /^[0-9]+$/ && l ~ /^[0-9]+$/) { cifd = cd1 + 0; cifu = l + 0; cifok = 1 }
+				}
+			}
+			close(curi)
 			while ((getline l < cur) > 0) {
 				split(l, f, "\t")
 				if (f[1] == "") continue
@@ -142,6 +156,13 @@ get_hourly() {
 			next
 		}
 		$2 == "router" { rv[$1] += $4 + 0; next }
+		# The WAN interface total for that hour, written once per hour by
+		# roll_hour as <hour> wan - <down> <up>.  It is a total rather than an
+		# application, so it is collected separately and never reaches the app
+		# or client lists - and it is summed rather than overwritten, because a
+		# legacy archive that already holds more than one such row for an hour
+		# must not have all but the last of them dropped.
+		$2 == "wan" { wd[$1] += $4 + 0; wu[$1] += $5 + 0; next }
 		END {
 			printf "{\"hours\":["
 			cnt = 0
@@ -172,7 +193,14 @@ get_hourly() {
 					f2 = 0
 					printf "{\"ip\":\"%s\",\"bytes\":%d}", esc(cn[j]), cb[k]
 				}
-				printf "],\"router\":%d}", rv[h] + 0
+				printf "],\"router\":%d", rv[h] + 0
+				# The device total for this hour of the range.  Only emitted when
+				# the archive actually holds a row for it: a range the archive
+				# predates carries no such row, and the absence of the field is
+				# what makes the page fall back to the attributed bytes and say
+				# 已归属 instead of presenting a part of the hour as its total.
+				if (h in wd) printf ",\"iface\":{\"down\":%d,\"up\":%d}", wd[h], wu[h]
+				printf "}"
 			}
 			# The hour in progress, so a range never comes back empty merely
 			# because the clock has not crossed the hour yet.  It is appended
@@ -196,7 +224,13 @@ get_hourly() {
 					if (i > 1) printf ","
 					printf "{\"ip\":\"%s\",\"bytes\":%d}", esc(k), ccb[k]
 				}
-				printf "],\"router\":%d}", crt
+				printf "],\"router\":%d", crt
+				# and the same hour in the device counters, when the collector
+				# measured them; without this the current hour would be the one
+				# bucket a range could never total from the interface, and the
+				# range would fall back for as long as the hour was running.
+				if (cifok) printf ",\"iface\":{\"down\":%d,\"up\":%d}", cifd, cifu
+				printf "}"
 			}
 			printf "]}\n"
 		}

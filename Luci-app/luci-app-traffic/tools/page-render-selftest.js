@@ -92,8 +92,10 @@ function freshView(){
            legendEl:E('div'), totalEl:E('div'), diagEl:E('div'), diagCardEl:E('div'),
            statusEl:E('div'), chartEl:E('div'), chartNote:E('span'),
            rateDown:E('b'), rateUp:E('b'),
-           // the protocol-bucket block under the table and the hero caption, which
-           // render() builds and draw() rewrites; these tests drive draw directly
+           // render() still builds the protocol-bucket block and the hero caption,
+           // and draw() still reaches both (renderProto gets an empty list now, so
+           // it only ever hides the block); these tests drive draw directly, so the
+           // stubs stay.  The hero caption is rewritten by draw() as before.
            protoEl:E('div'), protoListEl:E('div'), protoSumEl:E('span'),
            heroCapEl:E('div') });
 }
@@ -464,14 +466,22 @@ chk(txt(vIf.diagEl).indexOf('Attributed')>=0 && txt(vIf.diagEl).indexOf(sharePct
     `诊断行给出已归属占比 ${sharePct}（${txt(vIf.diagEl).trim()}）`);
 const aRow=(vIf.diagRows||[]).filter(r=>r.k&&r.k._text==='Attributed')[0];
 chk(aRow && /tf-warn/.test(aRow.v.className), '占比过低时该行是告警色（不是静默）');
-// offload=1 现在是采集器直接报的条件；此前门控在 acct_offload 上，而 shipped 自动
-// 模式永远不会给它赋值，所以这条告警在目标路由器上根本不可能出现
-chk(txt(vIf.diagEl).indexOf('flow offloading is on')>=0 &&
-    txt(vIf.diagEl).indexOf('interface counters')>=0,
-    'offload=1 时会话视图告警且说明总量来自接口计数');
+// 卸载告警整段被删掉了：它把采集器的一个内部状态（offload）摆到读者看数字的地方，
+// 而「总量到底来自接口计数还是归属值」现在由标题自己说了（总计 / 已归属），不再需要
+// 一句告警来解释。所以会话视图与范围视图、offload=1 与 offload=0，四种组合下诊断区
+// 都不该出现这套文案。断言是反向的：断言它不在，而不是把断言删掉——删掉就再也看不见
+// 它回来了。
+const OFFLOAD_WORDS=['flow offloading is on','Counter mode','Counting mode','计数口径'];
+const offloadWords=t=>OFFLOAD_WORDS.filter(w=>t.indexOf(w)>=0);
+// 非空前提：同一份快照下诊断区确实在渲染内容，否则「没有告警」是空集上的真命题
+chk(txt(vIf.diagEl).indexOf('Attributed')>=0,
+    `会话视图诊断区非空，下面的「没有告警」才不是空集（${txt(vIf.diagEl).trim()}）`);
+chk(offloadWords(txt(vIf.diagEl)).length===0,
+    `offload=1 时会话视图没有卸载文案（${txt(vIf.diagEl).trim()}）`);
 const vIf0=mkView({});
 view.renderLive.call(vIf0, sumOf({iface:IFACE,offload:0}));
-chk(txt(vIf0.diagEl).indexOf('flow offloading is on')===-1, 'offload=0 时不告警（不是无条件显示）');
+chk(offloadWords(txt(vIf0.diagEl)).length===0,
+    `offload=0 时也没有（两种取值都不出现：${txt(vIf0.diagEl).trim()}）`);
 
 const vNo=mkView({});
 view.renderLive.call(vNo, sumOf({}));
@@ -506,39 +516,58 @@ view.updateRate.call(rMix, {collected_at:1700000010,iface:{down:1000,up:100},tot
 chk(flat(rMix.rateDown)==='0 B/s' && flat(rMix.rateUp)==='0 B/s',
     `接口计数没动就是 0（${flat(rMix.rateDown)} / ${flat(rMix.rateUp)}）`);
 
-console.log('=== 协议桶不再冒充应用 ===');
+console.log('=== 协议桶与应用同表列出（不再单独成块）===');
 // SSL/TLS、QUIC、HTTP、DNS、STUN 这些「应用名」其实是归属的兜底标签，占了归属流量
-// 的三分之一左右；列在表头写着「应用」的表里，读者会以为有个叫 QUIC 的 App。
+// 的三分之一左右。曾经把它们从表里摘出来、放进表下独立的「协议（非应用）」区块，
+// 那个版本被否掉了：在开卸载的路由器上，相当大的一部分流量就落在 SSL/TLS / QUIC /
+// Other 上，摘走之后表格加起来远小于它上面的总量，而读者用的本来就是「一张按字节
+// 排序的单一列表」。页面代码里 isProto() 现在恒为 false，协议桶照旧是应用表的行；
+// 表下那个区块还留在 DOM 里（renderProto 仍会被调用一次），但恒收到空数组，所以
+// 恒为空、恒隐藏。下面这些断言是反向的：它们证明协议桶确实回到了应用表，而区块
+// 确实空了——把回归弄瞎的做法是删断言，不是这么写。
 const PICKS=[{name:'YouTube',down:1e6,up:1e5,clients:3,top:'192.168.2.5',top_bytes:5e5},
              {name:'QUIC',down:6e5,up:1e4,proto:1},
              {name:'DNS',down:2e5,up:1e4,proto:1}];
+const inRows=(v,n)=>!!(v.rowCache||{})[n];
+const rowCls=(v,n)=>((v.rowCache||{})[n]||{tr:{attrs:{}}}).tr.attrs.class||'';
 const vP=mkView({});
 view.renderLive.call(vP, sumOf({apps:PICKS,clients:[{name:'Mac',ip:'192.168.2.21',bytes:1e6}]}));
-chk(!(vP.rowCache||{})['QUIC'] && !(vP.rowCache||{})['DNS'],
-    `协议桶不再是应用表里的行（${Object.keys(vP.rowCache||{}).join('|')}）`);
-chk(!!vP.protoRows && !!vP.protoRows['QUIC'] && !!vP.protoRows['DNS'] && !!vP.rowCache['YouTube'],
-    '协议桶归到独立的协议区块，真应用仍在表里');
-chk(flat(vP.protoListEl).indexOf('QUIC')>=0 && flat(vP.protoListEl).indexOf('DNS')>=0 &&
-    txt(vP.rowsEl).indexOf('QUIC')===-1,
-    `协议区块列出协议桶，应用表里没有它（协议区：${flat(vP.protoListEl).trim()}）`);
-chk(vP.protoEl.style.display==='', '有协议桶时协议区块可见');
-chk((boxes(vP.statusEl).filter(b=>b.cap==='Apps')[0]||{}).val==='1',
-    `「应用」格只数应用（${(boxes(vP.statusEl).filter(b=>b.cap==='Apps')[0]||{}).val}）`);
-// 环形图的清单同样是「已归属流量」的构成，协议桶在里面也要带桶的标记，
-// 否则图上那份清单又会把 QUIC 读成应用
+chk(inRows(vP,'QUIC') && inRows(vP,'DNS') && inRows(vP,'YouTube'),
+    `协议桶与应用同表列出（表内：${Object.keys(vP.rowCache||{}).join('|')}）`);
+// 名字是 span 里的裸字符串，txt() 只收 _text，所以在 table 上必须用 flat()
+const tableRows=(vP.rowsEl.children||[]).filter(c=>c.tag==='tr' &&
+  !/tf-grand/.test((c.attrs||{}).class||''));
+chk(Object.keys(vP.rowCache||{}).length===PICKS.length && tableRows.length===PICKS.length,
+    `表格里真有一行一条，一个都没被摘走（rowCache ${Object.keys(vP.rowCache||{}).length}，<tr> ${tableRows.length}/${PICKS.length}）`);
+chk(flat(vP.rowsEl).indexOf('QUIC')>=0 && flat(vP.rowsEl).indexOf('DNS')>=0,
+    `应用表的文本里能看到协议桶（${flat(vP.rowsEl).trim().slice(-64)}）`);
+// 「是个桶」和「不是应用」现在是两件事：表里的协议桶行仍带桶标记（斜体名与字形靠
+// 它），只是它不再是一个单独区块里的行
+chk(/tf-isbucket/.test(rowCls(vP,'QUIC')) && !/tf-isbucket/.test(rowCls(vP,'YouTube')),
+    `表里协议桶行带桶标记、真应用不带（QUIC=${rowCls(vP,'QUIC')} / YouTube=${rowCls(vP,'YouTube')||'（空）'}）`);
+chk(Object.keys(vP.protoRows||{}).length===0 && vP.protoEl.style.display==='none',
+    `表下的协议区块恒为空且恒隐藏（protoRows=${Object.keys(vP.protoRows||{}).length}, display=${vP.protoEl.style.display}）`);
+chk(flat(vP.protoListEl).trim()==='', `协议区块里没有任何条目（${flat(vP.protoListEl).trim()||'（空）'}）`);
+chk((boxes(vP.statusEl).filter(b=>b.cap==='Apps')[0]||{}).val===String(PICKS.length),
+    `「应用」格数上表里全部条目（${(boxes(vP.statusEl).filter(b=>b.cap==='Apps')[0]||{}).val}）`);
+// 环形图的清单是「已归属流量」的构成。isProto 恒 false 之后协议桶在里面就是普通
+// 一行；若它还带桶标记，同一份清单和下面那张表就会把 QUIC 分成两种东西
 const legProto=(vP.legendCache||{})['QUIC'];
-chk(!!legProto && /tf-isbucket/.test((legProto.row.attrs||{}).class||''),
-    `环形图清单里协议桶带桶标记（${legProto&&legProto.row.attrs.class}）`);
+chk(!!legProto && !/tf-isbucket/.test((legProto.row.attrs||{}).class||''),
+    `环形图清单里协议桶不带桶标记（${legProto&&legProto.row.attrs.class}）`);
+chk(!!vP.legendCache['YouTube'] && !/tf-isbucket/.test((vP.legendCache['YouTube'].row.attrs||{}).class||''),
+    '环形图清单里真应用也不带桶标记');
 const vP0=mkView({});
 view.renderLive.call(vP0, sumOf({apps:[{name:'YouTube',down:1e6,up:1e5}]}));
 chk(!!vP0.protoEl && vP0.protoEl.style.display==='none' &&
-    Object.keys(vP0.protoRows||{}).length===0, '没有协议桶时整个区块隐藏');
-// 归档的小时行只有名字、没有 proto 标记，同样不能把 QUIC 当应用
+    Object.keys(vP0.protoRows||{}).length===0, '没有协议桶时整个区块同样隐藏（与上面一致）');
+// 归档的小时行只有名字、没有 proto 标记：范围视图走的也是同一条路，QUIC 照旧进应用表
 const vPH=mkView({});
 view.renderHourly.call(vPH,{hours:[{hour:'h0',apps:[{name:'YouTube',down:36000,up:18000},
   {name:'QUIC',down:1000,up:500}],clients:[],router:0}]});
-chk(!(vPH.rowCache||{})['QUIC'] && !!(vPH.protoRows||{})['QUIC'],
-    '范围视图按名字识别协议桶，同样不进应用表');
+chk(inRows(vPH,'QUIC') && inRows(vPH,'YouTube') && Object.keys(vPH.protoRows||{}).length===0 &&
+    vPH.protoEl.style.display==='none',
+    `范围视图同样把协议桶列进应用表（表内：${Object.keys(vPH.rowCache||{}).join('|')}）`);
 
 console.log('=== 热门客户端：跨窗口的荒谬百分比不再印出 ===');
 // 归档里的 apptop 存的是会话累计的客户端字节，而同一行的小时字节只是那一小时；
@@ -581,9 +610,23 @@ chk(flat(vR.heroCapEl)==='Attributed' && flat(vR.grandRow.label)==='Attributed',
     `范围视图的总量标注为已归属（${flat(vR.heroCapEl)} / ${flat(vR.grandRow.label)}）`);
 chk(txt(vR.diagEl).indexOf('Attributed')===-1,
     `范围视图不显示会话级的已归属占比（${txt(vR.diagEl).trim()}）`);
-chk(txt(vR.diagEl).indexOf('flow offloading is on')>=0 &&
-    txt(vR.diagEl).indexOf('interface counters')===-1,
-    '范围视图的卸载告警不说总量来自接口计数');
+chk(offloadWords(txt(vR.diagEl)).length===0,
+    `范围视图也没有卸载文案（${txt(vR.diagEl).trim()||'（诊断区为空）'}）`);
+// vR 这份快照的诊断区本来就是空的，「没有告警」在空集上恒真，所以再造一份诊断区
+// 非空的：pending>0 会写出「等待解析」，而卸载文案仍然不出现。顺带确认范围视图的
+// 协议桶也走应用表那条路（上面 vPH 只查了表，这里查了完整的一轮绘制）
+const RSU2=sumOf({iface:IFACE,offload:1,pending:5});
+const vR2=mkView({summary:RSU2});
+view.renderHourly.call(vR2,{hours:[{hour:'h0',apps:[{name:'YouTube',down:36000,up:18000},
+  {name:'QUIC',down:1000,up:500}],clients:[{ip:'192.168.2.5',bytes:50000}],router:0}]});
+view.drawStatus.call(vR2, RSU2, vR2.lastItems||[]);
+chk(txt(vR2.diagEl).indexOf('Waiting to resolve')>=0,
+    `范围视图诊断区确实非空，下面的「没有告警」才不是空集（${txt(vR2.diagEl).trim()}）`);
+chk(offloadWords(txt(vR2.diagEl)).length===0,
+    `范围视图诊断区非空时同样没有卸载文案（${txt(vR2.diagEl).trim()}）`);
+chk(inRows(vR2,'QUIC') && Object.keys(vR2.protoRows||{}).length===0 &&
+    vR2.protoEl.style.display==='none',
+    `范围视图一轮完整绘制后协议桶仍在应用表里（表内：${Object.keys(vR2.rowCache||{}).join('|')}）`);
 chk(String((vR.grandRow.cells.top.attrs||{}).title||'').indexOf('selected range')>=0,
     `范围视图合计行的客户端标注为所选范围（${(vR.grandRow.cells.top.attrs||{}).title}）`);
 

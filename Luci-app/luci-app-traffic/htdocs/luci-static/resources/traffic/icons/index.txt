@@ -146,6 +146,7 @@ cerebras
 certificate
 cgb
 chaoxing
+chatgpt
 chinabroadnet
 chinamobile
 chinaso
@@ -490,6 +491,8 @@ metabrainz
 metacritic
 mewatch
 microsoft
+microsoft-365
+microsoft-365-copilot
 microsoft-azure
 microsoft-dev
 microsoft-edge
@@ -584,6 +587,7 @@ organicmaps
 origin
 osu
 other
+outlook
 overcast
 ozon
 panasonic
@@ -687,6 +691,7 @@ sitepoint
 sketch
 skillshare
 sky
+skype
 slack
 slideshare
 sling
@@ -791,6 +796,7 @@ tver
 twilio
 twitch
 twitter
+twitter-badge
 typography
 uber
 ubi

@@ -134,7 +134,15 @@ CFG_PURGE_MB=100
 # small fraction of the traffic.  The state that carries the old meaning is
 # dropped on upgrade - including the device baseline, because a delta measured
 # against a reading taken before the upgrade is not a delta of this session.
-STATE_VERSION=2
+# 3: the hourly archive carries the hour's interface total as well.  Its snapshot
+# (arch/wan.snap) does not exist on a router upgrading from 2, while wan.tsv
+# already holds the whole session - so the first roll would have archived the
+# session as one hour and the 1-hour view would have shown it as that hour's
+# traffic.  Dropping the live counters restarts the device baseline, the same
+# tradeoff as 2; the history in <datadir> is untouched, and the hours written
+# before the upgrade simply carry no interface row, which the page reads as an
+# attributed figure rather than as a total.
+STATE_VERSION=3
 
 log() { logger -t traffic "$*"; }
 
@@ -1405,7 +1413,7 @@ record_sample() {
 # twice: what is already in the archive is subtracted out.  It lives in /tmp and
 # never touches the overlay, because it is written every round.
 publish_current() {
-    local arch="$STATE_DIR/arch" hour hr shr
+    local arch="$STATE_DIR/arch" hour hr shr wd wu swd swu dwd dwu
     hour=$(date +%Y-%m-%dT%H 2>/dev/null)
     [ -n "$hour" ] || return 0
     mkdir -p "$arch" 2>/dev/null
@@ -1468,6 +1476,34 @@ publish_current() {
     [ "$hr" -ge "$shr" ] || shr=0
     printf '%s\n' "$((hr - shr))" > "$STATE_DIR/cur.router.new" 2>/dev/null \
         && mv -f "$STATE_DIR/cur.router.new" "$STATE_DIR/cur.router"
+
+    # The hour in progress in the device counters, differenced against the same
+    # snapshot roll_hour advances: this is what lets a range view total up the
+    # current hour from the interface rather than from the attribution.  The
+    # session cumulative count must not be used here - inside a range it would
+    # both repeat the part the archive already holds and mix a session reading
+    # into an hour of it.
+    #
+    # Written only when the counters were actually measured, and removed when
+    # they were not: the absence of the file is what tells the backend to leave
+    # the field off the bucket, and the page to fall back to the attributed
+    # numbers rather than show a range as carrying nothing.
+    if [ -n "$WAN_IF" ] && [ -s "$STATE_DIR/wan.tsv" ]; then
+        { read -r wd; read -r wu; } < "$STATE_DIR/wan.tsv"
+        case "$wd" in ''|*[!0-9]*) wd=0 ;; esac
+        case "$wu" in ''|*[!0-9]*) wu=0 ;; esac
+        swd=$(sed -n '1p' "$arch/wan.snap" 2>/dev/null)
+        swu=$(sed -n '2p' "$arch/wan.snap" 2>/dev/null)
+        case "$swd" in ''|*[!0-9]*) swd=0 ;; esac
+        case "$swu" in ''|*[!0-9]*) swu=0 ;; esac
+        dwd=$((wd - swd)); [ "$dwd" -ge 0 ] || dwd=0
+        dwu=$((wu - swu)); [ "$dwu" -ge 0 ] || dwu=0
+        printf '%s\n%s\n' "$dwd" "$dwu" > "$STATE_DIR/cur.iface.new" 2>/dev/null \
+            && mv -f "$STATE_DIR/cur.iface.new" "$STATE_DIR/cur.iface"
+    else
+        rm -f "$STATE_DIR/cur.iface"
+    fi
+
     printf '%s\n' "$hour" > "$STATE_DIR/cur.hour.new" 2>/dev/null \
         && mv -f "$STATE_DIR/cur.hour.new" "$STATE_DIR/cur.hour"
     return 0
@@ -1491,6 +1527,7 @@ publish_current() {
 # rather than archived as a negative or a wrapped number.
 roll_hour() {
     local hour now hr shr dhr n arch="$STATE_DIR/arch"
+    local wd wu swd swu dwd dwu
     now=$(date +%s 2>/dev/null || echo 0)
     hour=$(date +%Y-%m-%dT%H 2>/dev/null)
     [ -n "$hour" ] || hour="h$now"
@@ -1503,6 +1540,33 @@ roll_hour() {
     case "$shr" in ''|*[!0-9]*) shr=0 ;; esac
     dhr=$((hr - shr))
     [ "$dhr" -ge 0 ] || dhr=0
+
+    # The interface counters, differenced exactly the way the router total above
+    # is, and for the same reason: wan.tsv is a running total for the session
+    # while the archive keeps one hour per row.  This row is the only place a
+    # range view can get a total that flow offloading did not shrink - the app
+    # rows in this same file are the attribution, which on the router this exists
+    # for recorded 6% of what the device carried.  The snapshot is a separate
+    # file from the other archives because the counters it measures are separate.
+    #
+    # A missing snapshot means the session has never been archived, so the whole
+    # of it belongs to this hour; a counter that went backwards - the state
+    # directory was reset while the snapshot survived - is clamped instead of
+    # being archived as a wrapped number.
+    wd=0; wu=0
+    if [ -s "$STATE_DIR/wan.tsv" ]; then
+        { read -r wd; read -r wu; } < "$STATE_DIR/wan.tsv"
+    fi
+    case "$wd" in ''|*[!0-9]*) wd=0 ;; esac
+    case "$wu" in ''|*[!0-9]*) wu=0 ;; esac
+    swd=$(sed -n '1p' "$arch/wan.snap" 2>/dev/null)
+    swu=$(sed -n '2p' "$arch/wan.snap" 2>/dev/null)
+    case "$swd" in ''|*[!0-9]*) swd=0 ;; esac
+    case "$swu" in ''|*[!0-9]*) swu=0 ;; esac
+    dwd=$((wd - swd))
+    [ "$dwd" -ge 0 ] || dwd=0
+    dwu=$((wu - swu))
+    [ "$dwu" -ge 0 ] || dwu=0
 
     # The applications, and the week-tier point, in one pass over the totals.
     #
@@ -1611,12 +1675,24 @@ roll_hour() {
         printf '%s\trouter\tproxy\t%d\t0\n' "$hour" "$dhr" >> "$CFG_DATADIR/hourly.tsv"
     fi
 
+    # The interface counters for this hour, as one more kind of row.  The name
+    # column is a placeholder: this row is a total and not an application, so
+    # every reader keys on the kind and keeps it out of the app and client
+    # lists - a row named "-" in the application table is the failure mode this
+    # avoids.  Written only when the hour carried something, which is exactly
+    # how the router row above keeps a repeated roll of the same hour from
+    # archiving the same bytes twice.
+    if [ "$dwd" -gt 0 ] || [ "$dwu" -gt 0 ]; then
+        printf '%s\twan\t-\t%d\t%d\n' "$hour" "$dwd" "$dwu" >> "$CFG_DATADIR/hourly.tsv"
+    fi
+
     # The snapshot is taken after the history has been appended, so a failure to
     # write cannot also lose the bytes it was about to record.
     cp -f "$STATE_DIR/totals.tsv"  "$arch/totals.tsv"  2>/dev/null
     cp -f "$STATE_DIR/acct.tsv"    "$arch/acct.tsv"    2>/dev/null
     cp -f "$STATE_DIR/clients.tsv" "$arch/clients.tsv" 2>/dev/null
     printf '%s\n' "$hr" > "$arch/router" 2>/dev/null
+    printf '%s\n%s\n' "$wd" "$wu" > "$arch/wan.snap" 2>/dev/null
 
     prune_hourly
     prune_dnsmap

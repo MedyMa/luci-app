@@ -32,7 +32,10 @@
 set -u
 
 SELF="$(cd "$(dirname "$0")" && pwd)"
-COLLECTOR="$(cd "$SELF/.." && pwd)/root/usr/share/traffic/collector.sh"
+# COLLECTOR_SRC points every phase at another revision of the collector: an
+# assertion that cannot be made to fail on the code it was written against
+# proves nothing, and the only honest way to check that is to run it there.
+COLLECTOR="${COLLECTOR_SRC:-$(cd "$SELF/.." && pwd)/root/usr/share/traffic/collector.sh}"
 # The collector's live-counter schema, read from the collector rather than written
 # out here.  A phase that seeds a counter file has to also seed a matching version,
 # or init_state() treats the state as older and drops exactly what was seeded -
@@ -404,7 +407,7 @@ printf '999\n' > "$T/state3/version"
 run_collector_at 30 "$T/state3" "$T/data3" "$T/ct" "$T/ql"
 c3() { awk -F'\t' -v ip="$1" '$1==ip {print $2}' "$T/state3/clients.tsv"; }
 chk "21 旧版本的存量客户端行被清除"         ""                  "$(c3 '192.168.2.1')"
-chk "21a 新版本号已写入"                    "2"                 "$(sed -n '1p' "$T/state3/version")"
+chk "21a 新版本号已写入"                    "$SCHEMA"                 "$(sed -n '1p' "$T/state3/version")"
 chk "21b 计数器是从新数据重建的"            "72600"             "$(c3 '192.168.2.138')"
 # second run: the schema now matches, so the totals must survive it untouched
 run_collector_at 30 "$T/state3" "$T/data3" "$T/ct" "$T/ql"
@@ -641,6 +644,21 @@ printf '%s\n' "$SCHEMA" > "$T/state9/version"   # matching schema, so what is se
 printf 'YouTube\t1000\t5000\n' > "$T/state9/totals.tsv"   # name, up, down
 printf '192.168.2.99\t6000\n'  > "$T/state9/clients.tsv"
 printf '777\n'                 > "$T/state9/router.tsv"
+# The device counters for this phase, and the device itself.  roll_hour now
+# archives the WAN counters as its own kind of row, so this phase has to have a
+# device: without one iface_account writes nothing and the archived device row
+# would be missing for a reason that has nothing to do with the code under test.
+# The counters never move, so every round contributes a delta of zero and the
+# one hour this phase archives carries exactly the seeded session total.
+printf '4000\n900\n'           > "$T/state9/wan.tsv"
+cat > "$T/netdev9" <<'EOF'
+Inter-|   Receive                                                |  Transmit
+ face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed
+    lo:    1000       10    0    0    0     0          0         0     1000       10    0    0    0     0       0          0
+  eth2: 5000000     4000    0    0    0     0          0         0   800000     3000    0    0    0     0       0          0
+EOF
+printf 'Iface\tDestination\tGateway \tFlags\tRefCnt\tUse\tMetric\tMask\t\tMTU\tWindow\tIRTT\n' > "$T/route9"
+printf 'eth2\t00000000\t0102A8C1\t0003\t0\t0\t0\t00000000\t0\t0\t0\n' >> "$T/route9"
 printf 'h0\n' > "$T/fakehour"
 cat > "$T/bin/date" <<EOF
 #!/bin/sh
@@ -664,10 +682,15 @@ wait_rounds() {
     return 1
 }
 
-PATH="$T/bin:$PATH" UCI=/bin/true LUA="$T/bin/lua" CT="$T/ctempty" \
+# env, not a bare assignment prefix: this shell does not treat a quoted
+# "NAME=value" word as an assignment, so the prefix form only works unquoted -
+# and the device paths have to be quoted because they are built from $T.
+env PATH="$T/bin:$PATH" UCI=/bin/true LUA="$T/bin/lua" CT="$T/ctempty" \
   TRAFFIC_QUERYLOG=/nonexistent TRAFFIC_LAN4=192.168.2. TRAFFIC_INTERVAL=2 \
   TRAFFIC_DATADIR="$T/data9" TRAFFIC_APPMAP="$T/apps.tsv" \
   TRAFFIC_CATEGORIES="$T/categories.tsv" STATE_DIR="$T/state9" \
+  "TRAFFIC_PROC_NET_DEV=$T/netdev9" "TRAFFIC_PROC_NET_ROUTE=$T/route9" \
+  TRAFFIC_PROC_NET_ROUTE6=/nonexistent \
   SELF_DIR="$(cd "$SELF/../root/usr/share/traffic" && pwd)" \
   sh "$COLLECTOR" >/dev/null 2>&1 &
 hpid=$!
@@ -693,7 +716,24 @@ chk "26 整点应用行下/上未错位"              "5000/1000" "$(awk -F'\t' 
 chk "26a 整点客户端行记字节数"              "6000/0"    "$(awk -F'\t' '$2=="client" { printf "%s/%s", $4, $5 }' "$h9")"
 chk "26b 整点隧道行记路由器自身流量"        "777"       "$(awk -F'\t' '$2=="router" { printf "%s", $4 }' "$h9")"
 chk "26c 整点只归档一次"                    "1"         "$(awk -F'\t' '$2=="router"' "$h9" | wc -l | tr -d ' ')"
-chk "26d 归档行数 = 三类各一行"             "3"         "$(grep -c . "$h9")"
+chk "26d 归档行数 = 四类各一行"             "4"         "$(grep -c . "$h9")"
+# The device counters of the hour, as a fourth kind of row.  The archive's app
+# rows are the attribution, which under flow offloading is a small fraction of
+# what the box carried - so a range view totals from this row instead, and it has
+# to be the seed and not the attribution.  Seeded asymmetrically again, and the
+# app row above is 5000/1000, so a row that had been filled from the attribution
+# would fail this even if the columns were right.
+chk "26d1 整点网卡行记设备字节"             "4000/900"  "$(awk -F'\t' '$2=="wan" { printf "%s/%s", $4, $5 }' "$h9")"
+chk "26d2 网卡行带 wan 类型与占位名"        "wan/-"     "$(awk -F'\t' '$2=="wan" { printf "%s/%s", $2, $3 }' "$h9")"
+chk "26d3 网卡行归到被滚动的小时"           "1"         "$(awk -F'\t' '$1=="h1" && $2=="wan"' "$h9" | wc -l | tr -d ' ')"
+# The row is a total and not an application.  A writer that emitted it as an app
+# row instead would put a "-" entry in the application table of every range view.
+chk "26d4 网卡行不冒充应用行"               "0"         "$(awk -F'\t' '$2=="app" && $3=="-"' "$h9" | wc -l | tr -d ' ')"
+chk "26d5 网卡会话累计未被归档清空"         "4000/900"  "$(sed -n '1p' "$T/state9/wan.tsv")/$(sed -n '2p' "$T/state9/wan.tsv")"
+# The device baseline the next delta is measured against.  It is advanced by the
+# roll, and it is what makes the second roll below archiving nothing rather than
+# the same bytes twice.
+chk "26d6 整点推进了网卡快照"               "4000/900"  "$(sed -n '1p' "$T/state9/arch/wan.snap")/$(sed -n '2p' "$T/state9/arch/wan.snap")"
 # The week tier is one point per hour, and its down column carries the router
 # total as well, because the box's own traffic belongs to the hour too.
 chk "26e series1h 下行含路由器流量"         "5777"      "$(cut -f2 "$T/data9/series1h.tsv" | head -n 1)"
@@ -703,9 +743,24 @@ chk "26h series1h 无流量的小时为 0"         "0/0"       "$(sed -n '2p' "$
 # The second roll had nothing new to archive, and the live counters it measured
 # against are still there: zeroing them here is what used to make the page lose
 # the session's traffic at the top of every hour.
-chk "26i 第二次滚动不重复归档"              "3"         "$(grep -c . "$h9")"
+chk "26i 第二次滚动不重复归档"              "4"         "$(grep -c . "$h9")"
+# The device row has to obey the same rule as the router row: the second roll
+# archived nothing, so the hour it ran in must not gain a copy of the bytes the
+# first roll already recorded.  This is the assertion the snapshot exists for.
+chk "26i1 第二次滚动不重复归档网卡行"       "1"         "$(awk -F'\t' '$2=="wan"' "$h9" | wc -l | tr -d ' ')"
+chk "26i2 第二次滚动的小时没有网卡行"       "0"         "$(awk -F'\t' '$1=="h2" && $2=="wan"' "$h9" | wc -l | tr -d ' ')"
+chk "26i3 第二次滚动后快照仍是原值"         "4000/900"  "$(sed -n '1p' "$T/state9/arch/wan.snap")/$(sed -n '2p' "$T/state9/arch/wan.snap")"
 chk "26j 整点不再清空应用累计"              "5000"      "$(awk -F'\t' '$1=="YouTube"{print $3}' "$T/state9/totals.tsv")"
 chk "26k 整点不再清空路由器累计"            "777"       "$(sed -n '1p' "$T/state9/router.tsv")"
+# The hour in progress, in device counters, for the backend to publish on the
+# bucket it appends.  After the roll the session total and the snapshot are the
+# same, so the current hour starts at zero rather than repeating the archived
+# hour; a collector that published the session cumulative here instead would
+# double every hour of every range once the hour turned over.
+chk "26l 进行中的小时发布网卡增量"          "0/0"       "$(sed -n '1p' "$T/state9/cur.iface")/$(sed -n '2p' "$T/state9/cur.iface")"
+chk "26m 网卡增量取自快照之差而非会话累计"  "no" \
+    "$([ "$(sed -n '1p' "$T/state9/cur.iface")" = "4000" ] && echo yes || echo no)"
+
 
 echo
 echo "=== WAN 接口计数器：权威总量与曲线 ==="
