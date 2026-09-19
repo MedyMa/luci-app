@@ -378,6 +378,8 @@ const CURATED = [
 	['Taobao', 'taobaocdn.com'], ['Taobao', 'tbcdn.cn'], ['Taobao', 'taobao.net'],
 	['Tmall', 'tmall.hk'], ['Alipay', 'alipayobjects.com'], ['Alipay', 'alipaydev.com'],
 	['DingTalk', 'dingtalkapps.com'],
+	['Toutiao', 'toutiao.com'],
+	['WeChat Official Accounts', 'mp.weixin.qq.com'],
 	/* --- Tencent */
 	['Tencent', 'tencent.com'], ['Tencent', 'tencent-cloud.net'], ['Tencent', 'tencentcs.com'],
 	['Tencent', 'idqqimg.com'], ['Tencent', 'weixinbridge.com'], ['Tencent', 'tenpay.com'],

@@ -1,10 +1,10 @@
 {
  "generated": "2026-09-19",
- "icons": 888,
- "manifestRows": 888,
+ "icons": 889,
+ "manifestRows": 889,
  "catalogue": {
-  "rows": 32068,
-  "names": 1657
+  "rows": 32069,
+  "names": 1658
  },
  "coverage": {
   "names": 49.4,
@@ -5261,14 +5261,6 @@
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/arcticons/"
   },
-  "toutiao": {
-   "file": "toutiao.svg",
-   "application": "Toutiao",
-   "source": "iconify:icon-park-outline",
-   "upstream": "icon-park-outline:jinritoutiao",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/icon-park-outline/"
-  },
   "typography": {
    "file": "typography.svg",
    "application": "Typography",
@@ -7272,6 +7264,22 @@
   "wechat": {
    "file": "wechat.svg",
    "application": "WeChat",
+   "source": "local",
+   "upstream": "local",
+   "licence": "supplied by the user, shipped in this repository (marks of their owners)",
+   "url": "tools/icons-local in the luci-app-traffic source tree"
+  },
+  "toutiao": {
+   "file": "toutiao.svg",
+   "application": "Toutiao",
+   "source": "local",
+   "upstream": "local",
+   "licence": "supplied by the user, shipped in this repository (marks of their owners)",
+   "url": "tools/icons-local in the luci-app-traffic source tree"
+  },
+  "wechat-official-accounts": {
+   "file": "wechat-official-accounts.svg",
+   "application": "WeChat Official Accounts",
    "source": "local",
    "upstream": "local",
    "licence": "supplied by the user, shipped in this repository (marks of their owners)",

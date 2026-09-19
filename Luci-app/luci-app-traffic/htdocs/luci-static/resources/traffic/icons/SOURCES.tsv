@@ -635,7 +635,6 @@ terabox.svg	TeraBox	iconify:arcticons	arcticons:terabox	see the collection licen
 taptap.svg	TapTap	iconify:arcticons	arcticons:taptap	see the collection licence	https://icon-sets.iconify.design/arcticons/	
 tianyancha.svg	Tianyancha	iconify:arcticons	arcticons:tianyancha	see the collection licence	https://icon-sets.iconify.design/arcticons/	
 termux.svg	Termux	iconify:arcticons	arcticons:termux	see the collection licence	https://icon-sets.iconify.design/arcticons/	
-toutiao.svg	Toutiao	iconify:icon-park-outline	icon-park-outline:jinritoutiao	see the collection licence	https://icon-sets.iconify.design/icon-park-outline/	
 typography.svg	Typography	iconify:tabler	tabler:typography	see the collection licence	https://icon-sets.iconify.design/tabler/	
 ucloud.svg	UCloud	iconify:thesvg	thesvg:baiducloud	see the collection licence	https://icon-sets.iconify.design/thesvg/	
 tutanota.svg	Tutanota	iconify:arcticons	arcticons:tutanota	see the collection licence	https://icon-sets.iconify.design/arcticons/	
@@ -888,3 +887,5 @@ moonvy.svg	Moonvy	svglogo	moonvy	MIT	https://github.com/HeyHuazi/SVGLOGO
 midea.svg	Midea	svglogo	midea	MIT	https://github.com/HeyHuazi/SVGLOGO	
 bytedance.svg	ByteDance	local	local	supplied by the user, shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
 wechat.svg	WeChat	local	local	supplied by the user, shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
+toutiao.svg	Toutiao	local	local	supplied by the user, shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
+wechat-official-accounts.svg	WeChat Official Accounts	local	local	supplied by the user, shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
