@@ -1330,6 +1330,7 @@ async function buildIcons(appNames, glyphNames) {
 			'https://commons.wikimedia.org/'],
 		'seeklogo': ['seeklogo: reference use only, not an open licence (trademark of the owner)',
 			'https://seeklogo.com/'],
+		'svglogo': ['MIT', 'https://github.com/HeyHuazi/SVGLOGO'],
 	};
 	function setInfo(src) {
 		if (!src) return ['unknown', ''];

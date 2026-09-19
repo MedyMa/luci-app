@@ -1,13 +1,13 @@
 {
  "generated": "2026-09-19",
- "icons": 882,
- "manifestRows": 882,
+ "icons": 888,
+ "manifestRows": 888,
  "catalogue": {
   "rows": 32068,
   "names": 1657
  },
  "coverage": {
-  "names": 49,
+  "names": 49.4,
   "domains": 77.3
  },
  "missingByDomains": [
@@ -1034,14 +1034,6 @@
    "application": "Buymeacoffee",
    "source": "iconify:simple-icons",
    "upstream": "buymeacoffee",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
-  },
-  "bytedance": {
-   "file": "bytedance.svg",
-   "application": "ByteDance",
-   "source": "iconify:simple-icons",
-   "upstream": "bytedance",
    "licence": "see the collection licence",
    "url": "https://icon-sets.iconify.design/simple-icons/"
   },
@@ -4773,14 +4765,6 @@
    "licence": "see upstream LICENSE",
    "url": "https://github.com/selfhst/icons/blob/main/LICENSE"
   },
-  "wechat": {
-   "file": "wechat.svg",
-   "application": "WeChat",
-   "source": "dashboard-icons",
-   "upstream": "wechat",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
-  },
   "vrchat": {
    "file": "vrchat.svg",
    "application": "Vrchat",
@@ -7224,6 +7208,70 @@
   "feishu": {
    "file": "feishu.svg",
    "application": "Feishu",
+   "source": "local",
+   "upstream": "local",
+   "licence": "supplied by the user, shipped in this repository (marks of their owners)",
+   "url": "tools/icons-local in the luci-app-traffic source tree"
+  },
+  "haier": {
+   "file": "haier.svg",
+   "application": "Haier",
+   "source": "svglogo",
+   "upstream": "haier",
+   "licence": "MIT",
+   "url": "https://github.com/HeyHuazi/SVGLOGO"
+  },
+  "ximalaya": {
+   "file": "ximalaya.svg",
+   "application": "Ximalaya",
+   "source": "svglogo",
+   "upstream": "ximalaya",
+   "licence": "MIT",
+   "url": "https://github.com/HeyHuazi/SVGLOGO"
+  },
+  "huya": {
+   "file": "huya.svg",
+   "application": "Huya",
+   "source": "svglogo",
+   "upstream": "huya",
+   "licence": "MIT",
+   "url": "https://github.com/HeyHuazi/SVGLOGO"
+  },
+  "qingtingfm": {
+   "file": "qingtingfm.svg",
+   "application": "Qingtingfm",
+   "source": "svglogo",
+   "upstream": "qingtingfm",
+   "licence": "MIT",
+   "url": "https://github.com/HeyHuazi/SVGLOGO"
+  },
+  "moonvy": {
+   "file": "moonvy.svg",
+   "application": "Moonvy",
+   "source": "svglogo",
+   "upstream": "moonvy",
+   "licence": "MIT",
+   "url": "https://github.com/HeyHuazi/SVGLOGO"
+  },
+  "midea": {
+   "file": "midea.svg",
+   "application": "Midea",
+   "source": "svglogo",
+   "upstream": "midea",
+   "licence": "MIT",
+   "url": "https://github.com/HeyHuazi/SVGLOGO"
+  },
+  "bytedance": {
+   "file": "bytedance.svg",
+   "application": "ByteDance",
+   "source": "local",
+   "upstream": "local",
+   "licence": "supplied by the user, shipped in this repository (marks of their owners)",
+   "url": "tools/icons-local in the luci-app-traffic source tree"
+  },
+  "wechat": {
+   "file": "wechat.svg",
+   "application": "WeChat",
    "source": "local",
    "upstream": "local",
    "licence": "supplied by the user, shipped in this repository (marks of their owners)",

@@ -342,6 +342,7 @@ grok
 groq
 group-ib
 habr
+haier
 hardware
 hashicorp
 haskell
@@ -375,6 +376,7 @@ hulu
 huluusa
 humblebundle
 hupu
+huya
 ibkr
 ibm
 icbc
@@ -492,6 +494,7 @@ microsoft-dev
 microsoft-edge
 microsoft-pki
 microsoft-teams
+midea
 midjourney
 migu
 mihoyo-cn
@@ -508,6 +511,7 @@ modrinth
 mogu
 mojang
 mongodb
+moonvy
 moov
 motorola
 mozilla
@@ -618,6 +622,7 @@ pypi
 python
 qcc
 qidian
+qingtingfm
 qnap
 qobuz
 qq
@@ -861,6 +866,7 @@ xiaomi-getapps
 xiaomi-iot
 xiaoyuzhou
 xiecheng
+ximalaya
 xnxx
 xunlei
 yahoo
