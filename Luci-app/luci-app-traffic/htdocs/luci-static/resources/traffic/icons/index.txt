@@ -7,6 +7,7 @@ abc
 abema
 accuweather
 acer
+acfun
 activision
 activision-blizzard
 adblock
@@ -662,6 +663,7 @@ rostelecom
 rsshub
 rsshub-3rd
 rtsp
+ruanmei
 ruby
 rumble
 rutube
@@ -708,6 +710,7 @@ social
 softbank
 software
 sogou
+sohu
 sony
 soundcloud
 sourceforge

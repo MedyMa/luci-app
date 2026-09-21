@@ -1,1 +1,23 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 48 48"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="M15.011 30.09L5.5 23.01l37-16.394l-8.736 34.768l-15.51-10.268L42.5 6.616Z"/><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="m15.011 30.09l.865 9.295l2.378-8.269"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 132 132">
+  <!-- 由 132x132 原图逐像素分析生成：超椭圆圆角 + 2x2 色块（非等分）+ 白色十字 + 折纸飞机 + 柔和投影 -->
+  <defs>
+    <clipPath id="icon"><path d="M33.72 0L98.28 0L103.47 0.18L107.61 0.72L111.36 1.62L114.8 2.88L117.94 4.47L120.8 6.4L123.36 8.64L125.6 11.2L127.53 14.06L129.12 17.2L130.38 20.64L131.28 24.39L131.82 28.53L132 33.72L132 98.28L131.82 103.47L131.28 107.61L130.38 111.36L129.12 114.8L127.53 117.94L125.6 120.8L123.36 123.36L120.8 125.6L117.94 127.53L114.8 129.12L111.36 130.38L107.61 131.28L103.47 131.82L98.28 132L33.72 132L28.53 131.82L24.39 131.28L20.64 130.38L17.2 129.12L14.06 127.53L11.2 125.6L8.64 123.36L6.4 120.8L4.47 117.94L2.88 114.8L1.62 111.36L0.72 107.61L0.18 103.47L0 98.28L0 33.72L0.18 28.53L0.72 24.39L1.62 20.64L2.88 17.2L4.47 14.06L6.4 11.2L8.64 8.64L11.2 6.4L14.06 4.47L17.2 2.88L20.64 1.62L24.39 0.72L28.53 0.18Z"/></clipPath>
+    <filter id="soft" x="-40%" y="-40%" width="180%" height="180%" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="0.5"/>
+    </filter>
+  </defs>
+  <g clip-path="url(#icon)">
+    <rect x="0" y="0" width="132" height="132" fill="#B4FB91"/>
+    <rect x="65" y="0" width="67" height="81.56" fill="#E9F1F2"/>
+    <rect x="0" y="93.17" width="50.18" height="38.83" fill="#E9F1F2"/>
+    <rect x="65" y="93.17" width="67" height="38.83" fill="#57E9FF"/>
+    <rect x="50.18" y="0" width="14.82" height="132" fill="#FFFFFF"/>
+    <rect x="0" y="81.56" width="132" height="11.61" fill="#FFFFFF"/>
+    <path d="M113.65 16.59L93.75 117.74L60.72 98.1L50.14 110.65L42.4 87.14L9.41 69.32Z" fill="#0088FE" opacity="0.0637" filter="url(#soft)" transform="translate(-2 14)"/>
+    <g transform="translate(0.05 -0.05)">
+      <path d="M113.65 16.59L93.75 117.74L60.72 98.1L50.14 110.65L42.4 87.14L9.41 69.32Z" fill="#0088FE" fill-rule="evenodd"/>
+      <path d="M109.01 21.73L54.09 92.67L60.37 97.93L50.38 110.56L42.79 87.25Z" fill="#0057F9" fill-rule="evenodd"/>
+      <path d="M53.28 93.54L60.43 97.62L50.5 109.76Z" fill="#0025C4" fill-rule="evenodd"/>
+    </g>
+  </g>
+</svg>

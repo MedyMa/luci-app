@@ -739,7 +739,7 @@ sms.svg	sms	lucide-static	message-square	ISC	https://github.com/lucide-icons/luc
 government.svg	government	lucide-static	building-2	ISC	https://github.com/lucide-icons/lucide/blob/main/LICENSE	
 android-app-download.svg	android-app-download	lucide-static	smartphone	ISC	https://github.com/lucide-icons/lucide/blob/main/LICENSE	
 iptv.svg	iptv	lucide-static	tv	ISC	https://github.com/lucide-icons/lucide/blob/main/LICENSE	
-360.svg		unknown		carried over; provenance not recorded		
+360.svg	360	local	local	supplied by the user, shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
 abema.svg		unknown		carried over; provenance not recorded		
 alphabet.svg		unknown		carried over; provenance not recorded		
 antutu.svg		unknown		carried over; provenance not recorded		
@@ -869,7 +869,7 @@ tencent.svg	Tencent	iconify:thesvg-color	tencent	see the collection licence	http
 chinabroadnet.svg	Chinabroadnet	local	local	shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
 speedtest-cn.svg	speedtest.cn	local	local	shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
 mango-tv.svg	Mango TV	seeklogo	649521	seeklogo: reference use only, not an open licence (trademark of the owner)	https://seeklogo.com/vector-logo/649521/mango-tv	cropped to the emblem
-gaode.svg	GaoDe	iconify:arcticons	autonavi	see the collection licence	https://icon-sets.iconify.design/arcticons/	
+gaode.svg	GaoDe	local	local	supplied by the user, shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
 amap.svg	Amap	iconify:arcticons	autonavi	see the collection licence	https://icon-sets.iconify.design/arcticons/	
 hoyoverse.svg	HoYoverse	iconify:thesvg-color	mihoyo	see the collection licence	https://icon-sets.iconify.design/thesvg-color/	
 cctv.svg	CCTV	wikimedia-commons	CCTVNewLogo cropped	see the licence on the file page (public domain for CCTVNewLogo)	https://commons.wikimedia.org/wiki/File:CCTVNewLogo_cropped.svg	
@@ -897,3 +897,6 @@ outlook.svg	Outlook	local	local	supplied by the user, shipped in this repository
 microsoft-365.svg	Microsoft 365	local	local	supplied by the user, shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
 microsoft-365-copilot.svg	Microsoft 365 Copilot	local	local	supplied by the user, shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
 pptv.svg	PPTV	local	local	supplied by the user, shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
+ruanmei.svg	RuanMei	local	local	supplied by the user, shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
+acfun.svg	AcFun	local	local	supplied by the user, shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
+sohu.svg	Sohu	local	local	supplied by the user, shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
