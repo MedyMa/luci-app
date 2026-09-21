@@ -167,6 +167,7 @@ var dashboardStyle = [
 	'  --lf-well: rgba(255, 255, 255, 0.72);',
 	'  --lf-well-hub: rgba(255, 255, 255, 0.92);',
 	'  --lf-track: rgba(128, 150, 175, 0.20);',
+	'  --lf-hairline: inset 0 1px 0 rgba(255, 255, 255, 0.5);',
 	'  --lf-form-bg: rgba(255, 255, 255, 0.8);',
 	'  --lf-form-border: rgba(128, 150, 175, 0.20);',
 	'  --lf-form-title: var(--font-color, #20303d);',
@@ -202,6 +203,7 @@ var dashboardStyle = [
 	'  --lf-well: rgba(7, 20, 26, 0.38);',
 	'  --lf-well-hub: rgba(10, 27, 33, 0.92);',
 	'  --lf-track: rgba(255, 255, 255, 0.12);',
+	'  --lf-hairline: inset 0 1px 0 rgba(255, 255, 255, 0.05);',
 	'  --lf-form-bg: rgba(44, 44, 46, 0.8);',
 	'  --lf-form-border: var(--border-color-low, rgba(255, 255, 255, 0.12));',
 	'  --lf-form-title: #e6edf3;',
@@ -218,7 +220,7 @@ var dashboardStyle = [
 	'}',
 
 	/* ── Shell & Entrance ── */
-	'.lf-dashboard-shell { position: relative; overflow: hidden; border: 1px solid var(--lf-shell-border); border-radius: 24px; box-shadow: var(--lf-shell-shadow); background: var(--lf-shell-bg); backdrop-filter: blur(14px) saturate(150%); -webkit-backdrop-filter: blur(14px) saturate(150%); }',
+	'.lf-dashboard-shell { position: relative; overflow: hidden; border: 1px solid var(--lf-shell-border); border-radius: 24px; box-shadow: var(--lf-hairline), var(--lf-shell-shadow); background: var(--lf-shell-bg); backdrop-filter: blur(14px) saturate(150%); -webkit-backdrop-filter: blur(14px) saturate(150%); }',
 	'.lf-dashboard-shell.lf-entering { animation: lf-shell-enter 500ms var(--lf-ease-out) both; }',
 	'@keyframes lf-shell-enter { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }',
 
@@ -227,21 +229,22 @@ var dashboardStyle = [
 	 * has none: a light material with a coloured blob behind it reads as a
 	 * leftover, not as depth. */
 
-	'.lf-dashboard { position: relative; z-index: 1; padding: 28px; color: var(--lf-fg); }',
-	'.lf-hero { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.85fr); gap: 24px; align-items: stretch; }',
-	'.lf-copy { min-width: 0; }',
+	'.lf-dashboard { position: relative; z-index: 1; padding: 18px 20px; color: var(--lf-fg); }',
+	'.lf-hero { display: grid; grid-template-columns: minmax(0, 1.85fr) minmax(280px, 1fr); gap: 18px; align-items: stretch; }',
+	'.lf-copy { min-width: 0; display: flex; flex-direction: column; }',
 
-	/* Eyebrow badge */
-	'.lf-eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: var(--lf-frost-bg); border: 1px solid var(--lf-frost-border); backdrop-filter: blur(16px) saturate(140%); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; }',
+	/* Eyebrow badge — align-self keeps it as wide as its text: the copy column
+	 * is a flex column now, and a stretched inline-flex child fills the row. */
+	'.lf-eyebrow { display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; padding: 4px 10px; border-radius: 999px; background: var(--lf-frost-bg); border: 1px solid var(--lf-frost-border); backdrop-filter: blur(16px) saturate(140%); font-size: 11px; letter-spacing: 0.10em; text-transform: uppercase; }',
 
 	/* Headline — reset all LuCI overrides */
-	'.lf-headline { all: unset; display: block !important; width: auto !important; margin: 16px 0 10px !important; padding: 0 !important; min-height: 0 !important; background: transparent !important; background-color: transparent !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; font-size: 30px !important; font-weight: 700 !important; line-height: 1.15 !important; color: var(--lf-fg) !important; text-shadow: none !important; }',
+	'.lf-headline { all: unset; display: block !important; width: auto !important; margin: 12px 0 8px !important; padding: 0 !important; min-height: 0 !important; background: transparent !important; background-color: transparent !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; font-size: 25px !important; font-weight: 700 !important; line-height: 1.15 !important; letter-spacing: -0.02em !important; color: var(--lf-fg) !important; text-shadow: none !important; }',
 	'.lf-headline:before, .lf-headline:after { display: none; content: none; }',
-	'.lf-copy p { max-width: 52rem; margin: 0; font-size: 14px; line-height: 1.7; color: var(--lf-dim); }',
+	'.lf-copy p { max-width: 46rem; margin: 0; font-size: 13px; line-height: 1.6; color: var(--lf-dim); }',
 
-	'.lf-chip-row, .lf-metrics, .lf-grid, .lf-config-grid, .lf-ladder-scale { display: grid; gap: 14px; }',
-	'.lf-chip-row { grid-template-columns: repeat(auto-fit, minmax(140px, max-content)); margin-top: 18px; }',
-	'.lf-chip { display: inline-flex; align-items: center; justify-content: center; padding: 8px 14px; border-radius: 999px; background: var(--lf-frost-bg); border: 1px solid var(--lf-frost-border); backdrop-filter: blur(12px); font-size: 12px; line-height: 1.4; color: var(--lf-fg); }',
+	'.lf-chip-row, .lf-metrics, .lf-grid, .lf-config-grid, .lf-ladder-scale { display: grid; gap: 10px; }',
+	'.lf-chip-row { grid-template-columns: repeat(auto-fit, minmax(120px, max-content)); margin-top: 12px; }',
+	'.lf-chip { display: inline-flex; align-items: center; justify-content: center; padding: 4px 10px; border-radius: 999px; background: var(--lf-frost-bg); border: 1px solid var(--lf-frost-border); backdrop-filter: blur(12px); font-size: 11.5px; line-height: 1.4; color: var(--lf-fg); }',
 	'.lf-chip-muted { background: var(--lf-deep-surface); color: var(--lf-dim); }',
 	'.lf-chip-alert { background: rgba(246, 135, 83, 0.2); border-color: rgba(246, 135, 83, 0.35); }',
 
@@ -251,55 +254,61 @@ var dashboardStyle = [
 	'.lf-runtime-badge[data-state="standby"] { background: #cbe7f0; border-color: #cbe7f0; color: #173843; }',
 	'.lf-runtime-badge[data-state="disabled"], .lf-runtime-badge[data-state="unsupported"] { background: var(--lf-frost-bg); color: var(--lf-fg); }',
 
-	'.lf-visual { min-width: 0; display: grid; gap: 16px; align-content: start; justify-items: stretch; }',
+	'.lf-visual { min-width: 0; display: grid; gap: 10px; align-content: start; justify-items: stretch; }',
 
 	/* Fan orb — Apple-style glass surface with top-edge light catch */
-	'.lf-orb { position: relative; display: flex; align-items: center; justify-content: center; width: 100%; min-height: 280px; padding: 18px; overflow: hidden; border-radius: 26px; background: var(--lf-well) !important; border: 1px solid var(--lf-frost-border) !important; backdrop-filter: blur(18px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 8px 24px rgba(0,0,0,0.08) !important; }',
+	'.lf-orb { position: relative; display: flex; align-items: center; justify-content: center; width: 100%; min-height: 268px; padding: 4px; overflow: hidden; border-radius: 18px; background: var(--lf-well) !important; border: 1px solid var(--lf-frost-border) !important; backdrop-filter: blur(18px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 8px 24px rgba(0,0,0,0.08) !important; }',
 	'.lf-orb canvas, #lf-fan-canvas { display: block !important; width: 260px !important; height: 260px !important; max-width: 100% !important; max-height: 260px !important; margin: 0 auto !important; background: transparent !important; background-color: transparent !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; outline: 0 !important; }',
 
 	'.lf-temp-readout { position: absolute; top: 50%; left: 50%; z-index: 1; transform: translate(-50%, -50%); text-align: center; pointer-events: none; }',
-	'.lf-temp-number { font-size: 42px; line-height: 1; font-weight: 700; }',
-	'.lf-temp-unit { margin-top: 4px; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--lf-dim); }',
-	'.lf-temp-caption { margin-top: 8px; font-size: 12px; color: var(--lf-dim); }',
+	'.lf-temp-number { font-size: 32px; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums; }',
+	'.lf-temp-unit { margin-top: 2px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--lf-dim); }',
+	'.lf-temp-caption { margin-top: 3px; font-size: 11px; color: var(--lf-dim); }',
 
 	/* Demand bar — smooth width transition with strong ease-in-out */
-	'.lf-demand { width: 100%; box-sizing: border-box; padding: 16px 18px 18px; border-radius: 18px; background: var(--lf-frost-soft); border: 1px solid var(--lf-frost-border); backdrop-filter: blur(10px); }',
-	'.lf-demand-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 13px; }',
-	'.lf-demand-row strong { font-size: 18px; }',
-	'.lf-demand-bar { margin-top: 10px; height: 12px; border-radius: 999px; background: var(--lf-track); overflow: hidden; }',
+	'.lf-demand { width: 100%; box-sizing: border-box; padding: 10px 12px 12px; border-radius: 14px; background: var(--lf-frost-soft); border: 1px solid var(--lf-frost-border); backdrop-filter: blur(10px); }',
+	'.lf-demand-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 12px; }',
+	'.lf-demand-row strong { font-size: 15px; font-variant-numeric: tabular-nums; }',
+	'.lf-demand-bar { margin-top: 7px; height: 8px; border-radius: 999px; background: var(--lf-track); overflow: hidden; }',
 	'#lf-demand-fill { height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, #7de2b8 0%, #f3d07b 55%, #f68753 100%);',
 	'  transition: width 350ms var(--lf-ease-in-out), background 350ms var(--lf-ease-in-out); }',
 
-	/* Metrics grid — translucency + blur */
-	'.lf-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 22px; }',
-	'.lf-metric, .lf-card, .lf-ladder-card { padding: 18px; border-radius: 20px; background: var(--lf-frost-bg); border: 1px solid var(--lf-frost-border); backdrop-filter: blur(12px) saturate(140%); }',
-	'.lf-metric-label { font-size: 12px; line-height: 1.5; color: var(--lf-dim); }',
-	'.lf-metric-value { margin-top: 10px; font-size: 28px; line-height: 1.1; font-weight: 700; color: var(--lf-fg);',
+	/* Metrics grid — translucency + blur.  It fills whatever height the orb
+	 * column has left over: the KPI tiles grow into the space instead of
+	 * leaving a hole between themselves and the chips above. */
+	'.lf-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 14px; flex: 1 1 auto; align-content: stretch; }',
+	'.lf-metric, .lf-card, .lf-ladder-card { padding: 12px 14px; border-radius: 16px; background: var(--lf-frost-bg); border: 1px solid var(--lf-frost-border); backdrop-filter: blur(12px) saturate(140%); }',
+	/* The KPI tiles stretch to the orb column's height, so the label goes to the
+	 * top and the number to the bottom of the tile rather than both sitting in
+	 * the upper half of a tall box. */
+	'.lf-metric { display: flex; flex-direction: column; justify-content: space-between; }',
+	'.lf-metric-label { font-size: 11px; line-height: 1.4; color: var(--lf-dim); }',
+	'.lf-metric-value { margin-top: 4px; font-size: 22px; line-height: 1.1; font-weight: 700; color: var(--lf-fg); font-variant-numeric: tabular-nums;',
 	'  transition: color 200ms var(--lf-ease-out); }',
 
 	/* Ladder (smart curve visualisation) */
-	'.lf-ladder-card { margin-top: 22px; }',
+	'.lf-ladder-card { margin-top: 16px; }',
 	'.lf-ladder-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }',
-	'.lf-ladder-head h4, .lf-card h4 { margin: 0; font-size: 16px; color: var(--lf-fg); }',
-	'.lf-source-pill { padding: 6px 10px; border-radius: 999px; background: var(--lf-deep-surface); font-size: 12px; color: var(--lf-dim); }',
-	'.lf-ladder-track { position: relative; height: 18px; margin-top: 18px; border-radius: 999px; background: linear-gradient(90deg, rgba(125, 226, 184, 0.45) 0%, rgba(250, 206, 118, 0.72) 55%, rgba(246, 135, 83, 0.95) 100%); overflow: hidden; }',
+	'.lf-ladder-head h4, .lf-card h4 { margin: 0; font-size: 15px; color: var(--lf-fg); }',
+	'.lf-source-pill { padding: 3px 8px; border-radius: 999px; background: var(--lf-deep-surface); font-size: 11px; color: var(--lf-dim); }',
+	'.lf-ladder-track { position: relative; height: 14px; margin-top: 12px; border-radius: 999px; background: linear-gradient(90deg, rgba(125, 226, 184, 0.45) 0%, rgba(250, 206, 118, 0.72) 55%, rgba(246, 135, 83, 0.95) 100%); overflow: hidden; }',
 	'.lf-ladder-track:before { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(6, 18, 22, 0.25), rgba(255, 255, 255, 0.04)); }',
-	'.lf-marker { position: absolute; top: -5px; width: 2px; height: 28px; background: #ffffff; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.16); transform: translateX(-50%);',
+	'.lf-marker { position: absolute; top: -4px; width: 2px; height: 22px; background: #ffffff; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.16); transform: translateX(-50%);',
 	'  transition: left 400ms var(--lf-ease-out), opacity 200ms var(--lf-ease-out); }',
-	'.lf-marker-current { height: 34px; top: -8px; background: #ffd17c; box-shadow: 0 0 0 4px rgba(255, 209, 124, 0.18); }',
-	'.lf-ladder-scale { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 16px; }',
-	'.lf-scale-item { padding: 10px 12px; border-radius: 14px; background: var(--lf-deep-surface-soft); }',
-	'.lf-scale-item span { display: block; font-size: 11px; line-height: 1.5; color: var(--lf-dim); }',
-	'.lf-scale-item strong { display: block; margin-top: 6px; font-size: 18px; line-height: 1.2; color: var(--lf-fg);',
+	'.lf-marker-current { height: 28px; top: -7px; background: #ffd17c; box-shadow: 0 0 0 4px rgba(255, 209, 124, 0.18); }',
+	'.lf-ladder-scale { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 10px; }',
+	'.lf-scale-item { padding: 7px 10px; border-radius: 12px; background: var(--lf-deep-surface-soft); }',
+	'.lf-scale-item span { display: block; font-size: 10.5px; line-height: 1.4; color: var(--lf-dim); }',
+	'.lf-scale-item strong { display: block; margin-top: 2px; font-size: 16px; line-height: 1.2; color: var(--lf-fg); font-variant-numeric: tabular-nums;',
 	'  transition: color 200ms var(--lf-ease-out); }',
 
-	'.lf-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 22px; }',
-	'.lf-card p { margin: 12px 0 0; font-size: 13px; line-height: 1.7; color: var(--lf-dim); }',
+	'.lf-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 16px; }',
+	'.lf-card p { margin: 8px 0 0; font-size: 12.5px; line-height: 1.6; color: var(--lf-dim); }',
 
 	/* ── Preset Buttons (Emil-style: :active scale feedback, strong easing) ── */
-	'.lf-preset-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }',
+	'.lf-preset-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }',
 	'.lf-preset {',
-	'  min-height: 48px; padding: 0 14px; border-radius: 14px;',
+	'  min-height: 40px; padding: 0 12px; border-radius: 12px;',
 	'  border: 1px solid var(--lf-preset-border);',
 	'  background: var(--lf-preset-bg);',
 	'  color: var(--lf-fg); box-shadow: none; cursor: pointer;',
@@ -315,21 +324,25 @@ var dashboardStyle = [
 	'.lf-preset:focus-visible { box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.4); }',
 	'.lf-preset.is-active { background: var(--lf-preset-active); border-color: var(--lf-preset-active-border); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); }',
 
-	'.lf-note, .lf-insights, .lf-config-grid { margin-top: 14px; }',
-	'.lf-insight { margin: 0 0 10px; padding: 10px 12px; border-radius: 14px; background: var(--lf-deep-surface-soft); font-size: 13px; line-height: 1.6; color: var(--lf-fg); }',
+	'.lf-note, .lf-insights, .lf-config-grid { margin-top: 10px; }',
+	/* The hints are six sentences.  As one column this card was the tallest
+	 * thing on the page and stretched the two cards beside it, so the row is
+	 * now two columns of hints and the three cards come out even. */
+	'.lf-insights { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; }',
+	'.lf-insight { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--lf-fg); }',
 	'.lf-config-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }',
-	'.lf-config-item { padding: 10px 12px; border-radius: 14px; background: var(--lf-deep-surface-soft); }',
-	'.lf-config-item span { display: block; font-size: 11px; line-height: 1.5; color: var(--lf-dim); }',
-	'.lf-config-item strong { display: block; margin-top: 6px; font-size: 18px; line-height: 1.3; color: var(--lf-fg);',
+	'.lf-config-item { padding: 7px 10px; border-radius: 12px; background: var(--lf-deep-surface-soft); }',
+	'.lf-config-item span { display: block; font-size: 10.5px; line-height: 1.4; color: var(--lf-dim); }',
+	'.lf-config-item strong { display: block; margin-top: 2px; font-size: 16px; line-height: 1.3; color: var(--lf-fg); font-variant-numeric: tabular-nums;',
 	'  transition: color 200ms var(--lf-ease-out); }',
 
 	/* ── LuCI Form Integration ── */
-	'.lf-dashboard-shell + .cbi-map { margin-top: 0; border-radius: 22px; border: 1px solid var(--lf-form-border); box-shadow: 0 12px 30px rgba(17, 48, 54, 0.08); overflow: hidden; background: var(--lf-form-bg); }',
+	'.lf-dashboard-shell + .cbi-map { margin-top: 0; border-radius: 20px; border: 1px solid var(--lf-form-border); box-shadow: 0 12px 30px rgba(17, 48, 54, 0.08); overflow: hidden; background: var(--lf-form-bg); }',
 	'.lf-dashboard-shell + .cbi-map > h2, .lf-dashboard-shell + .cbi-map > .cbi-map-descr { display: none; }',
 	'.lf-dashboard-shell + .cbi-map .cbi-section { margin: 0; border: 0; box-shadow: none; background: transparent; }',
 	'.lf-dashboard-shell + .cbi-map .cbi-section-node { padding-top: 6px; background: transparent; }',
-	'.lf-dashboard-shell + .cbi-map .cbi-section-node h3 { margin-top: 4px; font-size: 20px; color: var(--lf-form-title); }',
-	'.lf-dashboard-shell + .cbi-map .cbi-value { padding: 14px 18px; border-top: 1px solid var(--lf-form-border); }',
+	'.lf-dashboard-shell + .cbi-map .cbi-section-node h3 { margin-top: 2px; font-size: 17px; color: var(--lf-form-title); }',
+	'.lf-dashboard-shell + .cbi-map .cbi-value { padding: 11px 14px; border-top: 1px solid var(--lf-form-border); }',
 	'.lf-dashboard-shell + .cbi-map .cbi-value-title { font-weight: 600; color: var(--lf-form-title); }',
 	'.lf-dashboard-shell + .cbi-map input[type="text"],',
 	'.lf-dashboard-shell + .cbi-map input[type="password"],',
@@ -365,7 +378,7 @@ var dashboardStyle = [
 
 	/* ── Responsive ── */
 	'@media screen and (max-width: 1180px) { .lf-hero, .lf-grid { grid-template-columns: 1fr; } .lf-metrics, .lf-preset-list, .lf-ladder-scale { grid-template-columns: repeat(2, minmax(0, 1fr)); } }',
-	'@media screen and (max-width: 760px) { .lf-dashboard { padding: 20px; } .lf-headline { font-size: 24px !important; } .lf-metrics, .lf-preset-list, .lf-grid, .lf-config-grid, .lf-ladder-scale { grid-template-columns: 1fr; } .lf-orb { min-height: 240px; } }'
+	'@media screen and (max-width: 760px) { .lf-dashboard { padding: 20px; } .lf-headline { font-size: 21px !important; } .lf-metrics, .lf-insights, .lf-preset-list, .lf-grid, .lf-config-grid, .lf-ladder-scale { grid-template-columns: 1fr; } .lf-orb { min-height: 240px; } }'
 ].join('\n');
 
 var texts = {
@@ -1185,12 +1198,18 @@ return view.extend({
 			'<div class="lf-hero">' +
 				'<div class="lf-copy">' +
 					'<div class="lf-eyebrow">' + escapeHtml(t('Adaptive Fan Profile', '自适应风扇控制')) + '</div>' +
-					'<div class="lf-headline" style="all:unset;display:block;margin:16px 0 10px;padding:0;background:transparent;color:var(--lf-fg);font-size:30px;font-weight:700;line-height:1.15;">' + escapeHtml(t('Live Cooling Dashboard', '实时散热面板')) + '</div>' +
+					'<div class="lf-headline" style="all:unset;display:block;margin:12px 0 8px;padding:0;background:transparent;color:var(--lf-fg);font-size:25px;font-weight:700;line-height:1.15;">' + escapeHtml(t('Live Cooling Dashboard', '实时散热面板')) + '</div>' +
 					'<p>' + escapeHtml(heroText) + '</p>' +
 					'<div class="lf-chip-row">' +
 						'<span class="lf-chip">' + primaryChip + '</span>' +
 						'<span class="lf-chip lf-chip-alert" id="lf-support-chip" style="display:none"></span>' +
 						'<span class="lf-chip lf-runtime-badge" id="lf-runtime-badge" data-state="disabled">' + escapeHtml(texts.monitoringState) + '</span>' +
+					'</div>' +
+					'<div class="lf-metrics">' +
+						'<div class="lf-metric"><div class="lf-metric-label">' + escapeHtml(t('CPU temperature', 'CPU 温度')) + '</div><div class="lf-metric-value" id="lf-metric-cpu">--</div></div>' +
+						'<div class="lf-metric"><div class="lf-metric-label">' + escapeHtml(t('Fan speed', '风扇转速')) + '</div><div class="lf-metric-value" id="lf-metric-fan">--</div></div>' +
+						'<div class="lf-metric"><div class="lf-metric-label">' + escapeHtml(t('Current PWM duty', '当前 PWM 占空比')) + '</div><div class="lf-metric-value" id="lf-metric-pwm">--</div></div>' +
+						'<div class="lf-metric"><div class="lf-metric-label">' + escapeHtml(t('Control mode', '控制模式')) + '</div><div class="lf-metric-value" id="lf-metric-mode">--</div></div>' +
 					'</div>' +
 				'</div>' +
 				'<div class="lf-visual">' +
@@ -1210,12 +1229,6 @@ return view.extend({
 						'<div class="lf-demand-bar"><div id="lf-demand-fill"></div></div>' +
 					'</div>' +
 				'</div>' +
-			'</div>' +
-			'<div class="lf-metrics">' +
-				'<div class="lf-metric"><div class="lf-metric-label">' + escapeHtml(t('CPU temperature', 'CPU 温度')) + '</div><div class="lf-metric-value" id="lf-metric-cpu">--</div></div>' +
-				'<div class="lf-metric"><div class="lf-metric-label">' + escapeHtml(t('Fan speed', '风扇转速')) + '</div><div class="lf-metric-value" id="lf-metric-fan">--</div></div>' +
-				'<div class="lf-metric"><div class="lf-metric-label">' + escapeHtml(t('Current PWM duty', '当前 PWM 占空比')) + '</div><div class="lf-metric-value" id="lf-metric-pwm">--</div></div>' +
-				'<div class="lf-metric"><div class="lf-metric-label">' + escapeHtml(t('Control mode', '控制模式')) + '</div><div class="lf-metric-value" id="lf-metric-mode">--</div></div>' +
 			'</div>' +
 			'<div class="lf-ladder-card">' +
 				'<div class="lf-ladder-head">' +
