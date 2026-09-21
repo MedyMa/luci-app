@@ -423,7 +423,7 @@ perplexity.svg	Perplexity	dashboard-icons	perplexity	see upstream LICENSE	https:
 paramountplus.svg	ParamountPlus	simple-icons	paramountplus	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
 ozon.svg	Ozon	simple-icons	autozone	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
 pinterest.svg	Pinterest	dashboard-icons	pinterest	see upstream LICENSE	https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE	
-playstation.svg	PlayStation	dashboard-icons	playstation	see upstream LICENSE	https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE	
+playstation.svg	PlayStation	local	local	supplied by the user, shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
 playstation-network.svg	PlayStation Network	dashboard-icons	playstation	see upstream LICENSE	https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE	
 plex.svg	Plex	dashboard-icons	plex	see upstream LICENSE	https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE	
 overcast.svg	Overcast	simple-icons	overcast	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
@@ -453,7 +453,7 @@ qt.svg	Qt	simple-icons	qt	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github
 razer.svg	Razer	selfhst/icons	razer	see upstream LICENSE	https://github.com/selfhst/icons/blob/main/LICENSE	
 qualcomm.svg	Qualcomm	simple-icons	qualcomm	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
 remnawave.svg	Remnawave	dashboard-icons	remnawave	see upstream LICENSE	https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE	
-riot-games.svg	Riot Games	dashboard-icons	riot	see upstream LICENSE	https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE	
+riot-games.svg	Riot Games	local	local	supplied by the user, shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
 quora.svg	Quora	simple-icons	quora	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
 rsshub.svg	Rsshub	selfhst/icons	rsshub	see upstream LICENSE	https://github.com/selfhst/icons/blob/main/LICENSE	
 rsshub-3rd.svg	Rsshub 3rd	selfhst/icons	rsshub	see upstream LICENSE	https://github.com/selfhst/icons/blob/main/LICENSE	
