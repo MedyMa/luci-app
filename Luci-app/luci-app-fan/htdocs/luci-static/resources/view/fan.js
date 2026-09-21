@@ -302,7 +302,7 @@ var dashboardStyle = [
 	'.lf-scale-item strong { display: block; margin-top: 2px; font-size: 16px; line-height: 1.2; color: var(--lf-fg); font-variant-numeric: tabular-nums;',
 	'  transition: color 200ms var(--lf-ease-out); }',
 
-	'.lf-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 16px; }',
+	'.lf-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 16px; }',
 	'.lf-card p { margin: 8px 0 0; font-size: 12.5px; line-height: 1.6; color: var(--lf-dim); }',
 
 	/* ── Preset Buttons (Emil-style: :active scale feedback, strong easing) ── */
@@ -328,7 +328,7 @@ var dashboardStyle = [
 	/* The hints are six sentences.  As one column this card was the tallest
 	 * thing on the page and stretched the two cards beside it, so the row is
 	 * now two columns of hints and the three cards come out even. */
-	'.lf-insights { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; }',
+	'.lf-insights { display: grid; gap: 4px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--lf-frost-border); }',
 	'.lf-insight { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--lf-fg); }',
 	'.lf-config-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }',
 	'.lf-config-item { padding: 7px 10px; border-radius: 12px; background: var(--lf-deep-surface-soft); }',
@@ -337,29 +337,40 @@ var dashboardStyle = [
 	'  transition: color 200ms var(--lf-ease-out); }',
 
 	/* ── LuCI Form Integration ── */
-	'.lf-dashboard-shell + .cbi-map { margin-top: 0; border-radius: 20px; border: 1px solid var(--lf-form-border); box-shadow: 0 12px 30px rgba(17, 48, 54, 0.08); overflow: hidden; background: var(--lf-form-bg); }',
-	'.lf-dashboard-shell + .cbi-map > h2, .lf-dashboard-shell + .cbi-map > .cbi-map-descr { display: none; }',
-	'.lf-dashboard-shell + .cbi-map .cbi-section { margin: 0; border: 0; box-shadow: none; background: transparent; }',
-	'.lf-dashboard-shell + .cbi-map .cbi-section-node { padding-top: 6px; background: transparent; }',
-	'.lf-dashboard-shell + .cbi-map .cbi-section-node h3 { margin-top: 2px; font-size: 17px; color: var(--lf-form-title); }',
-	'.lf-dashboard-shell + .cbi-map .cbi-value { padding: 11px 14px; border-top: 1px solid var(--lf-form-border); }',
-	'.lf-dashboard-shell + .cbi-map .cbi-value-title { font-weight: 600; color: var(--lf-form-title); }',
-	'.lf-dashboard-shell + .cbi-map input[type="text"],',
-	'.lf-dashboard-shell + .cbi-map input[type="password"],',
-	'.lf-dashboard-shell + .cbi-map input[type="number"],',
-	'.lf-dashboard-shell + .cbi-map select {',
+	'.lf-settings { margin: 0; border-radius: 16px; border: 1px solid var(--lf-form-border); background: var(--lf-form-bg); box-shadow: 0 12px 30px rgba(17, 48, 54, 0.08); overflow: hidden; }',
+	'.lf-settings > .lf-settings-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px; font-size: 14px; font-weight: 600; color: var(--lf-form-title); cursor: pointer; list-style: none; -webkit-tap-highlight-color: transparent; }',
+	'.lf-settings > .lf-settings-head::-webkit-details-marker { display: none; }',
+	'.lf-settings > .lf-settings-head:after { content: ""; margin-left: auto; width: 7px; height: 7px; border: solid currentColor; border-width: 0 2px 2px 0; transform: rotate(45deg); transition: transform 200ms var(--lf-ease-out); }',
+	'.lf-settings[open] > .lf-settings-head { border-bottom: 1px solid var(--lf-form-border); }',
+	'.lf-settings[open] > .lf-settings-head:after { transform: rotate(-135deg); }',
+	'.lf-settings > .lf-settings-head:hover { color: var(--lf-accent); }',
+	'.lf-settings > .lf-settings-head:focus-visible { outline: 2px solid var(--lf-accent); outline-offset: 2px; }',
+	'.lf-settings .cbi-map { margin: 0; border: 0; border-radius: 0; box-shadow: none; background: transparent; }',
+	/* the summary carries the section's own heading, so the one inside the map
+	 * would print "基本设置" twice */
+	'.lf-settings .cbi-map .cbi-section-node h3 { display: none; }',
+	'.lf-settings .cbi-map .cbi-value:first-child { border-top: 0; }',
+	'.lf-settings .cbi-map > h2, .lf-settings .cbi-map > .cbi-map-descr { display: none; }',
+	'.lf-settings .cbi-map .cbi-section { margin: 0; border: 0; box-shadow: none; background: transparent; }',
+	'.lf-settings .cbi-map .cbi-section-node { padding-top: 6px; background: transparent; }',
+	'.lf-settings .cbi-map .cbi-value { padding: 11px 14px; border-top: 1px solid var(--lf-form-border); }',
+	'.lf-settings .cbi-map .cbi-value-title { font-weight: 600; color: var(--lf-form-title); }',
+	'.lf-settings .cbi-map input[type="text"],',
+	'.lf-settings .cbi-map input[type="password"],',
+	'.lf-settings .cbi-map input[type="number"],',
+	'.lf-settings .cbi-map select {',
 	'  border-radius: 12px; border-color: var(--lf-field-border);',
 	'  background: var(--lf-field-bg); color: var(--lf-form-title);',
 	'  box-shadow: none;',
 	'  transition: border-color 200ms var(--lf-ease-out);',
 	'}',
-	'.lf-dashboard-shell + .cbi-map input[type="text"]:focus,',
-	'.lf-dashboard-shell + .cbi-map input[type="number"]:focus,',
-	'.lf-dashboard-shell + .cbi-map select:focus {',
+	'.lf-settings .cbi-map input[type="text"]:focus,',
+	'.lf-settings .cbi-map input[type="number"]:focus,',
+	'.lf-settings .cbi-map select:focus {',
 	'  border-color: rgba(10, 132, 255, 0.5);',
 	'  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.15);',
 	'}',
-	'.lf-dashboard-shell + .cbi-map input[type="range"] { width: 100%; accent-color: var(--lf-accent); }',
+	'.lf-settings .cbi-map input[type="range"] { width: 100%; accent-color: var(--lf-accent); }',
 	'.lf-range-output { display: inline-flex; align-items: center; justify-content: center; min-width: 72px; margin-top: 10px; padding: 6px 12px; border-radius: 999px; background: var(--lf-range-pill-bg); color: var(--lf-range-pill-text); font-size: 12px; font-weight: 600;',
 	'  transition: background-color 200ms var(--lf-ease-out), color 200ms var(--lf-ease-out); }',
 
@@ -370,15 +381,16 @@ var dashboardStyle = [
 	'  #lf-demand-fill { transition: none; }',
 	'  .lf-marker { transition: none; }',
 	'  .lf-metric-value, .lf-scale-item strong, .lf-config-item strong { transition: none; }',
-	'  .lf-dashboard-shell + .cbi-map input[type="text"],',
-	'  .lf-dashboard-shell + .cbi-map input[type="number"],',
-	'  .lf-dashboard-shell + .cbi-map select { transition: none; }',
+	'  .lf-settings .cbi-map input[type="text"],',
+	'  .lf-settings .cbi-map input[type="number"],',
+	'  .lf-settings .cbi-map select { transition: none; }',
+	'  .lf-settings > .lf-settings-head:after { transition: none; }',
 	'  .lf-range-output { transition: none; }',
 	'}',
 
 	/* ── Responsive ── */
 	'@media screen and (max-width: 1180px) { .lf-hero, .lf-grid { grid-template-columns: 1fr; } .lf-metrics, .lf-preset-list, .lf-ladder-scale { grid-template-columns: repeat(2, minmax(0, 1fr)); } }',
-	'@media screen and (max-width: 760px) { .lf-dashboard { padding: 20px; } .lf-headline { font-size: 21px !important; } .lf-metrics, .lf-insights, .lf-preset-list, .lf-grid, .lf-config-grid, .lf-ladder-scale { grid-template-columns: 1fr; } .lf-orb { min-height: 240px; } }'
+	'@media screen and (max-width: 760px) { .lf-dashboard { padding: 20px; } .lf-headline { font-size: 21px !important; } .lf-metrics, .lf-preset-list, .lf-grid, .lf-config-grid, .lf-ladder-scale { grid-template-columns: 1fr; } .lf-orb { min-height: 240px; } }'
 ].join('\n');
 
 var texts = {
@@ -406,7 +418,6 @@ var texts = {
 	smart: t('Smart', '智能'),
 	manual: t('Manual', '手动'),
 	turboHint: t('Turbo mode locks the fan at the configured full-speed RPM ceiling after Save & Apply.', '狂暴模式在“保存并应用”后会把风扇锁定在已配置的满速转速上限。'),
-	smartHint: t('Smart mode linearly ramps from the stop temperature to the configured full-speed RPM ceiling.', '智能模式会在停转温度到满速温度之间线性调速，并遵循已配置的满速转速上限。'),
 	manualHint: t('Manual mode applies the selected duty target after Save & Apply and reports the available fan speed feedback.', '手动模式会在“保存并应用”后采用所选占空比，并显示当前可用的风扇转速反馈。'),
 	modePending: t('Mode target', '目标模式'),
 	currentDuty: t('Current fan duty', '当前风扇占空比'),
@@ -418,8 +429,7 @@ var texts = {
 	speedFeedback: t('Speed feedback', '转速反馈'),
 	smartFloor: t('Fan stop below', '低于此温度停转'),
 	smartCeiling: t('Full speed above', '高于此温度满速'),
-	curveModulating: t('The fan is linearly modulating between the stop floor and the full-speed ceiling.', '当前风扇正在停转温度和满速温度之间线性调速。'),
-	precisionHint: t('Backend control uses the kernel thermal reading directly, so the smart curve tracks temperature changes at 0.1 C granularity.', '后端直接使用内核热区读数，因此智能曲线按 0.1 摄氏度粒度跟踪温度变化。')
+	curveModulating: t('The fan is linearly modulating between the stop floor and the full-speed ceiling.', '当前风扇正在停转温度和满速温度之间线性调速。')
 };
 
 function toNumber(value) {
@@ -843,6 +853,13 @@ return view.extend({
 	},
 
 	renderInsights: function(preview) {
+		/* One line where the mode can be described in one, two where smart mode
+		 * has a state worth naming.  It used to be six: the paragraph about
+		 * linear modulation and the "modulating now" line said the same thing in
+		 * two sentences, the speed-feedback line repeated the ladder's own
+		 * feedback cell, the 0.1 C granularity line was implementation detail,
+		 * and the closing "Save & Apply" line repeated the note already printed
+		 * under the presets. */
 		var hints = [];
 		var startDelta = (this.runtime && this.runtime.zone_temp !== null && preview.off !== null) ? (preview.off - this.runtime.zone_temp) : null;
 		var ceilingDelta = (this.runtime && this.runtime.zone_temp !== null && preview.on !== null) ? (preview.on - this.runtime.zone_temp) : null;
@@ -855,10 +872,10 @@ return view.extend({
 		} else if (preview.mode === 'turbo') {
 			hints.push(texts.turboHint + ' ' + maxRpm + ' RPM.');
 		} else if (preview.mode === 'manual') {
-			hints.push(texts.manualHint + ' ' + texts.modePending + ': ' + this.formatPercent(preview.manual_pwm) + ' / ' + maxRpm + ' RPM.');
+			hints.push(texts.manualHint + ' ' + this.formatPercent(preview.manual_pwm) + ' / ' + maxRpm + ' RPM.');
 		} else {
-			hints.push(texts.smartHint);
-			hints.push(texts.smartFloor + ': ' + this.formatTemp(preview.off) + ' / ' + texts.smartCeiling + ': ' + this.formatTemp(preview.on) + ' / ' + maxRpm + ' RPM');
+			hints.push(texts.smartFloor + ' ' + this.formatTemp(preview.off) + ' · ' +
+				texts.smartCeiling + ' ' + this.formatTemp(preview.on) + ' · ' + maxRpm + ' RPM');
 
 			if (startDelta !== null && startDelta > 0)
 				hints.push(this.formatTemp(startDelta) + ' ' + texts.toStart);
@@ -866,16 +883,10 @@ return view.extend({
 				hints.push(texts.thresholdReached);
 			else if (ceilingDelta !== null)
 				hints.push(texts.curveModulating);
-
-			hints.push(texts.precisionHint);
 		}
 
-		hints.push(texts.speedFeedback + ': ' + this.formatSpeedFeedback());
-
-		if (!this.runtime || !this.runtime.mode_supported)
+		if (this.runtime && !this.runtime.mode_supported)
 			hints.push(texts.modeUnsupportedHint);
-		else
-			hints.push(texts.saveApply);
 
 		this.nodes.insights.innerHTML = '';
 		hints.forEach(function(hint) {
@@ -1257,11 +1268,8 @@ return view.extend({
 						'<button type="button" class="lf-preset" data-preset="smart">' + escapeHtml(t('Smart mode', '智能模式')) + '</button>' +
 						'<button type="button" class="lf-preset" data-preset="manual">' + escapeHtml(t('Manual mode', '手动模式')) + '</button>' +
 					'</div>' +
-					'<p class="lf-note" id="lf-preset-note">' + escapeHtml(texts.saveApply) + '</p>' +
-				'</div>' +
-				'<div class="lf-card">' +
-					'<h4>' + escapeHtml(t('Runtime insight', '运行提示')) + '</h4>' +
 					'<div class="lf-insights" id="lf-insights"><p class="lf-insight">' + escapeHtml(texts.telemetryWaiting) + '</p></div>' +
+					'<p class="lf-note" id="lf-preset-note">' + escapeHtml(texts.saveApply) + '</p>' +
 				'</div>' +
 				'<div class="lf-card">' +
 					'<h4>' + escapeHtml(t('Current config', '当前设置')) + '</h4>' +
@@ -1461,7 +1469,18 @@ return view.extend({
 			this._animFrameId = null; /* allow new animation loop */
 			this.requestFrame(this.animationLoop.bind(this));
 			this._pollHandle = poll.add(this.pollStatus.bind(this), this.statusPollInterval());
-			return applyThemeClass(E('div', { 'class': 'lf-page' }, [ dashboard, mapNode ]), 'lf-dark');
+			/* The profile form is folded away by default: everything it configures
+			 * is already reported above it, so it is only opened to change
+			 * something.  A <details> does that in the markup - no state to keep
+			 * in sync, no click handler, and a browser without details support
+			 * simply shows the form open, which is where it was. */
+			var settings = E('details', { 'class': 'lf-settings' }, [
+				E('summary', { 'class': 'lf-settings-head' }, [
+					escapeHtml(t('Profile settings', '基本设置'))
+				]),
+				mapNode
+			]);
+			return applyThemeClass(E('div', { 'class': 'lf-page' }, [ dashboard, settings ]), 'lf-dark');
 		}.bind(this));
 	}
 });
