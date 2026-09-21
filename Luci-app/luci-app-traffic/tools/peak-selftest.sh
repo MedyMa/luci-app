@@ -8,7 +8,7 @@
 # peaks.tsv reaches the page, which says nothing about whether anything ever
 # puts it there.
 here=$(cd "$(dirname "$0")" && pwd)
-SRC="$here/../root/usr/share/traffic/collector.sh"
+SRC="${COLLECTOR_SRC:-$here/../root/usr/share/traffic/collector.sh}"
 T=$(mktemp -d)
 pass=0; fail=0
 ck() { # ck <name> <expected> <actual>
@@ -57,8 +57,18 @@ ck "up keeps its own maximum"                "9000000"   "$PEAK_U"
 ck "the sample count accumulates"            "2"         "$PEAK_N"
 
 # ---- 5. one bucket per minute ----------------------------------------------
+# The minute is pinned rather than read off the clock afterwards.  record_peak
+# reads the minute itself, and the few hundred milliseconds between its own
+# `date` and the one here is enough to cross a minute boundary under load: the
+# expectation then names the next minute, record_peak writes the row under the
+# previous one, and every assertion below ends up comparing a second, unrelated
+# row.  That is exactly how this suite failed once out of five runs while the
+# text it tests was correct.  PEAK_AT is the override the collector already
+# honours, and pinning it is also what makes the merge cases that follow test
+# one minute on purpose instead of by luck.
+PEAK_AT=1789990020
 record_peak
-b=$(( $(date +%s) / 60 * 60 ))
+b=$(( PEAK_AT / 60 * 60 ))
 ck "one row written"                         "1"          "$(wc -l < "$STATE_DIR/peaks.tsv")"
 ck "the bucket is the minute"                "$b"         "$(cut -f1 "$STATE_DIR/peaks.tsv")"
 ck "the maximum is recorded"                 "118000000"  "$(cut -f2 "$STATE_DIR/peaks.tsv")"
@@ -133,6 +143,24 @@ ck "the peak keeps the interface download rate" "yes" \
 	"$([ $((PEAK_D * dt)) -le 300000 ] && [ $((300000 - PEAK_D * dt)) -lt "$dt" ] && echo yes || echo no)"
 ck "the peak keeps the interface upload rate" "yes" \
 	"$([ $((PEAK_U * dt)) -le 720000 ] && [ $((720000 - PEAK_U * dt)) -lt "$dt" ] && echo yes || echo no)"
+
+# ---- 12. with no override the bucket is the minute the clock was in ---------
+# The path the router actually takes: PEAK_AT unset, so the minute comes from
+# the clock.  Pinning it everywhere would leave this default untested, and
+# reading the clock only afterwards is what made the old section 5 flaky, so
+# both minutes the call could have landed in are accepted here.  The assertion
+# is then true whichever side of a boundary the call ends up on.
+S2="$T/state2"
+mkdir -p "$S2"
+STATE_DIR="$S2"
+PEAK_D=5; PEAK_U=0; PEAK_N=1
+unset PEAK_AT
+lo=$(( $(date +%s) / 60 * 60 ))
+record_peak
+hi=$(( $(date +%s) / 60 * 60 ))
+got=$(cut -f1 "$S2/peaks.tsv")
+if [ "$got" = "$lo" ] || [ "$got" = "$hi" ]; then w=yes; else w=no; fi
+ck "with no override the bucket is the minute" "yes" "$w"
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 rm -rf "$T"
