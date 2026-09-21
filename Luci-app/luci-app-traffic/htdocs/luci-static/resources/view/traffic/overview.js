@@ -17,6 +17,14 @@ var PALETTE = [
 	'#ffc53d', '#40d97b', '#ff9f1c', '#5cd1ff', '#b37feb'
 ];
 
+/* The colour of the ring's "nothing could name this" slice, and the only one on
+ * the page that is not derived from a name.  It is not an application, so it
+ * must not wear an application's colour: a hue out of the palette above would
+ * read as one more thing that had been identified.  Fixed rather than hashed
+ * from the label, because the label is translated - a hash of 未归属 would put
+ * the slice in a different colour on a Chinese page than on an English one. */
+var UNATTR_COLOR = '#9aa5b1';
+
 var ICON = 26;   /* one size everywhere: list rows, donut legend */
 
 /* Throughput history.  The collector keeps two tiers, so the range selector on
@@ -255,11 +263,14 @@ function colorFor(name) {
  * wins; the cache is only consulted when it is missing, and the letter avatar
  * stays when neither has it.  Nothing here reaches the network - a page must not
  * depend on an upstream icon host being reachable, which is the whole reason the
- * fetching, when it is enabled at all, happens on the router and not here. */
-function makeIcon(name) {
+ * fetching, when it is enabled at all, happens on the router and not here.
+ *
+ * `color` overrides the name-derived colour for the rows that are not
+ * applications - the ring's 未归属 slice - so the avatar agrees with the slice. */
+function makeIcon(name, color) {
 	var box = E('span', {
 		'class': 'tf-icon',
-		'style': 'background:' + colorFor(name)
+		'style': 'background:' + (color || colorFor(name))
 	}, [ E('span', { 'class': 'tf-icon-letter' }, [ (name || '?').charAt(0).toUpperCase() ]) ]);
 
 	var tries = [];
@@ -291,7 +302,9 @@ function makeIcon(name) {
 }
 
 /* Donut drawn with one stroked circle per slice (dash offset), which needs no
- * arc maths and stays crisp at any size. */
+ * arc maths and stays crisp at any size.  `total` is the denominator of every
+ * slice, so the slices add up to the whole circle; the caller passes the number
+ * the headline and the table's first row show, not the sum of the named rows. */
 function makeDonut(items, total) {
 	var size = 168, stroke = 20, r = (size - stroke) / 2, c = 2 * Math.PI * r;
 	var svg = S('svg', { 'width': size, 'height': size, 'viewBox': '0 0 ' + size + ' ' + size,
@@ -308,7 +321,9 @@ function makeDonut(items, total) {
 			var len = Math.max(frac * c - 2, 0.6);
 			g.appendChild(S('circle', {
 				'r': r, 'fill': 'none', 'stroke-linecap': 'butt',
-				'stroke': colorFor(items[i].name),
+				/* the marker, not the name, decides: the unattributed slice is
+				 * named by a translated string and must stay neutral grey */
+				'stroke': items[i].unattr ? UNATTR_COLOR : colorFor(items[i].name),
 				'stroke-width': stroke,
 				'stroke-dasharray': len + ' ' + (c - len),
 				'stroke-dashoffset': -offset
@@ -483,12 +498,13 @@ function updateRow(row, a, total) {
 
 /* The legend rows are reused the same way: only the percentage moves.  A
  * protocol bucket gets the same mark the table gives it, so the ring's key
- * cannot read as a list of applications either. */
-function makeLegendRow(name, proto) {
+ * cannot read as a list of applications either.  `color` overrides the dot for
+ * the slice that is not an application at all. */
+function makeLegendRow(name, proto, color) {
 	var pctEl = el('span', { 'class': 'tf-legend-pct' });
 	var row = el('div', { 'class': 'tf-legend-row' + (proto ? ' tf-isbucket' : '') }, [
-		el('span', { 'class': 'tf-legend-dot', 'style': 'background:' + colorFor(name) }),
-		makeIcon(name),
+		el('span', { 'class': 'tf-legend-dot', 'style': 'background:' + (color || colorFor(name)) }),
+		makeIcon(name, color),
 		el('span', { 'class': 'tf-legend-name' }, [ name ]),
 		pctEl
 	]);
@@ -667,16 +683,19 @@ return view.extend({
 		 * changed, so the two are separate nodes rather than one SVG. */
 		this.donutFigEl   = el('div', { 'class': 'tf-donut-fig' });
 		this.donutTotalEl = el('div', { 'class': 'tf-donut-total' }, [ '—' ]);
+		/* The ring is the composition of the *whole* window now - its slices are
+		 * the named applications, 其余应用 and 未归属 - so its own reading is the
+		 * same total the headline above shows, and its caption is the headline's
+		 * caption: 总计 while that number really is everything the box carried,
+		 * 已归属 when the ring could only be built from the attributed sum (a
+		 * ranged view whose archive has no device counters).  One number, one
+		 * word, in both places. */
+		this.donutCapEl = el('div', { 'class': 'tf-donut-cap' }, [ _('Attributed') ]);
 		this.donutEl  = el('div', { 'class': 'tf-donut' }, [
 			this.donutFigEl,
 			el('div', { 'class': 'tf-donut-center' }, [
 				this.donutTotalEl,
-				/* The ring is always the composition of the *attributed* traffic -
-				 * it is built from the application rows - so its own reading is
-				 * that sum and it says so.  Under flow offloading the headline
-				 * above it is the larger interface total; two readings that differ
-				 * under one word would be the same lie in a new place. */
-				el('div', { 'class': 'tf-donut-cap' }, [ _('Attributed') ])
+				this.donutCapEl
 			])
 		]);
 		this.legendEl = el('div', { 'class': 'tf-legend' });
@@ -773,11 +792,12 @@ return view.extend({
 					/* The legend is its own labelled block: as a bare list of names
 					 * beside a ring it read as an unlabelled column of text. */
 					el('div', { 'class': 'tf-legend-box' }, [
-						/* The ring's key lists whatever the attributed traffic is
-						 * made of, protocol buckets included - so it cannot be
-						 * captioned 应用 the way the table's name column is: that
-						 * is exactly how "SSL/TLS" came to read as an application. */
-						el('div', { 'class': 'tf-legend-cap' }, [ _('Attributed traffic') ]),
+						/* The ring's key lists every slice of the ring, 未归属
+						 * included - so it is neither 应用 (the table's name
+						 * column) nor 已归属流量 (which it no longer is: the ring
+						 * is the whole total now).  流量构成 is what it is: the
+						 * breakdown of the total, named and unnamed alike. */
+						el('div', { 'class': 'tf-legend-cap' }, [ _('Traffic breakdown') ]),
 						this.legendEl
 					])
 				])
@@ -1327,10 +1347,12 @@ return view.extend({
 		this.draw(items, {
 			total: head.total, down: head.down, up: head.up,
 			totalSource: head.source,
-			/* the shares the ring and the table show are shares of the attributed
-			 * sum, which is a smaller number than the headline whenever the
-			 * interface counters answered */
-			shareTotal: clientTotal,
+			/* The attributed sum is what the ring's named slices and the table's
+			 * rows cover; draw() measures every percentage against the headline
+			 * above instead, and shows the difference as 未归属.  It is also
+			 * passed split by direction so that row's 下载/上传 columns can be
+			 * filled and the three byte columns all reconcile. */
+			shareTotal: clientTotal, shareDown: accDown, shareUp: accUp,
 			topText: topText,
 			/* the grand row's client is the current run's, like the app cells */
 			topScope: 'session',
@@ -1514,12 +1536,13 @@ return view.extend({
 			 * of exactly the kind this page is being fixed for. */
 			total: headTotal, down: headDown, up: headUp,
 			totalSource: ifaceRange ? 'iface' : 'totals',
-			/* The shares the ring, the table and the protocol block show stay
-			 * shares of the attributed sum whatever the headline is: their own
-			 * rows are a breakdown of that sum, and dividing them by the larger
-			 * device total would turn every application into a fraction of a
-			 * percent. */
-			shareTotal: total,
+			/* The attributed sum - the range's own application rows - is what the
+			 * ring's named slices cover and what the protocol block is a share
+			 * of; every percentage the page prints is measured against the
+			 * headline instead, and 未归属 carries the difference.  When the
+			 * archive carries no device counters the two are the same number, the
+			 * difference is zero, and the ring is exactly what it was before. */
+			shareTotal: total, shareDown: gd, shareUp: gu,
 			topText: topText, clientCount: cl.length,
 			/* this row's client comes from the range's own client rows, so the
 			 * cell must not claim to be the current run's */
@@ -1555,7 +1578,7 @@ return view.extend({
 		 * infrastructure label the attribution falls back to, and listed among
 		 * the applications they read as if an app called "QUIC" had been used.
 		 * They keep their share of the ring above, where the composition of the
-		 * attributed traffic is the point; the table below lists applications, so
+		 * whole total is the point; the table below lists applications, so
 		 * they are drawn in their own block under it. */
 		var apps = items.filter(function(a) { return !isProto(a); });
 		var protos = items.filter(isProto);
@@ -1563,29 +1586,47 @@ return view.extend({
 		/* one palette assignment for everything drawn this round, so the donut,
 		 * the legend and the table cannot disagree about a colour */
 		colorMap = assignColors(items.slice(0, 30));
-		var top = items.slice(0, 10);
-		/* The ring is drawn from the rows the table lists, so every application
-		 * past the tenth used to leave its share of the circle empty: on a real
-		 * page that was a 9% gap in the ring with nothing to explain it.  One
-		 * extra slice carries the rest, which is what closes the circle.  The
-		 * table and the legend still list the top ten. */
-		var restBytes = 0;
-		for (var ri = top.length; ri < items.length; ri++) restBytes += items[ri].bytes;
-		var ring = restBytes > 0
-			? top.concat([{ name: _('Other apps'), bytes: restBytes, rest: 1 }])
-			: top;
 		/* the headline: what the box carried in the session view, or the window's
-		 * own attributed total in a ranged view */
+		 * own total in a ranged view */
 		var total = stats.total;
-		/* The shares the ring and the table show are shares *of the attributed
-		 * traffic* - the sum their own rows are part of.  The headline can be the
-		 * larger interface total, and dividing the rows by that would have turned
-		 * every application into a fraction of a percent. */
+		/* What the app and client accounting could name: the sum the table's own
+		 * rows are part of, and the part of the total the ring's named slices
+		 * cover.  The remainder of the total is the slice that says so. */
 		var shareTotal = (stats.shareTotal === undefined) ? total : stats.shareTotal;
+		/* the same two numbers split by direction, so the 未归属 row can fill the
+		 * 下载/上传 columns instead of leaving them short */
+		var shareDown = (stats.shareDown === undefined) ? stats.down : stats.shareDown;
+		var shareUp = (stats.shareUp === undefined) ? stats.up : stats.shareUp;
 		/* 总计 is only true when the number really is everything the box carried;
 		 * otherwise the reading is the attributed sum and says so. */
 		var exact = stats.totalSource === 'iface';
 		var self = this;
+
+		/* The ring is the whole window, not the named part of it: the ten named
+		 * applications, 其余应用, and one slice for what nothing could name.  Its
+		 * 100% is therefore the same number the headline and the table's first
+		 * row show - which is the point of drawing it this way.  The ring used to
+		 * be 100% of the *attributed* sum while the row above it read 7.32 GiB,
+		 * so SSL/TLS was 46.1% of one number and 17.5% of the other on the same
+		 * card, with nothing on the page saying which 100% it meant.
+		 *
+		 * 其余应用 is shareTotal minus the top ten, not the literal sum of ranks
+		 * 11 and below.  The two are the same number whenever the publisher sent
+		 * every application - the collector sends the top 300 - and taking the
+		 * difference is what keeps the ring closed by construction when it did
+		 * not: the gap the rest slice was added to remove would come back, only
+		 * wider, if the slices were summed from a list that stops short. */
+		var top = items.slice(0, 10);
+		var topSum = 0;
+		for (var ti = 0; ti < top.length; ti++) topSum += top[ti].bytes;
+		var restBytes = Math.max(shareTotal - topSum, 0);
+		var unattrBytes = Math.max(total - shareTotal, 0);
+		var ring = top.slice();
+		if (restBytes > 0) ring.push({ name: _('Other apps'), bytes: restBytes, rest: 1 });
+		/* the marker is what gives this slice its neutral grey: it is not an
+		 * application and must not borrow an application's colour, and the slice
+		 * is drawn from a translated name, so hashing the name would not do */
+		if (unattrBytes > 0) ring.push({ name: _('Unattributed'), bytes: unattrBytes, rest: 1, unattr: 1 });
 
 		/* Everything below updates what is already on the page rather than
 		 * replacing it.  Only structure that genuinely changed (a new
@@ -1599,33 +1640,38 @@ return view.extend({
 		 * the hole rather than only in the hero above.  It moves on every refresh,
 		 * which is why it is its own node: folding it into the SVG would mean
 		 * rebuilding the ring on every poll to change one line of text.  Its
-		 * reading is the attributed sum, which is a smaller number than the
-		 * headline when the interface counters answered. */
-		setText(this.donutTotalEl, fmtBytes(shareTotal));
+		 * reading is the total the slices are measured against - the headline
+		 * number, whatever that is - and its caption names that number the same
+		 * way the headline does. */
+		setText(this.donutTotalEl, fmtBytes(total));
+		if (this.donutCapEl) setText(this.donutCapEl, exact ? _('total') : _('Attributed'));
 		var off = (this.donutEl.className.indexOf('tf-donut-off') >= 0);
-		if ((shareTotal <= 0) !== off)
-			this.donutEl.className = shareTotal > 0 ? 'tf-donut' : 'tf-donut tf-donut-off';
+		if ((total <= 0) !== off)
+			this.donutEl.className = total > 0 ? 'tf-donut' : 'tf-donut tf-donut-off';
 
 		/* donut: redrawn only when its composition changed, not when the bytes
 		 * behind the slices moved */
 		var donutSig = ring.map(function(a) {
-			return a.name + ':' + (shareTotal ? Math.round(1000 * a.bytes / shareTotal) : 0);
+			return a.name + ':' + (total ? Math.round(1000 * a.bytes / total) : 0);
 		}).join('|');
 		if (donutSig !== this.donutSig) {
 			this.donutSig = donutSig;
-			dom.content(this.donutFigEl, makeDonut(ring, shareTotal));
+			dom.content(this.donutFigEl, makeDonut(ring, total));
 		}
 
-		/* legend, keyed by name so the rows survive a reshuffle */
+		/* legend, keyed by name so the rows survive a reshuffle.  It lists every
+		 * slice of the ring, 其余应用 and 未归属 included: a key that leaves out
+		 * the largest slice is not a key, and one that lists only the top ten
+		 * cannot add up to the 100% the ring itself is measured in. */
 		var legendSeen = {};
-		top.forEach(function(a) {
+		ring.forEach(function(a) {
 			legendSeen[a.name] = 1;
 			var lr = self.legendCache[a.name];
 			if (!lr) {
-				lr = makeLegendRow(a.name, isProto(a));
+				lr = makeLegendRow(a.name, isProto(a), a.unattr ? UNATTR_COLOR : null);
 				self.legendCache[a.name] = lr;
 			}
-			setText(lr.pct, (shareTotal ? (100 * a.bytes / shareTotal) : 0).toFixed(1) + '%');
+			setText(lr.pct, (total ? (100 * a.bytes / total) : 0).toFixed(1) + '%');
 		});
 		Object.keys(this.legendCache).forEach(function(n) {
 			if (legendSeen[n]) return;
@@ -1639,7 +1685,10 @@ return view.extend({
 		 * still sit below one at 2% - the table reordered, the legend did not,
 		 * and the two disagreed about the same list.  Appending an attached node
 		 * moves it, which is all that is needed. */
-		top.forEach(function(a) {
+		/* ring is the top ten followed by the two aggregate slices, so this is the
+		 * order the ring draws as well: the named rows, then the ones that are
+		 * not applications */
+		ring.forEach(function(a) {
 			var lr = self.legendCache[a.name];
 			if (lr) self.legendEl.appendChild(lr.row);
 		});
@@ -1699,7 +1748,7 @@ return view.extend({
 				self.rowCache[a.name] = row;
 				self.rowsEl.appendChild(row.tr);
 			}
-			updateRow(row, a, shareTotal);
+			updateRow(row, a, total);
 		});
 		Object.keys(this.rowCache).forEach(function(n) {
 			if (seen[n]) return;
@@ -1725,14 +1774,71 @@ return view.extend({
 			this.emptyRow = null;
 		}
 
+		/* The row that reconciles the table with the total above it.  The rows
+		 * below add up to the grand row only when the part of the total nothing
+		 * could name is a row of its own; without it the reader sees 7.32 GiB,
+		 * a list that adds to 2.78 GiB, and no explanation.
+		 *
+		 * It sits directly under the grand total - the row it is the remainder of
+		 * - and not at the foot of a ranked list that can be 300 rows long, where
+		 * the number it reconciles with is a screen away.  It is not an
+		 * application, so it carries no icon: it lines up with 所有流量 instead,
+		 * the other row that is about the total rather than about one app.
+		 *
+		 * Its 下载/上传 split is derived from the total's so that all three byte
+		 * columns reconcile exactly.  The split itself is not something the
+		 * accounting knows - these are the bytes that were never attributed - and
+		 * a dash in the two columns would have been honest but left them short. */
+		if (unattrBytes > 0) {
+			if (!this.unattrRow) {
+				var uc = {
+					total: el('td', { 'class': 'tf-num tf-total' }),
+					down:  el('td', { 'class': 'tf-num tf-down' }),
+					up:    el('td', { 'class': 'tf-num tf-up' }),
+					top:   el('td', { 'class': 'tf-top' }),
+					clients: el('td', { 'class': 'tf-num' })
+				};
+				this.unattrRow = {
+					tr: el('tr', { 'class': 'tf-unattr' }, [
+						el('td', { 'class': 'tf-app' }, [
+							el('span', { 'class': 'tf-app-name' }, [ _('Unattributed') ])
+						]),
+						uc.total, uc.down, uc.up, uc.top, uc.clients
+					]),
+					cells: uc
+				};
+			}
+			var uDown = Math.max(stats.down - shareDown, 0);
+			var uUp = Math.max(stats.up - shareUp, 0);
+			/* the two remainders are the total's remainder whenever the attributed
+			 * sum sits inside the total, which is what it does by construction;
+			 * the clamp above is what could stop them adding up, and the row must
+			 * not contradict its own total cell, so 上传 carries that difference */
+			if (uDown + uUp !== unattrBytes) uUp = Math.max(unattrBytes - uDown, 0);
+			setText(this.unattrRow.cells.total, fmtBytes(unattrBytes) + ' (' +
+				(total ? (100 * unattrBytes / total).toFixed(1) : '0.0') + '%)');
+			setText(this.unattrRow.cells.down, fmtBytes(uDown));
+			setText(this.unattrRow.cells.up, fmtBytes(uUp));
+			setText(this.unattrRow.cells.top, '—');
+			setText(this.unattrRow.cells.clients, '—');
+			var firstApp = order.length ? self.rowCache[order[0]].tr : null;
+			var anchor = firstApp || self.emptyRow || null;
+			if (anchor) self.rowsEl.insertBefore(this.unattrRow.tr, anchor);
+			else self.rowsEl.appendChild(this.unattrRow.tr);
+		}
+		else if (this.unattrRow) {
+			if (this.unattrRow.tr.parentNode) this.unattrRow.tr.parentNode.removeChild(this.unattrRow.tr);
+			this.unattrRow = null;
+		}
+
 		/* and the protocol buckets, in their own labelled block under the table */
-		this.renderProto(protos, shareTotal);
+		this.renderProto(protos, total);
 	},
 
 	/* The protocol buckets: real attributed bytes, so the ring above counts them,
 	 * but not applications, so they are not rows of the application table.  They
 	 * get a muted block of their own under it, with the count and their share of
-	 * the attributed total, and something else in the table's place would have to
+	 * the page's one total, and something else in the table's place would have to
 	 * be a lie about what an application is. */
 	renderProto: function(list, total) {
 		if (!this.protoEl) return;
@@ -2210,6 +2316,11 @@ function injectCss() {
 		'.tf-page .tf-total{font-weight:600;}',
 		/* the grand total leads the table, so it is tinted rather than roped off */
 		'.tf-page .tf-table>tbody>tr.tf-grand>td{background:var(--tf-tint);font-weight:600;}',
+		/* the unattributed row sits directly under it and wears the same tint, so
+		 * the two read as one band - the total and its remainder - while the dim
+		 * name keeps it from reading as a second total */
+		'.tf-page .tf-table>tbody>tr.tf-unattr>td{background:var(--tf-tint);}',
+		'.tf-page .tf-unattr .tf-app-name{color:var(--tf-dim);}',
 		'.tf-page .tf-top{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
 		'color:var(--tf-dim);font-size:.85rem;}',
 

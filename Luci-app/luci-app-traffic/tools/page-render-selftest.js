@@ -451,16 +451,23 @@ chk(flat(vIf.totalEl)==='3.73 GiB', `总计取接口计数而不是归属值（$
 chk(flat(vIf.grandRow.cells.down)==='2.79 GiB' && flat(vIf.grandRow.cells.up)==='954 MiB',
     `总行下载/上传也取接口计数（${flat(vIf.grandRow.cells.down)} / ${flat(vIf.grandRow.cells.up)}）`);
 chk(flat(vIf.heroCapEl)==='total', `总计确实来自接口时标题才是「总计」（${flat(vIf.heroCapEl)}）`);
-// 环形图的读数与它的扇形同源（归属值），不能跟着总量一起变成接口计数。标题直接
-// 取自 render() 真正建出来的节点，而不是测试自己搭的替身。
+// 环形图的读数现在与它的扇形同源——都是总计，环画的是整个窗口的构成，所以环心必须
+// 是被切的那个数，而不是各段之和；标题也跟着总量的来源走，与 hero 用同一个词。
+// render() 建出环心的两个节点，draw() 才写它们，所以这里两个都要跑：标题取自真正
+// 建出来的节点，而不是测试自己搭的替身。
+const vIfPage=mkView({});
+view.render.call(vIfPage,{});
+view.renderLive.call(vIfPage, sumOf({iface:IFACE,offload:1}));
+const dcap=[]; walk(vIfPage.donutEl,n=>{ if((n.attrs||{}).class==='tf-donut-cap') dcap.push(n); });
+chk(flat(vIfPage.donutTotalEl)===flat(vIfPage.totalEl) && flat(vIfPage.donutTotalEl)==='3.73 GiB' &&
+    dcap.length===1 && flat(dcap[0])==='total',
+    `环形图中心是总计，与 hero 同数同词（${flat(vIfPage.donutTotalEl)} / ${flat(dcap[0])}）`);
+// 环形图右侧的清单标题不能沿用表头那份「应用」，也不再是「已归属流量」：环里现在
+// 有未归属那一段，这份清单是整张环的构成
 const pageIf=view.render.call(Object.assign(Object.create(view),freshView()),{});
-const dcap=[]; walk(pageIf,n=>{ if((n.attrs||{}).class==='tf-donut-cap') dcap.push(n); });
-chk(flat(vIf.donutTotalEl)==='238 MiB' && dcap.length===1 && flat(dcap[0])==='Attributed',
-    `环形图中心仍是归属值并标注为已归属（${flat(vIf.donutTotalEl)} / ${flat(dcap[0])}）`);
-// 环形图右侧的清单标题不能沿用表头那份「应用」
 const lcap=[]; walk(pageIf,n=>{ if((n.attrs||{}).class==='tf-legend-cap') lcap.push(n); });
-chk(lcap.length===1 && flat(lcap[0])==='Attributed traffic',
-    `环形图清单标题是「已归属流量」而不是「应用」（${flat(lcap[0])}）`);
+chk(lcap.length===1 && flat(lcap[0])==='Traffic breakdown',
+    `环形图清单标题是「流量构成」，不再是「已归属流量」或「应用」（${flat(lcap[0])}）`);
 // 已归属 X%：本次运行里归属层能说出名字的流量占实际承载的比例
 chk(txt(vIf.diagEl).indexOf('Attributed')>=0 && txt(vIf.diagEl).indexOf(sharePct)>=0,
     `诊断行给出已归属占比 ${sharePct}（${txt(vIf.diagEl).trim()}）`);
@@ -502,6 +509,102 @@ chk(flat(vNo.heroCapEl)==='Attributed' && flat(vNo.grandRow.label)==='Attributed
 chk(txt(vNo.diagEl).indexOf('Attributed')===-1 && flat(vNo.donutTotalEl)==='238 MiB',
     '没有 iface 时不编造已归属占比，环形图读数不变');
 
+console.log('=== 环形图代表总计：一段未归属，全卡只有一个分母 ===');
+// 同一张卡上出现两个分母正是这次要修的毛病：环曾经 100% = 已归属的 2.78 GiB，而它
+// 上面那行写着 7.32 GiB，于是 SSL/TLS 在同一张卡上既是 46.1% 又是 17.5%，页面上没
+// 有任何东西说明那个 100% 是谁的。现在环的每一段都除以总计，未归属占掉剩下的部分，
+// 环仍是一整圈，图例与表格也改用同一个分母。
+// 12 个应用（前十名之外还有两个）加一个远大于归属值的接口计数，一次覆盖三种段：
+// 前十名、其余应用、未归属。
+const BIGAPPS=Array.from({length:12},(_,i)=>({name:'App'+String(i+1).padStart(2,'0'),
+  down:(12-i)*8e7, up:(12-i)*2e7, clients:i, top:'', top_bytes:0}));
+const BIGDOWN=BIGAPPS.reduce((s,a)=>s+a.down,0);
+const BIGUP=BIGAPPS.reduce((s,a)=>s+a.up,0);
+const BIGATTR=BIGDOWN+BIGUP;                       // 7.8e9
+const BIGIFACE={dev:'eth2',down:10e9,up:4e9};
+const BIGTOTAL=BIGIFACE.down+BIGIFACE.up;          // 1.4e10
+const BIGUNATTR=BIGTOTAL-BIGATTR;                  // 6.2e9 → 44.3%
+const DONUT_C=2*Math.PI*74;                        // makeDonut 里 r=(168-20)/2
+// 每一段是一个 circle：dasharray 的长度是它画出来的弧，dashoffset 是它起点离圆周零点
+// 的距离。每段被缩短 2px 作分隔，所以 (len + 2) / C 是它真正占圆周的比例；而最后一段
+// 的终点离起点应当正好是那 2px——这就是「环是闭合的一圈」在这次改动里的可测量形式。
+const slices=v=>{ const out=[]; walk(v.donutEl,n=>{ if(n.tag==='circle'&&(n.attrs||{}).stroke){
+  const a=String(n.attrs['stroke-dasharray']).split(' ');
+  out.push({ stroke:String(n.attrs.stroke), len:parseFloat(a[0]),
+    off:Math.max(-(parseFloat(n.attrs['stroke-dashoffset'])||0),0) }); } }); return out; };
+const fracOf=s=>(s.len+2)/DONUT_C;
+const ringEnd=bs=>bs.length?bs[bs.length-1].off+bs[bs.length-1].len:0;
+const closed=bs=>bs.length>0 && Math.abs(ringEnd(bs)-(DONUT_C-2))<1;
+const PALCOL=((src.match(/var PALETTE = \[([\s\S]*?)\];/)||[])[1]||'').match(/#[0-9a-f]{6}/g)||[];
+const GREY='#9aa5b1';
+const greyOf=bs=>bs.filter(s=>s.stroke.toLowerCase()===GREY);
+const rowByText=(v,name)=>(v.rowsEl.children||[]).filter(tr=>tr.tag==='tr' &&
+  flat((tr.children||[])[0]||{}).indexOf(name)>=0)[0]||null;
+const legendRows=v=>{ const out=[]; (v.legendEl.children||[]).forEach(r=>{
+  const kids=r.children||[];
+  const nm=kids.filter(c=>(c.attrs||{}).class==='tf-legend-name')[0];
+  const pc=kids.filter(c=>(c.attrs||{}).class==='tf-legend-pct')[0];
+  const dt=kids.filter(c=>(c.attrs||{}).class==='tf-legend-dot')[0];
+  out.push({ name:nm?flat(nm):'', pct:pc?flat(pc):'', dot:((dt||{}).attrs||{}).style||'' });
+}); return out; };
+
+const vBig=mkView({});
+view.render.call(vBig,{});        // 环心与图例的节点由 render() 建，draw() 才写它们
+view.renderLive.call(vBig, sumOf({apps:BIGAPPS, iface:BIGIFACE, offload:1,
+  totals:{down:BIGDOWN,up:BIGUP,router:0,client_count:1,exact:1,bucket:1,residual:0}}));
+const bs=slices(vBig), bg=greyOf(bs);
+// 旧口径下这里只有 11 段（前十名 + 其余应用），而且环的 100% 是 7.8e9 而不是 1.4e10
+chk(bs.length===12 && bg.length===1 && PALCOL.indexOf(GREY)===-1 &&
+    Math.abs(fracOf(bg[0])-BIGUNATTR/BIGTOTAL)<0.002 && closed(bs),
+    `环 = 前十名 + 其余应用 + 未归属 共 12 段，未归属是唯一的中性灰段并占 ${(100*BIGUNATTR/BIGTOTAL).toFixed(1)}%，各段收成整圈（段 ${bs.length}，灰 ${bg.length}${bg.length?'='+(100*fracOf(bg[0])).toFixed(1)+'%':''}，终点离起点 ${bs.length?(DONUT_C-ringEnd(bs)).toFixed(1):'—'}px）`);
+// 最大一段的弧长按总计算：旧口径下它是 15.4%（对 7.8e9），不是 8.6%
+chk(bs.length>0 && Math.abs(fracOf(bs[0])-(BIGAPPS[0].down+BIGAPPS[0].up)/BIGTOTAL)<0.002,
+    `第一段的弧长 = 该应用字节 / 总计（${bs.length?(100*fracOf(bs[0])).toFixed(1):'—'}%，应为 8.6%）`);
+const bigCaps=[]; walk(vBig.donutEl,n=>{ if((n.attrs||{}).class==='tf-donut-cap') bigCaps.push(n); });
+chk(flat(vBig.donutTotalEl)==='13.0 GiB' && flat(vBig.totalEl)==='13.0 GiB' &&
+    bigCaps.length===1 && flat(bigCaps[0])==='total',
+    `环心就是 hero 那个总计，同数同词（${flat(vBig.donutTotalEl)} / ${bigCaps.length?flat(bigCaps[0]):'（无）'}）`);
+// 表格：一行未归属，字节 = 总计 − 已归属，百分比同样对总计
+const uRow=rowByText(vBig,'Unattributed');
+chk(!!uRow && flat(uRow.children[1])==='5.77 GiB (44.3%)',
+    `表格里有一行未归属、字节 = 总计 − 已归属（${uRow?flat(uRow.children[1]):'（没有这一行）'}）`);
+// 它紧跟「所有流量」那一行：合计行的余数就该在合计行旁边，而不是在 300 行之下的表尾
+const btrs=(vBig.rowsEl.children||[]).filter(c=>c.tag==='tr');
+chk(btrs.length>1 && /tf-grand/.test((btrs[0].attrs||{}).class||'') &&
+    /tf-unattr/.test((btrs[1].attrs||{}).class||''),
+    `未归属那一行紧跟所有流量（第 1 行 ${btrs[0]&&(btrs[0].attrs||{}).class} / 第 2 行 ${btrs[1]&&(btrs[1].attrs||{}).class}）`);
+const a1Row=rowByText(vBig,'App01');
+chk(!!a1Row && flat(a1Row.children[1])==='1.12 GiB (8.6%)',
+    `应用行的百分比也按总计算（${a1Row?flat(a1Row.children[1]):'（没有这一行）'}，旧口径是 15.4%）`);
+// 图例：列出全部 12 段（含其余应用与未归属），百分比因此合计 100%
+const lg=legendRows(vBig);
+const lsum=lg.reduce((s,r)=>s+parseFloat(r.pct),0);
+chk(lg.length===12 && Math.abs(lsum-100)<0.15,
+    `图例列出全部 12 段、百分比合计 ${lsum.toFixed(1)}%（旧口径只列前十名，合计到不了 100%）`);
+const lgU=lg.filter(r=>r.name==='Unattributed')[0];
+chk(!!lgU && lgU.pct==='44.3%' && lgU.dot.indexOf(GREY)>=0,
+    `图例里未归属那行用同一段灰、同一个分母（${lgU?lgU.name+' '+lgU.pct+' / '+lgU.dot:'（没有这一行）'}）`);
+
+console.log('=== 范围视图：归档带设备行才多出未归属，不带就一段不多 ===');
+// 范围视图的底数可以是本范围自己的设备计数（归档每小时一行 wan）。那种情况下环同样
+// 要有一段未归属；而归档里没有设备行时，总量就是归属值，未归属为 0，环必须与旧口径
+// 一模一样——既不能多出 0% 的切片，也不能少画一段。
+const RH2=iface=>[{hour:'h0',apps:[{name:'YouTube',down:36000,up:18000},
+  {name:'QUIC',down:1000,up:500}],clients:[],router:0,iface:iface}];
+const RDOWN=3e6, RUP=1e6, RTOTAL=RDOWN+RUP, RATTR=36000+18000+1000+500;
+const vRIf=mkView({});
+view.renderHourly.call(vRIf,{hours:RH2({dev:'wan',down:RDOWN,up:RUP})});
+const rs=slices(vRIf), rg=greyOf(rs);
+chk(rs.length===3 && rg.length===1 &&
+    Math.abs(fracOf(rg[0])-(RTOTAL-RATTR)/RTOTAL)<0.002 && closed(rs),
+    `范围视图的环也以本范围的设备计数为底，未归属占 ${(100*(RTOTAL-RATTR)/RTOTAL).toFixed(1)}%，各段收成整圈（段 ${rs.length}，灰 ${rg.length}，终点离起点 ${rs.length?(DONUT_C-ringEnd(rs)).toFixed(1):'—'}px）`);
+const vRNo=mkView({});
+view.renderHourly.call(vRNo,{hours:RH2(undefined)});
+const ns=slices(vRNo);
+chk(ns.length===2 && greyOf(ns).length===0 && closed(ns) &&
+    flat(vRNo.donutTotalEl)==='54.2 KiB' && flat(vRNo.totalEl)==='54.2 KiB',
+    `归档没有设备行时未归属 = 0：不多画 0% 的切片，环与旧口径完全一致（段 ${ns.length}，灰 ${greyOf(ns).length}，终点离起点 ${ns.length?(DONUT_C-ringEnd(ns)).toFixed(1):'—'}px，环心 ${flat(vRNo.donutTotalEl)}）`);
+
 console.log('=== 实时速率：优先接口增量，且不跨来源相减 ===');
 const rIf=mkView({});
 view.updateRate.call(rIf, sumOf({iface:IFACE}));
@@ -536,7 +639,7 @@ chk(inRows(vP,'QUIC') && inRows(vP,'DNS') && inRows(vP,'YouTube'),
     `协议桶与应用同表列出（表内：${Object.keys(vP.rowCache||{}).join('|')}）`);
 // 名字是 span 里的裸字符串，txt() 只收 _text，所以在 table 上必须用 flat()
 const tableRows=(vP.rowsEl.children||[]).filter(c=>c.tag==='tr' &&
-  !/tf-grand/.test((c.attrs||{}).class||''));
+  !/tf-grand/.test((c.attrs||{}).class||'') && !/tf-unattr/.test((c.attrs||{}).class||''));
 chk(Object.keys(vP.rowCache||{}).length===PICKS.length && tableRows.length===PICKS.length,
     `表格里真有一行一条，一个都没被摘走（rowCache ${Object.keys(vP.rowCache||{}).length}，<tr> ${tableRows.length}/${PICKS.length}）`);
 chk(flat(vP.rowsEl).indexOf('QUIC')>=0 && flat(vP.rowsEl).indexOf('DNS')>=0,

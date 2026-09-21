@@ -335,6 +335,20 @@ msgid "the busiest client of the selected range, from the archived client rows"
 msgstr "所选时间范围内最忙的客户端，取自归档的客户端记录"
 
 #: htdocs/luci-static/resources/view/traffic/overview.js
-# 环形图里其余应用的合计切片，只把环填满，表格与图例的前十名不变
+# 环形图里其余应用的合计切片：环现在代表总计，图例也把它和未归属一起列出
 msgid "Other apps"
 msgstr "其余应用"
+
+# --- 环形图代表总计，不再是已归属 ---------------------------------------------
+# 环里「没能归属」的那一段：本窗口的总量减去应用/客户端归属能说出名字的部分。
+# 开流卸载或走代理隧道时它很大（实测占 62%），所以它必须有一眼可辨的颜色：中性
+# 灰，而不是调色板里的应用色——没有任何东西被识别出来，它不该看起来像一个应用。
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Unattributed"
+msgstr "未归属"
+
+# 环形图右侧那份清单的标题。环现在画的是整个窗口的构成（前十名 + 其余应用 +
+# 未归属），其 100% 就是上方总计，所以它不再是「已归属流量」的构成。
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Traffic breakdown"
+msgstr "流量构成"
