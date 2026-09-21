@@ -1564,6 +1564,16 @@ return view.extend({
 		 * the legend and the table cannot disagree about a colour */
 		colorMap = assignColors(items.slice(0, 30));
 		var top = items.slice(0, 10);
+		/* The ring is drawn from the rows the table lists, so every application
+		 * past the tenth used to leave its share of the circle empty: on a real
+		 * page that was a 9% gap in the ring with nothing to explain it.  One
+		 * extra slice carries the rest, which is what closes the circle.  The
+		 * table and the legend still list the top ten. */
+		var restBytes = 0;
+		for (var ri = top.length; ri < items.length; ri++) restBytes += items[ri].bytes;
+		var ring = restBytes > 0
+			? top.concat([{ name: _('Other apps'), bytes: restBytes, rest: 1 }])
+			: top;
 		/* the headline: what the box carried in the session view, or the window's
 		 * own attributed total in a ranged view */
 		var total = stats.total;
@@ -1598,12 +1608,12 @@ return view.extend({
 
 		/* donut: redrawn only when its composition changed, not when the bytes
 		 * behind the slices moved */
-		var donutSig = top.map(function(a) {
+		var donutSig = ring.map(function(a) {
 			return a.name + ':' + (shareTotal ? Math.round(1000 * a.bytes / shareTotal) : 0);
 		}).join('|');
 		if (donutSig !== this.donutSig) {
 			this.donutSig = donutSig;
-			dom.content(this.donutFigEl, makeDonut(top, shareTotal));
+			dom.content(this.donutFigEl, makeDonut(ring, shareTotal));
 		}
 
 		/* legend, keyed by name so the rows survive a reshuffle */
