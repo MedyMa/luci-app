@@ -61,7 +61,12 @@ function isDarkTheme() {
 
 function applyThemeClass(node, darkClass) {
 	function syncThemeClass() {
-		node.classList.toggle(darkClass, isDarkTheme());
+		/* The canvas paints in the same two palettes and redraws on every frame,
+		 * so the answer is recorded here instead of being asked for sixty times
+		 * a second: isDarkTheme() reads a computed background colour, which is a
+		 * style resolution per call. */
+		applyThemeClass._dark = isDarkTheme();
+		node.classList.toggle(darkClass, applyThemeClass._dark);
 	}
 	var retries = [ 0, 80, 220, 480, 900 ];
 	var index;
@@ -140,63 +145,89 @@ var dashboardStyle = [
 	'  --lf-duration-slow: 350ms;',
 	'  display: grid; gap: 18px;',
 
-	/* ── Light Shell ── */
-	'  --lf-shell-bg: linear-gradient(135deg, #294a7a 0%, #3d679f 48%, #7da4d8 100%);',
-	'  --lf-shell-shadow: 0 20px 40px rgba(25, 50, 87, 0.16);',
-	'  --lf-frost-bg: rgba(255, 255, 255, 0.12);',
-	'  --lf-frost-border: rgba(255, 255, 255, 0.14);',
-	'  --lf-frost-soft: rgba(255, 255, 255, 0.10);',
-	'  --lf-deep-surface: rgba(11, 24, 45, 0.20);',
-	'  --lf-deep-surface-soft: rgba(11, 24, 45, 0.18);',
-	'  --lf-form-bg: linear-gradient(180deg, rgba(249, 252, 255, 0.98), rgba(240, 246, 255, 0.99));',
-	'  --lf-form-border: rgba(76, 108, 157, 0.12);',
-	'  --lf-form-title: #1a3556;',
-	'  --lf-field-border: rgba(76, 108, 157, 0.18);',
+	/* ── Light Surface ──
+	 * The shell is the material the traffic page's cards are made of, so the
+	 * two pages read as one design: rgba(255,255,255,.8) over a
+	 * blur(14px) saturate(150%) layer, one hairline border, one soft shadow.
+	 * It used to be a saturated blue gradient with two radial glows, which
+	 * left every colour below tuned for a dark surface - a #ffffff headline
+	 * that a light theme cannot read.  Nothing here is a fixed colour any
+	 * more: the dark block below restates only these tokens. */
+	'  --lf-shell-bg: rgba(255, 255, 255, 0.8);',
+	'  --lf-shell-border: rgba(255, 255, 255, 0.75);',
+	'  --lf-shell-shadow: 0 6px 22px rgba(31, 66, 102, 0.10);',
+	'  --lf-fg: var(--font-color, #20303d);',
+	'  --lf-dim: #68727c;',
+	'  --lf-accent: #0a84ff;',
+	'  --lf-frost-bg: rgba(140, 160, 180, 0.16);',
+	'  --lf-frost-border: rgba(128, 150, 175, 0.20);',
+	'  --lf-frost-soft: rgba(255, 255, 255, 0.60);',
+	'  --lf-deep-surface: rgba(140, 160, 180, 0.16);',
+	'  --lf-deep-surface-soft: rgba(140, 160, 180, 0.10);',
+	'  --lf-well: rgba(255, 255, 255, 0.72);',
+	'  --lf-well-hub: rgba(255, 255, 255, 0.92);',
+	'  --lf-track: rgba(128, 150, 175, 0.20);',
+	'  --lf-form-bg: rgba(255, 255, 255, 0.8);',
+	'  --lf-form-border: rgba(128, 150, 175, 0.20);',
+	'  --lf-form-title: var(--font-color, #20303d);',
+	'  --lf-field-border: rgba(128, 150, 175, 0.28);',
 	'  --lf-field-bg: var(--background-color-high, #fff);',
-	'  --lf-range-pill-bg: rgba(41, 74, 122, 0.08);',
-	'  --lf-range-pill-text: #1d3d67;',
-	'  --lf-preset-bg: rgba(17, 32, 54, 0.18);',
-	'  --lf-preset-border: rgba(255, 255, 255, 0.18);',
-	'  --lf-preset-hover: rgba(120, 169, 231, 0.18);',
-	'  --lf-preset-hover-border: rgba(120, 169, 231, 0.45);',
-	'  --lf-preset-active: rgba(120, 169, 231, 0.24);',
-	'  --lf-preset-active-border: rgba(120, 169, 231, 0.60);',
+	'  --lf-range-pill-bg: rgba(140, 160, 180, 0.16);',
+	'  --lf-range-pill-text: #20303d;',
+	'  --lf-preset-bg: rgba(140, 160, 180, 0.16);',
+	'  --lf-preset-border: rgba(128, 150, 175, 0.20);',
+	'  --lf-preset-hover: rgba(140, 160, 180, 0.26);',
+	'  --lf-preset-hover-border: rgba(10, 132, 255, 0.45);',
+	'  --lf-preset-active: rgba(10, 132, 255, 0.14);',
+	'  --lf-preset-active-border: rgba(10, 132, 255, 0.55);',
 	'}',
 
-	/* ── Dark Shell (Argon / theme-agnostic) ── */
+	/* ── Dark Surface (Argon / theme-agnostic) ── */
 	'.lf-page.lf-dark,',
 	'body.dark .lf-page, html.dark .lf-page,',
 	'body.mode-dark .lf-page, body.argon-dark .lf-page,',
 	'html[data-theme="dark"] .lf-page, body[data-theme="dark"] .lf-page,',
 	'html[data-theme="dark"] body .lf-page,',
 	'body[data-theme="dark"] .lf-page {',
-	'  --lf-shell-bg: linear-gradient(135deg, #0c1424 0%, #15253d 48%, #24456d 100%);',
-	'  --lf-shell-shadow: 0 24px 46px rgba(0, 0, 0, 0.32);',
+	'  --lf-shell-bg: rgba(44, 44, 46, 0.8);',
+	'  --lf-shell-border: var(--border-color-low, rgba(255, 255, 255, 0.08));',
+	'  --lf-shell-shadow: 0 6px 22px rgba(0, 0, 0, 0.35);',
+	'  --lf-fg: #e6edf3;',
+	'  --lf-dim: #aeb5bc;',
 	'  --lf-frost-bg: rgba(255, 255, 255, 0.08);',
-	'  --lf-frost-border: rgba(255, 255, 255, 0.10);',
-	'  --lf-frost-soft: rgba(255, 255, 255, 0.07);',
-	'  --lf-deep-surface: rgba(7, 14, 24, 0.38);',
-	'  --lf-deep-surface-soft: rgba(10, 18, 30, 0.32);',
-	'  --lf-form-bg: linear-gradient(180deg, rgba(18, 28, 44, 0.96), rgba(10, 17, 29, 0.98));',
-	'  --lf-form-border: rgba(124, 147, 186, 0.22);',
-	'  --lf-form-title: #eef5fd;',
-	'  --lf-field-border: rgba(124, 147, 186, 0.22);',
-	'  --lf-field-bg: rgba(8, 14, 24, 0.94);',
-	'  --lf-range-pill-bg: rgba(8, 14, 24, 0.86);',
+	'  --lf-frost-border: var(--border-color-low, rgba(255, 255, 255, 0.12));',
+	'  --lf-frost-soft: rgba(255, 255, 255, 0.06);',
+	'  --lf-deep-surface: rgba(255, 255, 255, 0.08);',
+	'  --lf-deep-surface-soft: rgba(255, 255, 255, 0.06);',
+	'  --lf-well: rgba(7, 20, 26, 0.38);',
+	'  --lf-well-hub: rgba(10, 27, 33, 0.92);',
+	'  --lf-track: rgba(255, 255, 255, 0.12);',
+	'  --lf-form-bg: rgba(44, 44, 46, 0.8);',
+	'  --lf-form-border: var(--border-color-low, rgba(255, 255, 255, 0.12));',
+	'  --lf-form-title: #e6edf3;',
+	'  --lf-field-border: rgba(255, 255, 255, 0.14);',
+	'  --lf-field-bg: rgba(30, 30, 32, 0.94);',
+	'  --lf-range-pill-bg: rgba(255, 255, 255, 0.08);',
 	'  --lf-range-pill-text: #dce7f3;',
+	'  --lf-preset-bg: rgba(255, 255, 255, 0.08);',
+	'  --lf-preset-border: rgba(255, 255, 255, 0.12);',
+	'  --lf-preset-hover: rgba(255, 255, 255, 0.14);',
+	'  --lf-preset-hover-border: rgba(10, 132, 255, 0.50);',
+	'  --lf-preset-active: rgba(10, 132, 255, 0.22);',
+	'  --lf-preset-active-border: rgba(10, 132, 255, 0.60);',
 	'}',
 
 	/* ── Shell & Entrance ── */
-	'.lf-dashboard-shell { position: relative; overflow: hidden; border: 0; border-radius: 24px; box-shadow: var(--lf-shell-shadow); background: var(--lf-shell-bg); }',
+	'.lf-dashboard-shell { position: relative; overflow: hidden; border: 1px solid var(--lf-shell-border); border-radius: 24px; box-shadow: var(--lf-shell-shadow); background: var(--lf-shell-bg); backdrop-filter: blur(14px) saturate(150%); -webkit-backdrop-filter: blur(14px) saturate(150%); }',
 	'.lf-dashboard-shell.lf-entering { animation: lf-shell-enter 500ms var(--lf-ease-out) both; }',
 	'@keyframes lf-shell-enter { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }',
 
-	/* Decorative ambient glows — Apple-style soft radial gradients */
-	'.lf-dashboard-shell:before, .lf-dashboard-shell:after { content: ""; position: absolute; inset: auto; pointer-events: none; }',
-	'.lf-dashboard-shell:before { top: -60px; right: -80px; width: 260px; height: 260px; border-radius: 50%; background: radial-gradient(circle, rgba(176, 205, 255, 0.28) 0%, rgba(176, 205, 255, 0) 70%); }',
-	'.lf-dashboard-shell:after { left: -100px; bottom: -120px; width: 320px; height: 320px; border-radius: 50%; background: radial-gradient(circle, rgba(214, 229, 255, 0.22) 0%, rgba(214, 229, 255, 0) 72%); }',
+	/* No ambient glows.  The two radial gradients that used to sit here were
+	 * part of the blue-gradient shell, and the traffic page this now matches
+	 * has none: a light material with a coloured blob behind it reads as a
+	 * leftover, not as depth. */
 
-	'.lf-dashboard { position: relative; z-index: 1; padding: 28px; color: #eef6ef; }',
+	'.lf-dashboard { position: relative; z-index: 1; padding: 28px; color: var(--lf-fg); }',
 	'.lf-hero { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.85fr); gap: 24px; align-items: stretch; }',
 	'.lf-copy { min-width: 0; }',
 
@@ -204,53 +235,53 @@ var dashboardStyle = [
 	'.lf-eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: var(--lf-frost-bg); border: 1px solid var(--lf-frost-border); backdrop-filter: blur(16px) saturate(140%); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; }',
 
 	/* Headline — reset all LuCI overrides */
-	'.lf-headline { all: unset; display: block !important; width: auto !important; margin: 16px 0 10px !important; padding: 0 !important; min-height: 0 !important; background: transparent !important; background-color: transparent !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; font-size: 30px !important; font-weight: 700 !important; line-height: 1.15 !important; color: #ffffff !important; text-shadow: none !important; }',
+	'.lf-headline { all: unset; display: block !important; width: auto !important; margin: 16px 0 10px !important; padding: 0 !important; min-height: 0 !important; background: transparent !important; background-color: transparent !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; font-size: 30px !important; font-weight: 700 !important; line-height: 1.15 !important; color: var(--lf-fg) !important; text-shadow: none !important; }',
 	'.lf-headline:before, .lf-headline:after { display: none; content: none; }',
-	'.lf-copy p { max-width: 52rem; margin: 0; font-size: 14px; line-height: 1.7; color: rgba(238, 246, 239, 0.88); }',
+	'.lf-copy p { max-width: 52rem; margin: 0; font-size: 14px; line-height: 1.7; color: var(--lf-dim); }',
 
 	'.lf-chip-row, .lf-metrics, .lf-grid, .lf-config-grid, .lf-ladder-scale { display: grid; gap: 14px; }',
 	'.lf-chip-row { grid-template-columns: repeat(auto-fit, minmax(140px, max-content)); margin-top: 18px; }',
-	'.lf-chip { display: inline-flex; align-items: center; justify-content: center; padding: 8px 14px; border-radius: 999px; background: var(--lf-frost-bg); border: 1px solid var(--lf-frost-border); backdrop-filter: blur(12px); font-size: 12px; line-height: 1.4; color: #ffffff; }',
-	'.lf-chip-muted { background: var(--lf-deep-surface); color: rgba(238, 246, 239, 0.86); }',
+	'.lf-chip { display: inline-flex; align-items: center; justify-content: center; padding: 8px 14px; border-radius: 999px; background: var(--lf-frost-bg); border: 1px solid var(--lf-frost-border); backdrop-filter: blur(12px); font-size: 12px; line-height: 1.4; color: var(--lf-fg); }',
+	'.lf-chip-muted { background: var(--lf-deep-surface); color: var(--lf-dim); }',
 	'.lf-chip-alert { background: rgba(246, 135, 83, 0.2); border-color: rgba(246, 135, 83, 0.35); }',
 
 	/* Runtime state badge colors */
 	'.lf-runtime-badge[data-state="active"] { background: #ffcb72; border-color: #ffcb72; color: #2d1f04; }',
 	'.lf-runtime-badge[data-state="transition"] { background: #9adfb9; border-color: #9adfb9; color: #143325; }',
 	'.lf-runtime-badge[data-state="standby"] { background: #cbe7f0; border-color: #cbe7f0; color: #173843; }',
-	'.lf-runtime-badge[data-state="disabled"], .lf-runtime-badge[data-state="unsupported"] { background: rgba(255, 255, 255, 0.16); color: #ffffff; }',
+	'.lf-runtime-badge[data-state="disabled"], .lf-runtime-badge[data-state="unsupported"] { background: var(--lf-frost-bg); color: var(--lf-fg); }',
 
 	'.lf-visual { min-width: 0; display: grid; gap: 16px; align-content: start; justify-items: stretch; }',
 
 	/* Fan orb — Apple-style glass surface with top-edge light catch */
-	'.lf-orb { position: relative; display: flex; align-items: center; justify-content: center; width: 100%; min-height: 280px; padding: 18px; overflow: hidden; border-radius: 26px; background: linear-gradient(180deg, var(--lf-deep-surface), var(--lf-frost-soft)) !important; border: 1px solid var(--lf-frost-border) !important; backdrop-filter: blur(18px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 8px 24px rgba(0,0,0,0.08) !important; }',
+	'.lf-orb { position: relative; display: flex; align-items: center; justify-content: center; width: 100%; min-height: 280px; padding: 18px; overflow: hidden; border-radius: 26px; background: var(--lf-well) !important; border: 1px solid var(--lf-frost-border) !important; backdrop-filter: blur(18px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 8px 24px rgba(0,0,0,0.08) !important; }',
 	'.lf-orb canvas, #lf-fan-canvas { display: block !important; width: 260px !important; height: 260px !important; max-width: 100% !important; max-height: 260px !important; margin: 0 auto !important; background: transparent !important; background-color: transparent !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; outline: 0 !important; }',
 
 	'.lf-temp-readout { position: absolute; top: 50%; left: 50%; z-index: 1; transform: translate(-50%, -50%); text-align: center; pointer-events: none; }',
 	'.lf-temp-number { font-size: 42px; line-height: 1; font-weight: 700; }',
-	'.lf-temp-unit { margin-top: 4px; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(238, 246, 239, 0.72); }',
-	'.lf-temp-caption { margin-top: 8px; font-size: 12px; color: rgba(238, 246, 239, 0.82); }',
+	'.lf-temp-unit { margin-top: 4px; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--lf-dim); }',
+	'.lf-temp-caption { margin-top: 8px; font-size: 12px; color: var(--lf-dim); }',
 
 	/* Demand bar — smooth width transition with strong ease-in-out */
 	'.lf-demand { width: 100%; box-sizing: border-box; padding: 16px 18px 18px; border-radius: 18px; background: var(--lf-frost-soft); border: 1px solid var(--lf-frost-border); backdrop-filter: blur(10px); }',
 	'.lf-demand-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 13px; }',
 	'.lf-demand-row strong { font-size: 18px; }',
-	'.lf-demand-bar { margin-top: 10px; height: 12px; border-radius: 999px; background: rgba(5, 16, 19, 0.34); overflow: hidden; }',
+	'.lf-demand-bar { margin-top: 10px; height: 12px; border-radius: 999px; background: var(--lf-track); overflow: hidden; }',
 	'#lf-demand-fill { height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, #7de2b8 0%, #f3d07b 55%, #f68753 100%);',
 	'  transition: width 350ms var(--lf-ease-in-out), background 350ms var(--lf-ease-in-out); }',
 
 	/* Metrics grid — translucency + blur */
 	'.lf-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 22px; }',
 	'.lf-metric, .lf-card, .lf-ladder-card { padding: 18px; border-radius: 20px; background: var(--lf-frost-bg); border: 1px solid var(--lf-frost-border); backdrop-filter: blur(12px) saturate(140%); }',
-	'.lf-metric-label { font-size: 12px; line-height: 1.5; color: rgba(238, 246, 239, 0.76); }',
-	'.lf-metric-value { margin-top: 10px; font-size: 28px; line-height: 1.1; font-weight: 700; color: #ffffff;',
+	'.lf-metric-label { font-size: 12px; line-height: 1.5; color: var(--lf-dim); }',
+	'.lf-metric-value { margin-top: 10px; font-size: 28px; line-height: 1.1; font-weight: 700; color: var(--lf-fg);',
 	'  transition: color 200ms var(--lf-ease-out); }',
 
 	/* Ladder (smart curve visualisation) */
 	'.lf-ladder-card { margin-top: 22px; }',
 	'.lf-ladder-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }',
-	'.lf-ladder-head h4, .lf-card h4 { margin: 0; font-size: 16px; color: #ffffff; }',
-	'.lf-source-pill { padding: 6px 10px; border-radius: 999px; background: var(--lf-deep-surface); font-size: 12px; color: rgba(238, 246, 239, 0.84); }',
+	'.lf-ladder-head h4, .lf-card h4 { margin: 0; font-size: 16px; color: var(--lf-fg); }',
+	'.lf-source-pill { padding: 6px 10px; border-radius: 999px; background: var(--lf-deep-surface); font-size: 12px; color: var(--lf-dim); }',
 	'.lf-ladder-track { position: relative; height: 18px; margin-top: 18px; border-radius: 999px; background: linear-gradient(90deg, rgba(125, 226, 184, 0.45) 0%, rgba(250, 206, 118, 0.72) 55%, rgba(246, 135, 83, 0.95) 100%); overflow: hidden; }',
 	'.lf-ladder-track:before { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(6, 18, 22, 0.25), rgba(255, 255, 255, 0.04)); }',
 	'.lf-marker { position: absolute; top: -5px; width: 2px; height: 28px; background: #ffffff; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.16); transform: translateX(-50%);',
@@ -258,12 +289,12 @@ var dashboardStyle = [
 	'.lf-marker-current { height: 34px; top: -8px; background: #ffd17c; box-shadow: 0 0 0 4px rgba(255, 209, 124, 0.18); }',
 	'.lf-ladder-scale { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 16px; }',
 	'.lf-scale-item { padding: 10px 12px; border-radius: 14px; background: var(--lf-deep-surface-soft); }',
-	'.lf-scale-item span { display: block; font-size: 11px; line-height: 1.5; color: rgba(238, 246, 239, 0.76); }',
-	'.lf-scale-item strong { display: block; margin-top: 6px; font-size: 18px; line-height: 1.2; color: #ffffff;',
+	'.lf-scale-item span { display: block; font-size: 11px; line-height: 1.5; color: var(--lf-dim); }',
+	'.lf-scale-item strong { display: block; margin-top: 6px; font-size: 18px; line-height: 1.2; color: var(--lf-fg);',
 	'  transition: color 200ms var(--lf-ease-out); }',
 
 	'.lf-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 22px; }',
-	'.lf-card p { margin: 12px 0 0; font-size: 13px; line-height: 1.7; color: rgba(238, 246, 239, 0.82); }',
+	'.lf-card p { margin: 12px 0 0; font-size: 13px; line-height: 1.7; color: var(--lf-dim); }',
 
 	/* ── Preset Buttons (Emil-style: :active scale feedback, strong easing) ── */
 	'.lf-preset-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }',
@@ -271,7 +302,7 @@ var dashboardStyle = [
 	'  min-height: 48px; padding: 0 14px; border-radius: 14px;',
 	'  border: 1px solid var(--lf-preset-border);',
 	'  background: var(--lf-preset-bg);',
-	'  color: #ffffff; box-shadow: none; cursor: pointer;',
+	'  color: var(--lf-fg); box-shadow: none; cursor: pointer;',
 	'  outline: none;',
 	'  -webkit-tap-highlight-color: transparent;',
 	'  transition: transform 160ms var(--lf-ease-out),',
@@ -281,15 +312,15 @@ var dashboardStyle = [
 	'}',
 	'.lf-preset:active { transform: scale(0.97); transition: transform 100ms var(--lf-ease-out); }',
 	'.lf-preset:hover, .lf-preset:focus-visible { transform: translateY(-1px); background: var(--lf-preset-hover); border-color: var(--lf-preset-hover-border); }',
-	'.lf-preset:focus-visible { box-shadow: 0 0 0 3px rgba(120, 169, 231, 0.4); }',
+	'.lf-preset:focus-visible { box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.4); }',
 	'.lf-preset.is-active { background: var(--lf-preset-active); border-color: var(--lf-preset-active-border); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); }',
 
 	'.lf-note, .lf-insights, .lf-config-grid { margin-top: 14px; }',
-	'.lf-insight { margin: 0 0 10px; padding: 10px 12px; border-radius: 14px; background: var(--lf-deep-surface-soft); font-size: 13px; line-height: 1.6; color: rgba(238, 246, 239, 0.9); }',
+	'.lf-insight { margin: 0 0 10px; padding: 10px 12px; border-radius: 14px; background: var(--lf-deep-surface-soft); font-size: 13px; line-height: 1.6; color: var(--lf-fg); }',
 	'.lf-config-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }',
 	'.lf-config-item { padding: 10px 12px; border-radius: 14px; background: var(--lf-deep-surface-soft); }',
-	'.lf-config-item span { display: block; font-size: 11px; line-height: 1.5; color: rgba(238, 246, 239, 0.76); }',
-	'.lf-config-item strong { display: block; margin-top: 6px; font-size: 18px; line-height: 1.3; color: #ffffff;',
+	'.lf-config-item span { display: block; font-size: 11px; line-height: 1.5; color: var(--lf-dim); }',
+	'.lf-config-item strong { display: block; margin-top: 6px; font-size: 18px; line-height: 1.3; color: var(--lf-fg);',
 	'  transition: color 200ms var(--lf-ease-out); }',
 
 	/* ── LuCI Form Integration ── */
@@ -312,10 +343,10 @@ var dashboardStyle = [
 	'.lf-dashboard-shell + .cbi-map input[type="text"]:focus,',
 	'.lf-dashboard-shell + .cbi-map input[type="number"]:focus,',
 	'.lf-dashboard-shell + .cbi-map select:focus {',
-	'  border-color: rgba(120, 169, 231, 0.5);',
-	'  box-shadow: 0 0 0 3px rgba(120, 169, 231, 0.15);',
+	'  border-color: rgba(10, 132, 255, 0.5);',
+	'  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.15);',
 	'}',
-	'.lf-dashboard-shell + .cbi-map input[type="range"] { width: 100%; accent-color: #1d6d5d; }',
+	'.lf-dashboard-shell + .cbi-map input[type="range"] { width: 100%; accent-color: var(--lf-accent); }',
 	'.lf-range-output { display: inline-flex; align-items: center; justify-content: center; min-width: 72px; margin-top: 10px; padding: 6px 12px; border-radius: 999px; background: var(--lf-range-pill-bg); color: var(--lf-range-pill-text); font-size: 12px; font-weight: 600;',
 	'  transition: background-color 200ms var(--lf-ease-out), color 200ms var(--lf-ease-out); }',
 
@@ -997,8 +1028,20 @@ return view.extend({
 		var centerY = canvas.height / 2;
 		var outerRadius = 94;
 		var innerRadius = 58;
-		var bladeColor = demand > 0.72 ? '#f79259' : (demand > 0.42 ? '#f3cf7c' : '#7de2b8');
-		var glowColor = demand > 0.72 ? 'rgba(247, 146, 89, 0.22)' : (demand > 0.42 ? 'rgba(243, 207, 124, 0.22)' : 'rgba(125, 226, 184, 0.2)');
+		/* The well, the track and the demand colours have to follow the surface
+		 * the orb now sits on.  They were picked against the blue gradient: a
+		 * near-black well with pale pastels on it.  On the light material the
+		 * shell is made of, the well reads as a hole and the pastels wash out,
+		 * so the light theme gets the same three hues taken down to a legible
+		 * depth.  These values mirror --lf-well, --lf-well-hub, --lf-track and
+		 * the --lf-down / --lf-up family in the stylesheet above. */
+		var orbDark = (typeof applyThemeClass._dark === 'boolean') ? applyThemeClass._dark : isDarkTheme();
+		var bladeColor = orbDark
+			? (demand > 0.72 ? '#f79259' : (demand > 0.42 ? '#f3cf7c' : '#7de2b8'))
+			: (demand > 0.72 ? '#d9662f' : (demand > 0.42 ? '#c98a12' : '#1f9d63'));
+		var glowColor = orbDark
+			? (demand > 0.72 ? 'rgba(247, 146, 89, 0.22)' : (demand > 0.42 ? 'rgba(243, 207, 124, 0.22)' : 'rgba(125, 226, 184, 0.20)'))
+			: (demand > 0.72 ? 'rgba(217, 102, 47, 0.20)' : (demand > 0.42 ? 'rgba(201, 138, 18, 0.20)' : 'rgba(31, 157, 99, 0.20)'));
 
 		context.clearRect(0, 0, canvas.width, canvas.height);
 		context.save();
@@ -1011,11 +1054,11 @@ return view.extend({
 
 		context.beginPath();
 		context.arc(0, 0, outerRadius, 0, Math.PI * 2, false);
-		context.fillStyle = 'rgba(7, 20, 26, 0.38)';
+		context.fillStyle = orbDark ? 'rgba(7, 20, 26, 0.38)' : 'rgba(255, 255, 255, 0.72)';
 		context.fill();
 
 		context.lineWidth = 12;
-		context.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+		context.strokeStyle = orbDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(128, 150, 175, 0.20)';
 		context.beginPath();
 		context.arc(0, 0, outerRadius, 0, Math.PI * 2, false);
 		context.stroke();
@@ -1041,7 +1084,7 @@ return view.extend({
 
 		context.beginPath();
 		context.arc(0, 0, innerRadius, 0, Math.PI * 2, false);
-		context.fillStyle = 'rgba(10, 27, 33, 0.92)';
+		context.fillStyle = orbDark ? 'rgba(10, 27, 33, 0.92)' : 'rgba(255, 255, 255, 0.92)';
 		context.fill();
 
 		context.beginPath();
@@ -1142,7 +1185,7 @@ return view.extend({
 			'<div class="lf-hero">' +
 				'<div class="lf-copy">' +
 					'<div class="lf-eyebrow">' + escapeHtml(t('Adaptive Fan Profile', '自适应风扇控制')) + '</div>' +
-					'<div class="lf-headline" style="all:unset;display:block;margin:16px 0 10px;padding:0;background:transparent;color:#ffffff;font-size:30px;font-weight:700;line-height:1.15;">' + escapeHtml(t('Live Cooling Dashboard', '实时散热面板')) + '</div>' +
+					'<div class="lf-headline" style="all:unset;display:block;margin:16px 0 10px;padding:0;background:transparent;color:var(--lf-fg);font-size:30px;font-weight:700;line-height:1.15;">' + escapeHtml(t('Live Cooling Dashboard', '实时散热面板')) + '</div>' +
 					'<p>' + escapeHtml(heroText) + '</p>' +
 					'<div class="lf-chip-row">' +
 						'<span class="lf-chip">' + primaryChip + '</span>' +
