@@ -337,4 +337,4 @@ msgstr "所选时间范围内最忙的客户端，取自归档的客户端记录
 #: htdocs/luci-static/resources/view/traffic/overview.js
 # 环形图里其余应用的合计切片，只把环填满，表格与图例的前十名不变
 msgid "Other apps"
-msgstr "其他应用"
+msgstr "其余应用"
