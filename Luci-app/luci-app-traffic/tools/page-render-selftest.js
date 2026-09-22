@@ -103,11 +103,7 @@ function freshView(){
            legendEl:E('div'), totalEl:E('div'), diagEl:E('div'), diagCardEl:E('div'),
            statusEl:E('div'), chartEl:E('div'), chartNote:E('span'),
            rateDown:E('b'), rateUp:E('b'),
-           // render() still builds the protocol-bucket block and the hero caption,
-           // and draw() still reaches both (renderProto gets an empty list now, so
-           // it only ever hides the block); these tests drive draw directly, so the
-           // stubs stay.  The hero caption is rewritten by draw() as before.
-           protoEl:E('div'), protoListEl:E('div'), protoSumEl:E('span'),
+	           // draw() rewrites the hero caption on every refresh.
            heroCapEl:E('div') });
 }
 const items=[{name:'YouTube',down:1e6,up:1e5,bytes:11e5,clients:3,top:'192.168.2.5',top_bytes:5e5},
@@ -690,10 +686,8 @@ console.log('=== 协议桶与应用同表列出（不再单独成块）===');
 // 的三分之一左右。曾经把它们从表里摘出来、放进表下独立的「协议（非应用）」区块，
 // 那个版本被否掉了：在开卸载的路由器上，相当大的一部分流量就落在 SSL/TLS / QUIC /
 // Other 上，摘走之后表格加起来远小于它上面的总量，而读者用的本来就是「一张按字节
-// 排序的单一列表」。页面代码里 isProto() 现在恒为 false，协议桶照旧是应用表的行；
-// 表下那个区块还留在 DOM 里（renderProto 仍会被调用一次），但恒收到空数组，所以
-// 恒为空、恒隐藏。下面这些断言是反向的：它们证明协议桶确实回到了应用表，而区块
-// 确实空了——把回归弄瞎的做法是删断言，不是这么写。
+// 排序的单一列表」。协议桶照旧是主表的行；下面直接检查表格、环图和计数，
+// 而不是依赖已经移除的空协议区块。
 const PICKS=[{name:'YouTube',down:1e6,up:1e5,clients:3,top:'192.168.2.5',top_bytes:5e5},
              {name:'QUIC',down:6e5,up:1e4,proto:1},
              {name:'DNS',down:2e5,up:1e4,proto:1}];
@@ -716,28 +710,19 @@ chk(flat(vP.rowsEl).indexOf('QUIC')>=0 && flat(vP.rowsEl).indexOf('DNS')>=0,
 // 它），只是它不再是一个单独区块里的行
 chk(/tf-isbucket/.test(rowCls(vP,'QUIC')) && !/tf-isbucket/.test(rowCls(vP,'YouTube')),
     `表里协议桶行带桶标记、真应用不带（QUIC=${rowCls(vP,'QUIC')} / YouTube=${rowCls(vP,'YouTube')||'（空）'}）`);
-chk(Object.keys(vP.protoRows||{}).length===0 && vP.protoEl.style.display==='none',
-    `表下的协议区块恒为空且恒隐藏（protoRows=${Object.keys(vP.protoRows||{}).length}, display=${vP.protoEl.style.display}）`);
-chk(flat(vP.protoListEl).trim()==='', `协议区块里没有任何条目（${flat(vP.protoListEl).trim()||'（空）'}）`);
 chk((boxes(vP.statusEl).filter(b=>b.cap==='Apps and sites')[0]||{}).val==='1',
     `「应用与站点」格数只算应用和站点（${(boxes(vP.statusEl).filter(b=>b.cap==='Apps and sites')[0]||{}).val}）`);
-// 环形图的清单是「已归属流量」的构成。isProto 恒 false 之后协议桶在里面就是普通
-// 一行；若它还带桶标记，同一份清单和下面那张表就会把 QUIC 分成两种东西
+// 环形图的清单是「已归属流量」的构成，协议桶与主表使用相同的标记。
 const legProto=(vP.legendCache||{})['QUIC'];
 chk(!!legProto && /tf-isbucket/.test((legProto.row.attrs||{}).class||''),
     `环形图清单里协议桶有桶标记（${legProto&&legProto.row.attrs.class}）`);
 chk(!!vP.legendCache['YouTube'] && !/tf-isbucket/.test((vP.legendCache['YouTube'].row.attrs||{}).class||''),
     '环形图清单里真应用也不带桶标记');
-const vP0=mkView({});
-view.renderLive.call(vP0, sumOf({apps:[{name:'YouTube',down:1e6,up:1e5}]}));
-chk(!!vP0.protoEl && vP0.protoEl.style.display==='none' &&
-    Object.keys(vP0.protoRows||{}).length===0, '没有协议桶时整个区块同样隐藏（与上面一致）');
 // 归档的小时行只有名字、没有 proto 标记：范围视图走的也是同一条路，QUIC 照旧进应用表
 const vPH=mkView({});
 view.renderHourly.call(vPH,{hours:[{hour:'h0',apps:[{name:'YouTube',down:36000,up:18000},
   {name:'QUIC',down:1000,up:500}],clients:[],router:0}]});
-chk(inRows(vPH,'QUIC') && inRows(vPH,'YouTube') && Object.keys(vPH.protoRows||{}).length===0 &&
-    vPH.protoEl.style.display==='none',
+chk(inRows(vPH,'QUIC') && inRows(vPH,'YouTube'),
     `范围视图同样把协议桶列进应用表（表内：${Object.keys(vPH.rowCache||{}).join('|')}）`);
 
 console.log('=== 热门客户端：跨窗口的荒谬百分比不再印出 ===');
@@ -800,8 +785,7 @@ chk(txt(vR2.diagEl).indexOf('Waiting to resolve')>=0,
     `范围视图诊断区确实非空，下面的「没有告警」才不是空集（${txt(vR2.diagEl).trim()}）`);
 chk(offloadWords(txt(vR2.diagEl)).length===0,
     `范围视图诊断区非空时同样没有卸载文案（${txt(vR2.diagEl).trim()}）`);
-chk(inRows(vR2,'QUIC') && Object.keys(vR2.protoRows||{}).length===0 &&
-    vR2.protoEl.style.display==='none',
+chk(inRows(vR2,'QUIC'),
     `范围视图一轮完整绘制后协议桶仍在应用表里（表内：${Object.keys(vR2.rowCache||{}).join('|')}）`);
 chk(String((vR.grandRow.cells.top.attrs||{}).title||'').indexOf('selected range')>=0,
     `范围视图合计行的客户端标注为所选范围（${(vR.grandRow.cells.top.attrs||{}).title}）`);

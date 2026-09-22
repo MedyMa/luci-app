@@ -325,11 +325,6 @@ msgstr "已开启流量卸载：应用明细只覆盖了其中一部分流量，
 msgid "flow offloading is on: the accounting layer only sees part of the forwarded traffic, so the figures below are a share of what the box carried"
 msgstr "已开启流量卸载：记账层只能看到转发流量的一部分，下方数字只是实际承载量的一份占比"
 
-# 协议桶（SSL/TLS、QUIC、HTTP、DNS、STUN 等）不是应用，单独成块列出。
-#: htdocs/luci-static/resources/view/traffic/overview.js
-msgid "Protocols (not applications)"
-msgstr "协议（非应用）"
-
 # 环形图右侧那份清单是「已归属流量」的构成（协议桶也在其中），不能沿用表头那份
 # 「应用」文案，否则 SSL/TLS 又会被读成一个应用。
 #: htdocs/luci-static/resources/view/traffic/overview.js

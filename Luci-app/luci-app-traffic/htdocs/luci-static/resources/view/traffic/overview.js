@@ -164,27 +164,6 @@ function groupServices(items) {
 	return out.sort(function(a, b) { return b.bytes - a.bytes; });
 }
 
-/* The names the collector marks with "proto":1.  They are not applications and
- * never were: they are the transport or the infrastructure label the attribution
- * falls back to when a flow's destination never got a name, and together they
- * carried about a third of the attributed traffic.  The flag is what decides;
- * this list is the same one collector.sh carries and covers the archived hours,
- * whose rows are rebuilt from a name and carry no flag. */
-/* The collector still marks the protocol buckets with "proto":1, but they are
- * listed with the applications rather than in a block of their own: on a router
- * that offloads, SSL/TLS / QUIC / Other are where a large part of the traffic
- * actually lands, and pulling them out of the table left the table summing to
- * much less than the total above it.  One list, sorted by bytes, is what the
- * reader was using.  isProto stays as the single place that decision is made. */
-var PROTO_NAMES = {
-	'SSL/TLS': 1, 'QUIC': 1, 'HTTP': 1, 'DNS': 1, 'STUN': 1,
-	'RTSP': 1, 'Email': 1, 'ICMP': 1, 'Other': 1
-};
-
-function isProto(item) {
-	return false;
-}
-
 /* The headline total of the session: what the box actually carried.
  *
  * It comes from the interface counters the collector publishes as summary.iface
@@ -850,19 +829,6 @@ return view.extend({
 		]);
 		this.legendEl = el('div', { 'class': 'tf-legend' });
 		this.rowsEl   = el('tbody');
-		/* The protocol buckets live under the table rather than in it: they are
-		 * real attributed bytes - the ring above still counts them - but they are
-		 * not applications, and a table whose column header says 应用 must not
-		 * list a transport protocol as one.  Built here so a refresh only moves
-		 * the text. */
-		this.protoTitleEl = el('span', { 'class': 'tf-proto-title' }, [ _('Protocols (not applications)') ]);
-		this.protoSumEl   = el('span', { 'class': 'tf-proto-sum' });
-		this.protoListEl  = el('div', { 'class': 'tf-proto-list' });
-		this.protoEl = el('div', { 'class': 'tf-proto' }, [
-			el('div', { 'class': 'tf-proto-cap' }, [ this.protoTitleEl, this.protoSumEl ]),
-			this.protoListEl
-		]);
-		this.protoEl.style.display = 'none';
 		this.diagEl   = el('div', { 'class': 'tf-diag' });
 		this.chartEl  = el('div', { 'class': 'tf-chart' });
 		this.chartNote = el('span', { 'class': 'tf-chart-note' });
@@ -1450,10 +1416,6 @@ return view.extend({
 			var d = Number(a.down) || 0, u = Number(a.up) || 0;
 			return {
 				name: a.name, down: d, up: u, bytes: d + u,
-				/* the collector's own marking of a protocol bucket.  It is left
-				 * undefined when the collector did not send one, so isProto()
-				 * falls back to the name list instead of calling it a real app. */
-				proto: (a.proto === undefined ? undefined : Number(a.proto)),
 				clients: (a.clients === undefined) ? undefined : Number(a.clients),
 				top: a.top || '',
 				top_bytes: Number(a.top_bytes) || 0
@@ -1544,8 +1506,8 @@ return view.extend({
 			{ cap: _('Browser clients'), val: fmtBytes(all) },
 			{ cap: _('Router and tunnel'), val: fmtBytes(t.router) },
 			{ cap: _('Devices'), val: String(Number(t.client_count) || 0) },
-			/* the applications the table is listing: the protocol buckets are not
-			 * applications and no longer sit in that table */
+			/* Count product and site rows; protocol buckets are visible in the
+			 * ranked table but are not applications or sites. */
 			{ cap: _('Apps and sites'), val: String(groupServices(items).filter(function(a) { return !isBucket(a.name); }).length) }
 		]);
 
@@ -1738,11 +1700,9 @@ return view.extend({
 				: _('number of clients seen for this application in the current session'));
 		}
 		items = groupServices(items);
-		/* Protocol buckets are identified separately for count and styling.
-		 * isProto currently leaves them in the ranked table so the table and
-		 * ring describe the same traffic; isBucket marks their type. */
-		var apps = items.filter(function(a) { return !isProto(a); });
-		var protos = items.filter(isProto);
+		/* Protocol buckets remain in the ranked table and ring.  isBucket marks
+		 * their type without removing their bytes from either breakdown. */
+		var apps = items;
 
 		/* one palette assignment for everything drawn this round, so the donut,
 		 * the legend and the table cannot disagree about a colour */
@@ -1969,11 +1929,11 @@ return view.extend({
 			order.forEach(function(n) { self.rowsEl.appendChild(self.rowCache[n].tr); });
 		}
 
-		if (!apps.length && !protos.length && !this.emptyRow) {
+		if (!apps.length && !this.emptyRow) {
 			this.emptyRow = el('tr', {}, [ el('td', { 'colspan': 6, 'class': 'tf-empty' }, [ _('No traffic recorded yet.') ]) ]);
 			this.rowsEl.appendChild(this.emptyRow);
 		}
-		else if ((apps.length || protos.length) && this.emptyRow) {
+		else if (apps.length && this.emptyRow) {
 			if (this.emptyRow.parentNode) this.emptyRow.parentNode.removeChild(this.emptyRow);
 			this.emptyRow = null;
 		}
@@ -2035,51 +1995,6 @@ return view.extend({
 			this.unattrRow = null;
 		}
 
-		/* and the protocol buckets, in their own labelled block under the table */
-		this.renderProto(protos, total);
-	},
-
-	/* The protocol buckets: real attributed bytes, so the ring above counts them,
-	 * but not applications, so they are not rows of the application table.  They
-	 * get a muted block of their own under it, with the count and their share of
-	 * the page's one total, and something else in the table's place would have to
-	 * be a lie about what an application is. */
-	renderProto: function(list, total) {
-		if (!this.protoEl) return;
-		var self = this;
-		if (!this.protoRows) this.protoRows = {};
-
-		var rows = list.slice().sort(function(a, b) { return b.bytes - a.bytes; });
-		var sum = 0;
-		rows.forEach(function(a) { sum += a.bytes; });
-
-		var seen = {};
-		rows.forEach(function(a) {
-			seen[a.name] = 1;
-			var r = self.protoRows[a.name];
-			if (!r) {
-				var nm = el('span', { 'class': 'tf-proto-name', 'title': a.name }, [ a.name ]);
-				var by = el('span', { 'class': 'tf-proto-bytes' });
-				r = { name: nm, bytes: by,
-					row: el('div', { 'class': 'tf-proto-row' }, [ makeIcon(a.name), nm, by ]) };
-				self.protoRows[a.name] = r;
-			}
-			setText(r.bytes, fmtBytes(a.bytes) + ' (' +
-				shareLabel(a.bytes, total) + ')');
-			self.protoListEl.appendChild(r.row);
-		});
-		Object.keys(this.protoRows).forEach(function(n) {
-			if (seen[n]) return;
-			var r = self.protoRows[n];
-			if (r.row.parentNode) r.row.parentNode.removeChild(r.row);
-			delete self.protoRows[n];
-		});
-
-		if (this.protoSumEl)
-			setText(this.protoSumEl, rows.length
-				? String(rows.length) + ' · ' + fmtBytes(sum)
-				: '');
-		this.protoEl.style.display = rows.length ? '' : 'none';
 	},
 
 	handleSave: null,
@@ -2563,25 +2478,6 @@ function injectCss() {
 
 		'.tf-page .tf-warn{color:#ff8f1f;}',
 		'.tf-page .tf-empty{text-align:center;color:var(--tf-dim);padding:1.2rem 0;}',
-		/* The protocol buckets, under the table rather than in it.  They are a
-		 * kind of traffic and not a product, so the block is muted and separated
-		 * by the same hairline the table header uses - visibly a footnote to the
-		 * list above, not a second page of applications. */
-		'.tf-page .tf-proto{border-top:1px solid var(--tf-line);margin-top:.35rem;',
-		'padding:.45rem .6rem .5rem;display:flex;flex-direction:column;gap:.25rem;}',
-		'.tf-page .tf-proto-cap{display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap;',
-		'font-size:.72rem;color:var(--tf-dim);letter-spacing:.04em;}',
-		'.tf-page .tf-proto-title{font-weight:600;}',
-		'.tf-page .tf-proto-sum{font-variant-numeric:tabular-nums;}',
-		'.tf-page .tf-proto-list{display:grid;gap:.15rem 1.1rem;',
-		'grid-template-columns:repeat(auto-fill,minmax(15rem,1fr));}',
-		'.tf-page .tf-proto-row{display:flex;align-items:center;gap:.45rem;min-width:0;',
-		'font-size:.8rem;color:var(--tf-dim);font-style:italic;}',
-		'.tf-page .tf-proto-name{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
-		'.tf-page .tf-proto-bytes{white-space:nowrap;font-variant-numeric:tabular-nums;}',
-		'.tf-page .tf-proto-row .tf-icon,.tf-page .tf-proto-row .tf-icon-img{',
-		'width:16px;height:16px;flex:0 0 16px;border-radius:5px;box-shadow:none;}',
-		'.tf-page .tf-proto-row .tf-icon-letter{font-size:.58rem;}',
 		/* controls: every chip and field is a pill, so the toolbar reads as one
 		 * row of soft shapes rather than as mismatched theme widgets.
 		 *
