@@ -346,8 +346,12 @@ var dashboardStyle = [
 	'.lf-settings > .lf-settings-head:hover { color: var(--lf-accent); }',
 	'.lf-settings > .lf-settings-head:focus-visible { outline: 2px solid var(--lf-accent); outline-offset: 2px; }',
 	'.lf-settings .cbi-map { margin: 0; border: 0; border-radius: 0; box-shadow: none; background: transparent; }',
-	/* the summary carries the section's own heading, so the one inside the map
-	 * would print "基本设置" twice */
+	/* the summary carries the section's own heading, so the one the form renders
+	 * would print "基本设置" twice.  luci-base's form.js appends that heading as
+	 * a direct child of .cbi-section - `sectionEl.appendChild(E('h3', {}, this.title))`
+	 * - which is a sibling of .cbi-section-node, not inside it, so the selector
+	 * has to say so: matching .cbi-section-node h3 hid nothing at all. */
+	'.lf-settings .cbi-map .cbi-section > h3 { display: none; }',
 	'.lf-settings .cbi-map .cbi-section-node h3 { display: none; }',
 	'.lf-settings .cbi-map .cbi-value:first-child { border-top: 0; }',
 	'.lf-settings .cbi-map > h2, .lf-settings .cbi-map > .cbi-map-descr { display: none; }',
