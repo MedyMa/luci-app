@@ -41,6 +41,10 @@ const warnings = [];
 /* ---- what the page can actually resolve ---------------------------------- */
 const have = new Set(fs.readdirSync(ICON_DIR).filter(f => f.endsWith('.svg')));
 const perName = new Map();
+/* The catalogue also names the icon each application resolves to, which is what
+ * lets the manifest's application column be checked against something rather
+ * than merely checked for being non-empty. */
+const catalogueBySlug = new Map();
 let rows = 0;
 for (const line of fs.readFileSync(APPS, 'utf8').split('\n')) {
 	if (!line || line.startsWith('#')) continue;
@@ -48,6 +52,7 @@ for (const line of fs.readFileSync(APPS, 'utf8').split('\n')) {
 	if (!name || !domain) continue;
 	rows++;
 	perName.set(name, (perName.get(name) || 0) + 1);
+	if (!catalogueBySlug.has(slug(name))) catalogueBySlug.set(slug(name), name);
 }
 const names = [...perName.keys()];
 const missing = names.filter(n => !have.has(slug(n) + '.svg'));
@@ -69,6 +74,23 @@ if (!fs.existsSync(MANIFEST)) {
 		if (!file) continue;
 		if (seen.has(file)) problems.push(`duplicate manifest row for ${file}`);
 		seen.set(file, true);
+		/* The header declares seven columns.  Three rows ended at the URL column,
+		 * which is invisible in a TSV and exactly the kind of "close enough" that
+		 * lets a later column shift go unnoticed, so the shape is checked. */
+		if (cols.length !== 7)
+			problems.push(`${file}: manifest row has ${cols.length} fields, the header declares 7`);
+		/* A row that does not say which application the icon stands for is not
+		 * provenance, only a file list.  45 rows were empty here: the repair pass
+		 * rewrote the source columns and left column 1 as it found it, and every
+		 * one of those slugs is named in the catalogue, so the name was never
+		 * unknown.  Where the catalogue names the slug, the two must agree. */
+		if (!cols[1]) {
+			problems.push(`${file}: manifest row does not name the application`);
+		} else {
+			const named = catalogueBySlug.get(file.replace(/\.svg$/, ''));
+			if (named && cols[1] !== named)
+				problems.push(`${file}: application column says "${cols[1]}" but the catalogue names this icon "${named}"`);
+		}
 		manifestRows.push({ file, application: cols[1] || '', source: cols[2] || '', upstream: cols[3] || '', licence: cols[4] || '', url: cols[5] || '' });
 	}
 	for (const r of manifestRows) {
@@ -78,6 +100,46 @@ if (!fs.existsSync(MANIFEST)) {
 	}
 	for (const f of have) {
 		if (!seen.has(f)) problems.push(`${f} ships in the package but has no manifest row`);
+	}
+}
+
+/* ---- the site/icon map ---------------------------------------------------
+ * Rows here answer "which packaged icon stands for this site domain".  Two
+ * relations are recorded and they are not interchangeable:
+ *   - a brand root, two labels (zoho.com): the icon is the brand's own mark, so
+ *     the root label and the packaged slug are the same word;
+ *   - a product subdomain, three or more labels (hsr.hoyoverse.com): the site
+ *     belongs to a product of that brand and the icon is the product's, which is
+ *     why the slug differs from the root label.  Five such rows exist; the icons
+ *     they name are reachable through no other row, so they are kept and the
+ *     distinction is checked instead of assumed.
+ * A two-label row whose slug is not its root label is the defect this catches:
+ * it would give a whole brand the icon of one of its products.  expand-icons.js
+ * derives the two-label rows with exactly this rule (brandDomain), so a row that
+ * disagrees with it can only have been added by hand. */
+const DOMAIN_MAP = path.join(__dirname, 'site-icon-domains.tsv');
+const domainSeen = new Set();
+if (!fs.existsSync(DOMAIN_MAP)) {
+	problems.push('tools/site-icon-domains.tsv is missing: the site icon map has no recorded provenance');
+} else {
+	for (const line of fs.readFileSync(DOMAIN_MAP, 'utf8').split(/\r?\n/)) {
+		if (!line || line.startsWith('#')) continue;
+		const cols = line.split('\t');
+		const domain = cols[0], icon = cols[1];
+		if (cols.length !== 3) {
+			problems.push(`site-icon-domains.tsv: ${domain} has ${cols.length} fields, the header declares 3`);
+			continue;
+		}
+		if (domainSeen.has(domain)) problems.push(`site-icon-domains.tsv: ${domain} is mapped twice`);
+		domainSeen.add(domain);
+		if (!have.has(icon + '.svg'))
+			problems.push(`site-icon-domains.tsv: ${domain} maps to ${icon}, which is not a packaged icon`);
+		const labels = domain.toLowerCase().split('.');
+		if (labels.length < 2) {
+			problems.push(`site-icon-domains.tsv: ${domain} is not a domain`);
+		} else if (labels.length === 2 && labels[0] !== icon) {
+			problems.push(`site-icon-domains.tsv: ${domain} is a brand root but maps to ${icon}; a brand root must map to its own icon, and only a subdomain may map to a product icon`);
+		}
 	}
 }
 

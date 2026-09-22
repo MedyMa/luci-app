@@ -76,6 +76,16 @@ jobs:
           # while the generator reported 751; this fails in seconds instead.
           node Luci-app/luci-app-traffic/tools/check-icons.js
 
+      - name: Prove the icon guards can still fail
+        run: |
+          set -eux
+          # check-icons.js passing proves nothing on its own: a guard that never
+          # looks also passes.  This feeds each guard the defect it claims to
+          # catch, in a sandbox copy of the tree, and fails if the guard does not
+          # reject it.  It is what keeps the manifest shape, the application
+          # column and the site/icon map checked rather than merely present.
+          node Luci-app/luci-app-traffic/tools/guard-mutation-test.js
+
       - name: Run the self-tests
         run: |
           set -eux

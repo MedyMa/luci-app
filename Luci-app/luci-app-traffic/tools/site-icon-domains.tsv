@@ -1,4 +1,12 @@
 # Site domain	packaged SVG slug	upstream brand source URL
+# Two relations are recorded here and they are not interchangeable:
+#   a brand root (two labels, e.g. zoho.com) maps to the brand's own icon, so the
+#   root label and the slug are the same word; expand-icons.js derives these from
+#   the upstream metadata and refuses any row where the two disagree.
+#   a product subdomain (three or more labels, e.g. hsr.hoyoverse.com) maps to the
+#   product's icon, which is why its slug differs from the root label.  Five such
+#   rows exist and the game icons they name are reachable through no other row.
+# tools/check-icons.js enforces the first relation and the shape of both.
 1001tracklists.com	1001tracklists	https://www.1001tracklists.com
 1password.com	1password	https://1password.com/press
 2k.com	2k	https://support.2k.com/hc/en-us/articles/203972113-Digital-Copies-of-2K-Manuals

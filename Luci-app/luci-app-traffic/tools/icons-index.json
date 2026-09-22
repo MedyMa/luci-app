@@ -3,7 +3,7 @@
  "icons": 1503,
  "manifestRows": 1503,
  "catalogue": {
-  "rows": 32078,
+  "rows": 32077,
   "names": 1669
  },
  "coverage": {
@@ -6095,7 +6095,7 @@
   },
   "abema": {
    "file": "abema.svg",
-   "application": "",
+   "application": "Abema",
    "source": "iconify:arcticons",
    "upstream": "abema-tv",
    "licence": "CC BY-SA 4.0",
@@ -6103,7 +6103,7 @@
   },
   "alphabet": {
    "file": "alphabet.svg",
-   "application": "",
+   "application": "Alphabet",
    "source": "local:neutral",
    "upstream": "alphabet",
    "licence": "CC0-1.0",
@@ -6111,7 +6111,7 @@
   },
   "antutu": {
    "file": "antutu.svg",
-   "application": "",
+   "application": "Antutu",
    "source": "iconify:arcticons",
    "upstream": "antutu-3dbench",
    "licence": "CC BY-SA 4.0",
@@ -6119,7 +6119,7 @@
   },
   "blizzard": {
    "file": "blizzard.svg",
-   "application": "",
+   "application": "Blizzard",
    "source": "iconify:arcticons",
    "upstream": "blizzard-authenticator",
    "licence": "CC BY-SA 4.0",
@@ -6127,7 +6127,7 @@
   },
   "bloomberg": {
    "file": "bloomberg.svg",
-   "application": "",
+   "application": "Bloomberg",
    "source": "local:neutral",
    "upstream": "bloomberg",
    "licence": "CC0-1.0",
@@ -6135,7 +6135,7 @@
   },
   "blued": {
    "file": "blued.svg",
-   "application": "",
+   "application": "Blued",
    "source": "local:neutral",
    "upstream": "blued",
    "licence": "CC0-1.0",
@@ -6143,7 +6143,7 @@
   },
   "boomerang": {
    "file": "boomerang.svg",
-   "application": "",
+   "application": "Boomerang",
    "source": "local:neutral",
    "upstream": "boomerang",
    "licence": "CC0-1.0",
@@ -6151,7 +6151,7 @@
   },
   "cainiao": {
    "file": "cainiao.svg",
-   "application": "",
+   "application": "Cainiao",
    "source": "iconify:arcticons",
    "upstream": "cainiao-wireless",
    "licence": "CC BY-SA 4.0",
@@ -6159,7 +6159,7 @@
   },
   "cambridge": {
    "file": "cambridge.svg",
-   "application": "",
+   "application": "Cambridge",
    "source": "local:neutral",
    "upstream": "cambridge",
    "licence": "CC0-1.0",
@@ -6167,7 +6167,7 @@
   },
   "camera360": {
    "file": "camera360.svg",
-   "application": "",
+   "application": "Camera360",
    "source": "iconify:arcticons",
    "upstream": "camera360",
    "licence": "CC BY-SA 4.0",
@@ -6175,7 +6175,7 @@
   },
   "cdek": {
    "file": "cdek.svg",
-   "application": "",
+   "application": "Cdek",
    "source": "iconify:arcticons",
    "upstream": "cdek",
    "licence": "CC BY-SA 4.0",
@@ -6183,7 +6183,7 @@
   },
   "cerebras": {
    "file": "cerebras.svg",
-   "application": "",
+   "application": "Cerebras",
    "source": "local:neutral",
    "upstream": "cerebras",
    "licence": "CC0-1.0",
@@ -6191,7 +6191,7 @@
   },
   "chaoxing": {
    "file": "chaoxing.svg",
-   "application": "",
+   "application": "Chaoxing",
    "source": "iconify:arcticons",
    "upstream": "chaoxing-mobile",
    "licence": "CC BY-SA 4.0",
@@ -6199,7 +6199,7 @@
   },
   "civitai": {
    "file": "civitai.svg",
-   "application": "",
+   "application": "Civitai",
    "source": "local:neutral",
    "upstream": "civitai",
    "licence": "CC0-1.0",
@@ -6207,7 +6207,7 @@
   },
   "classic": {
    "file": "classic.svg",
-   "application": "",
+   "application": "Classic",
    "source": "local:neutral",
    "upstream": "classic",
    "licence": "CC0-1.0",
@@ -6215,7 +6215,7 @@
   },
   "connectivity-check": {
    "file": "connectivity-check.svg",
-   "application": "",
+   "application": "Connectivity Check",
    "source": "local:neutral",
    "upstream": "connectivity-check",
    "licence": "CC0-1.0",
@@ -6223,7 +6223,7 @@
   },
   "coolapk": {
    "file": "coolapk.svg",
-   "application": "",
+   "application": "Coolapk",
    "source": "iconify:arcticons",
    "upstream": "coolapk",
    "licence": "CC BY-SA 4.0",
@@ -6231,7 +6231,7 @@
   },
   "coupang": {
    "file": "coupang.svg",
-   "application": "",
+   "application": "Coupang",
    "source": "iconify:arcticons",
    "upstream": "coupang",
    "licence": "CC BY-SA 4.0",
@@ -6239,7 +6239,7 @@
   },
   "craigslist": {
    "file": "craigslist.svg",
-   "application": "",
+   "application": "Craigslist",
    "source": "iconify:arcticons",
    "upstream": "craigslist",
    "licence": "CC BY-SA 4.0",
@@ -6247,7 +6247,7 @@
   },
   "damai": {
    "file": "damai.svg",
-   "application": "",
+   "application": "DaMai",
    "source": "iconify:arcticons",
    "upstream": "damaiapp",
    "licence": "CC BY-SA 4.0",
@@ -6255,7 +6255,7 @@
   },
   "dcard": {
    "file": "dcard.svg",
-   "application": "",
+   "application": "Dcard",
    "source": "local:neutral",
    "upstream": "dcard",
    "licence": "CC0-1.0",
@@ -6263,7 +6263,7 @@
   },
   "dewu": {
    "file": "dewu.svg",
-   "application": "",
+   "application": "Dewu",
    "source": "iconify:arcticons",
    "upstream": "dewu",
    "licence": "CC BY-SA 4.0",
@@ -6271,7 +6271,7 @@
   },
   "didi": {
    "file": "didi.svg",
-   "application": "",
+   "application": "Didi",
    "source": "iconify:arcticons",
    "upstream": "didi",
    "licence": "CC BY-SA 4.0",
@@ -6279,7 +6279,7 @@
   },
   "dingtalk": {
    "file": "dingtalk.svg",
-   "application": "",
+   "application": "DingTalk",
    "source": "iconify:arcticons",
    "upstream": "dingtalk",
    "licence": "CC BY-SA 4.0",
@@ -6287,7 +6287,7 @@
   },
   "divar": {
    "file": "divar.svg",
-   "application": "",
+   "application": "Divar",
    "source": "iconify:arcticons",
    "upstream": "divar",
    "licence": "CC BY-SA 4.0",
@@ -6295,7 +6295,7 @@
   },
   "doubao": {
    "file": "doubao.svg",
-   "application": "",
+   "application": "Doubao",
    "source": "local:neutral",
    "upstream": "doubao",
    "licence": "CC0-1.0",
@@ -6303,7 +6303,7 @@
   },
   "dw": {
    "file": "dw.svg",
-   "application": "",
+   "application": "Dw",
    "source": "iconify:arcticons",
    "upstream": "dw",
    "licence": "CC BY-SA 4.0",
@@ -6311,7 +6311,7 @@
   },
   "dyndns": {
    "file": "dyndns.svg",
-   "application": "",
+   "application": "DynDNS",
    "source": "iconify:logos",
    "upstream": "dyndns",
    "licence": "see the collection licence",
@@ -6319,7 +6319,7 @@
   },
   "economist": {
    "file": "economist.svg",
-   "application": "",
+   "application": "Economist",
    "source": "iconify:arcticons",
    "upstream": "economist",
    "licence": "CC BY-SA 4.0",
@@ -6327,7 +6327,7 @@
   },
   "embedly": {
    "file": "embedly.svg",
-   "application": "",
+   "application": "Embedly",
    "source": "iconify:logos",
    "upstream": "embedly",
    "licence": "see the collection licence",
@@ -6335,7 +6335,7 @@
   },
   "eneba": {
    "file": "eneba.svg",
-   "application": "",
+   "application": "Eneba",
    "source": "iconify:arcticons",
    "upstream": "eneba",
    "licence": "CC BY-SA 4.0",
@@ -6343,7 +6343,7 @@
   },
   "epoch-media": {
    "file": "epoch-media.svg",
-   "application": "",
+   "application": "Epoch Media",
    "source": "local:neutral",
    "upstream": "epoch-media",
    "licence": "CC0-1.0",
@@ -6351,7 +6351,7 @@
   },
   "espn": {
    "file": "espn.svg",
-   "application": "",
+   "application": "Espn",
    "source": "iconify:arcticons",
    "upstream": "espn",
    "licence": "CC BY-SA 4.0",
@@ -6359,7 +6359,7 @@
   },
   "familymart": {
    "file": "familymart.svg",
-   "application": "",
+   "application": "Familymart",
    "source": "iconify:arcticons",
    "upstream": "familymart",
    "licence": "CC BY-SA 4.0",
@@ -6367,7 +6367,7 @@
   },
   "findmy": {
    "file": "findmy.svg",
-   "application": "",
+   "application": "FindMy",
    "source": "local:neutral",
    "upstream": "findmy",
    "licence": "CC0-1.0",
@@ -6375,7 +6375,7 @@
   },
   "finish": {
    "file": "finish.svg",
-   "application": "",
+   "application": "Finish",
    "source": "local:neutral",
    "upstream": "finish",
    "licence": "CC0-1.0",
@@ -6383,7 +6383,7 @@
   },
   "flyio": {
    "file": "flyio.svg",
-   "application": "",
+   "application": "Flyio",
    "source": "local:neutral",
    "upstream": "flyio",
    "licence": "CC0-1.0",
@@ -6391,7 +6391,7 @@
   },
   "forza": {
    "file": "forza.svg",
-   "application": "",
+   "application": "Forza",
    "source": "iconify:arcticons",
    "upstream": "forza",
    "licence": "CC BY-SA 4.0",
@@ -6399,7 +6399,7 @@
   },
   "friday": {
    "file": "friday.svg",
-   "application": "",
+   "application": "FriDay",
    "source": "local:neutral",
    "upstream": "friday",
    "licence": "CC0-1.0",
@@ -6407,7 +6407,7 @@
   },
   "gaijin": {
    "file": "gaijin.svg",
-   "application": "",
+   "application": "Gaijin",
    "source": "iconify:arcticons",
    "upstream": "gaijin-pass",
    "licence": "CC BY-SA 4.0",
@@ -6415,7 +6415,7 @@
   },
   "garena": {
    "file": "garena.svg",
-   "application": "",
+   "application": "Garena",
    "source": "iconify:arcticons",
    "upstream": "garena",
    "licence": "CC BY-SA 4.0",
@@ -6423,7 +6423,7 @@
   },
   "geely": {
    "file": "geely.svg",
-   "application": "",
+   "application": "Geely",
    "source": "local:neutral",
    "upstream": "geely",
    "licence": "CC0-1.0",
@@ -6431,7 +6431,7 @@
   },
   "geetest": {
    "file": "geetest.svg",
-   "application": "",
+   "application": "Geetest",
    "source": "iconify:logos",
    "upstream": "geetest",
    "licence": "see the collection licence",
@@ -6439,7 +6439,7 @@
   },
   "genshin-impact": {
    "file": "genshin-impact.svg",
-   "application": "",
+   "application": "Genshin Impact",
    "source": "iconify:arcticons",
    "upstream": "genshin-impact",
    "licence": "CC BY-SA 4.0",
@@ -6447,7 +6447,7 @@
   },
   "giffgaff": {
    "file": "giffgaff.svg",
-   "application": "",
+   "application": "Giffgaff",
    "source": "iconify:arcticons",
    "upstream": "giffgaff",
    "licence": "CC BY-SA 4.0",
