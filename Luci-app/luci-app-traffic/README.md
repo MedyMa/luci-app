@@ -480,6 +480,16 @@ for Blued or Stoat for STO Express). `check-icons.js` rejects unknown or empty
 source metadata. Source records point to upstream terms; they are not a blanket
 licence grant for third-party trademarks.
 
+Where an upstream set states its licence the row carries it, as an SPDX id with
+the URL that states it: the Iconify sets are recorded from the icon-sets
+`collections.json` index, which is the only place they declare one - the
+per-collection JSON the glyphs themselves come from has no licence field at
+all. The sets do not agree with each other, which is why the column is filled
+rather than waved at: `cbi` is CC BY-NC-SA 4.0 while `cib` is CC0-1.0, and
+`arcticons` is share-alike. `check-icons.js` rejects a set that carries two
+different licences or that falls back to "see the collection licence", so a set
+nobody has verified fails instead of being described vaguely.
+
 Uncovered names retain their avatar. To add an icon by hand,
 put an SVG in `htdocs/luci-static/resources/traffic/icons/`, record its source
 in `SOURCES.tsv`, and run `node tools/check-icons.js --write` to refresh the
