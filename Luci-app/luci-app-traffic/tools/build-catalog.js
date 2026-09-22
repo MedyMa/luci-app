@@ -867,6 +867,26 @@ const BRAND_ALIAS = {
 	'PlayStation': 'playstation',
 };
 
+/** Domains that are shared infrastructure, never a brand's own property.
+ *  An upstream list may carry one of these as a DOMAIN-SUFFIX rule for a
+ *  single service, but binding the whole domain is wrong: hinet.net is
+ *  HiNet/Chunghwa Telecom's ISP domain, and this catalogue attributes 41 of
+ *  its hosts to seven different owners (HamiVideo, LiTV, Hinet Eca, Bahamut,
+ *  PChome, KKTV, KKBOX).  Inheriting it made every unrecognised *.hinet.net
+ *  host read as Bahamut - the same defect as filing digicert.com under
+ *  Bahamut, and the reason a shared host must stay independent.
+ *
+ *  Only domains whose whole-domain rule would mis-attribute traffic belong
+ *  here, and only upstream rules are filtered: a curated rule is a human
+ *  decision.  The specific rules that carry the real traffic - Bahamut's
+ *  gamer-cds.cdn.hinet.net, HamiVideo's hamivideo.hinet.net - are unaffected. */
+const SHARED_INFRA_SUFFIX = new Set([
+	'hinet.net',
+]);
+
+const isSharedInfra = k => SHARED_INFRA_SUFFIX.has(k) ||
+	[...SHARED_INFRA_SUFFIX].some(d => k.endsWith('.' + d));
+
 /** Public suffixes worth dropping when a row is named after a bare domain.
  *  Only the ones that actually appear in this catalogue's traffic; the list is
  *  not a suffix database and does not need to be. */
@@ -1495,6 +1515,7 @@ async function main() {
 	 * nowhere else).  A more specific exact-host rule still wins at lookup
 	 * time, so claiming here does not flatten Adobe's activation hosts. */
 	let curated = 0;
+	let droppedShared = 0;
 	for (const [name, key, kind] of CURATED) {
 		const k = key.toLowerCase();
 		if (!validKey(k)) { log(`  ! 跳过无效的 curated 键: ${key}`); continue; }
@@ -1502,11 +1523,15 @@ async function main() {
 		else if (claim(appSuffix, k, name, 'curated', 'curated')) curated++;
 	}
 	log(`  curated 优先层: ${curated} 个键`);
+	log(`  共享基础设施整域规则已丢弃: ${droppedShared} 个键`);
 
 	for (const [dir, set] of bm7Entries) {
 		const name = prettyName(dir);
 		for (const k of set.host) claim(appHost, k, name, dir, 'bm7');
-		for (const k of set.suffix) claim(appSuffix, k, name, dir, 'bm7');
+		for (const k of set.suffix) {
+			if (isSharedInfra(k)) { droppedShared++; continue; }
+			claim(appSuffix, k, name, dir, 'bm7');
+		}
 	}
 
 	const dlcEntries = dlc.files
@@ -1516,7 +1541,10 @@ async function main() {
 	for (const [file, set] of dlcEntries) {
 		const name = prettyName(file);
 		for (const k of set.host) claim(appHost, k, name, file, 'dlc');
-		for (const k of set.suffix) claim(appSuffix, k, name, file, 'dlc');
+		for (const k of set.suffix) {
+			if (isSharedInfra(k)) { droppedShared++; continue; }
+			claim(appSuffix, k, name, file, 'dlc');
+		}
 	}
 
 	/* Two upstreams often carry the same brand spelled differently ("AcFun" in
