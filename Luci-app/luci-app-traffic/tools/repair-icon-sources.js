@@ -7,6 +7,10 @@ const path = require('path');
 const os = require('os');
 const root = path.resolve(__dirname, '..');
 const dir = path.join(root, 'htdocs/luci-static/resources/traffic/icons');
+/* The manifest is not page data and is no longer kept in the web directory: it
+ * ships under the package's share directory so the icon licensing record stays
+ * with the package without being served. */
+const manifestPath = path.join(root, 'root/usr/share/traffic/icons/SOURCES.tsv');
 const sources = {
   abema: 'abema-tv', antutu: 'antutu-3dbench', blizzard: 'blizzard-authenticator',
   cainiao: 'cainiao-wireless', camera360: 'camera360', cdek: 'cdek',
@@ -19,7 +23,7 @@ const sources = {
 };
 const logos = new Set(['dyndns', 'embedly', 'geetest']);
 async function main() {
-  const manifest = path.join(dir, 'SOURCES.tsv');
+  const manifest = manifestPath;
   const lines = fs.readFileSync(manifest, 'utf8').trimEnd().split(/\r?\n/);
   const collections = {};
   async function collection(set) {

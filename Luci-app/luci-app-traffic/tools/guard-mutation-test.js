@@ -29,13 +29,15 @@ const BASE = path.join(os.tmpdir(), 'traffic-guard-mutation');
 const rel = {
 	tool: path.join('tools', 'check-icons.js'),
 	domain: path.join('tools', 'site-icon-domains.tsv'),
-	manifest: path.join('htdocs', 'luci-static', 'resources', 'traffic', 'icons', 'SOURCES.tsv'),
+	/* the manifest ships with the package but outside the web directory */
+	manifest: path.join('root', 'usr', 'share', 'traffic', 'icons', 'SOURCES.tsv'),
 	apps: path.join('root', 'etc', 'traffic', 'apps.tsv'),
 };
+const INPUTS = ['tool', 'domain', 'manifest', 'apps'];
 const read = k => fs.readFileSync(path.join(BASE, rel[k]), 'utf8');
 const write = (k, s) => fs.writeFileSync(path.join(BASE, rel[k]), s, 'utf8');
 
-for (const k of ['tool', 'domain', 'apps']) {
+for (const k of INPUTS) {
 	if (!fs.existsSync(path.join(SRC, rel[k]))) {
 		console.error(`missing input: ${rel[k]}`);
 		process.exit(2);
@@ -45,8 +47,9 @@ for (const k of ['tool', 'domain', 'apps']) {
 fs.rmSync(BASE, { recursive: true, force: true });
 fs.mkdirSync(path.join(BASE, 'tools'), { recursive: true });
 fs.mkdirSync(path.join(BASE, 'root', 'etc', 'traffic'), { recursive: true });
+fs.mkdirSync(path.join(BASE, 'root', 'usr', 'share', 'traffic', 'icons'), { recursive: true });
 fs.mkdirSync(path.join(BASE, 'htdocs', 'luci-static', 'resources', 'traffic'), { recursive: true });
-for (const k of ['tool', 'domain', 'apps']) fs.copyFileSync(path.join(SRC, rel[k]), path.join(BASE, rel[k]));
+for (const k of INPUTS) fs.copyFileSync(path.join(SRC, rel[k]), path.join(BASE, rel[k]));
 fs.cpSync(path.join(SRC, 'htdocs', 'luci-static', 'resources', 'traffic', 'icons'),
 	path.join(BASE, 'htdocs', 'luci-static', 'resources', 'traffic', 'icons'), { recursive: true });
 

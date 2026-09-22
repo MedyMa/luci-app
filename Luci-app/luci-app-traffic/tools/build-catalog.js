@@ -33,6 +33,10 @@ const { spawnSync } = require('child_process');
 const ROOT = path.resolve(__dirname, '..');
 const DATA_DIR = path.join(ROOT, 'root', 'etc', 'traffic');
 const ICON_DIR = path.join(ROOT, 'htdocs', 'luci-static', 'resources', 'traffic', 'icons');
+/* The provenance manifest is not page data.  It is kept with the package (so the
+ * redistributed icons keep their licensing record) and out of the web directory,
+ * because nothing on the router reads it and it need not be served to clients. */
+const MANIFEST = path.join(ROOT, 'root', 'usr', 'share', 'traffic', 'icons', 'SOURCES.tsv');
 const CACHE = process.env.TRAFFIC_CATALOG_CACHE || path.join(os.tmpdir(), 'traffic-catalog');
 const GH_TOKEN = process.env.GH_TOKEN || process.env.GITHUB_TOKEN || '';
 
@@ -990,7 +994,7 @@ async function buildIcons(appNames, glyphNames) {
 	 * manifest is read first so that a file which survives because this run could
 	 * not re-fetch it keeps the provenance that was recorded for it. */
 	const prevRows = new Map();
-	const prevManifest = path.join(ICON_DIR, 'SOURCES.tsv');
+	const prevManifest = MANIFEST;
 	if (fs.existsSync(prevManifest)) {
 		for (const line of fs.readFileSync(prevManifest, 'utf8').split('\n')) {
 			if (!line || line.startsWith('#')) continue;
@@ -1497,7 +1501,7 @@ async function buildIcons(appNames, glyphNames) {
 	}
 	if (carried || dropped) log(`  保留未重新抓取: ${carried} 个，清理无用: ${dropped} 个`);
 
-	fs.writeFileSync(path.join(ICON_DIR, 'SOURCES.tsv'), rows.join('\n') + '\n', 'utf8');
+	fs.writeFileSync(MANIFEST, rows.join('\n') + '\n', 'utf8');
 	log(`  来源清单: SOURCES.tsv（${rows.length - 2} 条）`);
 
 	const bytes = fs.readdirSync(ICON_DIR).filter(f => f.endsWith('.svg'))

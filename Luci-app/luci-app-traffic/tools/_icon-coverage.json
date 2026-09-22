@@ -1,38 +1,13 @@
 {
- "rows": 32068,
- "names": 1657,
- "have": 751,
- "covered": 682,
+ "rows": 32077,
+ "names": 1669,
+ "have": 1503,
+ "covered": 835,
  "missing": [
-  {
-   "name": "360",
-   "d": 256,
-   "sample": "0360.cn"
-  },
-  {
-   "name": "Kingsoft",
-   "d": 254,
-   "sample": "35go.cn"
-  },
-  {
-   "name": "Huaweicloud",
-   "d": 189,
-   "sample": "26r9y.cn"
-  },
   {
    "name": "WangSuKeJi",
    "d": 189,
    "sample": "51cdn.com"
-  },
-  {
-   "name": "Mailru",
-   "d": 172,
-   "sample": "algoritmika.org"
-  },
-  {
-   "name": "IFlytek",
-   "d": 152,
-   "sample": "4006806555.com"
   },
   {
    "name": "Gmo Internet",
@@ -60,11 +35,6 @@
    "sample": "52ml.net"
   },
   {
-   "name": "ChinaTelecom",
-   "d": 88,
-   "sample": "01058511989.com"
-  },
-  {
    "name": "No-IP",
    "d": 83,
    "sample": "3utilities.com"
@@ -75,11 +45,6 @@
    "sample": "apecn.com"
   },
   {
-   "name": "Epoch Media",
-   "d": 68,
-   "sample": "dajiyuan.com"
-  },
-  {
    "name": "58.com",
    "d": 62,
    "sample": "58.com"
@@ -88,11 +53,6 @@
    "name": "Newscorp",
    "d": 60,
    "sample": "1degree.com.au"
-  },
-  {
-   "name": "Bloomberg",
-   "d": 60,
-   "sample": "bbgevent.com"
   },
   {
    "name": "BaiShanYunKeJi",
@@ -115,24 +75,9 @@
    "sample": "168kaifu.com"
   },
   {
-   "name": "ICBC",
-   "d": 57,
-   "sample": "95588.com"
-  },
-  {
-   "name": "Sohu",
-   "d": 54,
-   "sample": "acoloo.com"
-  },
-  {
    "name": "QiNiuYun",
    "d": 53,
    "sample": "atlab.ai"
-  },
-  {
-   "name": "HuluUSA",
-   "d": 51,
-   "sample": "112263.com"
   },
   {
    "name": "18comic",
@@ -143,11 +88,6 @@
    "name": "VOA",
    "d": 51,
    "sample": "amerikaninsesi.com"
-  },
-  {
-   "name": "Geely",
-   "d": 50,
-   "sample": "51caocao.cn"
   },
   {
    "name": "Verisign Pki",
@@ -170,29 +110,9 @@
    "sample": "aod.itunes.apple.com"
   },
   {
-   "name": "ChinaMobile",
-   "d": 44,
-   "sample": "10086.cn"
-  },
-  {
-   "name": "Blizzard",
-   "d": 44,
-   "sample": "battlenet.com"
-  },
-  {
    "name": "Ctyun",
    "d": 44,
    "sample": "bjctyiptv.cn"
-  },
-  {
-   "name": "Dewu",
-   "d": 44,
-   "sample": "dewu-inc.com"
-  },
-  {
-   "name": "Feishu",
-   "d": 43,
-   "sample": "anycross.com"
   },
   {
    "name": "Jlc",
@@ -210,34 +130,14 @@
    "sample": "veet.at"
   },
   {
-   "name": "CCTV",
-   "d": 42,
-   "sample": "cctv.cn"
-  },
-  {
-   "name": "ChinaUnicom",
-   "d": 40,
-   "sample": "10010.cn"
-  },
-  {
    "name": "AirWick",
    "d": 40,
    "sample": "airwick.at"
   },
   {
-   "name": "Globo",
-   "d": 40,
-   "sample": "autoesporte.com"
-  },
-  {
    "name": "Falungong",
    "d": 39,
    "sample": "aboluowang.com"
-  },
-  {
-   "name": "Finish",
-   "d": 39,
-   "sample": "finish.at"
   },
   {
    "name": "TaiKang",
@@ -250,11 +150,6 @@
    "sample": "3304399.com"
   },
   {
-   "name": "Douyin",
-   "d": 37,
-   "sample": "activity-wbsj.com"
-  },
-  {
    "name": "Ucoz",
    "d": 37,
    "sample": "at.ua"
@@ -263,21 +158,6 @@
    "name": "LanZouYun",
    "d": 36,
    "sample": "baidupan.com"
-  },
-  {
-   "name": "Ifanr",
-   "d": 35,
-   "sample": "01hub.com"
-  },
-  {
-   "name": "Likee",
-   "d": 35,
-   "sample": "agb9r0ad.qllfkl.com"
-  },
-  {
-   "name": "LastFM",
-   "d": 34,
-   "sample": "audioscrobbler.com"
   },
   {
    "name": "Dettol",
@@ -303,11 +183,6 @@
    "name": "CNNIC",
    "d": 33,
    "sample": "6pilot.cn"
-  },
-  {
-   "name": "Blued",
-   "d": 33,
-   "sample": "bf99.com"
   },
   {
    "name": "Miniso",
@@ -350,11 +225,6 @@
    "sample": "10035.com.cn"
   },
   {
-   "name": "Doubao",
-   "d": 31,
-   "sample": "api-building.fun"
-  },
-  {
    "name": "ThomsonReuters",
    "d": 31,
    "sample": "aranzadi.es"
@@ -368,11 +238,6 @@
    "name": "Swisssign",
    "d": 31,
    "sample": "digital-id.ch"
-  },
-  {
-   "name": "Group Ib",
-   "d": 30,
-   "sample": "antiphishing.nl"
   },
   {
    "name": "Rferl",
@@ -410,29 +275,14 @@
    "sample": "daxianglingke.cn"
   },
   {
-   "name": "PingAn",
-   "d": 27,
-   "sample": "1010-0000.com"
-  },
-  {
    "name": "NaSDDNS",
    "d": 27,
    "sample": "3322.net"
   },
   {
-   "name": "XieCheng",
-   "d": 27,
-   "sample": "c-ctrip.com"
-  },
-  {
    "name": "WangXinKeJi",
    "d": 26,
    "sample": "0101cdn.com"
-  },
-  {
-   "name": "Didi",
-   "d": 26,
-   "sample": "apptaxi.com.cn"
   },
   {
    "name": "ZhangYue",
@@ -505,16 +355,6 @@
    "sample": "4006663999.cn"
   },
   {
-   "name": "RuanMei",
-   "d": 22,
-   "sample": "6655.com"
-  },
-  {
-   "name": "CMB",
-   "d": 22,
-   "sample": "8008205555.cn"
-  },
-  {
    "name": "KouDaiShiShang",
    "d": 22,
    "sample": "91ruyu.com"
@@ -528,11 +368,6 @@
    "name": "HamiVideo",
    "d": 22,
    "sample": "apl-hamivideo.cdn.hinet.net"
-  },
-  {
-   "name": "Jtexpress",
-   "d": 22,
-   "sample": "bxexpress.com.cn"
   },
   {
    "name": "BlockHttpDNS",
@@ -550,11 +385,6 @@
    "sample": "97973.com"
   },
   {
-   "name": "Abema",
-   "d": 21,
-   "sample": "abema-tv.com"
-  },
-  {
    "name": "Envybox",
    "d": 21,
    "sample": "bananacall.ru"
@@ -568,11 +398,6 @@
    "name": "YYeTs",
    "d": 21,
    "sample": "got001.com"
-  },
-  {
-   "name": "Ibkr",
-   "d": 21,
-   "sample": "ibkr.ca"
   },
   {
    "name": "ZhongXingTongXun",
@@ -625,24 +450,9 @@
    "sample": "akmcdnoversea-tw.inter.iqiyi.com"
   },
   {
-   "name": "Ok",
-   "d": 19,
-   "sample": "apiok.ru"
-  },
-  {
-   "name": "Garena",
-   "d": 19,
-   "sample": "avatargarenanow-a.akamaihd.net"
-  },
-  {
    "name": "XingKongWuXian",
    "d": 19,
    "sample": "avstar01.me"
-  },
-  {
-   "name": "PPTV",
-   "d": 19,
-   "sample": "bkrent.cn"
   },
   {
    "name": "Faronics",
@@ -705,11 +515,6 @@
    "sample": "calgon.at"
   },
   {
-   "name": "CCB",
-   "d": 18,
-   "sample": "ccb-life.com.cn"
-  },
-  {
    "name": "Xhamster",
    "d": 18,
    "sample": "freexh.blog"
@@ -753,11 +558,6 @@
    "name": "ZhongWeiShiJi",
    "d": 17,
    "sample": "afdvr.cc"
-  },
-  {
-   "name": "PrimeVideo",
-   "d": 17,
-   "sample": "amazonvideo.com"
   },
   {
    "name": "Dailymail",
@@ -820,14 +620,9 @@
    "sample": "aval.ua"
   },
   {
-   "name": "Insider",
+   "name": "DigiCert",
    "d": 16,
-   "sample": "businessinsider.co.za"
-  },
-  {
-   "name": "NYTimes",
-   "d": 16,
-   "sample": "d1f1eryiqyjs0r.cloudfront.net"
+   "sample": "dcocsp.cn"
   },
   {
    "name": "Kanzhongguo",
@@ -848,21 +643,6 @@
    "name": "SmarTone",
    "d": 15,
    "sample": "barkadahansasmartone.com"
-  },
-  {
-   "name": "CEB",
-   "d": 15,
-   "sample": "cebbank.com"
-  },
-  {
-   "name": "Connectivity Check",
-   "d": 15,
-   "sample": "connectivity-check.ubuntu.com"
-  },
-  {
-   "name": "DigiCert",
-   "d": 15,
-   "sample": "dcocsp.cn"
   },
   {
    "name": "GlobalSign",
@@ -920,11 +700,6 @@
    "sample": "content-ause1-ur-discovery1.uplynk.com"
   },
   {
-   "name": "DingTalk",
-   "d": 14,
-   "sample": "ddurl.to"
-  },
-  {
    "name": "PChome",
    "d": 14,
    "sample": "ecapi-pchome.cdn.hinet.net"
@@ -950,24 +725,9 @@
    "sample": "51ckjr.com"
   },
   {
-   "name": "Cainiao",
-   "d": 13,
-   "sample": "56che.com"
-  },
-  {
    "name": "Zto Express",
    "d": 13,
    "sample": "95311.com"
-  },
-  {
-   "name": "Gaijin",
-   "d": 13,
-   "sample": "acesofthunder.net"
-  },
-  {
-   "name": "Douyu",
-   "d": 13,
-   "sample": "bytefcdnrd.com"
   },
   {
    "name": "Yomiuri",
@@ -1005,11 +765,6 @@
    "sample": "2cnt.net"
   },
   {
-   "name": "Hupu",
-   "d": 12,
-   "sample": "afpchinesesports.com"
-  },
-  {
    "name": "Yuewen",
    "d": 12,
    "sample": "aireads.cn"
@@ -1045,11 +800,6 @@
    "sample": "cash.app"
   },
   {
-   "name": "Citic",
-   "d": 12,
-   "sample": "cfc108.com"
-  },
-  {
    "name": "Otpbank",
    "d": 12,
    "sample": "ckb.me"
@@ -1065,34 +815,14 @@
    "sample": "drweb-av.de"
   },
   {
-   "name": "HoYoverse",
-   "d": 12,
-   "sample": "honkaiimpact3.com"
-  },
-  {
-   "name": "Megafon",
-   "d": 12,
-   "sample": "inplat.ru"
-  },
-  {
    "name": "Japonx",
    "d": 12,
    "sample": "japonx.com"
   },
   {
-   "name": "Longbridge",
-   "d": 12,
-   "sample": "lbctrl.com"
-  },
-  {
    "name": "LiTV",
    "d": 12,
    "sample": "litv.tv"
-  },
-  {
-   "name": "Manorama",
-   "d": 12,
-   "sample": "malayalamanorama.com"
   },
   {
    "name": "Overclockers Ru",
@@ -1145,11 +875,6 @@
    "sample": "apexprint.com.hk"
   },
   {
-   "name": "DaMai",
-   "d": 11,
-   "sample": "baotoo.com"
-  },
-  {
    "name": "Picacg",
    "d": 11,
    "sample": "bikaa.xyz"
@@ -1163,11 +888,6 @@
    "name": "WanMeiShiJie",
    "d": 11,
    "sample": "counter-strike.cn"
-  },
-  {
-   "name": "Espn",
-   "d": 11,
-   "sample": "dtci.co"
   },
   {
    "name": "Ku6",
@@ -1240,11 +960,6 @@
    "sample": "chobit.cc"
   },
   {
-   "name": "Mts Ru",
-   "d": 10,
-   "sample": "dbo-dengi.online"
-  },
-  {
    "name": "SouFang",
    "d": 10,
    "sample": "fang.com"
@@ -1303,11 +1018,6 @@
    "name": "Kyodonews",
    "d": 9,
    "sample": "47gyosei.jp"
-  },
-  {
-   "name": "GaoDe",
-   "d": 9,
-   "sample": "a-map.cn"
   },
   {
    "name": "OuPeng",
@@ -1390,11 +1100,6 @@
    "sample": "haiwaikan.com"
   },
   {
-   "name": "Midea",
-   "d": 9,
-   "sample": "irsnp.com"
-  },
-  {
    "name": "Ixbt",
    "d": 9,
    "sample": "ixbt.com"
@@ -1430,11 +1135,6 @@
    "sample": "z5.app"
   },
   {
-   "name": "Chinabroadnet",
-   "d": 8,
-   "sample": "10099.com.cn"
-  },
-  {
    "name": "TongCheng",
    "d": 8,
    "sample": "17u.cn"
@@ -1443,11 +1143,6 @@
    "name": "ZhiYunZhong",
    "d": 8,
    "sample": "2taobao2jd.com"
-  },
-  {
-   "name": "Camera360",
-   "d": 8,
-   "sample": "360in.com"
   },
   {
    "name": "Tmtpost",
@@ -1478,11 +1173,6 @@
    "name": "Beisen",
    "d": 8,
    "sample": "beisen.cn"
-  },
-  {
-   "name": "DynDNS",
-   "d": 8,
-   "sample": "blogdns.org"
   },
   {
    "name": "Cnblogs",
@@ -1535,11 +1225,6 @@
    "sample": "gate.com"
   },
   {
-   "name": "Libgen",
-   "d": 8,
-   "sample": "gen.lib.rus.ec"
-  },
-  {
    "name": "Headhunter",
    "d": 8,
    "sample": "hh.by"
@@ -1583,11 +1268,6 @@
    "name": "Nodeseek",
    "d": 7,
    "sample": "22112211.xyz"
-  },
-  {
-   "name": "2K Games",
-   "d": 7,
-   "sample": "2k.com"
   },
   {
    "name": "6park",
@@ -1670,11 +1350,6 @@
    "sample": "biggggg.com"
   },
   {
-   "name": "Cambridge",
-   "d": 7,
-   "sample": "cam.ac.uk"
-  },
-  {
    "name": "FOXPlus",
    "d": 7,
    "sample": "cdn-fox-networks-group-green.akamaized.net"
@@ -1750,29 +1425,9 @@
    "sample": "missav.ai"
   },
   {
-   "name": "Muji",
-   "d": 7,
-   "sample": "muji.com"
-  },
-  {
-   "name": "Pinduoduo",
-   "d": 7,
-   "sample": "pddcdn.com"
-  },
-  {
    "name": "Theporndude",
    "d": 7,
    "sample": "porndude2.com"
-  },
-  {
-   "name": "BOCOM",
-   "d": 6,
-   "sample": "95559.com.cn"
-  },
-  {
-   "name": "AcFun",
-   "d": 6,
-   "sample": "ac.fun"
   },
   {
    "name": "QuickConnect",
@@ -1853,11 +1508,6 @@
    "name": "EHGallery",
    "d": 6,
    "sample": "e-hentai.org"
-  },
-  {
-   "name": "Familymart",
-   "d": 6,
-   "sample": "famifun.com.tw"
   },
   {
    "name": "Ficbook",
@@ -2025,11 +1675,6 @@
    "sample": "byfan.cn"
   },
   {
-   "name": "Alphabet",
-   "d": 5,
-   "sample": "calicolabs.com"
-  },
-  {
    "name": "Hujiang",
    "d": 5,
    "sample": "cctalk.com"
@@ -2053,11 +1698,6 @@
    "name": "Polyu",
    "d": 5,
    "sample": "cpce-polyu.edu.hk"
-  },
-  {
-   "name": "Netcraze",
-   "d": 5,
-   "sample": "crazedns.ru"
   },
   {
    "name": "CWSeed",
@@ -2160,11 +1800,6 @@
    "sample": "metart.com"
   },
   {
-   "name": "Redotpay",
-   "d": 5,
-   "sample": "pod-15-sunco-ws.zendesk.com"
-  },
-  {
    "name": "ZhongGuoShiHua",
    "d": 5,
    "sample": "sinopec-usa.com"
@@ -2210,11 +1845,6 @@
    "sample": "95504.net"
   },
   {
-   "name": "CGB",
-   "d": 4,
-   "sample": "95508.com"
-  },
-  {
    "name": "Aligames",
    "d": 4,
    "sample": "aligames.com"
@@ -2243,11 +1873,6 @@
    "name": "Arphic",
    "d": 4,
    "sample": "arphic.com"
-  },
-  {
-   "name": "Classic",
-   "d": 4,
-   "sample": "asia.battle.net"
   },
   {
    "name": "B3log",
@@ -2330,11 +1955,6 @@
    "sample": "ctfile.com"
   },
   {
-   "name": "Dcard",
-   "d": 4,
-   "sample": "dcard.cc"
-  },
-  {
    "name": "WeiZhiYunDong",
    "d": 4,
    "sample": "dicom365.com"
@@ -2353,16 +1973,6 @@
    "name": "Hinet Eca",
    "d": 4,
    "sample": "eca.hinet.net"
-  },
-  {
-   "name": "Economist",
-   "d": 4,
-   "sample": "economist.com"
-  },
-  {
-   "name": "Haier",
-   "d": 4,
-   "sample": "ehaier.com"
   },
   {
    "name": "Emojipedia",
@@ -2410,16 +2020,6 @@
    "sample": "hku.edu.hk"
   },
   {
-   "name": "Hkust",
-   "d": 4,
-   "sample": "hkust.edu.hk"
-  },
-  {
-   "name": "Huya",
-   "d": 4,
-   "sample": "huya.com"
-  },
-  {
    "name": "TianTianKanKan",
    "d": 4,
    "sample": "ibangtiao.com"
@@ -2438,11 +2038,6 @@
    "name": "Justmysocks",
    "d": 4,
    "sample": "justmysocks.net"
-  },
-  {
-   "name": "Magnit",
-   "d": 4,
-   "sample": "kazanexpress.ru"
   },
   {
    "name": "KingSmith",
@@ -2513,16 +2108,6 @@
    "name": "Unext",
    "d": 4,
    "sample": "nxtv.jp"
-  },
-  {
-   "name": "Okko",
-   "d": 4,
-   "sample": "okko.sport"
-  },
-  {
-   "name": "Onekey",
-   "d": 4,
-   "sample": "onekey-asset.com"
   },
   {
    "name": "Projectpoi",
@@ -2605,19 +2190,9 @@
    "sample": "517lppz.com"
   },
   {
-   "name": "PSBC",
-   "d": 3,
-   "sample": "95580.net"
-  },
-  {
    "name": "Mvideo",
    "d": 3,
    "sample": "acmvid.com"
-  },
-  {
-   "name": "Cdek",
-   "d": 3,
-   "sample": "ad-cdek.ru"
   },
   {
    "name": "Pubmatic",
@@ -2700,11 +2275,6 @@
    "sample": "bootcdn.cn"
   },
   {
-   "name": "Hcaptcha",
-   "d": 3,
-   "sample": "botstop.com"
-  },
-  {
    "name": "Dslreports",
    "d": 3,
    "sample": "broadbandreports.com"
@@ -2765,11 +2335,6 @@
    "sample": "cloudimage.io"
   },
   {
-   "name": "Migu",
-   "d": 3,
-   "sample": "cmvideo.cn"
-  },
-  {
    "name": "Cnbeta",
    "d": 3,
    "sample": "cnbeta.com"
@@ -2778,11 +2343,6 @@
    "name": "Coinone",
    "d": 3,
    "sample": "coinone.co.kr"
-  },
-  {
-   "name": "Coolapk",
-   "d": 3,
-   "sample": "coolapk.com"
   },
   {
    "name": "Coomer",
@@ -2805,11 +2365,6 @@
    "sample": "deppon.com"
   },
   {
-   "name": "Divar",
-   "d": 3,
-   "sample": "divar.cloud"
-  },
-  {
    "name": "HKedcity",
    "d": 3,
    "sample": "edcity.hk"
@@ -2820,11 +2375,6 @@
    "sample": "eft-store.com"
   },
   {
-   "name": "Embedly",
-   "d": 3,
-   "sample": "embed.ly"
-  },
-  {
    "name": "Formula1",
    "d": 3,
    "sample": "f1.com"
@@ -2833,16 +2383,6 @@
    "name": "Fibank",
    "d": 3,
    "sample": "fibank.bg"
-  },
-  {
-   "name": "Flyio",
-   "d": 3,
-   "sample": "fly.dev"
-  },
-  {
-   "name": "FindMy",
-   "d": 3,
-   "sample": "fmfmobile.icloud.com"
   },
   {
    "name": "FOXNOW",
@@ -2863,11 +2403,6 @@
    "name": "Jutongbao",
    "d": 3,
    "sample": "guanggaotongapp.cn"
-  },
-  {
-   "name": "HibyMusic",
-   "d": 3,
-   "sample": "hiby.cd"
   },
   {
    "name": "Justav",
@@ -2900,19 +2435,9 @@
    "sample": "imagecurl.com"
   },
   {
-   "name": "Inshot",
-   "d": 3,
-   "sample": "inshot.cc"
-  },
-  {
    "name": "Tonec",
    "d": 3,
    "sample": "internetdownloadmanager.com"
-  },
-  {
-   "name": "Meipian",
-   "d": 3,
-   "sample": "ivwen.com"
   },
   {
    "name": "Javbus",
@@ -2965,11 +2490,6 @@
    "sample": "liepin.com"
   },
   {
-   "name": "Lighter",
-   "d": 3,
-   "sample": "lighter.exchange"
-  },
-  {
    "name": "LivePerson",
    "d": 3,
    "sample": "liveperson.com"
@@ -3003,16 +2523,6 @@
    "name": "MiWu",
    "d": 3,
    "sample": "miiiw.cn"
-  },
-  {
-   "name": "Mojang",
-   "d": 3,
-   "sample": "minecraft-services.net"
-  },
-  {
-   "name": "Mixi",
-   "d": 3,
-   "sample": "mixi.co.jp"
   },
   {
    "name": "Moji",
@@ -3055,11 +2565,6 @@
    "sample": "nypost.com"
   },
   {
-   "name": "OP",
-   "d": 3,
-   "sample": "op.gg"
-  },
-  {
    "name": "Vpngate",
    "d": 3,
    "sample": "opengw.net"
@@ -3078,11 +2583,6 @@
    "name": "Pugpig",
    "d": 3,
    "sample": "pugpig-dev.com"
-  },
-  {
-   "name": "Radiko",
-   "d": 3,
-   "sample": "radiko-cf.com"
   },
   {
    "name": "Regru",
@@ -3205,11 +2705,6 @@
    "sample": "928.plus"
   },
   {
-   "name": "Amap",
-   "d": 2,
-   "sample": "acloudrender.com"
-  },
-  {
    "name": "Acplay",
    "d": 2,
    "sample": "acplay.net"
@@ -3310,19 +2805,9 @@
    "sample": "bitflyer.com"
   },
   {
-   "name": "Bluearchive",
-   "d": 2,
-   "sample": "bluearchive.jp"
-  },
-  {
    "name": "Blurams",
    "d": 2,
    "sample": "blurams.app"
-  },
-  {
-   "name": "Boomerang",
-   "d": 2,
-   "sample": "boomerang.com"
   },
   {
    "name": "Boslife",
@@ -3410,11 +2895,6 @@
    "sample": "cloudns.nz"
   },
   {
-   "name": "Coupang",
-   "d": 2,
-   "sample": "coupang.com"
-  },
-  {
    "name": "Csis",
    "d": 2,
    "sample": "csis-prod.s3.amazonaws.com"
@@ -3445,19 +2925,9 @@
    "sample": "dangdang.com"
   },
   {
-   "name": "Linguee",
-   "d": 2,
-   "sample": "deepl.com"
-  },
-  {
    "name": "Deribit",
    "d": 2,
    "sample": "deribit.cdn.prismic.io"
-  },
-  {
-   "name": "Dw",
-   "d": 2,
-   "sample": "deutschewelle.h-cdn.com"
   },
   {
    "name": "Digitalplayground",
@@ -3468,11 +2938,6 @@
    "name": "Dmit",
    "d": 2,
    "sample": "dmit.io"
-  },
-  {
-   "name": "Openrec",
-   "d": 2,
-   "sample": "dqd0jw5gvbchn.cloudfront.net"
   },
   {
    "name": "Duitang",
@@ -3520,11 +2985,6 @@
    "sample": "embed-cdn.com"
   },
   {
-   "name": "Eneba",
-   "d": 2,
-   "sample": "eneba.com"
-  },
-  {
    "name": "Entermediadb",
    "d": 2,
    "sample": "entermediadb.net"
@@ -3543,11 +3003,6 @@
    "name": "Fcbox",
    "d": 2,
    "sample": "fcbox.com"
-  },
-  {
-   "name": "FriDay",
-   "d": 2,
-   "sample": "fetnet.net"
   },
   {
    "name": "Fzdm",
@@ -3580,19 +3035,9 @@
    "sample": "forbes.com"
   },
   {
-   "name": "Forza",
-   "d": 2,
-   "sample": "forza.net"
-  },
-  {
    "name": "LondonReal",
    "d": 2,
    "sample": "freedomplatform.tv"
-  },
-  {
-   "name": "Geetest",
-   "d": 2,
-   "sample": "geetest.com"
   },
   {
    "name": "Nikkan Gendai",
@@ -3600,19 +3045,9 @@
    "sample": "gendai.net"
   },
   {
-   "name": "Lantern",
-   "d": 2,
-   "sample": "getlantern.org"
-  },
-  {
    "name": "Ggsel",
    "d": 2,
    "sample": "ggsel.com"
-  },
-  {
-   "name": "Giffgaff",
-   "d": 2,
-   "sample": "giffgaff.com"
   },
   {
    "name": "Globalvoices",
@@ -3800,11 +3235,6 @@
    "sample": "lisiku.com"
   },
   {
-   "name": "Localbitcoins",
-   "d": 2,
-   "sample": "localbitcoins.com"
-  },
-  {
    "name": "Ltn",
    "d": 2,
    "sample": "ltn.com.tw"
@@ -3820,11 +3250,6 @@
    "sample": "manoto1.tv"
   },
   {
-   "name": "Manus",
-   "d": 2,
-   "sample": "manus.im"
-  },
-  {
    "name": "Mydirtyhobby",
    "d": 2,
    "sample": "mdhcdn.com"
@@ -3838,16 +3263,6 @@
    "name": "Miaomiaozhe",
    "d": 2,
    "sample": "miaomiaoz.com"
-  },
-  {
-   "name": "Moonvy",
-   "d": 2,
-   "sample": "moonvy.com"
-  },
-  {
-   "name": "MOOV",
-   "d": 2,
-   "sample": "moov.hk"
   },
   {
    "name": "Morisawa",
@@ -3870,29 +3285,14 @@
    "sample": "moxing.mobi"
   },
   {
-   "name": "Musixmatch",
-   "d": 2,
-   "sample": "musixmatch.com"
-  },
-  {
    "name": "Myfonts",
    "d": 2,
    "sample": "myfonts.com"
   },
   {
-   "name": "Myoffice Ru",
-   "d": 2,
-   "sample": "myoffice.ru"
-  },
-  {
    "name": "Myradio",
    "d": 2,
    "sample": "myradio.com.hk"
-  },
-  {
-   "name": "Narwal",
-   "d": 2,
-   "sample": "narwal.com"
   },
   {
    "name": "NaverTV",
@@ -3938,11 +3338,6 @@
    "name": "Ubuntukylin",
    "d": 2,
    "sample": "openkylin.top"
-  },
-  {
-   "name": "Openweather",
-   "d": 2,
-   "sample": "openweather.co.uk"
   },
   {
    "name": "Oskelly",
@@ -4028,21 +3423,6 @@
    "name": "PS Store",
    "d": 2,
    "sample": "psn.com"
-  },
-  {
-   "name": "Qcc",
-   "d": 2,
-   "sample": "qcc.com"
-  },
-  {
-   "name": "Qingtingfm",
-   "d": 2,
-   "sample": "qingting.fm"
-  },
-  {
-   "name": "QQ Music",
-   "d": 2,
-   "sample": "qqmusic.qq.com"
   },
   {
    "name": "Yuketang",
@@ -4315,11 +3695,6 @@
    "sample": "anandtech.com"
   },
   {
-   "name": "Antutu",
-   "d": 1,
-   "sample": "antutu.com"
-  },
-  {
    "name": "APKCombo",
    "d": 1,
    "sample": "apkcombo.com"
@@ -4360,11 +3735,6 @@
    "sample": "casimages.com"
   },
   {
-   "name": "Cerebras",
-   "d": 1,
-   "sample": "cerebras.ai"
-  },
-  {
    "name": "Chatango",
    "d": 1,
    "sample": "chatango.com"
@@ -4373,11 +3743,6 @@
    "name": "Chinapower",
    "d": 1,
    "sample": "chinapower.csis.org"
-  },
-  {
-   "name": "Civitai",
-   "d": 1,
-   "sample": "civitai.com"
   },
   {
    "name": "Clearasil",
@@ -4390,11 +3755,6 @@
    "sample": "cloudconvert.com"
   },
   {
-   "name": "Craigslist",
-   "d": 1,
-   "sample": "craigslist.org"
-  },
-  {
    "name": "Cuttly",
    "d": 1,
    "sample": "cutt.ly"
@@ -4403,11 +3763,6 @@
    "name": "Flurry",
    "d": 1,
    "sample": "data.flurry.com"
-  },
-  {
-   "name": "Chaoxing",
-   "d": 1,
-   "sample": "dayainfo.com"
   },
   {
    "name": "Decryptipastore",
@@ -4465,11 +3820,6 @@
    "sample": "gamersky.com"
   },
   {
-   "name": "Genshin Impact",
-   "d": 1,
-   "sample": "genshinimpact.com"
-  },
-  {
    "name": "Gfycat",
    "d": 1,
    "sample": "gfycat.com"
@@ -4480,34 +3830,14 @@
    "sample": "github1s.com"
   },
   {
-   "name": "Glyphs",
-   "d": 1,
-   "sample": "glyphsapp.com"
-  },
-  {
    "name": "Goproxy",
    "d": 1,
    "sample": "goproxy.io"
   },
   {
-   "name": "Jetbrains AI",
-   "d": 1,
-   "sample": "grazie.aws.intellij.net"
-  },
-  {
-   "name": "Groq",
-   "d": 1,
-   "sample": "groq.com"
-  },
-  {
    "name": "Hurricaneelectric",
    "d": 1,
    "sample": "he.net"
-  },
-  {
-   "name": "Hm",
-   "d": 1,
-   "sample": "hm.com"
   },
   {
    "name": "Huanghuagang",
@@ -4570,11 +3900,6 @@
    "sample": "jjwxc.net"
   },
   {
-   "name": "Kernel",
-   "d": 1,
-   "sample": "kernel.org"
-  },
-  {
    "name": "Kindle4rss",
    "d": 1,
    "sample": "kindle4rss.com"
@@ -4620,16 +3945,6 @@
    "sample": "masterclass.com"
   },
   {
-   "name": "MeWatch",
-   "d": 1,
-   "sample": "mewatch.sg"
-  },
-  {
-   "name": "Mango TV",
-   "d": 1,
-   "sample": "mgtv.com"
-  },
-  {
    "name": "Mindgeek",
    "d": 1,
    "sample": "mindgeek.com"
@@ -4643,11 +3958,6 @@
    "name": "Neuralink",
    "d": 1,
    "sample": "neuralink.com"
-  },
-  {
-   "name": "Npmjs",
-   "d": 1,
-   "sample": "npm.community"
   },
   {
    "name": "Okaapps",
@@ -4668,11 +3978,6 @@
    "name": "Paskoocheh",
    "d": 1,
    "sample": "paskoocheh.com"
-  },
-  {
-   "name": "PBS",
-   "d": 1,
-   "sample": "pbs.org"
   },
   {
    "name": "Pingpe",
@@ -4705,11 +4010,6 @@
    "sample": "pvp.net"
   },
   {
-   "name": "Qidian",
-   "d": 1,
-   "sample": "qidian.com"
-  },
-  {
    "name": "Qixin",
    "d": 1,
    "sample": "qixin.com"
@@ -4723,11 +4023,6 @@
    "name": "QQ Mail",
    "d": 1,
    "sample": "qqmail.com"
-  },
-  {
-   "name": "Qunar",
-   "d": 1,
-   "sample": "qunar.com"
   },
   {
    "name": "Qyyjt",
@@ -4855,11 +4150,6 @@
    "sample": "xdty.org"
   },
   {
-   "name": "Ximalaya",
-   "d": 1,
-   "sample": "ximalaya.com"
-  },
-  {
    "name": "Xingrz",
    "d": 1,
    "sample": "xingrz.me"
@@ -4878,6 +4168,11 @@
    "name": "Zongheng",
    "d": 1,
    "sample": "zongheng.com"
+  },
+  {
+   "name": "Product Hunt",
+   "d": 1,
+   "sample": "producthunt.com"
   }
  ]
 }

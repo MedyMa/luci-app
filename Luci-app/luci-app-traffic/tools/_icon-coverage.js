@@ -6,7 +6,10 @@
  * from whatever looked missing in a hand-written list. */
 const fs = require('fs');
 const path = require('path');
-const ROOT = 'D:/Code/Luci-app/luci-app-traffic';
+/* Resolved from this file, not hardcoded: the script has to measure the tree it
+ * was checked out into (a local clone, an SDK feed directory, CI), and a fixed
+ * path silently measures whatever happens to sit at that location instead. */
+const ROOT = path.resolve(__dirname, '..');
 const ICONS = path.join(ROOT, 'htdocs', 'luci-static', 'resources', 'traffic', 'icons');
 const APPS = path.join(ROOT, 'root', 'etc', 'traffic', 'apps.tsv');
 

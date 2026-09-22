@@ -12,7 +12,9 @@ const ICONS = path.join(ROOT, 'htdocs/luci-static/resources/traffic/icons');
 const APPS = path.join(ROOT, 'root/etc/traffic/apps.tsv');
 const LOCK = path.join(__dirname, 'site-icons.tsv');
 const DOMAIN_LOCK = path.join(__dirname, 'site-icon-domains.tsv');
-const MANIFEST = path.join(ICONS, 'SOURCES.tsv');
+/* The provenance manifest ships outside the web directory, under the package's
+ * own share directory; see the note in check-icons.js. */
+const MANIFEST = path.join(ROOT, 'root', 'usr', 'share', 'traffic', 'icons', 'SOURCES.tsv');
 const DOMAINS = path.join(ICONS, 'domains.tsv');
 const TARGET = 1500;
 const GAME_SOURCE = [

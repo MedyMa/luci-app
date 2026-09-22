@@ -26,7 +26,13 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 const ICON_DIR = path.join(ROOT, 'htdocs', 'luci-static', 'resources', 'traffic', 'icons');
 const APPS = path.join(ROOT, 'root', 'etc', 'traffic', 'apps.tsv');
-const MANIFEST = path.join(ICON_DIR, 'SOURCES.tsv');
+/* The manifest is a provenance record for the redistributed artwork, not page
+ * data: nothing on the router reads it at runtime, and a 210 KiB table does not
+ * need to be served to every LAN client, so it ships beside the collector under
+ * /usr/share/traffic/icons/ instead of inside the web directory.  The icons
+ * themselves stay in htdocs/ because the page loads those. */
+const ICON_META_DIR = path.join(ROOT, 'root', 'usr', 'share', 'traffic', 'icons');
+const MANIFEST = path.join(ICON_META_DIR, 'SOURCES.tsv');
 const INDEX = path.join(__dirname, 'icons-index.json');
 
 const write = process.argv.includes('--write');

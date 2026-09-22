@@ -492,8 +492,13 @@ nobody has verified fails instead of being described vaguely.
 
 Uncovered names retain their avatar. To add an icon by hand,
 put an SVG in `htdocs/luci-static/resources/traffic/icons/`, record its source
-in `SOURCES.tsv`, and run `node tools/check-icons.js --write` to refresh the
-index. No page code change is needed when its filename matches the service slug.
+in `root/usr/share/traffic/icons/SOURCES.tsv`, and run
+`node tools/check-icons.js --write` to refresh the index. No page code change is
+needed when its filename matches the service slug. The manifest ships with the
+package but outside the web directory: it is a licensing record for the
+redistributed artwork, nothing on the router reads it at runtime, and a 210 KiB
+table does not need to be served to every LAN client. The icons themselves stay
+in `htdocs/` because the page loads those.
 
 Note that `currentColor` is replaced with an explicit grey when a glyph is
 saved, and a monochrome brand mark is pinned to the same grey: an SVG loaded
@@ -501,7 +506,9 @@ through `<img>` does not inherit the page colour, so `currentColor` would
 resolve to black and disappear in dark mode.
 
 Icons remain the trademarks of their owners and are used here only to identify
-the corresponding service; check the upstream licences before redistributing.
+the corresponding service. The licences the bundled sets declare are recorded
+per row in `root/usr/share/traffic/icons/SOURCES.tsv`; check them before
+redistributing.
 
 ## Limitations — read before trusting the numbers
 
