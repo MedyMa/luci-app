@@ -393,7 +393,14 @@ separated in name order, which is likewise rank-independent.
   instead of being squeezed into one narrow column. Named slices below 0.5% of
   the headline total join **Attributed**; the complete application
   rows remain in the table. **Unattributed** stays separate and neutral. All
-  percentages use the headline total.
+  percentages use the headline total. Names that arrive in the snapshot —
+  applications, site names and the protocol buckets (`SSL/TLS`, `QUIC`,
+  `Other`) — are shown exactly as the collector wrote them and are deliberately
+  not translated. They are data rather than interface copy: one snapshot is read
+  by every language, and a bucket renamed in the browser would stop matching the
+  same bucket in the snapshot, the hourly archive and the logs, which is what
+  makes a log line or a screenshot checkable against the page. Only the two
+  names the page invents — **Attributed** and **Unattributed** — are localized.
 * **List card** — application, total and share, received, sent, busiest client,
   device count; 100 rows kept in the DOM, so a page left open all day does not
   grow. The column widths live in a `<colgroup>`: under `table-layout:fixed` those

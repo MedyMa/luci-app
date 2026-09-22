@@ -1788,6 +1788,16 @@ return view.extend({
 		var restBytes = Math.max(shareTotal - topSum, 0);
 		var unattrBytes = Math.max(total - shareTotal, 0);
 		var ring = top.slice();
+		/* Names that arrive in the snapshot - applications, site names and the
+		 * protocol buckets (SSL/TLS, QUIC, Other) - are shown exactly as the
+		 * collector wrote them and are deliberately not passed through _().
+		 * They are data, not interface copy: one summary.json is read by every
+		 * language, and a bucket renamed in the browser would no longer match
+		 * the same bucket in the snapshot, the hourly archive and the logs -
+		 * which is exactly what makes a log line or a screenshot checkable
+		 * against the page.  Only the two names this file invents are
+		 * translated, and they are marked rest/unattr so the ring can colour
+		 * them apart from the applications they are listed beside. */
 		if (restBytes > 0) ring.push({ name: _('Attributed'), bytes: restBytes, rest: 1 });
 		/* the marker is what gives this slice its neutral grey: it is not an
 		 * application and must not borrow an application's colour, and the slice
