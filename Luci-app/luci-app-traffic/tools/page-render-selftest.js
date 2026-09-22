@@ -139,12 +139,12 @@ view.draw.call(vMicro,[
   topText:'—',clientCount:1});
 chk(!vMicro.legendCache.Tiny && !!vMicro.rowCache.Tiny,
   '不足总量 0.5% 的应用合并到图例，完整表格仍保留原行');
-chk(!!vMicro.legendCache['Other attributed traffic'] &&
-    vMicro.legendCache['Other attributed traffic'].pct.textContent==='0.1%',
-  '小扇区计入其余已归属，分母仍是总流量');
+chk(!!vMicro.legendCache.Attributed &&
+    vMicro.legendCache.Attributed.pct.textContent==='0.1%',
+  '小扇区计入已归属，分母仍是总流量');
 chk(!!vMicro.legendCache.Unattributed &&
     vMicro.legendCache.Unattributed.pct.textContent==='98.0%',
-  '未归属与其余已归属分开，百分比可对账');
+  '未归属与已归属分开，百分比可对账');
 
 console.log('=== 空数据时环形图不再是空盒 ===');
 const v2=freshView();

@@ -1788,7 +1788,7 @@ return view.extend({
 		var restBytes = Math.max(shareTotal - topSum, 0);
 		var unattrBytes = Math.max(total - shareTotal, 0);
 		var ring = top.slice();
-		if (restBytes > 0) ring.push({ name: _('Other attributed traffic'), bytes: restBytes, rest: 1 });
+		if (restBytes > 0) ring.push({ name: _('Attributed'), bytes: restBytes, rest: 1 });
 		/* the marker is what gives this slice its neutral grey: it is not an
 		 * application and must not borrow an application's colour, and the slice
 		 * is drawn from a translated name, so hashing the name would not do */

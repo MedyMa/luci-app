@@ -1,6 +1,17 @@
 {
+	"admin/status/traffic": {
+		"title": "流量分析",
+		"order": 60,
+		"action": {
+			"type": "view",
+			"path": "traffic/overview"
+		},
+		"depends": {
+			"acl": [ "luci-app-traffic" ]
+		}
+	},
 	"admin/services/traffic": {
-		"title": "流量统计",
+		"title": null,
 		"order": 60,
 		"action": {
 			"type": "view",

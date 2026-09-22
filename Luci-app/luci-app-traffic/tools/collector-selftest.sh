@@ -32,6 +32,18 @@
 set -u
 
 SELF="$(cd "$(dirname "$0")" && pwd)"
+
+# Windows ships same-named tools that do not accept the same arguments -
+# sort.exe and timeout.exe among them - and on this machine
+# /c/WINDOWS/system32 precedes everything else in PATH, so collector.sh's
+# `acct_hosts | sort -u` failed with "-uThe system cannot find the file
+# specified." and the host list came back empty: no per-client nft rules, no
+# counters, an empty clients.tsv.  MSYS does provide coreutils sort, so the
+# MSYS directories go first and the POSIX behaviour this suite assumes is
+# restored.  `timeout` cannot be fixed this way - MSYS ships none - which is
+# why the nft phase supplies its own shim.
+PATH="/usr/bin:/bin:$PATH"
+export PATH
 # COLLECTOR_SRC points every phase at another revision of the collector: an
 # assertion that cannot be made to fail on the code it was written against
 # proves nothing, and the only honest way to check that is to run it there.
@@ -483,6 +495,27 @@ esac
 exit 0
 EOF
 chmod +x "$T/fakebin/nft"
+# Windows ships a `timeout` that waits for a key rather than running a
+# command, and on this machine /c/WINDOWS/system32 comes first in PATH, so
+# `command -v timeout` resolved to it.  collector.sh's nft_run() then ran
+# `timeout 5 nft ...`, nft never executed, and the whole counter layer
+# degraded silently: "acct":0 and no rules.pre.  BusyBox and coreutils both
+# provide timeout, so this is a property of the test machine, not of the
+# package - the suite supplies the POSIX contract it assumed.  It enforces a
+# real bound rather than exec'ing blindly, so a wedged command still ends.
+cat > "$T/fakebin/timeout" <<'EOF'
+#!/bin/sh
+set -u
+secs="$1"; shift
+"$@" &
+cmd=$!
+( sleep "$secs"; kill -9 "$cmd" 2>/dev/null ) &
+killer=$!
+wait "$cmd"; rc=$?
+kill "$killer" 2>/dev/null
+exit "$rc"
+EOF
+chmod +x "$T/fakebin/timeout"
 # one live host, one more live host, and a stale arp entry that is not a client
 cat > "$T/arp5" <<'EOF'
 IP address       HW type     Flags       HW address            Mask     Device
@@ -511,6 +544,21 @@ chk "23f 快照报告计数层已启用"              "1"                 "$(gre
 # unsubstituted placeholder, and that it is present at all is what matters: the
 # page shows it so an installed fix can be told from one that is not running.
 chk "23f2 快照报告采集器版本"               "dev"               "$(grep -o '"version":"[^"]*"' "$T/state5/summary.json" | cut -d'"' -f4)"
+# client_bytes is the page's per-client denominator.  It is produced by its
+# own awk over clients.tsv (column 2), separate from the top-clients array,
+# so it is asserted against a sum this test computes itself: a change of
+# file or of column in that awk now fails here instead of passing quietly.
+# The reader must be totf: "accounted" carries only the nft counters' down/up,
+# so asking acctf for client_bytes returns an empty string on every snapshot
+# and the mismatch would read as a product bug rather than a lookup mistake.
+totf() { grep -o '"totals":{[^}]*}' "$1" | sed -n "s/.*\"$2\":\([0-9]*\).*/\1/p"; }
+chk "23f3 client_bytes 等于客户端字节之和"  "$(awk -F'\t' '{s+=$2} END{print s+0}' "$T/state5/clients.tsv")" \
+                                            "$(totf "$T/state5/summary.json" client_bytes)"
+# 23f3 can only tell column 2 from column 3 if the fixture makes them
+# differ.  Without this guard, a fixture whose columns happen to be equal
+# would let a wrong-column awk pass - the vacuous case to avoid.
+chk "23f4 夹具可辨别列 2 与列 3"            "different" \
+    "$( [ "$(awk -F'\t' '{s+=$2} END{print s+0}' "$T/state5/clients.tsv")" != "$(awk -F'\t' '{s+=$3} END{print s+0}' "$T/state5/clients.tsv")" ] && echo different || echo same )"
 acctf() { grep -o '"accounted":{[^}]*}' "$1" | sed -n "s/.*\"$2\":\([0-9]*\).*/\1/p"; }
 chk "23g 快照报告计数器总量（下行）"        "10000"             "$(acctf "$T/state5/summary.json" down)"
 chk "23g2 快照报告计数器总量（上行）"       "1000"              "$(acctf "$T/state5/summary.json" up)"
@@ -583,7 +631,7 @@ mkdir -p "$T/state8" "$T/data8"
   TRAFFIC_INTERVAL=30 TRAFFIC_DATADIR="$T/data8" TRAFFIC_APPMAP="$T/apps.tsv" \
   TRAFFIC_CATEGORIES="$T/categories.tsv" STATE_DIR="$T/state8" \
   SELF_DIR="$(cd "$SELF/../root/usr/share/traffic" && pwd)" \
-  timeout 8 sh "$COLLECTOR" >/dev/null 2>&1 ) &
+  sh "$COLLECTOR" >/dev/null 2>&1 ) &
 stpid=$!
 i=0
 while [ "$i" -lt 40 ]; do

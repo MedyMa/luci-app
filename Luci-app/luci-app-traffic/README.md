@@ -391,7 +391,7 @@ separated in name order, which is likewise rank-independent.
   to be a full-width block above the table, and before that a column beside the
   table; as half of the row with the curve, the legend still spreads sideways
   instead of being squeezed into one narrow column. Named slices below 0.5% of
-  the headline total join **Other attributed traffic**; the complete application
+  the headline total join **Attributed**; the complete application
   rows remain in the table. **Unattributed** stays separate and neutral. All
   percentages use the headline total.
 * **List card** — application, total and share, received, sent, busiest client,
