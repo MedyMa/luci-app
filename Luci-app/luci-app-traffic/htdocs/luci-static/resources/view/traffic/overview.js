@@ -580,7 +580,7 @@ function makeRow(name, bucket, child, grouped) {
 		 * the column the names need.  The glyph, the italic name and the muted
 		 * colour already carry the only distinction that matters: a kind of
 		 * traffic rather than a product. */
-		el('td', { 'class': 'tf-app' }, (toggle ? [ icon, toggle, nameEl ] : [ icon, nameEl ])),
+		el('td', { 'class': 'tf-app' }, (toggle ? [ icon, nameEl, toggle ] : [ icon, nameEl ])),
 		cells.total, cells.down, cells.up, cells.top, cells.clients
 	]);
 	return { tr: tr, cells: cells, toggle: toggle };
@@ -2526,11 +2526,12 @@ function injectCss() {
 		 * width truncated it while the byte columns sat half empty, which is
 		 * what "NetEase…" next to a wide 总量 column was. */
 		'.tf-page .tf-app-name{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+		'.tf-page .tf-service-group .tf-app-name{flex:0 1 auto;}',
 		'.tf-page .tf-disclose{width:16px;height:22px;flex:0 0 16px;padding:0;border:0;',
 		'background:transparent;color:var(--tf-dim);cursor:pointer;font-size:1rem;line-height:1;}',
 		'.tf-page .tf-disclose[aria-expanded="true"]{transform:rotate(90deg);}',
 		'.tf-page .tf-disclose:focus-visible{outline:2px solid var(--tf-down);border-radius:3px;}',
-		'.tf-page .tf-domain-child>.tf-app{padding-left:calc(16px + .55rem);}',
+		'.tf-page .tf-domain-child>.tf-app{padding-left:2rem;}',
 		'.tf-page .tf-domain-child .tf-app-name{color:var(--tf-dim);font-size:.82rem;}',
 		/* a bucket is a kind of traffic, not a product: muted name plus a tag,
 		 * so it never reads as if it were an application */
