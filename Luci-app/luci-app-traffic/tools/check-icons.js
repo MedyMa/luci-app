@@ -103,6 +103,34 @@ if (!fs.existsSync(MANIFEST)) {
 	}
 }
 
+/* ---- one set, one licence, and it has to be stated ----------------------
+ * The manifest used to say "see the collection licence" for every iconify set.
+ * That understated what upstream plainly declares: the collections index
+ * (collections.json) gives each prefix a licence title, an SPDX id and a URL,
+ * and the terms differ enough to matter - cbi is CC BY-NC-SA 4.0 while cib is
+ * CC0-1.0, and arcticons is share-alike - so a redistribution manifest that
+ * does not name them is not honest about what it ships.  Those values are in
+ * build-catalog.js's ICONIFY_LICENCES table now, and two things are checked
+ * here: a set may not carry two different licences (arcticons once did, from
+ * two generation paths), and it may not fall back to the generic wording, which
+ * is only honest for a set nobody has verified yet.  A new set fails this and
+ * asks to be looked up in collections.json rather than described vaguely. */
+const licencesBySet = new Map();
+for (const r of manifestRows) {
+	if (!r.source.startsWith('iconify:')) continue;
+	if (!licencesBySet.has(r.source)) licencesBySet.set(r.source, new Set());
+	licencesBySet.get(r.source).add(r.licence + '\t' + r.url);
+}
+for (const [set, vals] of licencesBySet) {
+	if (vals.size > 1)
+		problems.push(`manifest gives ${set} ${vals.size} different licences: ${[...vals].map(v => v.split('\t')[0]).join(', ')}`);
+	for (const v of vals) {
+		const [lic] = v.split('\t');
+		if (!lic || lic === 'see the collection licence')
+			problems.push(`${set} does not state its licence; read it from the icon-sets collections.json and add it to ICONIFY_LICENCES in tools/build-catalog.js`);
+	}
+}
+
 /* ---- the site/icon map ---------------------------------------------------
  * Rows here answer "which packaged icon stands for this site domain".  Two
  * relations are recorded and they are not interchangeable:

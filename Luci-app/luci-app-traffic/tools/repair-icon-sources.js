@@ -45,13 +45,20 @@ async function main() {
       svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}">${icon.body}</svg>`;
       svg = svg.replace(/currentColor/g, '#8b98a5');
       row.splice(2, 5, 'iconify:' + set, source,
-        set === 'arcticons' ? 'CC BY-SA 4.0' : 'see the collection licence',
-        'https://icon-sets.iconify.design/' + set + '/' + source + '/', '');
+        set === 'arcticons' ? 'CC-BY-SA-4.0' : 'CC0-1.0',
+        set === 'arcticons'
+          ? 'https://creativecommons.org/licenses/by-sa/4.0/'
+          : 'https://raw.githubusercontent.com/gilbarbara/logos/master/LICENSE.txt', '');
     } else {
       // Two unbranded circles: own geometry, explicitly not a product logo.
       svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect x="2" y="2" width="28" height="28" rx="8" fill="#667585"/><circle cx="11" cy="16" r="3" fill="#fff"/><circle cx="21" cy="16" r="3" fill="#fff"/></svg>';
+      /* The URL column records where the material came from.  These glyphs have
+       * no upstream - the geometry is this script's - so it names the script in
+       * this repository, the same way the hand-supplied `local` rows name
+       * tools/icons-local, instead of putting a bare path where a URL belongs. */
       row.splice(2, 5, 'local:neutral', key, 'CC0-1.0',
-        'tools/repair-icon-sources.js', 'neutral placeholder; not a brand logo');
+        'tools/repair-icon-sources.js in the luci-app-traffic source tree',
+        'neutral placeholder; not a brand logo');
       neutral++;
     }
     fs.writeFileSync(path.join(dir, row[0]), svg + '\n');

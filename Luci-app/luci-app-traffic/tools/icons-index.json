@@ -186,40 +186,40 @@
    "application": "2gis",
    "source": "iconify:arcticons",
    "upstream": "2gis",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "0x0": {
    "file": "0x0.svg",
    "application": "0x0",
    "source": "iconify:token",
    "upstream": "0x0",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/token/"
+   "licence": "MIT",
+   "url": "https://github.com/0xa3k5/web3icons/blob/main/LICENCE"
   },
   "amp": {
    "file": "amp.svg",
    "application": "AMP",
    "source": "iconify:logos",
    "upstream": "amp",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/logos/"
+   "licence": "CC0-1.0",
+   "url": "https://raw.githubusercontent.com/gilbarbara/logos/master/LICENSE.txt"
   },
   "apkmirror": {
    "file": "apkmirror.svg",
    "application": "APKMirror",
    "source": "iconify:arcticons",
    "upstream": "apkmirror",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "aol": {
    "file": "aol.svg",
    "application": "AOL",
    "source": "iconify:simple-icons",
    "upstream": "aol",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "1337x": {
    "file": "1337x.svg",
@@ -250,56 +250,56 @@
    "application": "APKPure",
    "source": "iconify:arcticons",
    "upstream": "apkpure",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "at-t": {
    "file": "at-t.svg",
    "application": "AT&T",
    "source": "iconify:cib",
    "upstream": "at-and-t",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/cib/"
+   "licence": "CC0-1.0",
+   "url": "https://creativecommons.org/publicdomain/zero/1.0/"
   },
   "accuweather": {
    "file": "accuweather.svg",
    "application": "Accuweather",
    "source": "iconify:simple-icons",
    "upstream": "accuweather",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "activision-blizzard": {
    "file": "activision-blizzard.svg",
    "application": "Activision Blizzard",
    "source": "iconify:simple-icons",
    "upstream": "activision",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "adblock": {
    "file": "adblock.svg",
    "application": "Adblock",
    "source": "iconify:simple-icons",
    "upstream": "adblock",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "adblockplus": {
    "file": "adblockplus.svg",
    "application": "Adblockplus",
    "source": "iconify:simple-icons",
    "upstream": "adblockplus",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "adguard": {
    "file": "adguard.svg",
    "application": "Adguard",
    "source": "iconify:simple-icons",
    "upstream": "adguard",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "aws": {
    "file": "aws.svg",
@@ -314,24 +314,24 @@
    "application": "Acer",
    "source": "iconify:simple-icons",
    "upstream": "acer",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "activision": {
    "file": "activision.svg",
    "application": "Activision",
    "source": "iconify:simple-icons",
    "upstream": "activision",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "adidas": {
    "file": "adidas.svg",
    "application": "Adidas",
    "source": "iconify:simple-icons",
    "upstream": "adidas",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "adobe": {
    "file": "adobe.svg",
@@ -354,32 +354,32 @@
    "application": "Agora",
    "source": "iconify:simple-icons",
    "upstream": "agora",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "afdian": {
    "file": "afdian.svg",
    "application": "Afdian",
    "source": "iconify:simple-icons",
    "upstream": "afdian",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "airchina": {
    "file": "airchina.svg",
    "application": "AirChina",
    "source": "iconify:simple-icons",
    "upstream": "airchina",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "airbnb": {
    "file": "airbnb.svg",
    "application": "Airbnb",
    "source": "iconify:logos",
    "upstream": "airbnb",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/logos/"
+   "licence": "CC0-1.0",
+   "url": "https://raw.githubusercontent.com/gilbarbara/logos/master/LICENSE.txt"
   },
   "akamai": {
    "file": "akamai.svg",
@@ -394,8 +394,8 @@
    "application": "Alfred",
    "source": "iconify:simple-icons",
    "upstream": "alfred",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "aliexpress": {
    "file": "aliexpress.svg",
@@ -418,16 +418,16 @@
    "application": "Alipay",
    "source": "iconify:simple-icons",
    "upstream": "alipay",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "alibaba-cloud": {
    "file": "alibaba-cloud.svg",
    "application": "Alibaba Cloud",
    "source": "iconify:simple-icons",
    "upstream": "alibabacloud",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "amazon": {
    "file": "amazon.svg",
@@ -450,8 +450,8 @@
    "application": "Amazon Appstore",
    "source": "iconify:arcticons",
    "upstream": "amazon-appstore",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "amc": {
    "file": "amc.svg",
@@ -482,16 +482,16 @@
    "application": "Anker",
    "source": "iconify:arcticons",
    "upstream": "anker",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "annas-archive": {
    "file": "annas-archive.svg",
    "application": "Annas Archive",
    "source": "iconify:arcticons",
    "upstream": "annas-archive",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "anthropic": {
    "file": "anthropic.svg",
@@ -506,24 +506,24 @@
    "application": "Apa",
    "source": "iconify:arcticons",
    "upstream": "apa",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "aparat": {
    "file": "aparat.svg",
    "application": "Aparat",
    "source": "iconify:simple-icons",
    "upstream": "aparat",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "apifox": {
    "file": "apifox.svg",
    "application": "Apifox",
    "source": "iconify:simple-icons",
    "upstream": "apifox",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "app-store": {
    "file": "app-store.svg",
@@ -642,16 +642,16 @@
    "application": "Apple News",
    "source": "iconify:simple-icons",
    "upstream": "applenews",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "apple-pay": {
    "file": "apple-pay.svg",
    "application": "Apple Pay",
    "source": "iconify:logos",
    "upstream": "apple-pay",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/logos/"
+   "licence": "CC0-1.0",
+   "url": "https://raw.githubusercontent.com/gilbarbara/logos/master/LICENSE.txt"
   },
   "apple-podcasts": {
    "file": "apple-podcasts.svg",
@@ -666,8 +666,8 @@
    "application": "Aptoide",
    "source": "iconify:arcticons",
    "upstream": "aptoide",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "apple-tv": {
    "file": "apple-tv.svg",
@@ -698,32 +698,32 @@
    "application": "Archiveofourown",
    "source": "iconify:simple-icons",
    "upstream": "archiveofourown",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "archlinux": {
    "file": "archlinux.svg",
    "application": "Archlinux",
    "source": "iconify:logos",
    "upstream": "archlinux",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/logos/"
+   "licence": "CC0-1.0",
+   "url": "https://raw.githubusercontent.com/gilbarbara/logos/master/LICENSE.txt"
   },
   "asahi": {
    "file": "asahi.svg",
    "application": "Asahi",
    "source": "iconify:simple-icons",
    "upstream": "asahilinux",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "artstation": {
    "file": "artstation.svg",
    "application": "Artstation",
    "source": "iconify:simple-icons",
    "upstream": "artstation",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "atlassian": {
    "file": "atlassian.svg",
@@ -746,48 +746,48 @@
    "application": "Aviasales",
    "source": "iconify:arcticons",
    "upstream": "aviasales",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "autodesk": {
    "file": "autodesk.svg",
    "application": "Autodesk",
    "source": "iconify:simple-icons",
    "upstream": "autodesk",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "avito": {
    "file": "avito.svg",
    "application": "Avito",
    "source": "iconify:arcticons",
    "upstream": "avito",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "bmw": {
    "file": "bmw.svg",
    "application": "BMW",
    "source": "iconify:simple-icons",
    "upstream": "bmw",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "bbc": {
    "file": "bbc.svg",
    "application": "BBC",
    "source": "iconify:simple-icons",
    "upstream": "bbc",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "bahamut": {
    "file": "bahamut.svg",
    "application": "Bahamut",
    "source": "iconify:token",
    "upstream": "bahamut",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/token/"
+   "licence": "MIT",
+   "url": "https://github.com/0xa3k5/web3icons/blob/main/LICENCE"
   },
   "baidu": {
    "file": "baidu.svg",
@@ -826,16 +826,16 @@
    "application": "Baidu Map",
    "source": "iconify:arcticons",
    "upstream": "baidu-map",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "baidu-tieba": {
    "file": "baidu-tieba.svg",
    "application": "Baidu Tieba",
    "source": "iconify:arcticons",
    "upstream": "baidu-tieba",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "baidu-wenku": {
    "file": "baidu-wenku.svg",
@@ -866,24 +866,24 @@
    "application": "Beats",
    "source": "iconify:logos",
    "upstream": "beats",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/logos/"
+   "licence": "CC0-1.0",
+   "url": "https://raw.githubusercontent.com/gilbarbara/logos/master/LICENSE.txt"
   },
   "battle-net": {
    "file": "battle-net.svg",
    "application": "Battle.net",
    "source": "iconify:arcticons",
    "upstream": "battlenet",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "bestbuy": {
    "file": "bestbuy.svg",
    "application": "Bestbuy",
    "source": "iconify:arcticons",
    "upstream": "bestbuy",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "bilibili-intl": {
    "file": "bilibili-intl.svg",
@@ -906,8 +906,8 @@
    "application": "Binance",
    "source": "iconify:simple-icons",
    "upstream": "binance",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "bitbucket": {
    "file": "bitbucket.svg",
@@ -970,32 +970,32 @@
    "application": "Booking",
    "source": "iconify:arcticons",
    "upstream": "booking",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "bohemia": {
    "file": "bohemia.svg",
    "application": "Bohemia",
    "source": "iconify:simple-icons",
    "upstream": "bohemiainteractive",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "booking-com": {
    "file": "booking-com.svg",
    "application": "Booking.com",
    "source": "iconify:arcticons",
    "upstream": "booking",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "books": {
    "file": "books.svg",
    "application": "Books",
    "source": "iconify:arcticons",
    "upstream": "books",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "bootstrap": {
    "file": "bootstrap.svg",
@@ -1010,8 +1010,8 @@
    "application": "Brilliant",
    "source": "iconify:arcticons",
    "upstream": "brilliant",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "box": {
    "file": "box.svg",
@@ -1042,32 +1042,32 @@
    "application": "Buymeacoffee",
    "source": "iconify:simple-icons",
    "upstream": "buymeacoffee",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "bybit": {
    "file": "bybit.svg",
    "application": "Bybit",
    "source": "iconify:token",
    "upstream": "bybit",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/token/"
+   "licence": "MIT",
+   "url": "https://github.com/0xa3k5/web3icons/blob/main/LICENCE"
   },
   "cas": {
    "file": "cas.svg",
    "application": "CAS",
    "source": "iconify:token",
    "upstream": "cas",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/token/"
+   "licence": "MIT",
+   "url": "https://github.com/0xa3k5/web3icons/blob/main/LICENCE"
   },
   "cbs": {
    "file": "cbs.svg",
    "application": "CBS",
    "source": "iconify:simple-icons",
    "upstream": "cbs",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "canon": {
    "file": "canon.svg",
@@ -4211,7 +4211,7 @@
    "source": "local:neutral",
    "upstream": "sto-express",
    "licence": "CC0-1.0",
-   "url": "tools/repair-icon-sources.js"
+   "url": "tools/repair-icon-sources.js in the luci-app-traffic source tree"
   },
   "stripe": {
    "file": "stripe.svg",
@@ -5154,31 +5154,31 @@
    "application": "Sling",
    "source": "iconify:arcticons",
    "upstream": "arcticons:sling",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "softbank": {
    "file": "softbank.svg",
    "application": "Softbank",
    "source": "iconify:arcticons",
    "upstream": "arcticons:softbank",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "springer": {
    "file": "springer.svg",
    "application": "Springer",
    "source": "iconify:academicons",
    "upstream": "academicons:springer",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/academicons/"
+   "licence": "OFL-1.1",
+   "url": "https://scripts.sil.org/cms/scripts/page.php?site_id=nrsi&id=OFL"
   },
   "siri": {
    "file": "siri.svg",
    "application": "Siri",
    "source": "iconify:hugeicons",
    "upstream": "hugeicons:siri",
-   "licence": "see the collection licence",
+   "licence": "MIT",
    "url": "https://icon-sets.iconify.design/hugeicons/"
   },
   "st": {
@@ -5186,296 +5186,296 @@
    "application": "St",
    "source": "iconify:circle-flags",
    "upstream": "circle-flags:st",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/circle-flags/"
+   "licence": "MIT",
+   "url": "https://github.com/HatScripts/circle-flags/blob/gh-pages/LICENSE"
   },
   "starlink": {
    "file": "starlink.svg",
    "application": "Starlink",
    "source": "iconify:arcticons",
    "upstream": "arcticons:starlink",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "stackpath": {
    "file": "stackpath.svg",
    "application": "Stackpath",
    "source": "iconify:mdi",
    "upstream": "mdi:stackpath",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/mdi/"
+   "licence": "Apache-2.0",
+   "url": "https://github.com/Templarian/MaterialDesign/blob/master/LICENSE"
   },
   "taboola": {
    "file": "taboola.svg",
    "application": "Taboola",
    "source": "iconify:thesvg-color",
    "upstream": "thesvg-color:taboola",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/thesvg-color/"
+   "licence": "MIT",
+   "url": "https://github.com/glincker/thesvg/blob/main/LICENSE"
   },
   "tcl": {
    "file": "tcl.svg",
    "application": "TCL",
    "source": "iconify:material-icon-theme",
    "upstream": "material-icon-theme:tcl",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/material-icon-theme/"
+   "licence": "MIT",
+   "url": "https://github.com/material-extensions/vscode-material-icon-theme/blob/main/LICENSE"
   },
   "tbank-ru": {
    "file": "tbank-ru.svg",
    "application": "Tbank Ru",
    "source": "iconify:arcticons",
    "upstream": "arcticons:outbank",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "technogym": {
    "file": "technogym.svg",
    "application": "Technogym",
    "source": "iconify:arcticons",
    "upstream": "arcticons:technogym",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "terabox": {
    "file": "terabox.svg",
    "application": "TeraBox",
    "source": "iconify:arcticons",
    "upstream": "arcticons:terabox",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "taptap": {
    "file": "taptap.svg",
    "application": "TapTap",
    "source": "iconify:arcticons",
    "upstream": "arcticons:taptap",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "tianyancha": {
    "file": "tianyancha.svg",
    "application": "Tianyancha",
    "source": "iconify:arcticons",
    "upstream": "arcticons:tianyancha",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "termux": {
    "file": "termux.svg",
    "application": "Termux",
    "source": "iconify:arcticons",
    "upstream": "arcticons:termux",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "typography": {
    "file": "typography.svg",
    "application": "Typography",
    "source": "iconify:tabler",
    "upstream": "tabler:typography",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/tabler/"
+   "licence": "MIT",
+   "url": "https://github.com/tabler/tabler-icons/blob/master/LICENSE"
   },
   "ucloud": {
    "file": "ucloud.svg",
    "application": "UCloud",
    "source": "iconify:thesvg",
    "upstream": "thesvg:baiducloud",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/thesvg/"
+   "licence": "MIT",
+   "url": "https://github.com/glincker/thesvg/blob/main/LICENSE"
   },
   "tutanota": {
    "file": "tutanota.svg",
    "application": "Tutanota",
    "source": "iconify:arcticons",
    "upstream": "arcticons:tutanota",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "unionpay": {
    "file": "unionpay.svg",
    "application": "UnionPay",
    "source": "iconify:logos",
    "upstream": "logos:unionpay",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/logos/"
+   "licence": "CC0-1.0",
+   "url": "https://raw.githubusercontent.com/gilbarbara/logos/master/LICENSE.txt"
   },
   "twilio": {
    "file": "twilio.svg",
    "application": "Twilio",
    "source": "iconify:gg",
    "upstream": "gg:twilio",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/gg/"
+   "licence": "MIT",
+   "url": "https://github.com/astrit/css.gg/blob/master/LICENSE"
   },
   "viki": {
    "file": "viki.svg",
    "application": "Viki",
    "source": "iconify:arcticons",
    "upstream": "arcticons:viki",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "volcano-engine": {
    "file": "volcano-engine.svg",
    "application": "Volcano Engine",
    "source": "iconify:material-symbols",
    "upstream": "material-symbols:volcano",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/material-symbols/"
+   "licence": "Apache-2.0",
+   "url": "https://github.com/google/material-design-icons/blob/master/LICENSE"
   },
   "vipshop": {
    "file": "vipshop.svg",
    "application": "Vipshop",
    "source": "iconify:arcticons",
    "upstream": "arcticons:vipshop",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "viu": {
    "file": "viu.svg",
    "application": "Viu",
    "source": "iconify:arcticons",
    "upstream": "arcticons:viu",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "wps-office": {
    "file": "wps-office.svg",
    "application": "WPS Office",
    "source": "iconify:gis",
    "upstream": "gis:wps",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/gis/"
+   "licence": "CC-BY-4.0",
+   "url": "https://github.com/Viglino/font-gis/blob/main/LICENSE-CC-BY.md"
   },
   "wetv": {
    "file": "wetv.svg",
    "application": "WeTV",
    "source": "iconify:arcticons",
    "upstream": "arcticons:wetv",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "wetype": {
    "file": "wetype.svg",
    "application": "WeType",
    "source": "iconify:arcticons",
    "upstream": "arcticons:wetype",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "whoosh": {
    "file": "whoosh.svg",
    "application": "Whoosh",
    "source": "iconify:arcticons",
    "upstream": "arcticons:whoosh",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "wikihow": {
    "file": "wikihow.svg",
    "application": "Wikihow",
    "source": "iconify:arcticons",
    "upstream": "arcticons:wikihow",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "wildberries": {
    "file": "wildberries.svg",
    "application": "Wildberries",
    "source": "iconify:arcticons",
    "upstream": "arcticons:wildberries",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "windy": {
    "file": "windy.svg",
    "application": "Windy",
    "source": "iconify:mdi",
    "upstream": "mdi:windy",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/mdi/"
+   "licence": "Apache-2.0",
+   "url": "https://github.com/Templarian/MaterialDesign/blob/master/LICENSE"
   },
   "wsj": {
    "file": "wsj.svg",
    "application": "Wsj",
    "source": "iconify:arcticons",
    "upstream": "arcticons:wsj",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "xai": {
    "file": "xai.svg",
    "application": "Xai",
    "source": "iconify:codicon",
    "upstream": "codicon:xai",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/codicon/"
+   "licence": "CC-BY-4.0",
+   "url": "https://github.com/microsoft/vscode-codicons/blob/main/LICENSE"
   },
   "xiaomi-ai": {
    "file": "xiaomi-ai.svg",
    "application": "Xiaomi AI",
    "source": "iconify:simple-icons",
    "upstream": "simple-icons:xiaomi",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/simple-icons/"
+   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
+   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
   },
   "wifi-master": {
    "file": "wifi-master.svg",
    "application": "WiFi Master",
    "source": "iconify:material-symbols",
    "upstream": "material-symbols:wifi",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/material-symbols/"
+   "licence": "Apache-2.0",
+   "url": "https://github.com/google/material-design-icons/blob/master/LICENSE"
   },
   "xiaoyuzhou": {
    "file": "xiaoyuzhou.svg",
    "application": "Xiaoyuzhou",
    "source": "iconify:dinkie-icons",
    "upstream": "dinkie-icons:xiaoyuzhou",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/dinkie-icons/"
+   "licence": "MIT",
+   "url": "https://github.com/atelier-anchor/dinkie-icons/blob/main/LICENSE"
   },
   "xiaoheihe": {
    "file": "xiaoheihe.svg",
    "application": "Xiaoheihe",
    "source": "iconify:arcticons",
    "upstream": "arcticons:xiaoheihe",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "xd": {
    "file": "xd.svg",
    "application": "Xd",
    "source": "iconify:tabler",
    "upstream": "tabler:xd",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/tabler/"
+   "licence": "MIT",
+   "url": "https://github.com/tabler/tabler-icons/blob/master/LICENSE"
   },
   "xnxx": {
    "file": "xnxx.svg",
    "application": "Xnxx",
    "source": "iconify:arcticons",
    "upstream": "arcticons:xnxx",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "youmind": {
    "file": "youmind.svg",
    "application": "Youmind",
    "source": "iconify:thesvg",
    "upstream": "thesvg:youmind",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/thesvg/"
+   "licence": "MIT",
+   "url": "https://github.com/glincker/thesvg/blob/main/LICENSE"
   },
   "xunlei": {
    "file": "xunlei.svg",
    "application": "Xunlei",
    "source": "iconify:arcticons",
    "upstream": "arcticons:xunlei",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "youku": {
    "file": "youku.svg",
@@ -5490,8 +5490,8 @@
    "application": "Zeplin",
    "source": "iconify:logos",
    "upstream": "logos:zeplin",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/logos/"
+   "licence": "CC0-1.0",
+   "url": "https://raw.githubusercontent.com/gilbarbara/logos/master/LICENSE.txt"
   },
   "iqiyi": {
    "file": "iqiyi.svg",
@@ -5506,24 +5506,24 @@
    "application": "iQIYI (Intl)",
    "source": "iconify:arcticons",
    "upstream": "arcticons:iqiyi",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "thescore": {
    "file": "thescore.svg",
    "application": "theScore",
    "source": "iconify:arcticons",
    "upstream": "arcticons:thescore",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "zee": {
    "file": "zee.svg",
    "application": "Zee",
    "source": "iconify:token",
    "upstream": "token:zee",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/token/"
+   "licence": "MIT",
+   "url": "https://github.com/0xa3k5/web3icons/blob/main/LICENCE"
   },
   "stun-servers": {
    "file": "stun-servers.svg",
@@ -6098,8 +6098,8 @@
    "application": "Abema",
    "source": "iconify:arcticons",
    "upstream": "abema-tv",
-   "licence": "CC BY-SA 4.0",
-   "url": "https://icon-sets.iconify.design/arcticons/abema-tv/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "alphabet": {
    "file": "alphabet.svg",
@@ -6107,23 +6107,23 @@
    "source": "local:neutral",
    "upstream": "alphabet",
    "licence": "CC0-1.0",
-   "url": "tools/repair-icon-sources.js"
+   "url": "tools/repair-icon-sources.js in the luci-app-traffic source tree"
   },
   "antutu": {
    "file": "antutu.svg",
    "application": "Antutu",
    "source": "iconify:arcticons",
    "upstream": "antutu-3dbench",
-   "licence": "CC BY-SA 4.0",
-   "url": "https://icon-sets.iconify.design/arcticons/antutu-3dbench/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "blizzard": {
    "file": "blizzard.svg",
    "application": "Blizzard",
    "source": "iconify:arcticons",
    "upstream": "blizzard-authenticator",
-   "licence": "CC BY-SA 4.0",
-   "url": "https://icon-sets.iconify.design/arcticons/blizzard-authenticator/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "bloomberg": {
    "file": "bloomberg.svg",
@@ -6131,7 +6131,7 @@
    "source": "local:neutral",
    "upstream": "bloomberg",
    "licence": "CC0-1.0",
-   "url": "tools/repair-icon-sources.js"
+   "url": "tools/repair-icon-sources.js in the luci-app-traffic source tree"
   },
   "blued": {
    "file": "blued.svg",
@@ -6139,7 +6139,7 @@
    "source": "local:neutral",
    "upstream": "blued",
    "licence": "CC0-1.0",
-   "url": "tools/repair-icon-sources.js"
+   "url": "tools/repair-icon-sources.js in the luci-app-traffic source tree"
   },
   "boomerang": {
    "file": "boomerang.svg",
@@ -6147,15 +6147,15 @@
    "source": "local:neutral",
    "upstream": "boomerang",
    "licence": "CC0-1.0",
-   "url": "tools/repair-icon-sources.js"
+   "url": "tools/repair-icon-sources.js in the luci-app-traffic source tree"
   },
   "cainiao": {
    "file": "cainiao.svg",
    "application": "Cainiao",
    "source": "iconify:arcticons",
    "upstream": "cainiao-wireless",
-   "licence": "CC BY-SA 4.0",
-   "url": "https://icon-sets.iconify.design/arcticons/cainiao-wireless/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "cambridge": {
    "file": "cambridge.svg",
@@ -6163,23 +6163,23 @@
    "source": "local:neutral",
    "upstream": "cambridge",
    "licence": "CC0-1.0",
-   "url": "tools/repair-icon-sources.js"
+   "url": "tools/repair-icon-sources.js in the luci-app-traffic source tree"
   },
   "camera360": {
    "file": "camera360.svg",
    "application": "Camera360",
    "source": "iconify:arcticons",
    "upstream": "camera360",
-   "licence": "CC BY-SA 4.0",
-   "url": "https://icon-sets.iconify.design/arcticons/camera360/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "cdek": {
    "file": "cdek.svg",
    "application": "Cdek",
    "source": "iconify:arcticons",
    "upstream": "cdek",
-   "licence": "CC BY-SA 4.0",
-   "url": "https://icon-sets.iconify.design/arcticons/cdek/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "cerebras": {
    "file": "cerebras.svg",
@@ -6187,15 +6187,15 @@
    "source": "local:neutral",
    "upstream": "cerebras",
    "licence": "CC0-1.0",
-   "url": "tools/repair-icon-sources.js"
+   "url": "tools/repair-icon-sources.js in the luci-app-traffic source tree"
   },
   "chaoxing": {
    "file": "chaoxing.svg",
    "application": "Chaoxing",
    "source": "iconify:arcticons",
    "upstream": "chaoxing-mobile",
-   "licence": "CC BY-SA 4.0",
-   "url": "https://icon-sets.iconify.design/arcticons/chaoxing-mobile/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "civitai": {
    "file": "civitai.svg",
@@ -6203,7 +6203,7 @@
    "source": "local:neutral",
    "upstream": "civitai",
    "licence": "CC0-1.0",
-   "url": "tools/repair-icon-sources.js"
+   "url": "tools/repair-icon-sources.js in the luci-app-traffic source tree"
   },
   "classic": {
    "file": "classic.svg",
@@ -6211,7 +6211,7 @@
    "source": "local:neutral",
    "upstream": "classic",
    "licence": "CC0-1.0",
-   "url": "tools/repair-icon-sources.js"
+   "url": "tools/repair-icon-sources.js in the luci-app-traffic source tree"
   },
   "connectivity-check": {
    "file": "connectivity-check.svg",
@@ -6219,39 +6219,39 @@
    "source": "local:neutral",
    "upstream": "connectivity-check",
    "licence": "CC0-1.0",
-   "url": "tools/repair-icon-sources.js"
+   "url": "tools/repair-icon-sources.js in the luci-app-traffic source tree"
   },
   "coolapk": {
    "file": "coolapk.svg",
    "application": "Coolapk",
    "source": "iconify:arcticons",
    "upstream": "coolapk",
-   "licence": "CC BY-SA 4.0",
-   "url": "https://icon-sets.iconify.design/arcticons/coolapk/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "coupang": {
    "file": "coupang.svg",
    "application": "Coupang",
    "source": "iconify:arcticons",
    "upstream": "coupang",
-   "licence": "CC BY-SA 4.0",
-   "url": "https://icon-sets.iconify.design/arcticons/coupang/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "craigslist": {
    "file": "craigslist.svg",
    "application": "Craigslist",
    "source": "iconify:arcticons",
    "upstream": "craigslist",
-   "licence": "CC BY-SA 4.0",
-   "url": "https://icon-sets.iconify.design/arcticons/craigslist/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "damai": {
    "file": "damai.svg",
    "application": "DaMai",
    "source": "iconify:arcticons",
    "upstream": "damaiapp",
-   "licence": "CC BY-SA 4.0",
-   "url": "https://icon-sets.iconify.design/arcticons/damaiapp/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "dcard": {
    "file": "dcard.svg",
@@ -6259,39 +6259,39 @@
    "source": "local:neutral",
    "upstream": "dcard",
    "licence": "CC0-1.0",
-   "url": "tools/repair-icon-sources.js"
+   "url": "tools/repair-icon-sources.js in the luci-app-traffic source tree"
   },
   "dewu": {
    "file": "dewu.svg",
    "application": "Dewu",
    "source": "iconify:arcticons",
    "upstream": "dewu",
-   "licence": "CC BY-SA 4.0",
-   "url": "https://icon-sets.iconify.design/arcticons/dewu/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "didi": {
    "file": "didi.svg",
    "application": "Didi",
    "source": "iconify:arcticons",
    "upstream": "didi",
-   "licence": "CC BY-SA 4.0",
-   "url": "https://icon-sets.iconify.design/arcticons/didi/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "dingtalk": {
    "file": "dingtalk.svg",
    "application": "DingTalk",
    "source": "iconify:arcticons",
    "upstream": "dingtalk",
-   "licence": "CC BY-SA 4.0",
-   "url": "https://icon-sets.iconify.design/arcticons/dingtalk/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "divar": {
    "file": "divar.svg",
    "application": "Divar",
    "source": "iconify:arcticons",
    "upstream": "divar",
-   "licence": "CC BY-SA 4.0",
-   "url": "https://icon-sets.iconify.design/arcticons/divar/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "doubao": {
    "file": "doubao.svg",
@@ -6299,47 +6299,47 @@
    "source": "local:neutral",
    "upstream": "doubao",
    "licence": "CC0-1.0",
-   "url": "tools/repair-icon-sources.js"
+   "url": "tools/repair-icon-sources.js in the luci-app-traffic source tree"
   },
   "dw": {
    "file": "dw.svg",
    "application": "Dw",
    "source": "iconify:arcticons",
    "upstream": "dw",
-   "licence": "CC BY-SA 4.0",
-   "url": "https://icon-sets.iconify.design/arcticons/dw/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "dyndns": {
    "file": "dyndns.svg",
    "application": "DynDNS",
    "source": "iconify:logos",
    "upstream": "dyndns",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/logos/dyndns/"
+   "licence": "CC0-1.0",
+   "url": "https://raw.githubusercontent.com/gilbarbara/logos/master/LICENSE.txt"
   },
   "economist": {
    "file": "economist.svg",
    "application": "Economist",
    "source": "iconify:arcticons",
    "upstream": "economist",
-   "licence": "CC BY-SA 4.0",
-   "url": "https://icon-sets.iconify.design/arcticons/economist/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "embedly": {
    "file": "embedly.svg",
    "application": "Embedly",
    "source": "iconify:logos",
    "upstream": "embedly",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/logos/embedly/"
+   "licence": "CC0-1.0",
+   "url": "https://raw.githubusercontent.com/gilbarbara/logos/master/LICENSE.txt"
   },
   "eneba": {
    "file": "eneba.svg",
    "application": "Eneba",
    "source": "iconify:arcticons",
    "upstream": "eneba",
-   "licence": "CC BY-SA 4.0",
-   "url": "https://icon-sets.iconify.design/arcticons/eneba/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "epoch-media": {
    "file": "epoch-media.svg",
@@ -6347,23 +6347,23 @@
    "source": "local:neutral",
    "upstream": "epoch-media",
    "licence": "CC0-1.0",
-   "url": "tools/repair-icon-sources.js"
+   "url": "tools/repair-icon-sources.js in the luci-app-traffic source tree"
   },
   "espn": {
    "file": "espn.svg",
    "application": "Espn",
    "source": "iconify:arcticons",
    "upstream": "espn",
-   "licence": "CC BY-SA 4.0",
-   "url": "https://icon-sets.iconify.design/arcticons/espn/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "familymart": {
    "file": "familymart.svg",
    "application": "Familymart",
    "source": "iconify:arcticons",
    "upstream": "familymart",
-   "licence": "CC BY-SA 4.0",
-   "url": "https://icon-sets.iconify.design/arcticons/familymart/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "findmy": {
    "file": "findmy.svg",
@@ -6371,7 +6371,7 @@
    "source": "local:neutral",
    "upstream": "findmy",
    "licence": "CC0-1.0",
-   "url": "tools/repair-icon-sources.js"
+   "url": "tools/repair-icon-sources.js in the luci-app-traffic source tree"
   },
   "finish": {
    "file": "finish.svg",
@@ -6379,7 +6379,7 @@
    "source": "local:neutral",
    "upstream": "finish",
    "licence": "CC0-1.0",
-   "url": "tools/repair-icon-sources.js"
+   "url": "tools/repair-icon-sources.js in the luci-app-traffic source tree"
   },
   "flyio": {
    "file": "flyio.svg",
@@ -6387,15 +6387,15 @@
    "source": "local:neutral",
    "upstream": "flyio",
    "licence": "CC0-1.0",
-   "url": "tools/repair-icon-sources.js"
+   "url": "tools/repair-icon-sources.js in the luci-app-traffic source tree"
   },
   "forza": {
    "file": "forza.svg",
    "application": "Forza",
    "source": "iconify:arcticons",
    "upstream": "forza",
-   "licence": "CC BY-SA 4.0",
-   "url": "https://icon-sets.iconify.design/arcticons/forza/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "friday": {
    "file": "friday.svg",
@@ -6403,23 +6403,23 @@
    "source": "local:neutral",
    "upstream": "friday",
    "licence": "CC0-1.0",
-   "url": "tools/repair-icon-sources.js"
+   "url": "tools/repair-icon-sources.js in the luci-app-traffic source tree"
   },
   "gaijin": {
    "file": "gaijin.svg",
    "application": "Gaijin",
    "source": "iconify:arcticons",
    "upstream": "gaijin-pass",
-   "licence": "CC BY-SA 4.0",
-   "url": "https://icon-sets.iconify.design/arcticons/gaijin-pass/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "garena": {
    "file": "garena.svg",
    "application": "Garena",
    "source": "iconify:arcticons",
    "upstream": "garena",
-   "licence": "CC BY-SA 4.0",
-   "url": "https://icon-sets.iconify.design/arcticons/garena/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "geely": {
    "file": "geely.svg",
@@ -6427,159 +6427,159 @@
    "source": "local:neutral",
    "upstream": "geely",
    "licence": "CC0-1.0",
-   "url": "tools/repair-icon-sources.js"
+   "url": "tools/repair-icon-sources.js in the luci-app-traffic source tree"
   },
   "geetest": {
    "file": "geetest.svg",
    "application": "Geetest",
    "source": "iconify:logos",
    "upstream": "geetest",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/logos/geetest/"
+   "licence": "CC0-1.0",
+   "url": "https://raw.githubusercontent.com/gilbarbara/logos/master/LICENSE.txt"
   },
   "genshin-impact": {
    "file": "genshin-impact.svg",
    "application": "Genshin Impact",
    "source": "iconify:arcticons",
    "upstream": "genshin-impact",
-   "licence": "CC BY-SA 4.0",
-   "url": "https://icon-sets.iconify.design/arcticons/genshin-impact/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "giffgaff": {
    "file": "giffgaff.svg",
    "application": "Giffgaff",
    "source": "iconify:arcticons",
    "upstream": "giffgaff",
-   "licence": "CC BY-SA 4.0",
-   "url": "https://icon-sets.iconify.design/arcticons/giffgaff/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "globo": {
    "file": "globo.svg",
    "application": "Globo",
    "source": "iconify:thesvg-color",
    "upstream": "thesvg-color:globo-tv",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/thesvg-color/"
+   "licence": "MIT",
+   "url": "https://github.com/glincker/thesvg/blob/main/LICENSE"
   },
   "glyphs": {
    "file": "glyphs.svg",
    "application": "Glyphs",
    "source": "iconify:material-symbols",
    "upstream": "material-symbols:glyphs",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/material-symbols/"
+   "licence": "Apache-2.0",
+   "url": "https://github.com/google/material-design-icons/blob/master/LICENSE"
   },
   "groq": {
    "file": "groq.svg",
    "application": "Groq",
    "source": "iconify:thesvg-color",
    "upstream": "thesvg-color:groq",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/thesvg-color/"
+   "licence": "MIT",
+   "url": "https://github.com/glincker/thesvg/blob/main/LICENSE"
   },
   "group-ib": {
    "file": "group-ib.svg",
    "application": "Group Ib",
    "source": "iconify:material-symbols",
    "upstream": "material-symbols:group",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/material-symbols/"
+   "licence": "Apache-2.0",
+   "url": "https://github.com/google/material-design-icons/blob/master/LICENSE"
   },
   "hcaptcha": {
    "file": "hcaptcha.svg",
    "application": "Hcaptcha",
    "source": "iconify:logos",
    "upstream": "logos:hcaptcha",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/logos/"
+   "licence": "CC0-1.0",
+   "url": "https://raw.githubusercontent.com/gilbarbara/logos/master/LICENSE.txt"
   },
   "hibymusic": {
    "file": "hibymusic.svg",
    "application": "HibyMusic",
    "source": "iconify:arcticons",
    "upstream": "arcticons:hibymusic",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "hkust": {
    "file": "hkust.svg",
    "application": "Hkust",
    "source": "iconify:arcticons",
    "upstream": "arcticons:hkust-qr-code",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "hm": {
    "file": "hm.svg",
    "application": "Hm",
    "source": "iconify:arcticons",
    "upstream": "arcticons:hm",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "ibkr": {
    "file": "ibkr.svg",
    "application": "Ibkr",
    "source": "iconify:arcticons",
    "upstream": "arcticons:ibkr",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "ifanr": {
    "file": "ifanr.svg",
    "application": "Ifanr",
    "source": "iconify:material-icon-theme",
    "upstream": "material-icon-theme:ifanr-cloud",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/material-icon-theme/"
+   "licence": "MIT",
+   "url": "https://github.com/material-extensions/vscode-material-icon-theme/blob/main/LICENSE"
   },
   "iflytek": {
    "file": "iflytek.svg",
    "application": "IFlytek",
    "source": "iconify:arcticons",
    "upstream": "arcticons:iflytek-input",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "inshot": {
    "file": "inshot.svg",
    "application": "Inshot",
    "source": "iconify:arcticons",
    "upstream": "arcticons:inshot",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "insider": {
    "file": "insider.svg",
    "application": "Insider",
    "source": "iconify:arcticons",
    "upstream": "arcticons:callinsider",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "jetbrains-ai": {
    "file": "jetbrains-ai.svg",
    "application": "Jetbrains AI",
    "source": "iconify:devicon",
    "upstream": "devicon:jetbrains",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/devicon/"
+   "licence": "MIT",
+   "url": "https://github.com/devicons/devicon/blob/master/LICENSE"
   },
   "jtexpress": {
    "file": "jtexpress.svg",
    "application": "Jtexpress",
    "source": "iconify:cbi",
    "upstream": "cbi:jtexpress",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/cbi/"
+   "licence": "CC-BY-NC-SA-4.0",
+   "url": "https://github.com/elax46/custom-brand-icons/blob/main/LICENSE"
   },
   "kernel": {
    "file": "kernel.svg",
    "application": "Kernel",
    "source": "iconify:iconmind",
    "upstream": "iconmind:kernel-duotone-bold",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/iconmind/"
+   "licence": "MIT",
+   "url": "https://github.com/Iconmind/iconmind/blob/main/LICENSE"
   },
   "kingsoft": {
    "file": "kingsoft.svg",
@@ -6594,112 +6594,112 @@
    "application": "Lantern",
    "source": "iconify:mingcute",
    "upstream": "mingcute:lantern-fill",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/mingcute/"
+   "licence": "Apache-2.0",
+   "url": "https://github.com/Richard9394/MingCute/blob/main/LICENSE"
   },
   "lastfm": {
    "file": "lastfm.svg",
    "application": "LastFM",
    "source": "iconify:logos",
    "upstream": "logos:lastfm",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/logos/"
+   "licence": "CC0-1.0",
+   "url": "https://raw.githubusercontent.com/gilbarbara/logos/master/LICENSE.txt"
   },
   "libgen": {
    "file": "libgen.svg",
    "application": "Libgen",
    "source": "iconify:arcticons",
    "upstream": "arcticons:libgen",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "lighter": {
    "file": "lighter.svg",
    "application": "Lighter",
    "source": "iconify:tabler",
    "upstream": "tabler:lighter",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/tabler/"
+   "licence": "MIT",
+   "url": "https://github.com/tabler/tabler-icons/blob/master/LICENSE"
   },
   "likee": {
    "file": "likee.svg",
    "application": "Likee",
    "source": "iconify:arcticons",
    "upstream": "arcticons:likee",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "linguee": {
    "file": "linguee.svg",
    "application": "Linguee",
    "source": "iconify:arcticons",
    "upstream": "arcticons:linguee",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "localbitcoins": {
    "file": "localbitcoins.svg",
    "application": "Localbitcoins",
    "source": "iconify:arcticons",
    "upstream": "arcticons:localbitcoins",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "longbridge": {
    "file": "longbridge.svg",
    "application": "Longbridge",
    "source": "iconify:thesvg-color",
    "upstream": "thesvg-color:longbridge",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/thesvg-color/"
+   "licence": "MIT",
+   "url": "https://github.com/glincker/thesvg/blob/main/LICENSE"
   },
   "magnit": {
    "file": "magnit.svg",
    "application": "Magnit",
    "source": "iconify:arcticons",
    "upstream": "arcticons:magnit",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "manorama": {
    "file": "manorama.svg",
    "application": "Manorama",
    "source": "iconify:arcticons",
    "upstream": "arcticons:manoramamax",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "manus": {
    "file": "manus.svg",
    "application": "Manus",
    "source": "iconify:arcticons",
    "upstream": "arcticons:manus",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "megafon": {
    "file": "megafon.svg",
    "application": "Megafon",
    "source": "iconify:arcticons",
    "upstream": "arcticons:megafon",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "meipian": {
    "file": "meipian.svg",
    "application": "Meipian",
    "source": "iconify:arcticons",
    "upstream": "arcticons:meipian-photo-album-maker",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "mewatch": {
    "file": "mewatch.svg",
    "application": "MeWatch",
    "source": "iconify:arcticons",
    "upstream": "arcticons:animewatch",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "migu": {
    "file": "migu.svg",
@@ -6714,144 +6714,144 @@
    "application": "Mixi",
    "source": "iconify:arcticons",
    "upstream": "arcticons:mixi",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "mojang": {
    "file": "mojang.svg",
    "application": "Mojang",
    "source": "iconify:cib",
    "upstream": "cib:mojang",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/cib/"
+   "licence": "CC0-1.0",
+   "url": "https://creativecommons.org/publicdomain/zero/1.0/"
   },
   "moov": {
    "file": "moov.svg",
    "application": "MOOV",
    "source": "iconify:token",
    "upstream": "token:moov",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/token/"
+   "licence": "MIT",
+   "url": "https://github.com/0xa3k5/web3icons/blob/main/LICENCE"
   },
   "mts-ru": {
    "file": "mts-ru.svg",
    "application": "Mts Ru",
    "source": "iconify:token",
    "upstream": "token:mts",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/token/"
+   "licence": "MIT",
+   "url": "https://github.com/0xa3k5/web3icons/blob/main/LICENCE"
   },
   "muji": {
    "file": "muji.svg",
    "application": "Muji",
    "source": "iconify:arcticons",
    "upstream": "arcticons:muji",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "musixmatch": {
    "file": "musixmatch.svg",
    "application": "Musixmatch",
    "source": "iconify:arcticons",
    "upstream": "arcticons:musixmatch",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "myoffice-ru": {
    "file": "myoffice-ru.svg",
    "application": "Myoffice Ru",
    "source": "iconify:arcticons",
    "upstream": "arcticons:myoffice-documents",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "narwal": {
    "file": "narwal.svg",
    "application": "Narwal",
    "source": "iconify:cbi",
    "upstream": "cbi:narwal",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/cbi/"
+   "licence": "CC-BY-NC-SA-4.0",
+   "url": "https://github.com/elax46/custom-brand-icons/blob/main/LICENSE"
   },
   "netcraze": {
    "file": "netcraze.svg",
    "application": "Netcraze",
    "source": "iconify:arcticons",
    "upstream": "arcticons:netcraze",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "npmjs": {
    "file": "npmjs.svg",
    "application": "Npmjs",
    "source": "iconify:ri",
    "upstream": "ri:npmjs-fill",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/ri/"
+   "licence": "Apache-2.0",
+   "url": "https://github.com/cyberalien/RemixIcon/blob/master/License"
   },
   "nytimes": {
    "file": "nytimes.svg",
    "application": "NYTimes",
    "source": "iconify:arcticons",
    "upstream": "arcticons:nytimes",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "ok": {
    "file": "ok.svg",
    "application": "Ok",
    "source": "iconify:picon",
    "upstream": "picon:ok",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/picon/"
+   "licence": "OFL-1.1",
+   "url": "https://github.com/yne/picon/blob/master/OFL.txt"
   },
   "okko": {
    "file": "okko.svg",
    "application": "Okko",
    "source": "iconify:arcticons",
    "upstream": "arcticons:okko",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "onekey": {
    "file": "onekey.svg",
    "application": "Onekey",
    "source": "iconify:arcticons",
    "upstream": "arcticons:onekey",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "op": {
    "file": "op.svg",
    "application": "OP",
    "source": "iconify:token",
    "upstream": "token:op",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/token/"
+   "licence": "MIT",
+   "url": "https://github.com/0xa3k5/web3icons/blob/main/LICENCE"
   },
   "openrec": {
    "file": "openrec.svg",
    "application": "Openrec",
    "source": "iconify:arcticons",
    "upstream": "arcticons:openrectv",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "openweather": {
    "file": "openweather.svg",
    "application": "Openweather",
    "source": "iconify:arcticons",
    "upstream": "arcticons:openweather",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "pbs": {
    "file": "pbs.svg",
    "application": "PBS",
    "source": "iconify:cbi",
    "upstream": "cbi:pbs",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/cbi/"
+   "licence": "CC-BY-NC-SA-4.0",
+   "url": "https://github.com/elax46/custom-brand-icons/blob/main/LICENSE"
   },
   "pinduoduo": {
    "file": "pinduoduo.svg",
@@ -6866,24 +6866,24 @@
    "application": "PrimeVideo",
    "source": "iconify:arcticons",
    "upstream": "arcticons:primevideo",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "qcc": {
    "file": "qcc.svg",
    "application": "Qcc",
    "source": "iconify:arcticons",
    "upstream": "arcticons:qcc",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "qidian": {
    "file": "qidian.svg",
    "application": "Qidian",
    "source": "iconify:arcticons",
    "upstream": "arcticons:qidian-reader",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "qq-music": {
    "file": "qq-music.svg",
@@ -6898,88 +6898,88 @@
    "application": "Qunar",
    "source": "iconify:arcticons",
    "upstream": "arcticons:qunar",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "radiko": {
    "file": "radiko.svg",
    "application": "Radiko",
    "source": "iconify:arcticons",
    "upstream": "arcticons:radiko",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "redotpay": {
    "file": "redotpay.svg",
    "application": "Redotpay",
    "source": "iconify:arcticons",
    "upstream": "arcticons:redotpay",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "reuters": {
    "file": "reuters.svg",
    "application": "Reuters",
    "source": "iconify:arcticons",
    "upstream": "arcticons:reuters",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "rostelecom": {
    "file": "rostelecom.svg",
    "application": "Rostelecom",
    "source": "iconify:arcticons",
    "upstream": "arcticons:pjsc-rostelecom",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "rutube": {
    "file": "rutube.svg",
    "application": "Rutube",
    "source": "iconify:arcticons",
    "upstream": "arcticons:rutube",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "safepal": {
    "file": "safepal.svg",
    "application": "Safepal",
    "source": "iconify:arcticons",
    "upstream": "arcticons:safepal",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "sb": {
    "file": "sb.svg",
    "application": "Sb",
    "source": "iconify:circle-flags",
    "upstream": "circle-flags:sb",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/circle-flags/"
+   "licence": "MIT",
+   "url": "https://github.com/HatScripts/circle-flags/blob/gh-pages/LICENSE"
   },
   "secom": {
    "file": "secom.svg",
    "application": "Secom",
    "source": "iconify:arcticons",
    "upstream": "arcticons:secom-safety-check-report",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "shein": {
    "file": "shein.svg",
    "application": "SHEIN",
    "source": "iconify:arcticons",
    "upstream": "arcticons:shein",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "smzdm": {
    "file": "smzdm.svg",
    "application": "SMZDM",
    "source": "iconify:arcticons",
    "upstream": "arcticons:smzdm",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "abc": {
    "file": "abc.svg",
@@ -7098,8 +7098,8 @@
    "application": "Tencent",
    "source": "iconify:thesvg-color",
    "upstream": "tencent",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/thesvg-color/"
+   "licence": "MIT",
+   "url": "https://github.com/glincker/thesvg/blob/main/LICENSE"
   },
   "chinabroadnet": {
    "file": "chinabroadnet.svg",
@@ -7138,16 +7138,16 @@
    "application": "Amap",
    "source": "iconify:arcticons",
    "upstream": "autonavi",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/arcticons/"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "hoyoverse": {
    "file": "hoyoverse.svg",
    "application": "HoYoverse",
    "source": "iconify:thesvg-color",
    "upstream": "mihoyo",
-   "licence": "see the collection licence",
-   "url": "https://icon-sets.iconify.design/thesvg-color/"
+   "licence": "MIT",
+   "url": "https://github.com/glincker/thesvg/blob/main/LICENSE"
   },
   "cctv": {
    "file": "cctv.svg",
@@ -12162,40 +12162,40 @@
    "application": "Bluearchive",
    "source": "iconify:arcticons",
    "upstream": "blue-archive",
-   "licence": "CC BY-SA 4.0",
-   "url": "https://github.com/Donnnno/Arcticons"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "wuthering-waves": {
    "file": "wuthering-waves.svg",
    "application": "Wuthering Waves",
    "source": "iconify:arcticons",
    "upstream": "wuthering-waves",
-   "licence": "CC BY-SA 4.0",
-   "url": "https://github.com/Donnnno/Arcticons"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "honkai-star-rail": {
    "file": "honkai-star-rail.svg",
    "application": "Honkai Star Rail",
    "source": "iconify:arcticons",
    "upstream": "honkai-star-rail",
-   "licence": "CC BY-SA 4.0",
-   "url": "https://github.com/Donnnno/Arcticons"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "honkai-impact-3rd": {
    "file": "honkai-impact-3rd.svg",
    "application": "Honkai Impact 3rd",
    "source": "iconify:arcticons",
    "upstream": "honkai-impact-3rd",
-   "licence": "CC BY-SA 4.0",
-   "url": "https://github.com/Donnnno/Arcticons"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "zenless-zone-zero": {
    "file": "zenless-zone-zero.svg",
    "application": "Zenless Zone Zero",
    "source": "iconify:arcticons",
    "upstream": "zenless-zone-zero",
-   "licence": "CC BY-SA 4.0",
-   "url": "https://github.com/Donnnno/Arcticons"
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   }
  }
 }

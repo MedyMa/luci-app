@@ -84,6 +84,17 @@ expect('M4 ragged domain row (2 fields)',
 	() => write('domain', read('domain').replace(/^zoho\.com\tzoho\t[^\t\n]*\n/m, 'zoho.com\tzoho\n')),
 	'fields, the header declares 3');
 
+expect('M3 a set falls back to the generic licence wording',
+	() => write('manifest', read('manifest').replace(
+		/^(abema\.svg\t[^\t]*\ticonify:arcticons\t[^\t]*\t)[^\t]*\t[^\t]*/m,
+		'$1see the collection licence\thttps://icon-sets.iconify.design/arcticons/')),
+	'arcticons does not state its licence');
+
+expect('M3 a set carries two different licences',
+	() => write('manifest', read('manifest').replace(
+		/^(abema\.svg\t[^\t]*\ticonify:arcticons\t[^\t]*\t)[^\t]*/m, '$1MIT')),
+	'different licences');
+
 let failures = 0;
 for (const c of cases) {
 	const saved = { manifest: read('manifest'), domain: read('domain') };
