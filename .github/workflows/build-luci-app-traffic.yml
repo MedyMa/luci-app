@@ -21,6 +21,8 @@ on:
         required: false
         default: ''
   push:
+    branches:
+      - main
     tags:
       - 'traffic-v*'
     paths:
