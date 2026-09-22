@@ -1423,9 +1423,8 @@ record_sample() {
 
     if [ "$cur_m" -gt 0 ] && [ "$cur_m" != "$m" ]; then
         # The minute that just ended is complete.  It is written even when it
-        # carried nothing: the chart spaces its points by index, so a skipped
-        # idle minute would silently compress the time axis.  A gap in the
-        # series therefore means the collector was not running - nothing else.
+        # carried nothing: the chart distinguishes a quiet zero-rate minute
+        # from a missing sample, which is drawn as a visible gap.
         #
         # Trimming and appending happen in one rewrite and one rename, so the
         # ring is never over its cap and never half-written: a collector killed

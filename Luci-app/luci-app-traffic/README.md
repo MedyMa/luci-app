@@ -355,11 +355,9 @@ separated in name order, which is likewise rank-independent.
 
 * **Hero card** — total carried by clients, down/up rates, and the range
   selector. The range defaults to **one day**, which is the window the total, the
-  donut, the table and the chart all describe. In "since start" the two rates are
-  the live ones, derived from two consecutive samples; over a range they are the
-  averages for that range, which is what a rate means once there is a window to
-  divide by — the tooltip says so, because a dash in that position read as "no
-  traffic" instead of "measured differently here". There is no reset button (see
+  donut, the table and the chart all describe. The two rates are the current
+  live rates in every range; the range changes the totals and chart window, not
+  what the rate means. There is no reset button (see
   [above](#the-history-is-bounded-by-the-collector-not-by-a-button)).
 * **Throughput card** — down/up over time, drawn as plain SVG. Its tier is not a
   second choice: the curve is the selected range at a coarser granularity, so the
@@ -371,8 +369,10 @@ separated in name order, which is likewise rank-independent.
   lengths), and **1 h points for the last week**. The minute
   and hour tiers live in `<datadir>` (`series60.tsv`, `series1h.tsv`) so they
   survive a reboot; the 10 s tier is session state in `/tmp`. A quiet round is
-  recorded as a zero point rather than skipped, so a gap in the chart always means
-  the collector was not running, never merely "nothing happened". A colour key
+  recorded as a zero point rather than skipped. Points use actual timestamps;
+  missing intervals break the curve and its fill. The y axis describes interval
+  averages. A larger one-second peak is marked and quoted separately so it
+  cannot flatten the average-rate curve. A colour key
   names the two curves under the header, because they often differ by orders of
   magnitude and a small upload curve would otherwise read as a stray line.
 * **Donut card and throughput card** — the composition and the curve are the two
@@ -390,7 +390,10 @@ separated in name order, which is likewise rank-independent.
 * **Donut card** — the ten largest applications with a matching legend. It used
   to be a full-width block above the table, and before that a column beside the
   table; as half of the row with the curve, the legend still spreads sideways
-  instead of being squeezed into one narrow column.
+  instead of being squeezed into one narrow column. Named slices below 0.5% of
+  the headline total join **Other attributed traffic**; the complete application
+  rows remain in the table. **Unattributed** stays separate and neutral. All
+  percentages use the headline total.
 * **List card** — application, total and share, received, sent, busiest client,
   device count; 100 rows kept in the DOM, so a page left open all day does not
   grow. The column widths live in a `<colgroup>`: under `table-layout:fixed` those

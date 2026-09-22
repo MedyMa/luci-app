@@ -174,7 +174,7 @@ const sessionDark=(()=>{ const v=Object.create(view); const p=view.render.call(v
   seedRate(v); view.renderLive.call(v,SUMMARY); p.attrs['class']=(p.attrs['class']||'')+' tf-dark'; return p; })();
 
 function write(name,node,theme){
-  const html='<!DOCTYPE html>\n<html lang="zh"><head><meta charset="utf-8">\n<style>\n'+
+  const html='<!DOCTYPE html>\n<html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">\n<style>\n'+
     'html,body{margin:0;padding:0;background:'+(theme==='dark'?'#191d24':'#eef1f5')+';}\n'+
     // no fixed width: a hardcoded 1200px body made the page ignore the window,
     // so it could not be used to check any width but one.  At a 1200px window

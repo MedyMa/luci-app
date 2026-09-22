@@ -654,7 +654,7 @@ function niceTop(peak) {
  * translucent area, drawn by hand so it needs no chart library and inherits the
  * page's colours.  A flat zero reads as a line on the floor rather than as a
  * gap. */
-function makeChart(series) {
+function makeChart(series, interval) {
 	var narrow = (typeof window !== 'undefined') && (window.innerWidth || 0) > 0 &&
 		window.innerWidth <= CHART_NARROW_MAX;
 	var pad = narrow ? CHART_NARROW_PAD : CHART_PAD;
@@ -667,16 +667,21 @@ function makeChart(series) {
 	for (var i = 0; i < n; i++) {
 		if (series[i].down > peak) peak = series[i].down;
 		if (series[i].up > peak) peak = series[i].up;
-		/* A one second peak can be far above every average on the curve, and the
-		 * axis has to hold it or the top gridline would sit below the number the
-		 * note quotes. */
-		if (series[i].pk > peak) peak = series[i].pk;
-		if (series[i].pu > peak) peak = series[i].pu;
 	}
 	var top = niceTop(peak);
 
-	var x = function(k) { return pad.l + (n < 2 ? iw / 2 : (k * iw) / (n - 1)); };
+	var start = series[0].t, span = series[n - 1].t - start;
+	var x = function(k) { return pad.l + (span > 0 ? (series[k].t - start) * iw / span : iw / 2); };
 	var y = function(v) { return pad.t + ih - (Math.max(0, Math.min(1, v / top)) * ih); };
+	var chunks = [], chunk = [];
+	for (i = 0; i < n; i++) {
+		if (chunk.length && interval > 0 &&
+			(series[i].t - series[i - 1].t > interval * 2.5 || series[i].t <= series[i - 1].t)) {
+			chunks.push(chunk); chunk = [];
+		}
+		chunk.push(i);
+	}
+	if (chunk.length) chunks.push(chunk);
 
 	var svg = S('svg', {
 		'class': 'tf-chart-svg', 'viewBox': '0 0 ' + W + ' ' + H, 'role': 'img'
@@ -715,9 +720,12 @@ function makeChart(series) {
 	 * Both colours come from classes: a stroke set as a presentation attribute
 	 * cannot read a custom property, so the curve kept its light-mode blue on a
 	 * dark page while the table under it turned over correctly. */
-	function curve(key) {
+	function curve(key, indexes) {
 		var pts = [], k;
-		for (k = 0; k < n; k++) pts.push({ x: x(k), y: y(series[k][key]) });
+		for (k = 0; k < indexes.length; k++) {
+			var ix = indexes[k];
+			pts.push({ x: x(ix), y: y(series[ix][key]) });
+		}
 		var d = 'M' + pts[0].x.toFixed(1) + ' ' + pts[0].y.toFixed(1);
 
 		if (pts.length >= 3) {
@@ -753,12 +761,17 @@ function makeChart(series) {
 	}
 
 	function path(key) {
-		var d = curve(key);
+		var d = '', area = '';
 		var base = (pad.t + ih).toFixed(1);
 		/* the fill follows the same curve, so the area under it is the area the
-		 * line encloses rather than a second, straighter shape */
-		var area = d + 'L' + x(n - 1).toFixed(1) + ' ' + base +
-			' L' + x(0).toFixed(1) + ' ' + base + ' Z';
+		 * line encloses rather than a second, straighter shape. Each run closes
+		 * independently so a missing interval is not painted as traffic. */
+		chunks.forEach(function(indices) {
+			var segment = curve(key, indices);
+			d += segment;
+			area += segment + 'L' + x(indices[indices.length - 1]).toFixed(1) + ' ' + base +
+				' L' + x(indices[0]).toFixed(1) + ' ' + base + ' Z';
+		});
 		svg.appendChild(S('path', { 'd': area, 'class': 'tf-area-' + key, 'stroke': 'none' }));
 		svg.appendChild(S('path', {
 			'd': d, 'fill': 'none', 'class': 'tf-curve tf-curve-' + key,
@@ -768,6 +781,25 @@ function makeChart(series) {
 
 	path('down');
 	path('up');
+	/* A one-second burst can dwarf the interval average. Keep the measured
+	 * average scale and mark clipped bursts at their containing interval. */
+	var maxima = { pk: null, pu: null };
+	for (i = 0; i < n; i++) {
+		if (!(series[i].pn > 0)) continue;
+		['pk', 'pu'].forEach(function(key) {
+			if (series[i][key] > top && (!maxima[key] || series[i][key] > maxima[key].value))
+				maxima[key] = { index: i, value: series[i][key] };
+		});
+	}
+	[['pk', 'down', -4], ['pu', 'up', 4]].forEach(function(mark) {
+		var found = maxima[mark[0]];
+		if (!found) return;
+		var mx = x(found.index) + mark[2], my = pad.t + 3;
+		svg.appendChild(S('path', {
+			'd': 'M' + mx.toFixed(1) + ' ' + my + 'l-4 7h8z',
+			'class': 'tf-peak-mark tf-peak-mark-' + mark[1]
+		}, [S('title', { 'text': _('Peak (1 s)') + ': ' + fmtRate(found.value) })]));
+	});
 
 	/* first and last timestamp, so the window is unambiguous */
 	svg.appendChild(S('text', { 'x': pad.l, 'y': H - 6, 'class': 'tf-chart-tick',
@@ -1043,7 +1075,7 @@ return view.extend({
 			var span = spans[(s && s.range) || this.seriesRange] || 3600;
 			series = [ { t: now - span, down: 0, up: 0 }, { t: now, down: 0, up: 0 } ];
 		}
-		this.chartEl.appendChild(makeChart(series));
+		this.chartEl.appendChild(makeChart(series, iv));
 
 		if (!pts.length) {
 			var empty = el('div', { 'class': 'tf-chart-empty' }, [ _('No samples yet') ]);
@@ -1745,13 +1777,18 @@ return view.extend({
 		 * difference is what keeps the ring closed by construction when it did
 		 * not: the gap the rest slice was added to remove would come back, only
 		 * wider, if the slices were summed from a list that stops short. */
-		var top = items.slice(0, 10);
+		/* Fractions below half a percent cannot be read as separate sectors at
+		 * 168px. Keep their exact bytes in the attributed remainder and their
+		 * individual rows in the table below. */
+		var top = items.slice(0, 10).filter(function(a) {
+			return total > 0 && a.bytes / total >= 0.005;
+		});
 		var topSum = 0;
 		for (var ti = 0; ti < top.length; ti++) topSum += top[ti].bytes;
 		var restBytes = Math.max(shareTotal - topSum, 0);
 		var unattrBytes = Math.max(total - shareTotal, 0);
 		var ring = top.slice();
-		if (restBytes > 0) ring.push({ name: _('Other listed traffic'), bytes: restBytes, rest: 1 });
+		if (restBytes > 0) ring.push({ name: _('Other attributed traffic'), bytes: restBytes, rest: 1 });
 		/* the marker is what gives this slice its neutral grey: it is not an
 		 * application and must not borrow an application's colour, and the slice
 		 * is drawn from a translated name, so hashing the name would not do */
@@ -2385,6 +2422,8 @@ function injectCss() {
 		 * curve above them stayed the light-mode one. */
 		'.tf-page .tf-curve-down{stroke:var(--tf-down);}',
 		'.tf-page .tf-curve-up{stroke:var(--tf-up);}',
+		'.tf-page .tf-peak-mark-down{fill:var(--tf-down);}',
+		'.tf-page .tf-peak-mark-up{fill:var(--tf-up);}',
 		'.tf-page .tf-area-down{fill:var(--tf-area-down);}',
 		'.tf-page .tf-area-up{fill:var(--tf-area-up);}',
 

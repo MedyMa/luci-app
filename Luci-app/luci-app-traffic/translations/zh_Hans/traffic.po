@@ -363,6 +363,10 @@ msgstr "其余应用"
 msgid "Other listed traffic"
 msgstr "其余已列流量"
 
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Other attributed traffic"
+msgstr "其余已归属流量"
+
 # --- 环形图代表总计，不再是已归属 ---------------------------------------------
 # 环里「没能归属」的那一段：本窗口的总量减去应用/客户端归属能说出名字的部分。
 # 开流卸载或走代理隧道时它很大（实测占 62%），所以它必须有一眼可辨的颜色：中性

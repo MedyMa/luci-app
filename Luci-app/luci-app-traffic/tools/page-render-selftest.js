@@ -129,6 +129,23 @@ chk(count(v.donutEl,'circle')===3, `3 个扇形圆（${count(v.donutEl,'circle')
 chk(seen.wrongNs.length===0, `没有把 SVG 标签建成 HTML 元素（异常 ${seen.wrongNs.join(',')||'无'}）`);
 console.log(`  命名空间统计: SVG=${seen.ns[SVG]||0}, XHTML=${seen.ns[XHTML]||0}`);
 
+console.log('=== 环形图小扇区与未归属分开 ===');
+const vMicro=freshView();
+view.draw.call(vMicro,[
+  {name:'Large',down:12000,up:0,bytes:12000},
+  {name:'Proto',down:7000,up:0,bytes:7000},
+  {name:'Tiny',down:1000,up:0,bytes:1000}
+],{total:1000000,down:1000000,up:0,shareTotal:20000,shareDown:20000,shareUp:0,
+  topText:'—',clientCount:1});
+chk(!vMicro.legendCache.Tiny && !!vMicro.rowCache.Tiny,
+  '不足总量 0.5% 的应用合并到图例，完整表格仍保留原行');
+chk(!!vMicro.legendCache['Other attributed traffic'] &&
+    vMicro.legendCache['Other attributed traffic'].pct.textContent==='0.1%',
+  '小扇区计入其余已归属，分母仍是总流量');
+chk(!!vMicro.legendCache.Unattributed &&
+    vMicro.legendCache.Unattributed.pct.textContent==='98.0%',
+  '未归属与其余已归属分开，百分比可对账');
+
 console.log('=== 空数据时环形图不再是空盒 ===');
 const v2=freshView();
 view.draw.call(v2,[],{total:0,down:0,up:0,topText:'—',clientCount:0});
@@ -180,6 +197,44 @@ const allY=curveDs.concat(areaDs).flatMap(ysOf);
 const bad=allY.filter(y=>y<plotTop-0.6||y>plotBottom+0.6);
 chk(allY.length>100 && bad.length===0,
     `所有 y 都在绘图区内（${allY.length} 个，越界 ${bad.length}${bad.length?'，例如 '+bad.slice(0,3).join(','):''}）`);
+
+console.log('=== 波形时间轴、采样空档与独立峰值 ===');
+const chartPaths=root=>{const a=[];walk(root,n=>{if(n.tag==='path')a.push(n);});return a;};
+const vGap=freshView();
+vGap.seriesRange='1h';
+vGap.series={range:'1h',interval:10,points:[
+  [1000,1000,0],[1010,2000,0],[1100,3000,0],[1110,4000,0]]};
+view.drawSeries.call(vGap);
+const gapCurve=chartPaths(vGap.chartEl).find(n=>n.attrs.class==='tf-curve tf-curve-down');
+const gapArea=chartPaths(vGap.chartEl).find(n=>n.attrs.class==='tf-area-down');
+chk(gapCurve && (gapCurve.attrs.d.match(/M/g)||[]).length===2,
+  '超过采样间隔的空档被断成两段曲线');
+chk(gapArea && (gapArea.attrs.d.match(/Z/g)||[]).length===2,
+  '面积填充也在空档处分段');
+const starts=gapCurve && [...gapCurve.attrs.d.matchAll(/M([\d.]+)/g)].map(x=>Number(x[1]));
+chk(starts && starts[1]-starts[0]>500,
+  `横坐标反映 90 秒真实时间空档（${starts&&starts.join(',')}）`);
+const vPeak=freshView();
+vPeak.seriesRange='1h';
+vPeak.series={range:'1h',interval:10,points:[[1000,1000,0,0,0,0],
+  [1010,1000,0,1000000,0,1],[1020,1000,0,0,0,0]]};
+view.drawSeries.call(vPeak);
+const peakSvg=vPeak.chartEl.children[0];
+const peakTicks=[];walk(peakSvg,n=>{if(n.tag==='text'&&n.attrs.class==='tf-chart-tick')peakTicks.push(n._text);});
+chk(peakTicks.some(t=>/128 B\/s/.test(t)) && !peakTicks.some(t=>/977 KiB\/s/.test(t)),
+  `纵轴依区间平均速率而非 1 秒峰值（${peakTicks.join(', ')}）`);
+let peakMarks=0;walk(peakSvg,n=>{if((n.attrs.class||'').includes('tf-peak-mark'))peakMarks++;});
+chk(peakMarks>0 && vPeak.chartNote.textContent.includes('977 KiB/s'),
+  '1 秒峰值有独立标记且保留准确数值');
+const vManyPeaks=freshView();
+vManyPeaks.seriesRange='1h';
+vManyPeaks.series={range:'1h',interval:10,points:Array.from({length:80},(_,i)=>
+  [1000+i*10,1000,1000,100000+i*1000,120000+i*1000,1])};
+view.drawSeries.call(vManyPeaks);
+let peakMarkCount=0;walk(vManyPeaks.chartEl,n=>{
+  if((n.attrs.class||'').includes('tf-peak-mark'))peakMarkCount++;
+});
+chk(peakMarkCount<=2, `每个方向只标最强的 1 秒峰值（${peakMarkCount} 个标记）`);
 
 console.log('=== 无采样时也画轴（避免空卡片）===');
 const v4=freshView();
@@ -645,7 +700,9 @@ const PICKS=[{name:'YouTube',down:1e6,up:1e5,clients:3,top:'192.168.2.5',top_byt
 const inRows=(v,n)=>!!(v.rowCache||{})[n];
 const rowCls=(v,n)=>((v.rowCache||{})[n]||{tr:{attrs:{}}}).tr.attrs.class||'';
 const vP=mkView({});
-view.renderLive.call(vP, sumOf({apps:PICKS,clients:[{name:'Mac',ip:'192.168.2.21',bytes:1e6}]}));
+view.renderLive.call(vP, sumOf({apps:PICKS,
+  totals:Object.assign({},TOT,{down:1.8e6,up:1.2e5}),
+  clients:[{name:'Mac',ip:'192.168.2.21',bytes:1e6}]}));
 chk(inRows(vP,'QUIC') && inRows(vP,'DNS') && inRows(vP,'YouTube'),
     `协议桶与应用同表列出（表内：${Object.keys(vP.rowCache||{}).join('|')}）`);
 // 名字是 span 里的裸字符串，txt() 只收 _text，所以在 table 上必须用 flat()
