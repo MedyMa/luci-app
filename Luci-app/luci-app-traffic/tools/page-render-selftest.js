@@ -103,7 +103,7 @@ function freshView(){
            legendEl:E('div'), totalEl:E('div'), diagEl:E('div'), diagCardEl:E('div'),
            statusEl:E('div'), chartEl:E('div'), chartNote:E('span'),
            rateDown:E('b'), rateUp:E('b'),
-	           // draw() rewrites the hero caption on every refresh.
+           // draw() rewrites the hero caption on every refresh.
            heroCapEl:E('div') });
 }
 const items=[{name:'YouTube',down:1e6,up:1e5,bytes:11e5,clients:3,top:'192.168.2.5',top_bytes:5e5},

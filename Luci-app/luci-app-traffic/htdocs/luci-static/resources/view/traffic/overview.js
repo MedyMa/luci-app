@@ -1654,8 +1654,8 @@ return view.extend({
 			total: headTotal, down: headDown, up: headUp,
 			totalSource: ifaceRange ? 'iface' : 'totals',
 			/* The attributed sum - the range's own application rows - is what the
-			 * ring's named slices cover and what the protocol block is a share
-			 * of; every percentage the page prints is measured against the
+			 * ring's named slices cover and what the protocol buckets are a
+			 * share of; every percentage the page prints is measured against the
 			 * headline instead, and 未归属 carries the difference.  When the
 			 * archive carries no device counters the two are the same number, the
 			 * difference is zero, and the ring is exactly what it was before. */
