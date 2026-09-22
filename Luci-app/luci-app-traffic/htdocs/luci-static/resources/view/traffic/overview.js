@@ -103,6 +103,67 @@ var BUCKETS = {
 
 function isBucket(name) { return BUCKETS[name] === 1; }
 
+/* Only explicit, reviewed aliases are grouped.  A shared CDN is never treated
+ * as the product whose files it happened to deliver. */
+var SERVICE_ALIASES = {
+	'samsung.com.cn': 'Samsung',
+	'samsungcloudcn.com': 'Samsung',
+	'samsunggalaxy.com.cn': 'Samsung',
+	'aibixby.com.cn': 'Samsung',
+	'srcgsre.com': 'Samsung',
+	'producthunt.com': 'Product Hunt',
+	'brandfetch.io': 'Brandfetch',
+	'trip.com': 'Trip.com',
+	'zohopublic.com.cn': 'Zoho'
+};
+var SERVICE_TARGETS = {};
+Object.keys(SERVICE_ALIASES).forEach(function(k) { SERVICE_TARGETS[SERVICE_ALIASES[k]] = 1; });
+var ICON_ALIASES = {
+	'WangSuKeJi': 'cdn', 'WangXinKeJi': 'cdn', 'z1cdn.com': 'cdn',
+	'Product Hunt': 'producthunt', 'DigiCert': 'certificate',
+	'digicert.com': 'certificate',
+	'Rockstar': 'rockstargames', 'Rockstar Games': 'rockstargames',
+	'Square Enix': 'squareenix', 'Steam Deck': 'steamdeck',
+	'Mihoyo Cn': 'hoyoverse', 'PlayStation 5': 'playstation5',
+	'PlayStation 4': 'playstation4', 'Blue Archive': 'bluearchive',
+	'Heroic Games Launcher': 'heroicgameslauncher', 'Game Science': 'gamescience',
+	'PlayStation Vita': 'playstationvita', 'PlayStation Portable': 'playstationportable',
+	'PlayStation 2': 'playstation2', 'PlayStation 3': 'playstation3',
+	'Roblox Studio': 'robloxstudio', 'YouTube Gaming': 'youtubegaming'
+};
+
+function iconName(name) { return ICON_ALIASES[name] || SERVICE_ALIASES[name] || name; }
+
+function avatarLabel(name) {
+	var m = /^([a-z0-9-]{2,})\.[a-z0-9.-]+$/i.exec(String(name));
+	return m ? m[1].slice(0, 2).toUpperCase() : (name || '?').charAt(0).toUpperCase();
+}
+
+function groupServices(items) {
+	var groups = {}, out = [];
+	items.forEach(function(a) {
+		var service = SERVICE_ALIASES[a.name] || a.name;
+		if (service !== a.name || SERVICE_TARGETS[service]) {
+			if (!groups[service]) {
+				groups[service] = { name: service, down: 0, up: 0, bytes: 0,
+					children: [], clients: undefined, top: '' };
+				out.push(groups[service]);
+			}
+			groups[service].down += a.down;
+			groups[service].up += a.up;
+			groups[service].bytes += a.bytes;
+			groups[service].children.push(a);
+		}
+		else out.push(a);
+	});
+	out = out.map(function(a) {
+		if (a.children && a.children.length === 1 && a.children[0].name === a.name)
+			return a.children[0];
+		return a;
+	});
+	return out.sort(function(a, b) { return b.bytes - a.bytes; });
+}
+
 /* The names the collector marks with "proto":1.  They are not applications and
  * never were: they are the transport or the infrastructure label the attribution
  * falls back to when a flow's destination never got a name, and together they
@@ -193,7 +254,8 @@ function fmtRate(bps) {
  * avatar.  An unreadable SHIPPED index would mean showing no icons at all for a
  * whole page load, far worse than a few 404s, so in that case the URL is tried
  * as before. */
-var shippedIcons = null, cachedIcons = null, shippedIndexFailed = false;
+var shippedIcons = null, cachedIcons = null, shippedIndexFailed = false,
+	iconIndexPromise = null, domainIcons = {};
 
 function loadIndex(url, onFail) {
 	return fetch(url)
@@ -210,18 +272,58 @@ function loadIndex(url, onFail) {
 		.catch(function() { onFail(); return {}; });
 }
 
+function loadDomainIndex() {
+	return fetch(L.resource('traffic/icons/domains.tsv'))
+		.then(function(r) { return r.ok ? r.text() : ''; })
+		.then(function(t) {
+			var m = {};
+			t.split('\n').forEach(function(line) {
+				if (!line || line.charAt(0) === '#') return;
+				var cols = line.trim().split('\t');
+				if (cols.length === 2 && /^[a-z0-9.-]+\.[a-z]{2,}$/.test(cols[0]) &&
+					/^[a-z0-9-]+$/.test(cols[1])) m[cols[0]] = cols[1];
+			});
+			return m;
+		}).catch(function() { return {}; });
+}
+
 function ensureIconIndexes() {
-	if (shippedIcons) return;
-	shippedIcons = {};
-	cachedIcons = {};
-	loadIndex(L.resource('traffic/icons/index.txt'), function() { shippedIndexFailed = true; })
-		.then(function(m) { shippedIcons = m; });
-	loadIndex('/traffic-icons/index.txt', function() {})
-		.then(function(m) { cachedIcons = m; });
+	if (iconIndexPromise) return iconIndexPromise;
+	iconIndexPromise = Promise.all([
+		loadIndex(L.resource('traffic/icons/index.txt'), function() { shippedIndexFailed = true; }),
+		loadIndex('/traffic-icons/index.txt', function() {}),
+		loadDomainIndex()
+	]).then(function(m) { shippedIcons = m[0]; cachedIcons = m[1]; domainIcons = m[2]; });
+	return iconIndexPromise;
 }
 
 function slug(name) {
 	return String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+function iconKey(name) {
+	var key = slug(iconName(name));
+	if ((shippedIcons && shippedIcons[key]) || (cachedIcons && cachedIcons[key])) return key;
+	/* A packaged domain index connects verified brand-owned sites to artwork
+	 * even when the domain and official icon slugs differ.  Longest suffix first
+	 * lets a subdomain use its parent's mark without querying a third party. */
+	var host = String(name).toLowerCase();
+	if (/^[a-z0-9.-]+\.[a-z]{2,}$/.test(host)) {
+		var labels = host.split('.');
+		for (var i = 0; i < labels.length - 1; i++) {
+			var mapped = domainIcons[labels.slice(i).join('.')];
+			if (mapped && shippedIcons && shippedIcons[mapped]) return mapped;
+		}
+	}
+	/* A bare site such as stripe.com can reuse the packaged stripe mark.  Only
+	 * common public suffixes are accepted; arbitrary subdomains and similarly
+	 * named CDN hosts must keep their own identity. */
+	var m = /^([a-z0-9][a-z0-9-]*)\.(?:com|net|org|io|cn|ai|app|dev|co|tv|me|com\.cn|net\.cn|org\.cn)$/i.exec(name);
+	if (m) {
+		var root = slug(m[1]);
+		if ((shippedIcons && shippedIcons[root]) || (cachedIcons && cachedIcons[root])) return root;
+	}
+	return key;
 }
 
 /* Colours are derived from the application name, never from its rank, so an
@@ -258,7 +360,7 @@ function colorFor(name) {
 /* Icon: a bundled SVG if one exists for this name, else a letter avatar in the
  * app's own colour.  Same box size either way, so rows never jump.
  *
- * There are two places an icon can come from: the ~700 shipped inside the
+ * There are two places an icon can come from: the SVGs shipped inside the
  * package, and a cache the router may have filled at runtime.  The packaged one
  * wins; the cache is only consulted when it is missing, and the letter avatar
  * stays when neither has it.  Nothing here reaches the network - a page must not
@@ -271,21 +373,23 @@ function makeIcon(name, color) {
 	var box = E('span', {
 		'class': 'tf-icon',
 		'style': 'background:' + (color || colorFor(name))
-	}, [ E('span', { 'class': 'tf-icon-letter' }, [ (name || '?').charAt(0).toUpperCase() ]) ]);
+	}, [ E('span', { 'class': 'tf-icon-letter' }, [ avatarLabel(name) ]) ]);
 
+	function loadImage() {
 	var tries = [];
 	/* ask only for what an index says exists; if the shipped index could not be
 	 * read, fall back to asking, because a failed index must not cost the whole
 	 * page its icons */
-	if (shippedIndexFailed || !shippedIcons || shippedIcons[slug(name)])
-		tries.push(L.resource('traffic/icons/' + slug(name) + '.svg'));
-	if (cachedIcons && cachedIcons[slug(name)])
-		tries.push('/traffic-icons/' + slug(name) + '.svg');
+	var key = iconKey(name);
+	if (shippedIndexFailed || !shippedIcons || shippedIcons[key])
+		tries.push(L.resource('traffic/icons/' + key + '.svg'));
+	if (cachedIcons && cachedIcons[key])
+		tries.push('/traffic-icons/' + key + '.svg');
 	/* Nothing is known to exist.  Do not create an <img> at all: an empty src
 	 * makes the browser request the page itself, which is a worse request to
 	 * emit than the one this was meant to avoid.  The letter avatar above is
 	 * already the right answer. */
-	if (!tries.length) return box;
+	if (!tries.length) return;
 	var img = new Image();
 	img.onload = function() {
 		box.textContent = '';
@@ -298,6 +402,10 @@ function makeIcon(name, color) {
 		if (tries.length) img.src = tries.shift();
 	};
 	img.src = tries.shift();
+	}
+	if (iconIndexPromise && (!shippedIcons || !cachedIcons))
+		iconIndexPromise.then(loadImage);
+	else loadImage();
 	return box;
 }
 
@@ -449,9 +557,11 @@ function makeRangePicker(options, value, onChange) {
 /* A row is remembered by application name so a refresh can update the numbers
  * in place.  Rebuilding instead would recreate ~12 nodes, a letter avatar and
  * an <img> per row every 5 s - and the <img> would be decoded again each time. */
-function makeRow(name, bucket) {
+function makeRow(name, bucket, child, grouped) {
 	var icon = makeIcon(name);
 	var nameEl = el('span', { 'class': 'tf-app-name', 'title': name }, [ name ]);
+	var toggle = grouped ? el('button', { 'class': 'tf-disclose', 'type': 'button',
+		'aria-label': _('Show domains'), 'aria-expanded': 'false' }, [ '▸' ]) : null;
 	var cells = {
 		total: el('td', { 'class': 'tf-num tf-total' }),
 		down:  el('td', { 'class': 'tf-num tf-down' }),
@@ -463,21 +573,28 @@ function makeRow(name, bucket) {
 			'title': _('the busiest client of each application is recorded for the current run, while the byte columns can cover the selected range') }),
 		clients: el('td', { 'class': 'tf-num' })
 	};
-	var tr = el('tr', { 'class': bucket ? 'tf-isbucket' : '' }, [
+	var tr = el('tr', { 'class': (bucket ? 'tf-isbucket ' : '') +
+		(child ? 'tf-domain-child' : grouped ? 'tf-service-group' : '') }, [
 		/* No tag on a bucket row: "type" said nothing about what kind of thing the
 		 * row was - every reader asked what type of what - and it took room from
 		 * the column the names need.  The glyph, the italic name and the muted
 		 * colour already carry the only distinction that matters: a kind of
 		 * traffic rather than a product. */
-		el('td', { 'class': 'tf-app' }, [ icon, nameEl ]),
+		el('td', { 'class': 'tf-app' }, (toggle ? [ toggle, icon, nameEl ] : [ icon, nameEl ])),
 		cells.total, cells.down, cells.up, cells.top, cells.clients
 	]);
-	return { tr: tr, cells: cells };
+	return { tr: tr, cells: cells, toggle: toggle };
 }
 
-function updateRow(row, a, total) {
+function shareLabel(bytes, total) {
+	var share = total ? (100 * bytes / total) : 0;
+	return share > 0 && share < 0.05 ? '<0.1%' : share.toFixed(1) + '%';
+}
+
+function updateRow(row, a, total, topScope) {
 	var share = total ? (100 * a.bytes / total) : 0;
-	setText(row.cells.total, fmtBytes(a.bytes) + ' (' + share.toFixed(1) + '%)');
+	setText(row.cells.total, fmtBytes(a.bytes) + ' (' + shareLabel(a.bytes, total) + ')');
+	row.cells.total.setAttribute('title', share.toFixed(4) + '% ' + _('of all traffic'));
 	setText(row.cells.down, fmtBytes(a.down));
 	setText(row.cells.up, fmtBytes(a.up));
 	var topText = '—';
@@ -489,8 +606,9 @@ function updateRow(row, a, total) {
 		 * windows is not a share, so above 100% it is left off rather than
 		 * printed - 2458.0% in a 总量 column beside "30 MiB" is what it looked
 		 * like on a real page. */
-		topText = clientName(a.top) + ' ' + fmtBytes(tb) +
-			(a.bytes && tb <= a.bytes ? ' (' + (100 * tb / a.bytes).toFixed(1) + '%)' : '');
+		topText = clientName(a.top) + (topScope === 'range' ? '' :
+			' ' + fmtBytes(tb) + (a.bytes && tb <= a.bytes
+				? ' (' + (100 * tb / a.bytes).toFixed(1) + '%)' : ''));
 	}
 	setText(row.cells.top, topText);
 	setText(row.cells.clients, a.clients === undefined ? '—' : String(a.clients));
@@ -818,7 +936,7 @@ return view.extend({
 						el('col', { 'class': 'tf-col-clients' })
 					]),
 					el('thead', {}, [ el('tr', {}, [
-						el('th', { 'class': 'tf-app' }, [ _('Application name') ]),
+						el('th', { 'class': 'tf-app' }, [ _('Application / site / type') ]),
 						el('th', { 'class': 'tf-num' }, [ _('Total traffic') ]),
 						el('th', { 'class': 'tf-num' }, [ _('Received') ]),
 						el('th', { 'class': 'tf-num' }, [ _('Sent') ]),
@@ -832,7 +950,7 @@ return view.extend({
 						el('th', { 'class': 'tf-top-h',
 							'title': _('the busiest client of each application is recorded for the current run, while the byte columns can cover the selected range') },
 							[ _('Top client (this session)') ]),
-						el('th', { 'class': 'tf-num' }, [ _('Client count') ])
+						this.clientsHead = el('th', { 'class': 'tf-num' }, [ _('Client count') ])
 					]) ]),
 					this.rowsEl
 				])
@@ -1335,13 +1453,14 @@ return view.extend({
 		 * describe.  A figure above 100% is not a share at all: the client bytes
 		 * and the application bytes come from different counters, so the ratio is
 		 * left off rather than printed (it was the source of the 114.7%). */
-		var clientTotal = accTotal;
+		var clientTotal = Number(t.client_bytes) || 0;
 		var topClient = (s.clients && s.clients.length) ? s.clients[0] : null;
 		var topText = '—';
-		if (topClient && clientTotal > 0) {
+		if (topClient) {
 			var tb = Number(topClient.bytes) || 0;
 			topText = (topClient.name || topClient.ip) + ' ' + fmtBytes(tb) +
-				(tb <= clientTotal ? ' (' + (100 * tb / clientTotal).toFixed(1) + '%)' : '');
+				(clientTotal > 0 && tb <= clientTotal
+					? ' (' + (100 * tb / clientTotal).toFixed(1) + '%)' : '');
 		}
 
 		this.draw(items, {
@@ -1352,7 +1471,7 @@ return view.extend({
 			 * above instead, and shows the difference as 未归属.  It is also
 			 * passed split by direction so that row's 下载/上传 columns can be
 			 * filled and the three byte columns all reconcile. */
-			shareTotal: clientTotal, shareDown: accDown, shareUp: accUp,
+			shareTotal: accTotal, shareDown: accDown, shareUp: accUp,
 			topText: topText,
 			/* the grand row's client is the current run's, like the app cells */
 			topScope: 'session',
@@ -1365,6 +1484,11 @@ return view.extend({
 		var bucket = Number(t.bucket) || 0, residual = Number(t.residual) || 0;
 		var named = namedE + namedA;
 		var all = named + bucket + residual;
+		/* Deliberately not shareLabel(): these are the diagnostics' own shares
+		 * (attributed / accounted), where the interesting range is tens of
+		 * percent and "0.0%" is an honest reading.  shareLabel's "<0.1%" is for
+		 * a per-application share, where the table above the legend already
+		 * says "<0.1%" and a "0.0%" underneath would contradict it. */
 		var pct = function(v) { return all ? (100 * v / all).toFixed(1) + '%' : '—'; };
 
 		/* When the per-host nft counters are running they are the honest total:
@@ -1390,7 +1514,7 @@ return view.extend({
 			{ cap: _('Devices'), val: String(Number(t.client_count) || 0) },
 			/* the applications the table is listing: the protocol buckets are not
 			 * applications and no longer sit in that table */
-			{ cap: _('Apps'), val: String(items.filter(function(a) { return !isProto(a); }).length) }
+			{ cap: _('Apps and sites'), val: String(groupServices(items).filter(function(a) { return !isBucket(a.name); }).length) }
 		]);
 
 		/* The two numbers that belong together: what the box carried (the
@@ -1506,12 +1630,11 @@ return view.extend({
 		var headUp = ifaceRange ? ifUp : gu;
 		var headTotal = headDown + headUp;
 
-		/* The clients are summed across the hours the same way the applications
-		 * are, so the two grand-total columns mean here what they mean in the
-		 * session view: the busiest device of the range and how many devices
-		 * moved anything in it.  The per-application columns stay empty on
-		 * purpose - "which client drove this application" is not a question an
-		 * hour's totals can answer, and a guess would be worse than the dash. */
+		/* Client rows are summed by IP across hours.  The grand row can then
+		 * show the busiest device and the number of distinct IPs seen in the
+		 * selected range.  The per-application client column is different: the
+		 * archive has only a count per hour, so it shows that hour's peak count
+		 * with an explicit label rather than claiming a deduplicated range count. */
 		var cl = Object.keys(clAgg).map(function(ip) {
 			return { ip: ip, bytes: clAgg[ip] };
 		}).sort(function(a, b) { return b.bytes - a.bytes; });
@@ -1567,19 +1690,25 @@ return view.extend({
 			{ cap: _('Browser clients'), val: fmtBytes(total) },
 			{ cap: _('Router and tunnel'), val: fmtBytes(rt) },
 			{ cap: _('Devices'), val: String(cl.length) },
-			{ cap: _('Apps'), val: String(items.filter(function(a) { return !isProto(a); }).length) }
+			{ cap: _('Apps and sites'), val: String(groupServices(items).filter(function(a) { return !isBucket(a.name); }).length) }
 		]);
 		/* nothing to add here: every note this view has is already in the strip */
 		this.drawDiag([]);
 	},
 
 	draw: function(items, stats) {
-		/* Protocol buckets are not applications.  They are the transport or the
-		 * infrastructure label the attribution falls back to, and listed among
-		 * the applications they read as if an app called "QUIC" had been used.
-		 * They keep their share of the ring above, where the composition of the
-		 * whole total is the point; the table below lists applications, so
-		 * they are drawn in their own block under it. */
+		this.lastDrawItems = items;
+		this.lastDrawStats = stats;
+		if (this.clientsHead) {
+			setText(this.clientsHead, stats.topScope === 'range' ? _('Peak clients/hour') : _('Client count'));
+			this.clientsHead.setAttribute('title', stats.topScope === 'range'
+				? _('maximum number of clients seen in any single hour of this range')
+				: _('number of clients seen for this application in the current session'));
+		}
+		items = groupServices(items);
+		/* Protocol buckets are identified separately for count and styling.
+		 * isProto currently leaves them in the ranked table so the table and
+		 * ring describe the same traffic; isBucket marks their type. */
 		var apps = items.filter(function(a) { return !isProto(a); });
 		var protos = items.filter(isProto);
 
@@ -1622,7 +1751,7 @@ return view.extend({
 		var restBytes = Math.max(shareTotal - topSum, 0);
 		var unattrBytes = Math.max(total - shareTotal, 0);
 		var ring = top.slice();
-		if (restBytes > 0) ring.push({ name: _('Other apps'), bytes: restBytes, rest: 1 });
+		if (restBytes > 0) ring.push({ name: _('Other listed traffic'), bytes: restBytes, rest: 1 });
 		/* the marker is what gives this slice its neutral grey: it is not an
 		 * application and must not borrow an application's colour, and the slice
 		 * is drawn from a translated name, so hashing the name would not do */
@@ -1668,10 +1797,10 @@ return view.extend({
 			legendSeen[a.name] = 1;
 			var lr = self.legendCache[a.name];
 			if (!lr) {
-				lr = makeLegendRow(a.name, isProto(a), a.unattr ? UNATTR_COLOR : null);
+				lr = makeLegendRow(a.name, isBucket(a.name), a.unattr ? UNATTR_COLOR : null);
 				self.legendCache[a.name] = lr;
 			}
-			setText(lr.pct, (total ? (100 * a.bytes / total) : 0).toFixed(1) + '%');
+			setText(lr.pct, shareLabel(a.bytes, total));
 		});
 		Object.keys(this.legendCache).forEach(function(n) {
 			if (legendSeen[n]) return;
@@ -1730,25 +1859,53 @@ return view.extend({
 			: _('the busiest client overall, for the current run'));
 		setText(this.grandRow.cells.clients, stats.clientCount === undefined ? '—' : String(stats.clientCount));
 
-		/* the 300 heaviest applications, each row created once and then only
+		/* the 300 heaviest named rows, each row created once and then only
 		 * nudged: this is what keeps a page open for hours flat in memory.  The
 		 * ceiling matches the number the collector publishes (top_apps), so the
 		 * session view is never showing fewer rows than the page is willing to
 		 * draw; the ranged view builds its own rows from the archive, which
-		 * keeps every application it saw.  Only applications: the protocol
-		 * buckets are not rows of this table. */
+		 * keeps every name it saw.  Protocol buckets remain visible here with
+		 * their type mark so the ranked list reconciles with the ring. */
 		var wanted = apps.slice(0, 300);
 		var seen = {}, order = [];
 		wanted.forEach(function(a) {
 			seen[a.name] = 1;
 			order.push(a.name);
 			var row = self.rowCache[a.name];
+			/* The same service can gain or lose domain children between polls.
+			 * Rebuild only when its disclosure structure changes. */
+			if (row && !!row.toggle !== !!a.children) {
+				if (row.tr.parentNode) row.tr.parentNode.removeChild(row.tr);
+				row = null;
+				self.orderSig = null;
+			}
 			if (!row) {
-				row = makeRow(a.name, isBucket(a.name));
+				row = makeRow(a.name, isBucket(a.name), false, !!a.children);
 				self.rowCache[a.name] = row;
 				self.rowsEl.appendChild(row.tr);
+				if (row.toggle) row.toggle.addEventListener('click', function() {
+					if (!self.expandedServices) self.expandedServices = {};
+					self.expandedServices[a.name] = !self.expandedServices[a.name];
+					self.draw(self.lastDrawItems, self.lastDrawStats);
+				});
 			}
-			updateRow(row, a, total);
+			updateRow(row, a, total, stats.topScope);
+			if (row.toggle) row.toggle.setAttribute('aria-expanded',
+				self.expandedServices && self.expandedServices[a.name] ? 'true' : 'false');
+			if (a.children && self.expandedServices && self.expandedServices[a.name]) {
+				a.children.forEach(function(child) {
+					var key = 'domain:' + a.name + ':' + child.name;
+					seen[key] = 1;
+					order.push(key);
+					var childRow = self.rowCache[key];
+					if (!childRow) {
+						childRow = makeRow(child.name, false, true, false);
+						self.rowCache[key] = childRow;
+						self.rowsEl.appendChild(childRow.tr);
+					}
+					updateRow(childRow, child, total, stats.topScope);
+				});
+			}
 		});
 		Object.keys(this.rowCache).forEach(function(n) {
 			if (seen[n]) return;
@@ -1816,7 +1973,7 @@ return view.extend({
 			 * not contradict its own total cell, so 上传 carries that difference */
 			if (uDown + uUp !== unattrBytes) uUp = Math.max(unattrBytes - uDown, 0);
 			setText(this.unattrRow.cells.total, fmtBytes(unattrBytes) + ' (' +
-				(total ? (100 * unattrBytes / total).toFixed(1) : '0.0') + '%)');
+				shareLabel(unattrBytes, total) + ')');
 			setText(this.unattrRow.cells.down, fmtBytes(uDown));
 			setText(this.unattrRow.cells.up, fmtBytes(uUp));
 			setText(this.unattrRow.cells.top, '—');
@@ -1861,7 +2018,7 @@ return view.extend({
 				self.protoRows[a.name] = r;
 			}
 			setText(r.bytes, fmtBytes(a.bytes) + ' (' +
-				(total ? (100 * a.bytes / total).toFixed(1) : '0.0') + '%)');
+				shareLabel(a.bytes, total) + ')');
 			self.protoListEl.appendChild(r.row);
 		});
 		Object.keys(this.protoRows).forEach(function(n) {
@@ -2330,6 +2487,12 @@ function injectCss() {
 		 * width truncated it while the byte columns sat half empty, which is
 		 * what "NetEase…" next to a wide 总量 column was. */
 		'.tf-page .tf-app-name{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+		'.tf-page .tf-disclose{width:16px;height:22px;flex:0 0 16px;padding:0;border:0;',
+		'background:transparent;color:var(--tf-dim);cursor:pointer;font-size:1rem;line-height:1;}',
+		'.tf-page .tf-disclose[aria-expanded="true"]{transform:rotate(90deg);}',
+		'.tf-page .tf-disclose:focus-visible{outline:2px solid var(--tf-down);border-radius:3px;}',
+		'.tf-page .tf-domain-child>.tf-app{padding-left:2rem;}',
+		'.tf-page .tf-domain-child .tf-app-name{color:var(--tf-dim);font-size:.82rem;}',
 		/* a bucket is a kind of traffic, not a product: muted name plus a tag,
 		 * so it never reads as if it were an application */
 		'.tf-page .tf-isbucket .tf-app-name{color:var(--tf-dim);font-style:italic;}',

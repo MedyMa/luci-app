@@ -77,6 +77,7 @@ resolve_now() {
 get_hourly() {
 	local hours="$1" f list sel
 	case "$hours" in ''|*[!0-9]*) hours=24 ;; esac
+	[ "$hours" -gt 0 ] || hours=24
 	f="$(datadir)/hourly.tsv"
 	if [ ! -s "$f" ]; then
 		# No archive yet: a fresh install, or the first hour after a reflash.
@@ -88,7 +89,7 @@ get_hourly() {
 	fi
 	list=$(awk -F'\t' '{ if (!seen[$1]++) print $1 }' "$f" | sort | tail -n "$hours")
 	sel=$(printf '%s ' $list)
-	awk -F'\t' -v sel="$sel" -v cur="$STATE_DIR/cur.apps" \
+	awk -F'\t' -v sel="$sel" -v limit="$hours" -v cur="$STATE_DIR/cur.apps" \
 		-v curc="$STATE_DIR/cur.clients" -v curr="$STATE_DIR/cur.router" \
 		-v curi="$STATE_DIR/cur.iface" -v curh="$STATE_DIR/cur.hour" '
 		# Names come from the generated catalogue, so a quote is the only thing
@@ -166,7 +167,12 @@ get_hourly() {
 		END {
 			printf "{\"hours\":["
 			cnt = 0
-			for (i = 1; i <= n; i++) {
+			# The in-progress hour is one of the requested hours.  If the
+			# archive already supplied `limit` buckets, drop its oldest one;
+			# otherwise a 24-hour selection quietly includes 25 buckets.
+			hascur = curhour != "" && (nca > 0 || ncc > 0 || crt > 0 || (cifok && cifd + cifu > 0))
+			first = hascur && n >= limit ? 2 : 1
+			for (i = first; i <= n; i++) {
 				h = order[i]
 				if (cnt++) printf ","
 				printf "{\"hour\":\"%s\",\"apps\":[", esc(h)
@@ -208,7 +214,7 @@ get_hourly() {
 			# its row under the hour the roll ran in, so a row with this label
 			# can still be the previous hour bytes, and dropping the published
 			# hour in that case would lose the current one.
-			if (curhour != "" && (nca > 0 || crt > 0)) {
+			if (hascur) {
 				if (cnt++) printf ","
 				printf "{\"hour\":\"%s\",\"apps\":[", esc(curhour)
 				for (i = 1; i <= nca; i++) {

@@ -284,6 +284,10 @@ function prettyName(slugName) {
  * own (a more specific exact-host rule, such as Adobe's activation hosts, still
  * wins at lookup time). */
 const CURATED = [
+	/* Certificate infrastructure must keep its own owner even when a smaller
+	 * unrelated upstream rule set happens to include the shared host. */
+	['DigiCert', 'digicert.com'],
+	['Product Hunt', 'producthunt.com'], ['Brandfetch', 'brandfetch.io'],
 	/* --- China: shopping, payments, services */
 	['Taobao', 'taobao.com'], ['Tmall', 'tmall.com'], ['Alipay', 'alipay.com'],
 	['Alibaba', 'alibaba.com'], ['AliCDN', 'alicdn.com'], ['Alibaba Cloud', 'aliyuncs.com'],
@@ -547,6 +551,13 @@ const CURATED = [
 	['Roblox', 'rbxcdn.com'], ['Minecraft', 'minecraft.net'], ['Mojang', 'mojang.com'],
 	['HoYoverse', 'hoyoverse.com'], ['HoYoverse', 'mihoyo.com'], ['HoYoverse', 'hoyolab.com'],
 	['Genshin Impact', 'genshinimpact.com'], ['Garena', 'garena.com'], ['Garena', 'garenanow.com'],
+	/* Product-specific official hosts; shared publisher/CDN domains keep the
+	 * publisher identity because those hosts cannot identify a single game. */
+	['Honkai Star Rail', 'hsr.hoyoverse.com', 'H'],
+	['Zenless Zone Zero', 'zenless.hoyoverse.com', 'H'],
+	['Honkai Impact 3rd', 'honkaiimpact3.hoyoverse.com', 'H'],
+	['Wuthering Waves', 'mc.kurogames.com', 'H'],
+	['Wuthering Waves', 'wutheringwaves.kurogames.com', 'H'],
 	['Supercell', 'supercell.com'], ['King', 'king.com'], ['Zynga', 'zynga.com'],
 	['TapTap', 'taptap.com'], ['TapTap', 'taptap.io'], ['APKPure', 'apkpure.com'],
 	['APKMirror', 'apkmirror.com'], ['F-Droid', 'f-droid.org'], ['Aptoide', 'aptoide.com'],
@@ -917,25 +928,14 @@ function iconCandidates(name, sourceSlug) {
 	return out;
 }
 
-/** Upstream often spells a brand differently than we do: "Sina" is sinaweibo,
- *  "NetEase" is neteasecloudmusic, "Disney+" is disney-plus.  Rather than
- *  curating hundreds of aliases, allow a prefix or substring match - prefix
- *  first, then shortest, and never for very short names where the match would
- *  be meaningless. */
+/** Only spelling punctuation may differ. Prefix/substring matching confused
+ * BlueDriver with Blued and Stoat with STO Express; ownership needs an alias. */
 function fuzzyIconNames(indexes, cand,   ) {
+	const norm = s => s.toLowerCase().replace(/[^a-z0-9]/g, '');
 	const hits = [];
-	if (cand.length >= 3) {
-		indexes.forEach(({ set, rank }) => {
-			for (const n of set) if (n.startsWith(cand)) hits.push({ n, rank, exact: 1 });
-		});
-	}
-	if (cand.length >= 4 && hits.length === 0) {
-		indexes.forEach(({ set, rank }) => {
-			for (const n of set) if (n.includes(cand)) hits.push({ n, rank, exact: 0 });
-		});
-	}
-	hits.sort((a, b) => b.exact - a.exact || a.n.length - b.n.length || a.rank - b.rank);
-	return hits.slice(0, 4).map(h => h.n);
+	for (const {set} of indexes) for (const name of set)
+		if (norm(name) === norm(cand)) hits.push(name);
+	return [...new Set(hits)].slice(0, 4);
 }
 
 async function buildIcons(appNames, glyphNames) {
@@ -958,7 +958,7 @@ async function buildIcons(appNames, glyphNames) {
 		for (const line of fs.readFileSync(localSidecar, 'utf8').split('\n')) {
 			if (!line || line.startsWith('#')) continue;
 			const [file, , set, upstream] = line.split('\t');
-			if (file && set) localSource.set(file, { set, upstream });
+			if (file && set) localSource.set(file, { set, upstream, row: line });
 		}
 	}
 
@@ -1252,7 +1252,7 @@ async function buildIcons(appNames, glyphNames) {
 				const prefix = String(full).slice(0, cut);
 				const name = String(full).slice(cut + 1);
 				const got = norm(name);
-				if (got === want || (want.length >= 5 && (got.includes(want) || want.includes(got))))
+				if (got === want)
 					return { prefix, name };
 			}
 		} catch (e) { /* a failed search is just a miss */ }
@@ -1372,6 +1372,13 @@ async function buildIcons(appNames, glyphNames) {
 	const upstream = new Set(['dashboard-icons', 'iconify:logos', 'selfhst/icons', 'simple-icons',
 		...ICONIFY_PREFIXES.map(p => 'iconify:' + p)]);
 	for (const e of saved) {
+		const pinned = localSource.get(e.file);
+		if (pinned && pinned.row.split('\t').length >= 7) {
+			const cols = pinned.row.split('\t');
+			cols[1] = e.name;
+			rows.push(cols.join('\t'));
+			continue;
+		}
 		const [lic, url] = setInfo(e.src);
 		let note = '';
 		if (e.src && upstream.has(e.src)) {

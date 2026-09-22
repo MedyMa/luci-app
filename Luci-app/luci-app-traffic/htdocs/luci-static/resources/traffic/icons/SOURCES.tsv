@@ -503,7 +503,7 @@ steam.svg	Steam	dashboard-icons	steam	see upstream LICENSE	https://github.com/ho
 steam-china.svg	Steam China	dashboard-icons	steam	see upstream LICENSE	https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE	
 starbucks.svg	Starbucks	simple-icons	starbucks	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
 spacex.svg	Spacex	simple-icons	spacex	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
-sto-express.svg	Sto Express	dashboard-icons	stoat	see upstream LICENSE	https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE	
+sto-express.svg	Sto Express	local:neutral	sto-express	CC0-1.0	tools/repair-icon-sources.js	neutral placeholder; not a brand logo
 stripe.svg	Stripe	dashboard-icons	stripe	see upstream LICENSE	https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE	
 swag.svg	Swag	dashboard-icons	swagger	see upstream LICENSE	https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE	
 stackexchange.svg	Stackexchange	simple-icons	stackexchange	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
@@ -740,51 +740,51 @@ government.svg	government	lucide-static	building-2	ISC	https://github.com/lucide
 android-app-download.svg	android-app-download	lucide-static	smartphone	ISC	https://github.com/lucide-icons/lucide/blob/main/LICENSE	
 iptv.svg	iptv	lucide-static	tv	ISC	https://github.com/lucide-icons/lucide/blob/main/LICENSE	
 360.svg	360	local	local	supplied by the user, shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
-abema.svg		unknown		carried over; provenance not recorded		
-alphabet.svg		unknown		carried over; provenance not recorded		
-antutu.svg		unknown		carried over; provenance not recorded		
-blizzard.svg		unknown		carried over; provenance not recorded		
-bloomberg.svg		unknown		carried over; provenance not recorded		
-blued.svg		unknown		carried over; provenance not recorded		
-boomerang.svg		unknown		carried over; provenance not recorded		
-cainiao.svg		unknown		carried over; provenance not recorded		
-cambridge.svg		unknown		carried over; provenance not recorded		
-camera360.svg		unknown		carried over; provenance not recorded		
-cdek.svg		unknown		carried over; provenance not recorded		
-cerebras.svg		unknown		carried over; provenance not recorded		
-chaoxing.svg		unknown		carried over; provenance not recorded		
-civitai.svg		unknown		carried over; provenance not recorded		
-classic.svg		unknown		carried over; provenance not recorded		
-connectivity-check.svg		unknown		carried over; provenance not recorded		
-coolapk.svg		unknown		carried over; provenance not recorded		
-coupang.svg		unknown		carried over; provenance not recorded		
-craigslist.svg		unknown		carried over; provenance not recorded		
-damai.svg		unknown		carried over; provenance not recorded		
-dcard.svg		unknown		carried over; provenance not recorded		
-dewu.svg		unknown		carried over; provenance not recorded		
-didi.svg		unknown		carried over; provenance not recorded		
-dingtalk.svg		unknown		carried over; provenance not recorded		
-divar.svg		unknown		carried over; provenance not recorded		
-doubao.svg		unknown		carried over; provenance not recorded		
-dw.svg		unknown		carried over; provenance not recorded		
-dyndns.svg		unknown		carried over; provenance not recorded		
-economist.svg		unknown		carried over; provenance not recorded		
-embedly.svg		unknown		carried over; provenance not recorded		
-eneba.svg		unknown		carried over; provenance not recorded		
-epoch-media.svg		unknown		carried over; provenance not recorded		
-espn.svg		unknown		carried over; provenance not recorded		
-familymart.svg		unknown		carried over; provenance not recorded		
-findmy.svg		unknown		carried over; provenance not recorded		
-finish.svg		unknown		carried over; provenance not recorded		
-flyio.svg		unknown		carried over; provenance not recorded		
-forza.svg		unknown		carried over; provenance not recorded		
-friday.svg		unknown		carried over; provenance not recorded		
-gaijin.svg		unknown		carried over; provenance not recorded		
-garena.svg		unknown		carried over; provenance not recorded		
-geely.svg		unknown		carried over; provenance not recorded		
-geetest.svg		unknown		carried over; provenance not recorded		
-genshin-impact.svg		unknown		carried over; provenance not recorded		
-giffgaff.svg		unknown		carried over; provenance not recorded		
+abema.svg		iconify:arcticons	abema-tv	CC BY-SA 4.0	https://icon-sets.iconify.design/arcticons/abema-tv/	
+alphabet.svg		local:neutral	alphabet	CC0-1.0	tools/repair-icon-sources.js	neutral placeholder; not a brand logo
+antutu.svg		iconify:arcticons	antutu-3dbench	CC BY-SA 4.0	https://icon-sets.iconify.design/arcticons/antutu-3dbench/	
+blizzard.svg		iconify:arcticons	blizzard-authenticator	CC BY-SA 4.0	https://icon-sets.iconify.design/arcticons/blizzard-authenticator/	
+bloomberg.svg		local:neutral	bloomberg	CC0-1.0	tools/repair-icon-sources.js	neutral placeholder; not a brand logo
+blued.svg		local:neutral	blued	CC0-1.0	tools/repair-icon-sources.js	neutral placeholder; not a brand logo
+boomerang.svg		local:neutral	boomerang	CC0-1.0	tools/repair-icon-sources.js	neutral placeholder; not a brand logo
+cainiao.svg		iconify:arcticons	cainiao-wireless	CC BY-SA 4.0	https://icon-sets.iconify.design/arcticons/cainiao-wireless/	
+cambridge.svg		local:neutral	cambridge	CC0-1.0	tools/repair-icon-sources.js	neutral placeholder; not a brand logo
+camera360.svg		iconify:arcticons	camera360	CC BY-SA 4.0	https://icon-sets.iconify.design/arcticons/camera360/	
+cdek.svg		iconify:arcticons	cdek	CC BY-SA 4.0	https://icon-sets.iconify.design/arcticons/cdek/	
+cerebras.svg		local:neutral	cerebras	CC0-1.0	tools/repair-icon-sources.js	neutral placeholder; not a brand logo
+chaoxing.svg		iconify:arcticons	chaoxing-mobile	CC BY-SA 4.0	https://icon-sets.iconify.design/arcticons/chaoxing-mobile/	
+civitai.svg		local:neutral	civitai	CC0-1.0	tools/repair-icon-sources.js	neutral placeholder; not a brand logo
+classic.svg		local:neutral	classic	CC0-1.0	tools/repair-icon-sources.js	neutral placeholder; not a brand logo
+connectivity-check.svg		local:neutral	connectivity-check	CC0-1.0	tools/repair-icon-sources.js	neutral placeholder; not a brand logo
+coolapk.svg		iconify:arcticons	coolapk	CC BY-SA 4.0	https://icon-sets.iconify.design/arcticons/coolapk/	
+coupang.svg		iconify:arcticons	coupang	CC BY-SA 4.0	https://icon-sets.iconify.design/arcticons/coupang/	
+craigslist.svg		iconify:arcticons	craigslist	CC BY-SA 4.0	https://icon-sets.iconify.design/arcticons/craigslist/	
+damai.svg		iconify:arcticons	damaiapp	CC BY-SA 4.0	https://icon-sets.iconify.design/arcticons/damaiapp/	
+dcard.svg		local:neutral	dcard	CC0-1.0	tools/repair-icon-sources.js	neutral placeholder; not a brand logo
+dewu.svg		iconify:arcticons	dewu	CC BY-SA 4.0	https://icon-sets.iconify.design/arcticons/dewu/	
+didi.svg		iconify:arcticons	didi	CC BY-SA 4.0	https://icon-sets.iconify.design/arcticons/didi/	
+dingtalk.svg		iconify:arcticons	dingtalk	CC BY-SA 4.0	https://icon-sets.iconify.design/arcticons/dingtalk/	
+divar.svg		iconify:arcticons	divar	CC BY-SA 4.0	https://icon-sets.iconify.design/arcticons/divar/	
+doubao.svg		local:neutral	doubao	CC0-1.0	tools/repair-icon-sources.js	neutral placeholder; not a brand logo
+dw.svg		iconify:arcticons	dw	CC BY-SA 4.0	https://icon-sets.iconify.design/arcticons/dw/	
+dyndns.svg		iconify:logos	dyndns	see the collection licence	https://icon-sets.iconify.design/logos/dyndns/	
+economist.svg		iconify:arcticons	economist	CC BY-SA 4.0	https://icon-sets.iconify.design/arcticons/economist/	
+embedly.svg		iconify:logos	embedly	see the collection licence	https://icon-sets.iconify.design/logos/embedly/	
+eneba.svg		iconify:arcticons	eneba	CC BY-SA 4.0	https://icon-sets.iconify.design/arcticons/eneba/	
+epoch-media.svg		local:neutral	epoch-media	CC0-1.0	tools/repair-icon-sources.js	neutral placeholder; not a brand logo
+espn.svg		iconify:arcticons	espn	CC BY-SA 4.0	https://icon-sets.iconify.design/arcticons/espn/	
+familymart.svg		iconify:arcticons	familymart	CC BY-SA 4.0	https://icon-sets.iconify.design/arcticons/familymart/	
+findmy.svg		local:neutral	findmy	CC0-1.0	tools/repair-icon-sources.js	neutral placeholder; not a brand logo
+finish.svg		local:neutral	finish	CC0-1.0	tools/repair-icon-sources.js	neutral placeholder; not a brand logo
+flyio.svg		local:neutral	flyio	CC0-1.0	tools/repair-icon-sources.js	neutral placeholder; not a brand logo
+forza.svg		iconify:arcticons	forza	CC BY-SA 4.0	https://icon-sets.iconify.design/arcticons/forza/	
+friday.svg		local:neutral	friday	CC0-1.0	tools/repair-icon-sources.js	neutral placeholder; not a brand logo
+gaijin.svg		iconify:arcticons	gaijin-pass	CC BY-SA 4.0	https://icon-sets.iconify.design/arcticons/gaijin-pass/	
+garena.svg		iconify:arcticons	garena	CC BY-SA 4.0	https://icon-sets.iconify.design/arcticons/garena/	
+geely.svg		local:neutral	geely	CC0-1.0	tools/repair-icon-sources.js	neutral placeholder; not a brand logo
+geetest.svg		iconify:logos	geetest	see the collection licence	https://icon-sets.iconify.design/logos/geetest/	
+genshin-impact.svg		iconify:arcticons	genshin-impact	CC BY-SA 4.0	https://icon-sets.iconify.design/arcticons/genshin-impact/	
+giffgaff.svg		iconify:arcticons	giffgaff	CC BY-SA 4.0	https://icon-sets.iconify.design/arcticons/giffgaff/	
 globo.svg	Globo	iconify:thesvg-color	thesvg-color:globo-tv	see the collection licence	https://icon-sets.iconify.design/thesvg-color/	
 glyphs.svg	Glyphs	iconify:material-symbols	material-symbols:glyphs	see the collection licence	https://icon-sets.iconify.design/material-symbols/	
 groq.svg	Groq	iconify:thesvg-color	thesvg-color:groq	see the collection licence	https://icon-sets.iconify.design/thesvg-color/	
@@ -900,3 +900,606 @@ pptv.svg	PPTV	local	local	supplied by the user, shipped in this repository (mark
 ruanmei.svg	RuanMei	local	local	supplied by the user, shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
 acfun.svg	AcFun	local	local	supplied by the user, shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
 sohu.svg	Sohu	local	local	supplied by the user, shipped in this repository (marks of their owners)	tools/icons-local in the luci-app-traffic source tree	
+producthunt.svg	Product Hunt	simple-icons	producthunt	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+brandfetch.svg	Brandfetch	simple-icons	brandfetch	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md
+2k.svg	2K	simple-icons	2k	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+rockstargames.svg	Rockstar Games	simple-icons	rockstargames	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+wegame.svg	WeGame	simple-icons	wegame	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+eslgaming.svg	ESLGaming	simple-icons	eslgaming	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+heroicgameslauncher.svg	Heroic Games Launcher	simple-icons	heroicgameslauncher	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+gameloft.svg	Gameloft	simple-icons	gameloft	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+boardgamegeek.svg	BoardGameGeek	simple-icons	boardgamegeek	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+playstationvita.svg	PlayStation Vita	simple-icons	playstationvita	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+sega.svg	Sega	simple-icons	sega	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+squareenix.svg	Square Enix	simple-icons	squareenix	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+gamescience.svg	Game Science	simple-icons	gamescience	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+steamworks.svg	Steamworks	simple-icons	steamworks	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+gamejolt.svg	Game Jolt	simple-icons	gamejolt	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+gamebanana.svg	GameBanana	simple-icons	gamebanana	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+pcgamingwiki.svg	PCGamingWiki	simple-icons	pcgamingwiki	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+robloxstudio.svg	Roblox Studio	simple-icons	robloxstudio	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+playstation2.svg	PlayStation 2	simple-icons	playstation2	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+redcandlegames.svg	Red Candle Games	simple-icons	redcandlegames	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+steamdeck.svg	Steam Deck	simple-icons	steamdeck	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+playstation3.svg	PlayStation 3	simple-icons	playstation3	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+steamdb.svg	SteamDB	simple-icons	steamdb	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+youtubegaming.svg	YouTube Gaming	simple-icons	youtubegaming	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+playstation4.svg	PlayStation 4	simple-icons	playstation4	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+atari.svg	Atari	simple-icons	atari	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+playstation5.svg	PlayStation 5	simple-icons	playstation5	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+playstationportable.svg	PlayStation Portable	simple-icons	playstationportable	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+rubygems.svg	RubyGems	simple-icons	rubygems	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+twinmotion.svg	Twinmotion	simple-icons	twinmotion	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+uservoice.svg	UserVoice	simple-icons	uservoice	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+qualtrics.svg	Qualtrics	simple-icons	qualtrics	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+splunk.svg	Splunk	simple-icons	splunk	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+linuxfoundation.svg	Linux Foundation	simple-icons	linuxfoundation	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+v8.svg	V8	simple-icons	v8	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+sketchfab.svg	Sketchfab	simple-icons	sketchfab	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+nba.svg	NBA	simple-icons	nba	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+fitbit.svg	Fitbit	simple-icons	fitbit	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+scopus.svg	Scopus	simple-icons	scopus	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+smartthings.svg	SmartThings	simple-icons	smartthings	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+cinny.svg	Cinny	simple-icons	cinny	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+notebooklm.svg	NotebookLM	simple-icons	notebooklm	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+atomgit.svg	AtomGit	simple-icons	atomgit	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+element.svg	Element	simple-icons	element	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+proton.svg	Proton	simple-icons	proton	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+netdata.svg	Netdata	simple-icons	netdata	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+deepl.svg	DeepL	simple-icons	deepl	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+shazam.svg	Shazam	simple-icons	shazam	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+dependabot.svg	Dependabot	simple-icons	dependabot	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+groupme.svg	GroupMe	simple-icons	groupme	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+spring.svg	Spring	simple-icons	spring	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+beatsbydre.svg	Beats by Dre	simple-icons	beatsbydre	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+qwen.svg	QWen	simple-icons	qwen	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+bnbchain.svg	BNB Chain	simple-icons	bnbchain	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+truenas.svg	TrueNAS	simple-icons	truenas	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+boosty.svg	Boosty	simple-icons	boosty	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+newrelic.svg	New Relic	simple-icons	newrelic	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+flathub.svg	Flathub	simple-icons	flathub	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+waze.svg	Waze	simple-icons	waze	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+microbit.svg	micro:bit	simple-icons	microbit	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+virtualbox.svg	VirtualBox	simple-icons	virtualbox	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+leagueoflegends.svg	League of Legends	simple-icons	leagueoflegends	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+behance.svg	Behance	simple-icons	behance	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+gitter.svg	Gitter	simple-icons	gitter	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+deepmind.svg	DeepMind	simple-icons	deepmind	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+hyper.svg	Hyper	simple-icons	hyper	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+unrealengine.svg	Unreal Engine	simple-icons	unrealengine	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+elastic.svg	Elastic	simple-icons	elastic	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+bazel.svg	Bazel	simple-icons	bazel	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+jitpack.svg	JitPack	simple-icons	jitpack	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+wattpad.svg	Wattpad	simple-icons	wattpad	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+thunderbird.svg	Thunderbird	simple-icons	thunderbird	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+gitcode.svg	GitCode	simple-icons	gitcode	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+fandango.svg	Fandango	simple-icons	fandango	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+venmo.svg	Venmo	simple-icons	venmo	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+tensorflow.svg	TensorFlow	simple-icons	tensorflow	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+epicgames.svg	Epic Games	simple-icons	epicgames	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+ton.svg	TON	simple-icons	ton	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+mailchimp.svg	MailChimp	simple-icons	mailchimp	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+1password.svg	1Password	simple-icons	1password	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+apache.svg	Apache	simple-icons	apache	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+auth0.svg	Auth0	simple-icons	auth0	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+tinkercad.svg	Tinkercad	simple-icons	tinkercad	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+harmonyos.svg	HarmonyOS	simple-icons	harmonyos	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+riotgames.svg	Riot Games	simple-icons	riotgames	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+coreldraw.svg	CorelDRAW	simple-icons	coreldraw	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+mendeley.svg	Mendeley	simple-icons	mendeley	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+fubo.svg	Fubo	simple-icons	fubo	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+webrtc.svg	WebRTC	simple-icons	webrtc	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+trendmicro.svg	Trend Micro	simple-icons	trendmicro	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+channel4.svg	Channel 4	simple-icons	channel4	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+chef.svg	Chef	simple-icons	chef	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+speedtest.svg	Speedtest	simple-icons	speedtest	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+blackberry.svg	Blackberry	simple-icons	blackberry	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+here.svg	HERE	simple-icons	here	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+phpbb.svg	phpBB	simple-icons	phpbb	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+leetcode.svg	LeetCode	simple-icons	leetcode	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+keeper.svg	Keeper	simple-icons	keeper	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+deepcool.svg	DeepCool	simple-icons	deepcool	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+ethiopianairlines.svg	Ethiopian Airlines	simple-icons	ethiopianairlines	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+beatport.svg	Beatport	simple-icons	beatport	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+rancher.svg	Rancher	simple-icons	rancher	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+payhip.svg	Payhip	simple-icons	payhip	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+codemagic.svg	Codemagic	simple-icons	codemagic	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+paychex.svg	Paychex	simple-icons	paychex	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+openbugbounty.svg	Open Bug Bounty	simple-icons	openbugbounty	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+codeproject.svg	CodeProject	simple-icons	codeproject	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+aftership.svg	AfterShip	simple-icons	aftership	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+v0.svg	v0	simple-icons	v0	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+gleam.svg	Gleam	simple-icons	gleam	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+sailfishos.svg	Sailfish OS	simple-icons	sailfishos	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+stackbit.svg	Stackbit	simple-icons	stackbit	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+youhodler.svg	YouHodler	simple-icons	youhodler	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+knip.svg	Knip	simple-icons	knip	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+couchbase.svg	Couchbase	simple-icons	couchbase	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+penny.svg	Penny	simple-icons	penny	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+swagger.svg	Swagger	simple-icons	swagger	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+4d.svg	4D	simple-icons	4d	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+sessionize.svg	Sessionize	simple-icons	sessionize	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+picpay.svg	PicPay	simple-icons	picpay	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+icons8.svg	Icons8	simple-icons	icons8	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+datto.svg	Datto	simple-icons	datto	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+storyblok.svg	Storyblok	simple-icons	storyblok	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+wgpu.svg	wgpu	simple-icons	wgpu	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+99designs.svg	99designs	simple-icons	99designs	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+nikon.svg	Nikon	simple-icons	nikon	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+untappd.svg	Untappd	simple-icons	untappd	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+silverairways.svg	Silver Airways	simple-icons	silverairways	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+appveyor.svg	AppVeyor	simple-icons	appveyor	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+bosch.svg	Bosch	simple-icons	bosch	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+formbricks.svg	Formbricks	simple-icons	formbricks	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+uniqlo.svg	Uniqlo	simple-icons	uniqlo	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+tcs.svg	Tata Consultancy Services	simple-icons	tcs	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+coinmarketcap.svg	CoinMarketCap	simple-icons	coinmarketcap	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+testin.svg	Testin	simple-icons	testin	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+underarmour.svg	Under Armour	simple-icons	underarmour	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+meilisearch.svg	Meilisearch	simple-icons	meilisearch	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+gocd.svg	GoCD	simple-icons	gocd	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+builtbybit.svg	BuiltByBit	simple-icons	builtbybit	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+plesk.svg	Plesk	simple-icons	plesk	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+galaxus.svg	Galaxus	simple-icons	galaxus	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+kaufland.svg	Kaufland	simple-icons	kaufland	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+comptia.svg	CompTIA	simple-icons	comptia	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+adminer.svg	Adminer	simple-icons	adminer	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+dolby.svg	Dolby	simple-icons	dolby	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+infoq.svg	InfoQ	simple-icons	infoq	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+fluentd.svg	Fluentd	simple-icons	fluentd	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+premierleague.svg	Premier League	simple-icons	premierleague	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+picxy.svg	Picxy	simple-icons	picxy	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+postcss.svg	PostCSS	simple-icons	postcss	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+dinersclub.svg	Diners Club	simple-icons	dinersclub	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+bun.svg	Bun	simple-icons	bun	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+hackerrank.svg	HackerRank	simple-icons	hackerrank	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+frigate.svg	Frigate	simple-icons	frigate	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+pixabay.svg	Pixabay	simple-icons	pixabay	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+statuspal.svg	Statuspal	simple-icons	statuspal	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+photobucket.svg	Photobucket	simple-icons	photobucket	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+rtl.svg	RTL	simple-icons	rtl	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+airindia.svg	Air India	simple-icons	airindia	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+spdx.svg	SPDX	simple-icons	spdx	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+dblp.svg	dblp	simple-icons	dblp	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+bitwig.svg	Bitwig	simple-icons	bitwig	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+plangrid.svg	PlanGrid	simple-icons	plangrid	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+tangled.svg	Tangled	simple-icons	tangled	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+barmenia.svg	Barmenia	simple-icons	barmenia	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+jsfiddle.svg	JSFiddle	simple-icons	jsfiddle	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+wasabi.svg	Wasabi	simple-icons	wasabi	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+turbosquid.svg	TurboSquid	simple-icons	turbosquid	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+shadow.svg	Shadow	simple-icons	shadow	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+mlb.svg	MLB	simple-icons	mlb	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+hexlet.svg	Hexlet	simple-icons	hexlet	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+esotericsoftware.svg	Esoteric Software	simple-icons	esotericsoftware	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+datocms.svg	DatoCMS	simple-icons	datocms	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+symphony.svg	Symphony	simple-icons	symphony	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+ansible.svg	Ansible	simple-icons	ansible	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+wappalyzer.svg	Wappalyzer	simple-icons	wappalyzer	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+openmined.svg	OpenMined	simple-icons	openmined	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+fcc.svg	FCC	simple-icons	fcc	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+octobercms.svg	October CMS	simple-icons	octobercms	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+legacygames.svg	Legacy Games	simple-icons	legacygames	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+fauna.svg	Fauna	simple-icons	fauna	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+dunked.svg	Dunked	simple-icons	dunked	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+answer.svg	Answer	simple-icons	answer	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+blibli.svg	Blibli	simple-icons	blibli	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+vectary.svg	Vectary	simple-icons	vectary	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+bisecthosting.svg	BisectHosting	simple-icons	bisecthosting	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+comsol.svg	Comsol	simple-icons	comsol	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+pleroma.svg	Pleroma	simple-icons	pleroma	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+boulanger.svg	boulanger	simple-icons	boulanger	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+gradle.svg	Gradle	simple-icons	gradle	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+codingninjas.svg	Coding Ninjas	simple-icons	codingninjas	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+plume.svg	Plume	simple-icons	plume	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+rainyun.svg	RainYun	simple-icons	rainyun	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+phonepe.svg	PhonePe	simple-icons	phonepe	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+changedetection.svg	Change Detection	simple-icons	changedetection	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+intigriti.svg	Intigriti	simple-icons	intigriti	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+fila.svg	Fila	simple-icons	fila	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+viblo.svg	Viblo	simple-icons	viblo	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+airfrance.svg	Air France	simple-icons	airfrance	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+ros.svg	ROS	simple-icons	ros	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+virustotal.svg	VirusTotal	simple-icons	virustotal	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+expensify.svg	Expensify	simple-icons	expensify	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+studio3t.svg	Studio 3T	simple-icons	studio3t	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+anichart.svg	AniChart	simple-icons	anichart	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+trustedshops.svg	Trusted Shops	simple-icons	trustedshops	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+payloadcms.svg	Payload CMS	simple-icons	payloadcms	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+bugcrowd.svg	Bugcrowd	simple-icons	bugcrowd	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+pomerium.svg	Pomerium	simple-icons	pomerium	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+codestream.svg	CodeStream	simple-icons	codestream	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+carrd.svg	Carrd	simple-icons	carrd	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+tablecheck.svg	TableCheck	simple-icons	tablecheck	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+qgis.svg	QGIS	simple-icons	qgis	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+stackoverflow.svg	Stack Overflow	simple-icons	stackoverflow	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+hashcat.svg	Hashcat	simple-icons	hashcat	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+bungie.svg	Bungie	simple-icons	bungie	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+kickstarter.svg	Kickstarter	simple-icons	kickstarter	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+php.svg	PHP	simple-icons	php	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+glass.svg	Glass	simple-icons	glass	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+kiwix.svg	Kiwix	simple-icons	kiwix	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+centos.svg	CentOS	simple-icons	centos	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+codementor.svg	Codementor	simple-icons	codementor	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+lintcode.svg	LintCode	simple-icons	lintcode	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+sahibinden.svg	Sahibinden	simple-icons	sahibinden	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+telenor.svg	Telenor	simple-icons	telenor	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+neo4j.svg	Neo4j	simple-icons	neo4j	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+modelscope.svg	ModelScope	simple-icons	modelscope	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+vivaldi.svg	Vivaldi	simple-icons	vivaldi	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+breaker.svg	Breaker	simple-icons	breaker	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+nhl.svg	NHL	simple-icons	nhl	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+dataiku.svg	Dataiku	simple-icons	dataiku	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+codio.svg	Codio	simple-icons	codio	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+matomo.svg	Matomo	simple-icons	matomo	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+klm.svg	KLM	simple-icons	klm	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+ifttt.svg	IFTTT	simple-icons	ifttt	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+anta.svg	Anta	simple-icons	anta	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+akiflow.svg	Akiflow	simple-icons	akiflow	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+tinyletter.svg	TinyLetter	simple-icons	tinyletter	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+365datascience.svg	365 Data Science	simple-icons	365datascience	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+lufthansa.svg	Lufthansa	simple-icons	lufthansa	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+ring.svg	Ring	simple-icons	ring	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+nebula.svg	Nebula	simple-icons	nebula	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+htc.svg	HTC	simple-icons	htc	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+blockbench.svg	Blockbench	simple-icons	blockbench	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+dreamstime.svg	Dreamstime	simple-icons	dreamstime	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+tarteaucitron.svg	Tarteaucitron	simple-icons	tarteaucitron	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+passbolt.svg	Passbolt	simple-icons	passbolt	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+animalplanet.svg	Animal Planet	simple-icons	animalplanet	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+aframe.svg	A-Frame	simple-icons	aframe	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+dragonframe.svg	Dragonframe	simple-icons	dragonframe	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+prometheus.svg	Prometheus	simple-icons	prometheus	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+tietoevry.svg	TietoEVRY	simple-icons	tietoevry	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+codecov.svg	Codecov	simple-icons	codecov	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+rte.svg	RTÉ	simple-icons	rte	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+heroui.svg	HeroUI	simple-icons	heroui	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+keepachangelog.svg	Keep a Changelog	simple-icons	keepachangelog	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+onlyoffice.svg	ONLYOFFICE	simple-icons	onlyoffice	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+myanimelist.svg	MyAnimeList	simple-icons	myanimelist	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+formik.svg	Formik	simple-icons	formik	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+sololearn.svg	Sololearn	simple-icons	sololearn	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+piaggiogroup.svg	Piaggio Group	simple-icons	piaggiogroup	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+renpy.svg	Ren'Py	simple-icons	renpy	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+upcloud.svg	UpCloud	simple-icons	upcloud	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+drupal.svg	Drupal	simple-icons	drupal	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+indiehackers.svg	Indie Hackers	simple-icons	indiehackers	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+mangacollec.svg	Mangacollec	simple-icons	mangacollec	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+zara.svg	Zara	simple-icons	zara	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+showwcase.svg	Showwcase	simple-icons	showwcase	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+paperswithcode.svg	Papers With Code	simple-icons	paperswithcode	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+ankermake.svg	AnkerMake	simple-icons	ankermake	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+reebok.svg	Reebok	simple-icons	reebok	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+apmterminals.svg	APM Terminals	simple-icons	apmterminals	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+orange.svg	Orange	simple-icons	orange	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+neon.svg	Neon	simple-icons	neon	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+alpinelinux.svg	Alpine Linux	simple-icons	alpinelinux	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+stackblitz.svg	StackBlitz	simple-icons	stackblitz	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+devuan.svg	Devuan	simple-icons	devuan	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+salla.svg	Salla	simple-icons	salla	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+pagerduty.svg	PagerDuty	simple-icons	pagerduty	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+processingfoundation.svg	Processing Foundation	simple-icons	processingfoundation	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+distrokid.svg	Distrokid	simple-icons	distrokid	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+skypack.svg	Skypack	simple-icons	skypack	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+geopandas.svg	GeoPandas	simple-icons	geopandas	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+expo.svg	Expo	simple-icons	expo	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+ntfy.svg	ntfy	simple-icons	ntfy	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+xero.svg	Xero	simple-icons	xero	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+bitrise.svg	Bitrise	simple-icons	bitrise	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+formspree.svg	Formspree	simple-icons	formspree	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+ngrx.svg	NgRx	simple-icons	ngrx	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+nextdoor.svg	Nextdoor	simple-icons	nextdoor	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+thingiverse.svg	Thingiverse	simple-icons	thingiverse	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+groupon.svg	Groupon	simple-icons	groupon	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+gitpod.svg	Gitpod	simple-icons	gitpod	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+bugatti.svg	Bugatti	simple-icons	bugatti	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+surveymonkey.svg	SurveyMonkey	simple-icons	surveymonkey	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+fizz.svg	Fizz	simple-icons	fizz	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+spectrum.svg	Spectrum	simple-icons	spectrum	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+traxsource.svg	Traxsource	simple-icons	traxsource	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+semrush.svg	Semrush	simple-icons	semrush	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+datastax.svg	DataStax	simple-icons	datastax	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+jetblue.svg	JetBlue	simple-icons	jetblue	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+stackshare.svg	StackShare	simple-icons	stackshare	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+geocaching.svg	Geocaching	simple-icons	geocaching	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+bambulab.svg	Bambu Lab	simple-icons	bambulab	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+auchan.svg	Auchan	simple-icons	auchan	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+nuxt.svg	Nuxt	simple-icons	nuxt	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+stellar.svg	Stellar	simple-icons	stellar	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+astro.svg	Astro	simple-icons	astro	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+civo.svg	Civo	simple-icons	civo	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+joomla.svg	Joomla	simple-icons	joomla	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+namebase.svg	Namebase	simple-icons	namebase	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+similarweb.svg	Similarweb	simple-icons	similarweb	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+sui.svg	Sui	simple-icons	sui	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+mautic.svg	Mautic	simple-icons	mautic	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+mediamarkt.svg	MediaMarkt	simple-icons	mediamarkt	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+anycubic.svg	Anycubic	simple-icons	anycubic	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+rescuetime.svg	RescueTime	simple-icons	rescuetime	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+bitsy.svg	Bitsy	simple-icons	bitsy	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+theconversation.svg	The Conversation	simple-icons	theconversation	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+ryanair.svg	Ryanair	simple-icons	ryanair	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+livekit.svg	LiveKit	simple-icons	livekit	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+kashflow.svg	KashFlow	simple-icons	kashflow	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+isc2.svg	ISC2	simple-icons	isc2	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+inkscape.svg	Inkscape	simple-icons	inkscape	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+materialdesignicons.svg	Material Design Icons	simple-icons	materialdesignicons	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+wireguard.svg	WireGuard	simple-icons	wireguard	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+bigcartel.svg	Big Cartel	simple-icons	bigcartel	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+netim.svg	Netim	simple-icons	netim	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+fareharbor.svg	FareHarbor	simple-icons	fareharbor	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+jellyfin.svg	Jellyfin	simple-icons	jellyfin	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+trainerroad.svg	TrainerRoad	simple-icons	trainerroad	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+mediafire.svg	MediaFire	simple-icons	mediafire	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+dovetail.svg	Dovetail	simple-icons	dovetail	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+frontendmentor.svg	Frontend Mentor	simple-icons	frontendmentor	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+metafilter.svg	MetaFilter	simple-icons	metafilter	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+mullvad.svg	Mullvad	simple-icons	mullvad	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+migadu.svg	Migadu	simple-icons	migadu	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+nokia.svg	Nokia	simple-icons	nokia	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+cloudfoundry.svg	Cloud Foundry	simple-icons	cloudfoundry	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+paytm.svg	Paytm	simple-icons	paytm	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+houzz.svg	Houzz	simple-icons	houzz	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+polygon.svg	Polygon	simple-icons	polygon	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+elgato.svg	Elgato	simple-icons	elgato	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+theodinproject.svg	The Odin Project	simple-icons	theodinproject	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+fawry.svg	Fawry	simple-icons	fawry	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+farcaster.svg	Farcaster	simple-icons	farcaster	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+topcoder.svg	Topcoder	simple-icons	topcoder	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+voidlinux.svg	Void Linux	simple-icons	voidlinux	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+soundcharts.svg	Soundcharts	simple-icons	soundcharts	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+nestjs.svg	NestJS	simple-icons	nestjs	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+jdoodle.svg	JDoodle	simple-icons	jdoodle	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+startrek.svg	Star Trek	simple-icons	startrek	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+verdaccio.svg	Verdaccio	simple-icons	verdaccio	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+databricks.svg	Databricks	simple-icons	databricks	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+enterprisedb.svg	EnterpriseDB	simple-icons	enterprisedb	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+csswizardry.svg	CSS Wizardry	simple-icons	csswizardry	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+pnpm.svg	pnpm	simple-icons	pnpm	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+poly.svg	Poly	simple-icons	poly	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+lospec.svg	Lospec	simple-icons	lospec	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+continente.svg	Continente	simple-icons	continente	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+lining.svg	Li-Ning	simple-icons	lining	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+podman.svg	Podman	simple-icons	podman	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+cloudera.svg	Cloudera	simple-icons	cloudera	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+localxpose.svg	LocalXpose	simple-icons	localxpose	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+mix.svg	Mix	simple-icons	mix	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+nzxt.svg	NZXT	simple-icons	nzxt	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+wpengine.svg	WP Engine	simple-icons	wpengine	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+hackmd.svg	HackMD	simple-icons	hackmd	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+tado.svg	tado°	simple-icons	tado	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+linphone.svg	Linphone	simple-icons	linphone	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+mewe.svg	MeWe	simple-icons	mewe	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+mural.svg	Mural	simple-icons	mural	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+dpd.svg	DPD	simple-icons	dpd	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+freshrss.svg	FreshRSS	simple-icons	freshrss	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+siemens.svg	Siemens	simple-icons	siemens	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+tradingview.svg	TradingView	simple-icons	tradingview	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+arstechnica.svg	Ars Technica	simple-icons	arstechnica	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+kubuntu.svg	Kubuntu	simple-icons	kubuntu	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+makerbot.svg	MakerBot	simple-icons	makerbot	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+adafruit.svg	Adafruit	simple-icons	adafruit	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+sonos.svg	Sonos	simple-icons	sonos	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+mapillary.svg	Mapillary	simple-icons	mapillary	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+ssrn.svg	SSRN	simple-icons	ssrn	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+godox.svg	Godox	simple-icons	godox	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+modx.svg	MODX	simple-icons	modx	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+koyeb.svg	Koyeb	simple-icons	koyeb	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+codenewbie.svg	CodeNewbie	simple-icons	codenewbie	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+spigotmc.svg	SpigotMC	simple-icons	spigotmc	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+gotomeeting.svg	GoToMeeting	simple-icons	gotomeeting	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+irobot.svg	iRobot	simple-icons	irobot	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+toyota.svg	Toyota	simple-icons	toyota	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+gatling.svg	Gatling	simple-icons	gatling	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+freelancer.svg	Freelancer	simple-icons	freelancer	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+padlet.svg	Padlet	simple-icons	padlet	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+castbox.svg	Castbox	simple-icons	castbox	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+1001tracklists.svg	1001Tracklists	simple-icons	1001tracklists	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+tacobell.svg	Taco Bell	simple-icons	tacobell	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+moqups.svg	Moqups	simple-icons	moqups	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+cyberdefenders.svg	CyberDefenders	simple-icons	cyberdefenders	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+okcupid.svg	okcupid	simple-icons	okcupid	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+beekeeperstudio.svg	Beekeeper Studio	simple-icons	beekeeperstudio	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+bvg.svg	BVG	simple-icons	bvg	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+netgear.svg	NETGEAR	simple-icons	netgear	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+sifive.svg	SiFive	simple-icons	sifive	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+woocommerce.svg	WooCommerce	simple-icons	woocommerce	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+airbus.svg	Airbus	simple-icons	airbus	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+moodle.svg	Moodle	simple-icons	moodle	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+kia.svg	Kia	simple-icons	kia	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+omarchy.svg	Omarchy	simple-icons	omarchy	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+chatbot.svg	ChatBot	simple-icons	chatbot	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+astonmartin.svg	Aston Martin	simple-icons	astonmartin	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+liquibase.svg	Liquibase	simple-icons	liquibase	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+guilded.svg	Guilded	simple-icons	guilded	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+500px.svg	500px	simple-icons	500px	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+weasyl.svg	Weasyl	simple-icons	weasyl	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+codesandbox.svg	CodeSandbox	simple-icons	codesandbox	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+unstop.svg	Unstop	simple-icons	unstop	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+abbvie.svg	Abbvie	simple-icons	abbvie	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+razorpay.svg	Razorpay	simple-icons	razorpay	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+kleinanzeigen.svg	Kleinanzeigen	simple-icons	kleinanzeigen	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+eyeem.svg	EyeEm	simple-icons	eyeem	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+pdq.svg	PDQ	simple-icons	pdq	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+gojek.svg	Gojek	simple-icons	gojek	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+srgssr.svg	SRG SSR	simple-icons	srgssr	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+coffeescript.svg	CoffeeScript	simple-icons	coffeescript	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+uml.svg	UML	simple-icons	uml	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+magic.svg	Magic	simple-icons	magic	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+nicehash.svg	NiceHash	simple-icons	nicehash	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+mangaupdates.svg	MangaUpdates	simple-icons	mangaupdates	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+showpad.svg	Showpad	simple-icons	showpad	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+airtransat.svg	Air Transat	simple-icons	airtransat	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+tether.svg	Tether	simple-icons	tether	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+dash0.svg	Dash0	simple-icons	dash0	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+komoot.svg	Komoot	simple-icons	komoot	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+rasa.svg	Rasa	simple-icons	rasa	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+winamp.svg	Winamp	simple-icons	winamp	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+stencyl.svg	Stencyl	simple-icons	stencyl	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+porkbun.svg	Porkbun	simple-icons	porkbun	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+camunda.svg	Camunda	simple-icons	camunda	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+mailtrap.svg	Mailtrap	simple-icons	mailtrap	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+fedex.svg	FedEx	simple-icons	fedex	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+keenetic.svg	Keenetic	simple-icons	keenetic	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+carto.svg	Carto	simple-icons	carto	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+odoo.svg	Odoo	simple-icons	odoo	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+arc.svg	Arc	simple-icons	arc	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+paddypower.svg	Paddy Power	simple-icons	paddypower	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+virgin.svg	Virgin	simple-icons	virgin	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+seagate.svg	Seagate	simple-icons	seagate	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+fontforge.svg	FontForge	simple-icons	fontforge	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+arlo.svg	Arlo	simple-icons	arlo	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+airtable.svg	Airtable	simple-icons	airtable	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+unacademy.svg	Unacademy	simple-icons	unacademy	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+activitypub.svg	ActivityPub	simple-icons	activitypub	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+coppel.svg	Coppel	simple-icons	coppel	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+circuitverse.svg	CircuitVerse	simple-icons	circuitverse	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+loops.svg	Loops	simple-icons	loops	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+turso.svg	Turso	simple-icons	turso	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+bookmyshow.svg	BookMyShow	simple-icons	bookmyshow	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+jpeg.svg	JPEG	simple-icons	jpeg	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+stubhub.svg	StubHub	simple-icons	stubhub	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+openssl.svg	OpenSSL	simple-icons	openssl	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+fujifilm.svg	Fujifilm	simple-icons	fujifilm	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+totvs.svg	TOTVS	simple-icons	totvs	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+bento.svg	Bento	simple-icons	bento	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+jenkins.svg	Jenkins	simple-icons	jenkins	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+drizzle.svg	Drizzle	simple-icons	drizzle	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+ebox.svg	EBOX	simple-icons	ebox	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+languagetool.svg	LanguageTool	simple-icons	languagetool	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+postiz.svg	Postiz	simple-icons	postiz	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+cesium.svg	Cesium	simple-icons	cesium	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+securityscorecard.svg	SecurityScorecard	simple-icons	securityscorecard	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+tokio.svg	Tokio	simple-icons	tokio	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+codacy.svg	Codacy	simple-icons	codacy	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+crunchbase.svg	Crunchbase	simple-icons	crunchbase	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+talenthouse.svg	Talenthouse	simple-icons	talenthouse	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+starlingbank.svg	Starling Bank	simple-icons	starlingbank	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+aeroflot.svg	Aeroflot	simple-icons	aeroflot	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+nissan.svg	Nissan	simple-icons	nissan	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+snowpack.svg	Snowpack	simple-icons	snowpack	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+trailforks.svg	Trailforks	simple-icons	trailforks	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+aeromexico.svg	Aeroméxico	simple-icons	aeromexico	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+analogue.svg	Analogue	simple-icons	analogue	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+codeclimate.svg	Code Climate	simple-icons	codeclimate	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+speakerdeck.svg	Speaker Deck	simple-icons	speakerdeck	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+gurobi.svg	Gurobi	simple-icons	gurobi	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+gentoo.svg	Gentoo	simple-icons	gentoo	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+lemonsqueezy.svg	Lemon Squeezy	simple-icons	lemonsqueezy	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+near.svg	NEAR	simple-icons	near	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+oclc.svg	OCLC	simple-icons	oclc	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+picrew.svg	Picrew	simple-icons	picrew	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+redmine.svg	Redmine	simple-icons	redmine	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+lbry.svg	LBRY	simple-icons	lbry	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+paperspace.svg	Paperspace	simple-icons	paperspace	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+fujitsu.svg	Fujitsu	simple-icons	fujitsu	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+accusoft.svg	Accusoft	simple-icons	accusoft	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+postmates.svg	Postmates	simple-icons	postmates	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+iconify.svg	Iconify	simple-icons	iconify	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+pexels.svg	Pexels	simple-icons	pexels	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+moo.svg	Moo	simple-icons	moo	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+prosieben.svg	ProSieben	simple-icons	prosieben	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+root.svg	ROOT	simple-icons	root	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+ingress.svg	Ingress	simple-icons	ingress	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+man.svg	MAN	simple-icons	man	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+processwire.svg	ProcessWire	simple-icons	processwire	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+tarom.svg	TAROM	simple-icons	tarom	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+akasaair.svg	Akasa Air	simple-icons	akasaair	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+elegoo.svg	Elegoo	simple-icons	elegoo	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+zomato.svg	Zomato	simple-icons	zomato	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+supermicro.svg	Supermicro	simple-icons	supermicro	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+infinityfree.svg	InfinityFree	simple-icons	infinityfree	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+clyp.svg	Clyp	simple-icons	clyp	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+kinsta.svg	Kinsta	simple-icons	kinsta	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+spoj.svg	Sphere Online Judge	simple-icons	spoj	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+puppet.svg	Puppet	simple-icons	puppet	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+statista.svg	Statista	simple-icons	statista	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+edeka.svg	EDEKA	simple-icons	edeka	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+graylog.svg	Graylog	simple-icons	graylog	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+jbl.svg	JBL	simple-icons	jbl	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+furaffinity.svg	Fur Affinity	simple-icons	furaffinity	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+almalinux.svg	AlmaLinux	simple-icons	almalinux	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+ufc.svg	UFC	simple-icons	ufc	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+cloudbees.svg	CloudBees	simple-icons	cloudbees	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+embarcadero.svg	Embarcadero	simple-icons	embarcadero	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+ecovacs.svg	Ecovacs	simple-icons	ecovacs	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+qemu.svg	QEMU	simple-icons	qemu	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+mitsubishi.svg	Mitsubishi	simple-icons	mitsubishi	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+onstar.svg	OnStar	simple-icons	onstar	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+g2.svg	G2	simple-icons	g2	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+teratail.svg	teratail	simple-icons	teratail	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+immersivetranslate.svg	Immersive Translate	simple-icons	immersivetranslate	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+accenture.svg	Accenture	simple-icons	accenture	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+asana.svg	Asana	simple-icons	asana	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+manjaro.svg	Manjaro	simple-icons	manjaro	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+datacamp.svg	DataCamp	simple-icons	datacamp	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+obsidian.svg	Obsidian	simple-icons	obsidian	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+ethers.svg	Ethers	simple-icons	ethers	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+educative.svg	Educative	simple-icons	educative	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+adonisjs.svg	AdonisJS	simple-icons	adonisjs	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+kueski.svg	Kueski	simple-icons	kueski	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+freecad.svg	FreeCAD	simple-icons	freecad	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+pivotaltracker.svg	Pivotal Tracker	simple-icons	pivotaltracker	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+tabelog.svg	Tabelog	simple-icons	tabelog	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+frontify.svg	Frontify	simple-icons	frontify	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+gumtree.svg	Gumtree	simple-icons	gumtree	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+delta.svg	Delta	simple-icons	delta	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+roundcube.svg	Roundcube	simple-icons	roundcube	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+vivino.svg	Vivino	simple-icons	vivino	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+drooble.svg	Drooble	simple-icons	drooble	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+teepublic.svg	TeePublic	simple-icons	teepublic	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+zerodha.svg	Zerodha	simple-icons	zerodha	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+alternativeto.svg	AlternativeTo	simple-icons	alternativeto	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+redsys.svg	Redsys	simple-icons	redsys	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+moleculer.svg	Moleculer	simple-icons	moleculer	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+awesomewm.svg	awesomeWM	simple-icons	awesomewm	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+listenhub.svg	ListenHub	simple-icons	listenhub	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+songoda.svg	Songoda	simple-icons	songoda	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+pioneerdj.svg	Pioneer DJ	simple-icons	pioneerdj	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+wizzair.svg	Wizz Air	simple-icons	wizzair	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+opslevel.svg	OpsLevel	simple-icons	opslevel	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+baserow.svg	Baserow	simple-icons	baserow	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+jouav.svg	JOUAV	simple-icons	jouav	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+opensea.svg	OpenSea	simple-icons	opensea	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+norwegian.svg	Norwegian	simple-icons	norwegian	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+smart.svg	smart	simple-icons	smart	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+nutanix.svg	Nutanix	simple-icons	nutanix	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+pagekit.svg	Pagekit	simple-icons	pagekit	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+wipro.svg	Wipro	simple-icons	wipro	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+plotly.svg	Plotly	simple-icons	plotly	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+bitdefender.svg	Bitdefender	simple-icons	bitdefender	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+ultralytics.svg	Ultralytics	simple-icons	ultralytics	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+byjus.svg	Byju's	simple-icons	byjus	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+progate.svg	Progate	simple-icons	progate	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+typeform.svg	Typeform	simple-icons	typeform	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+cypress.svg	Cypress	simple-icons	cypress	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+cardano.svg	Cardano	simple-icons	cardano	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+threema.svg	Threema	simple-icons	threema	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+printables.svg	Printables	simple-icons	printables	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+meetup.svg	Meetup	simple-icons	meetup	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+spacemacs.svg	Spacemacs	simple-icons	spacemacs	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+checkmk.svg	Checkmk	simple-icons	checkmk	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+codebuddy.svg	CodeBuddy	simple-icons	codebuddy	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+robinhood.svg	Robinhood	simple-icons	robinhood	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+taipy.svg	Taipy	simple-icons	taipy	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+gitkraken.svg	GitKraken	simple-icons	gitkraken	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+hoppscotch.svg	Hoppscotch	simple-icons	hoppscotch	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+privatedivision.svg	Private Division	simple-icons	privatedivision	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+suno.svg	Suno	simple-icons	suno	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+bitcoincash.svg	Bitcoin Cash	simple-icons	bitcoincash	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+ripple.svg	Ripple	simple-icons	ripple	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+sketchup.svg	SketchUp	simple-icons	sketchup	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+sabanci.svg	Sabanci	simple-icons	sabanci	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+calendly.svg	Calendly	simple-icons	calendly	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+futurelearn.svg	FutureLearn	simple-icons	futurelearn	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+elavon.svg	Elavon	simple-icons	elavon	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+cloud66.svg	Cloud 66	simple-icons	cloud66	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+zillow.svg	Zillow	simple-icons	zillow	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+crowdin.svg	Crowdin	simple-icons	crowdin	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+borgbackup.svg	BorgBackup	simple-icons	borgbackup	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+2k-games.svg	2K Games	simple-icons	2k	CC0-1.0 (trademarks: see DISCLAIMER.md)	https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md	
+bluearchive.svg	Bluearchive	iconify:arcticons	blue-archive	CC BY-SA 4.0	https://github.com/Donnnno/Arcticons	
+wuthering-waves.svg	Wuthering Waves	iconify:arcticons	wuthering-waves	CC BY-SA 4.0	https://github.com/Donnnno/Arcticons
+honkai-star-rail.svg	Honkai Star Rail	iconify:arcticons	honkai-star-rail	CC BY-SA 4.0	https://github.com/Donnnno/Arcticons	
+honkai-impact-3rd.svg	Honkai Impact 3rd	iconify:arcticons	honkai-impact-3rd	CC BY-SA 4.0	https://github.com/Donnnno/Arcticons	
+zenless-zone-zero.svg	Zenless Zone Zero	iconify:arcticons	zenless-zone-zero	CC BY-SA 4.0	https://github.com/Donnnno/Arcticons

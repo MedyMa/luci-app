@@ -229,7 +229,7 @@ the log (`logread -e traffic`).
 ## The catalogue
 
 `/etc/traffic/apps.tsv` and `/etc/traffic/categories.tsv` are generated, not
-hand-written. **1,631 applications** over ~32,000 keys, plus 44 categories:
+hand-written. **1,669 application and site names** over ~32,000 keys, plus category rules:
 
 | File | Rows | What it holds |
 |---|---|---|
@@ -252,7 +252,7 @@ node tools/build-catalog.js          # re-download, regenerate tables and icons
 node tools/build-catalog.js --skip-icons
 ```
 
-It also copies the icons: **662 brand logos** from
+It also copies brand logos from
 [dashboard-icons](https://github.com/homarr-labs/dashboard-icons),
 [Iconify's logos collection](https://iconify.design),
 [selfhst/icons](https://github.com/selfhst/icons) and
@@ -417,12 +417,14 @@ a list of apps.
 
 ## Icons
 
-The package ships **731 icons** in two clearly different kinds:
+The package ships **1,503 SVG files** (about **2.90 MiB** uncompressed; the
+0.1.102 set was 900 files / 2.17 MiB). This includes brand artwork, category
+glyphs, and 18 explicitly neutral placeholders; file count is not brand coverage.
 
 | Kind | Count | Source | Rendered as |
 |---|---|---|---|
-| Brand logos | 662 | [dashboard-icons](https://github.com/homarr-labs/dashboard-icons), [Iconify logos](https://iconify.design), [selfhst/icons](https://github.com/selfhst/icons) and [simple-icons](https://simpleicons.org) | the product mark |
-| Category / protocol glyphs | 69 | [lucide-static](https://lucide.dev) (ISC) | line art in muted grey, plus a `TYPE` tag in the list |
+| Brand logos | catalogued in `SOURCES.tsv` | [dashboard-icons](https://github.com/homarr-labs/dashboard-icons), [Iconify](https://iconify.design), [selfhst/icons](https://github.com/selfhst/icons), [simple-icons](https://simpleicons.org) and locally curated sources | the product mark |
+| Category / protocol glyphs | 71 Lucide assets plus other generic icons | [lucide-static](https://lucide.dev) (ISC) and sources recorded in `SOURCES.tsv` | line art in muted grey, plus a `TYPE` tag in the list |
 
 The two kinds are deliberately not interchangeable. A brand logo answers *which
 product*, a glyph answers *what kind of traffic* — SSL/TLS, QUIC, HTTP, DNS,
@@ -438,11 +440,47 @@ avatar until that file has actually loaded, so a missing icon is invisible
 rather than broken. Both the image and the avatar occupy the same 26 px box, so
 row rhythm never shifts.
 
-**644 of 1,631 names** have an upstream logo — 64 of the 100 that carry the most
-domains. The rest keep their avatar; the open sets carry comparatively little of
-the Chinese app landscape and no logo is invented for a name that none of them
-knows. To add one by hand, drop an SVG into
-`htdocs/luci-static/resources/traffic/icons/` — no code change.
+The local `icons/domains.tsv` index maps **875 source-verified site domains** to
+packaged artwork, including their subdomains. It is loaded once with the icon
+indexes; SVG images are requested for rendered rows, not all 1,503 files.
+For a bare domain, the page can also reuse an already packaged logo with the same
+root name (for example, `stripe.com` uses `stripe.svg`). A short, verified alias
+list groups related domain rows under their service and lets the reader expand
+the original domain traffic; a shared CDN is kept separate. If an icon index
+arrives after the first table render, visible rows try again. Unknown domains
+retain their exact name and a two-letter fallback mark. The browser never asks
+a third-party favicon service for each row. Additional packaged icons can be
+added with a matching `SOURCES.tsv` provenance row and then checked with
+`node tools/check-icons.js`.
+
+Direct filename matching covers **835 / 1,669 catalogue names** and **77.7% of
+catalogue rules**. The actual page resolver, including aliases, covers
+**839 / 1,669 names** and **78.4% of catalogue rules**. These counts include
+category/neutral glyphs and do not measure observed traffic or unique brands.
+The domain index additionally gives raw site rows a path to artwork even when
+their names are absent from the catalogue. All 875 mappings are tested through
+the actual page resolver by `node tools/icon-resolution-selftest.js`.
+
+The expansion lock `tools/site-icons.tsv` records 595 extra selections: 579
+have site domains, while 16 are game/platform marks available by explicit
+application name (some are reserved for future catalogue entries). A packaged
+PlayStation model icon does not imply that traffic can identify that console
+model. Dedicated game host rules cover Honkai Star Rail, Honkai Impact 3rd,
+Zenless Zone Zero and Wuthering Waves without relabelling shared publisher hosts.
+`node tools/expand-icons.js` maintains the set and its domain index.
+
+Legacy untraceable icons were replaced with recorded upstream artwork or
+explicit neutral placeholders. Reviewed replacements are pinned in
+`tools/icons-local`; the generator preserves their complete provenance rows.
+It no longer accepts prefix/substring brand matches (for example BlueDriver
+for Blued or Stoat for STO Express). `check-icons.js` rejects unknown or empty
+source metadata. Source records point to upstream terms; they are not a blanket
+licence grant for third-party trademarks.
+
+Uncovered names retain their avatar. To add an icon by hand,
+put an SVG in `htdocs/luci-static/resources/traffic/icons/`, record its source
+in `SOURCES.tsv`, and run `node tools/check-icons.js --write` to refresh the
+index. No page code change is needed when its filename matches the service slug.
 
 Note that `currentColor` is replaced with an explicit grey when a glyph is
 saved, and a monochrome brand mark is pinned to the same grey: an SVG loaded

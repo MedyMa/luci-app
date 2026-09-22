@@ -1945,11 +1945,18 @@ write_summary() {
               }
           }' "$STATE_DIR/clients.tsv" 2>/dev/null
         printf '],"totals":{'
-        awk -F'\t' '{
+        awk -F'\t' -v clients="$STATE_DIR/clients.tsv" '
+            BEGIN {
+                while ((getline l < clients) > 0) {
+                    split(l, f, "\t"); client_bytes += f[2] + 0
+                }
+                close(clients)
+            }
+            {
             up += $2; down += $3
             if ($1 == "Other") ou += $2 + $3
         } END {
-            printf "\"down\":%d,\"up\":%d,\"other\":%d", down, up, ou
+            printf "\"down\":%d,\"up\":%d,\"other\":%d,\"client_bytes\":%d", down, up, ou, client_bytes
         }' "$STATE_DIR/totals.tsv" 2>/dev/null
         printf ',"router":%s' "$(cat "$STATE_DIR/router.tsv" 2>/dev/null || echo 0)"
         printf ',"client_count":%s' "$(wc -l < "$STATE_DIR/clients.tsv" 2>/dev/null || echo 0)"

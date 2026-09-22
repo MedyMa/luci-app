@@ -295,6 +295,18 @@ chk "10c 旧归档的桶不下发 iface"             \
     "$(one "$out" '{"hour":"h1"')"
 chk "10d 缺 iface 时仍是合法 JSON"           '{"hours":' "$(printf '%s' "$out" | cut -c1-9)"
 
+# With offloading, a current hour may carry WAN bytes before any application
+# or router-tunnel row arrives.  It still belongs in the selected range.
+: > "$T/data/hourly.tsv"
+: > "$T/state/cur.apps"; : > "$T/state/cur.clients"
+printf '0\n' > "$T/state/cur.router"
+printf '2026-09-17T10\n' > "$T/state/cur.hour"
+printf '9000\n700\n' > "$T/state/cur.iface"
+out=$(hr 24)
+chk "10e 仅有网卡流量的当前小时不丢失" \
+    '{"hour":"2026-09-17T10","apps":[],"clients":[],"router":0,"iface":{"down":9000,"up":700}}' \
+    "$(one "$out" '{"hour":"2026-09-17T10"')"
+
 # The hour in progress: publish_current writes cur.iface, the difference between
 # the live device counters and what is already archived.  Without it the current
 # hour would be the one bucket a range could never total from the device, and
@@ -327,6 +339,31 @@ out=$(hr 24)
 chk "10h 非数字的 cur.iface 不下发 iface" \
     '{"hour":"2026-09-17T10","apps":[{"name":"YouTube","down":60000,"up":3600}],"clients":[],"router":500}' \
     "$(one "$out" '{"hour":"2026-09-17T10"')"
+
+# The current partial hour consumes one slot in a requested N-hour window.
+# Returning N archived buckets plus the partial one silently spans N+1 buckets.
+{
+    printf 'h1\tapp\tOld\t1\t0\n'
+    printf 'h2\tapp\tMid\t2\t0\n'
+    printf 'h3\tapp\tNew\t3\t0\n'
+} > "$T/data/hourly.tsv"
+printf 'h4\n' > "$T/state/cur.hour"
+printf '4\n0\n' > "$T/state/cur.iface"
+out=$(hr 3)
+chk "10i 三小时范围含当前小时共三个桶" "3" \
+    "$(printf '%s' "$out" | grep -o '"hour":' | wc -l | tr -d ' ')"
+chk "10j 最旧的第四桶不在范围内" "0" \
+    "$(printf '%s' "$out" | grep -c '"hour":"h1"')"
+
+# Client counters can have traffic before classification or WAN detection.
+: > "$T/data/hourly.tsv"; : > "$T/state/cur.apps"
+printf '10.0.0.9\t123\n' > "$T/state/cur.clients"
+printf '0\n' > "$T/state/cur.router"
+rm -f "$T/state/cur.iface"
+out=$(hr 3)
+chk "10k 仅客户端计数的当前小时不丢失" \
+    '{"hour":"h4","apps":[],"clients":[{"ip":"10.0.0.9","bytes":123}],"router":0}' \
+    "$(one "$out" '{"hour":"h4"')"
 
 echo
 if [ "$fail" = 0 ]; then echo "=== 全部通过 ==="; else echo "=== 有失败 ==="; fi

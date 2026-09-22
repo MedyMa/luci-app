@@ -26,7 +26,9 @@ function mk(ns,tag,attrs,children){
   if(ns===XHTML && ['svg','g','circle','path','line','text'].includes(tag)) seen.wrongNs.push(tag);
   const n={tag,ns,attrs:{},children:[],parentNode:null,_text:'',style:{},
     setAttribute(k,v){ this.attrs[k]=v; }, removeAttribute(k){ delete this.attrs[k]; },
-    addEventListener(){}, removeEventListener(){}, focus(){},
+    _listeners:{},
+    addEventListener(type,fn){ this._listeners[type]=fn; },
+    removeEventListener(type){ delete this._listeners[type]; }, focus(){},
     appendChild(c){ if(c.parentNode)c.parentNode.removeChild(c); c.parentNode=this; this.children.push(c); return c; },
     // the strip re-appends boxes that are out of order, so the stub needs this
     insertBefore(c,ref){ if(c.parentNode)c.parentNode.removeChild(c);
@@ -62,9 +64,18 @@ const documentStub={
   head:{ appendChild(n){ if(n && n.id==='tf-css') global.__capturedCss=global.__capturedCss||''; } },
   hidden:false
 };
-function ImageStub(){ return {onload:null,src:'',className:''}; }
+const imageRequests=[];
+function ImageStub(){
+  let source='';
+  const img={onload:null,className:''};
+  Object.defineProperty(img,'src',{get(){return source;},set(v){source=v;imageRequests.push(v);}});
+  return img;
+}
 const factory=new Function('view','rpc','dom','poll','_','E','L','document','Image','confirm',
-  src.replace(/return view\.extend\(/, 'global.__injectCss = injectCss;\nreturn view.extend('));
+  src.replace(/return view\.extend\(/,
+    'global.__injectCss = injectCss;\n' +
+    'global.__iconTest = {makeIcon:makeIcon,setPending:function(p){iconIndexPromise=p;shippedIcons={};cachedIcons=null;},' +
+    'setShipped:function(m){shippedIcons=m;},setDomains:function(m){domainIcons=m;}};\nreturn view.extend('));
 const viewStub={extend(o){ viewStub.__obj=o; return o; }};
 const domStub={content(node,ch){ node.children=[]; (Array.isArray(ch)?ch:[ch]).forEach(x=>{ if(x) node.appendChild(x); }); }};
 const _id=s=>s;
@@ -182,7 +193,7 @@ const v5=freshView();
 view.drawStatus.call(v5,{collected_at:Math.floor(Date.now()/1000),interval:10,flows:1234,
   dnsmap_lines:5678,pending:3,acct:1,version:'0.1.23-r1'},items);
 view.drawSummary.call(v5,[{cap:'Bucket',val:'24'},{cap:'Browser clients',val:'1.2 MiB'},
-  {cap:'Router and tunnel',val:'0 B'},{cap:'Client count',val:'12'},{cap:'Apps',val:'7'}]);
+  {cap:'Router and tunnel',val:'0 B'},{cap:'Client count',val:'12'},{cap:'Apps and sites',val:'7'}]);
 const b5=boxes(v5.statusEl);
 chk(b5.length===11, `收集器状态 + 窗口合计共 11 个框（${b5.length}）`);
 chk(b5[0] && b5[0].cap==='State' && b5[0].val==='Running', `第一格是运行状态（${b5[0]&&b5[0].val}）`);
@@ -199,7 +210,7 @@ chk(kids.filter(c=>(c.attrs||{}).class==='tf-stat').length===11 &&
 chk(kids[6] && kids[6].attrs.class==='tf-stat-sep', `分隔线在第 7 个位置（${kids[6]&&kids[6].attrs.class}）`);
 // the last box counts the applications the table below is listing, so it has to
 // stay last: it is the one reading that describes the rows rather than the bytes
-chk(b5[10] && b5[10].cap==='Apps' && b5[10].val==='7',
+chk(b5[10] && b5[10].cap==='Apps and sites' && b5[10].val==='7',
     `最后一格是应用数（${b5[10]&&b5[10].cap}=${b5[10]&&b5[10].val}）`);
 // the strip keeps its shape when only one of the two callers has run
 const vOnly=freshView();
@@ -651,13 +662,13 @@ chk(/tf-isbucket/.test(rowCls(vP,'QUIC')) && !/tf-isbucket/.test(rowCls(vP,'YouT
 chk(Object.keys(vP.protoRows||{}).length===0 && vP.protoEl.style.display==='none',
     `表下的协议区块恒为空且恒隐藏（protoRows=${Object.keys(vP.protoRows||{}).length}, display=${vP.protoEl.style.display}）`);
 chk(flat(vP.protoListEl).trim()==='', `协议区块里没有任何条目（${flat(vP.protoListEl).trim()||'（空）'}）`);
-chk((boxes(vP.statusEl).filter(b=>b.cap==='Apps')[0]||{}).val===String(PICKS.length),
-    `「应用」格数上表里全部条目（${(boxes(vP.statusEl).filter(b=>b.cap==='Apps')[0]||{}).val}）`);
+chk((boxes(vP.statusEl).filter(b=>b.cap==='Apps and sites')[0]||{}).val==='1',
+    `「应用与站点」格数只算应用和站点（${(boxes(vP.statusEl).filter(b=>b.cap==='Apps and sites')[0]||{}).val}）`);
 // 环形图的清单是「已归属流量」的构成。isProto 恒 false 之后协议桶在里面就是普通
 // 一行；若它还带桶标记，同一份清单和下面那张表就会把 QUIC 分成两种东西
 const legProto=(vP.legendCache||{})['QUIC'];
-chk(!!legProto && !/tf-isbucket/.test((legProto.row.attrs||{}).class||''),
-    `环形图清单里协议桶不带桶标记（${legProto&&legProto.row.attrs.class}）`);
+chk(!!legProto && /tf-isbucket/.test((legProto.row.attrs||{}).class||''),
+    `环形图清单里协议桶有桶标记（${legProto&&legProto.row.attrs.class}）`);
 chk(!!vP.legendCache['YouTube'] && !/tf-isbucket/.test((vP.legendCache['YouTube'].row.attrs||{}).class||''),
     '环形图清单里真应用也不带桶标记');
 const vP0=mkView({});
@@ -691,9 +702,14 @@ view.renderLive.call(vG, sumOf({clients:[{name:'Mac',ip:'192.168.2.21',bytes:4e8
 chk(/%/.test(flat(vG.grandRow.cells.top))===false && flat(vG.grandRow.cells.top).indexOf('Mac')>=0,
     `总行的客户端占比超过 100% 时同样不印（${flat(vG.grandRow.cells.top)}）`);
 const vG2=mkView({});
-view.renderLive.call(vG2, sumOf({clients:[{name:'Mac',ip:'192.168.2.21',bytes:1.5e8}]}));
+view.renderLive.call(vG2, sumOf({totals:Object.assign({},TOT,{client_bytes:2.5e8}),
+  clients:[{name:'Mac',ip:'192.168.2.21',bytes:1.5e8}]}));
 chk(/\(60\.0%\)/.test(flat(vG2.grandRow.cells.top)),
-    `总行正常占比保留（${flat(vG2.grandRow.cells.top)}）`);
+    `总行以同来源的客户端总量计算占比（${flat(vG2.grandRow.cells.top)}）`);
+const vG3=mkView({});
+view.renderLive.call(vG3,sumOf({clients:[{name:'Mac',ip:'192.168.2.21',bytes:1.5e8}]}));
+chk(!/%/.test(flat(vG3.grandRow.cells.top)),
+  '后端尚无客户端总量时不拿应用归属量充当分母');
 // 合计行的热门客户端属于该行自己的窗口，单元格自己说明是哪一个
 chk(String((vG2.grandRow.cells.top.attrs||{}).title||'').indexOf('current run')>=0,
     `会话视图合计行的客户端标注为本次运行（${(vG2.grandRow.cells.top.attrs||{}).title}）`);
@@ -734,6 +750,71 @@ chk(String((vR.grandRow.cells.top.attrs||{}).title||'').indexOf('selected range'
     `范围视图合计行的客户端标注为所选范围（${(vR.grandRow.cells.top.attrs||{}).title}）`);
 
 console.log('=== 文案：页面里的 _() 都有中文条目 ===');
+console.log('=== 站点归并与小流量显示 ===');
+const vSites=mkView({});
+view.draw.call(vSites,[{name:'Samsung',down:3000,up:0,bytes:3000}],
+  {total:3000,down:3000,up:0,topText:'—',clientCount:1});
+chk(!vSites.rowCache.Samsung.toggle, '首次只有品牌行时不显示展开控件');
+view.draw.call(vSites,[
+  {name:'samsungcloudcn.com',down:1000,up:0,bytes:1000},
+  {name:'samsung.com.cn',down:2000,up:0,bytes:2000},
+  {name:'Samsung',down:3000,up:0,bytes:3000},
+  {name:'WangSuKeJi',down:1000,up:0,bytes:1000}
+],{total:1e8,down:1e8,up:0,shareTotal:7000,topText:'—',clientCount:1});
+chk(!!vSites.rowCache.Samsung && flat(vSites.rowCache.Samsung.cells.total).indexOf('5.86 KiB')>=0,
+  '已核实的三星域名归并到 Samsung，流量合计正确');
+chk(!!vSites.rowCache.Samsung && /<0\.1%/.test(flat(vSites.rowCache.Samsung.cells.total)),
+  '非零小占比显示为 <0.1%');
+chk(!!vSites.rowCache.Samsung && !!vSites.rowCache.Samsung.toggle,
+  '归并行提供展开域名的控件');
+if(vSites.rowCache.Samsung && vSites.rowCache.Samsung.toggle &&
+   vSites.rowCache.Samsung.toggle._listeners.click)
+  vSites.rowCache.Samsung.toggle._listeners.click();
+chk(!!vSites.rowCache['domain:Samsung:samsungcloudcn.com'] &&
+    !!vSites.rowCache['domain:Samsung:samsung.com.cn'],
+  '展开后能看到原始域名明细');
+chk(!!vSites.rowCache.WangSuKeJi && !vSites.rowCache.WangSuKeJi.children,
+  '共享 CDN 不归并到三星');
+const vOtherSites=mkView({});
+view.draw.call(vOtherSites,[
+  {name:'producthunt.com',down:800,up:0,bytes:800},
+  {name:'brandfetch.io',down:700,up:0,bytes:700},
+  {name:'trip.com',down:600,up:0,bytes:600},
+  {name:'qrstuuvwxyzab.com',down:500,up:0,bytes:500}
+],{total:2600,down:2600,up:0,topText:'—',clientCount:1});
+chk(!!vOtherSites.rowCache['Product Hunt'] && !!vOtherSites.rowCache.Brandfetch &&
+    !!vOtherSites.rowCache['Trip.com'],
+  '其他已核实品牌域名也能显示品牌身份');
+chk(!!vOtherSites.rowCache['qrstuuvwxyzab.com'],
+  '身份不明域名仍保留原名');
+const vBucketCount=mkView({});
+view.renderLive.call(vBucketCount,sumOf({apps:[{name:'YouTube',down:1000,up:0},
+  {name:'QUIC',down:1000,up:0,proto:1}]}));
+chk((boxes(vBucketCount.statusEl).filter(b=>b.cap==='Apps and sites')[0]||{}).val==='1',
+  '应用数不包含协议桶');
+const rangeCountHead=mk(XHTML,'th');
+const vRangeCount=mkView({clientsHead:rangeCountHead});
+view.renderHourly.call(vRangeCount,{hours:[
+  {hour:'h0',apps:[{name:'YouTube',down:100,up:0,clients:2}],clients:[]},
+  {hour:'h1',apps:[{name:'YouTube',down:100,up:0,clients:3}],clients:[]}
+]});
+chk(flat(vRangeCount.rowCache.YouTube.cells.clients)==='3' &&
+    flat(rangeCountHead)==='Peak clients/hour',
+  '区间应用客户端数明确标为单小时峰值，而非跨小时去重数');
+const sessionCountHead=mk(XHTML,'th');
+const vSessionCount=mkView({clientsHead:sessionCountHead});
+view.draw.call(vSessionCount,[{name:'YouTube',down:100,up:0,bytes:100,clients:2}],
+  {total:100,down:100,up:0,topScope:'session'});
+chk(flat(sessionCountHead)==='Client count',
+  '本次运行仍标示会话内客户端数');
+const vSmallTop=mkView({});
+view.draw.call(vSmallTop,[{name:'YouTube',down:1000,up:0,bytes:1000,
+  top:'192.168.2.9',top_bytes:500}],{total:1000,down:1000,up:0,
+  topText:'—',clientCount:1,topScope:'range'});
+chk(!/%/.test(flat(vSmallTop.rowCache.YouTube.cells.top)),
+  '归档客户端读数不计算跨口径的行占比');
+chk(flat(vSmallTop.rowCache.YouTube.cells.top).trim()==='192.168.2.9',
+  '归档应用行只显示客户端身份，不显示不同窗口的字节数');
 // 新文案必须同时进 catalogs，否则中文界面上会露出英文 msgid
 function loadCatalog(file){
   const map={}; const unesc=s=>s.replace(/\\n/g,'\n').replace(/\\"/g,'"').replace(/\\\\/g,'\\');
@@ -756,7 +837,41 @@ const missing=[...ids].filter(s=>s&&PO[s]===undefined);
 chk(ids.size>40, `页面用了 ${ids.size} 条 _() 文案`);
 chk(missing.length===0, `每条 _() 文案都在 traffic.po 里（缺 ${missing.length}${missing.length?': '+missing.slice(0,4).join(' | '):''}）`);
 
-console.log(fail?`\n  ${fail} 项失败`:'\n  页面渲染验证全部通过');
-process.exit(fail?1:0);
-
-
+console.log('=== 图标索引晚到时补装已有图标 ===');
+let finishIndex;
+const pendingIndex=new Promise(resolve=>{finishIndex=resolve;});
+global.__iconTest.setPending(pendingIndex);
+const iconBox=global.__iconTest.makeIcon('Samsung');
+global.__iconTest.setShipped({samsung:1,stripe:1,cdn:1,producthunt:1,'trip-com':1,brandfetch:1,'1password':1,rockstargames:1});
+global.__iconTest.setDomains({'1password.com':'1password'});
+finishIndex();
+pendingIndex.then(()=>{
+  chk(imageRequests.some(u=>u.indexOf('samsung.svg')>=0),
+    '首轮行创建后索引才到时仍请求已存在的 Samsung 图标');
+  chk(!!iconBox, '图标盒始终存在');
+  global.__iconTest.makeIcon('stripe.com');
+  global.__iconTest.makeIcon('WangSuKeJi');
+  global.__iconTest.makeIcon('producthunt.com');
+  global.__iconTest.makeIcon('trip.com');
+  global.__iconTest.makeIcon('brandfetch.io');
+  global.__iconTest.makeIcon('login.1password.com');
+  global.__iconTest.makeIcon('Rockstar');
+  return Promise.resolve();
+}).then(()=>{
+  chk(imageRequests.some(u=>u.indexOf('stripe.svg')>=0),
+    '未收录服务的简单根域名可复用本地品牌图标');
+  chk(imageRequests.some(u=>u.indexOf('cdn.svg')>=0),
+    '网宿科技使用中性的 CDN 图形，不冒充站点品牌');
+  chk(['producthunt.svg','trip-com.svg','brandfetch.svg'].every(f=>
+    imageRequests.some(u=>u.indexOf(f)>=0)),
+    '新增的品牌图标可被相应站点使用');
+  chk(imageRequests.some(u=>u.indexOf('1password.svg')>=0),
+    '包内域名索引可为子域名加载已核实的站点图标');
+  chk(imageRequests.some(u=>u.indexOf('rockstargames.svg')>=0),
+    '目录中的发行商名称能匹配新增游戏图标');
+  const unknownIcon=global.__iconTest.makeIcon('qrstuuvwxyzab.com');
+  chk(flat(unknownIcon).indexOf('QR')>=0,
+    '无图标的域名显示可区分的双字母标识');
+  console.log(fail?`\n  ${fail} 项失败`:'\n  页面渲染验证全部通过');
+  process.exit(fail?1:0);
+});

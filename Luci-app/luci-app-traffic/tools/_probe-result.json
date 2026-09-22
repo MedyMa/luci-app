@@ -1,0 +1,229 @@
+{
+ "360": [],
+ "17173": [],
+ "Douyin": [
+  {
+   "cand": "tiktok",
+   "set": "dashboard-icons"
+  }
+ ],
+ "XieCheng": [
+  {
+   "cand": "tripdotcom",
+   "set": "simple-icons"
+  }
+ ],
+ "FeiZhu": [
+  {
+   "cand": "taobao",
+   "set": "simple-icons"
+  }
+ ],
+ "Kingsoft": [
+  {
+   "cand": "wpsoffice",
+   "set": "iconify:arcticons"
+  }
+ ],
+ "Huaweicloud": [
+  {
+   "cand": "huawei",
+   "set": "dashboard-icons"
+  }
+ ],
+ "WangSuKeJi": [],
+ "Mailru": [
+  {
+   "cand": "mail-ru",
+   "set": "iconify:cib"
+  },
+  {
+   "cand": "maildotru",
+   "set": "simple-icons"
+  },
+  {
+   "cand": "mail",
+   "set": "iconify:arcticons"
+  }
+ ],
+ "IFlytek": [
+  {
+   "cand": "iflytek-input",
+   "set": "iconify:arcticons"
+  }
+ ],
+ "Gmo Internet": [],
+ "RT": [],
+ "BianFeng": [],
+ "Bridgestone": [],
+ "YuanFuDao": [],
+ "ChinaTelecom": [
+  {
+   "cand": "china-telecom",
+   "set": "iconify:arcticons"
+  }
+ ],
+ "No-IP": [],
+ "CIBN": [],
+ "Epoch Media": [],
+ "58.com": [],
+ "Newscorp": [],
+ "Bloomberg": [],
+ "BaiShanYunKeJi": [],
+ "Durex": [],
+ "Sakurafrp": [],
+ "ICBC": [
+  {
+   "cand": "icbc",
+   "set": "iconify:arcticons"
+  }
+ ],
+ "Sohu": [],
+ "QiNiuYun": [],
+ "HuluUSA": [
+  {
+   "cand": "hulu",
+   "set": "dashboard-icons"
+  }
+ ],
+ "18comic": [],
+ "VOA": [],
+ "Geely": [],
+ "Verisign Pki": [],
+ "Bestbuy": [
+  {
+   "cand": "bestbuy",
+   "set": "iconify:arcticons"
+  }
+ ],
+ "Wildberries": [
+  {
+   "cand": "wildberries",
+   "set": "iconify:arcticons"
+  }
+ ],
+ "UCloud": [],
+ "theScore": [
+  {
+   "cand": "thescore",
+   "set": "iconify:arcticons"
+  }
+ ],
+ "Reuters": [
+  {
+   "cand": "reuters",
+   "set": "iconify:arcticons"
+  }
+ ],
+ "Tencent": [],
+ "WangYi": [],
+ "Kuaishou": [
+  {
+   "cand": "kuaishou",
+   "set": "simple-icons"
+  },
+  {
+   "cand": "kwai",
+   "set": "iconify:arcticons"
+  }
+ ],
+ "WeiXin": [
+  {
+   "cand": "wechat",
+   "set": "dashboard-icons"
+  }
+ ],
+ "ZhiFuBao": [
+  {
+   "cand": "alipay",
+   "set": "simple-icons"
+  }
+ ],
+ "JingDong": [],
+ "MeiTuan": [
+  {
+   "cand": "meituan",
+   "set": "simple-icons"
+  }
+ ],
+ "DiDi": [
+  {
+   "cand": "didi",
+   "set": "iconify:arcticons"
+  }
+ ],
+ "BiliBili": [
+  {
+   "cand": "bilibili",
+   "set": "dashboard-icons"
+  }
+ ],
+ "XiaoHongShu": [
+  {
+   "cand": "xiaohongshu",
+   "set": "simple-icons"
+  }
+ ],
+ "AliBaba": [
+  {
+   "cand": "alibaba",
+   "set": "selfhst/icons"
+  },
+  {
+   "cand": "alibabacloud",
+   "set": "simple-icons"
+  }
+ ],
+ "BaiDu": [
+  {
+   "cand": "baidu",
+   "set": "dashboard-icons"
+  }
+ ],
+ "Epic": [
+  {
+   "cand": "epicgames",
+   "set": "simple-icons"
+  }
+ ],
+ "Genshin Impact": [
+  {
+   "cand": "genshin-impact",
+   "set": "iconify:arcticons"
+  }
+ ],
+ "League of Legends": [
+  {
+   "cand": "leagueoflegends",
+   "set": "simple-icons"
+  }
+ ],
+ "Valorant": [
+  {
+   "cand": "valorant",
+   "set": "simple-icons"
+  }
+ ],
+ "Starlink": [
+  {
+   "cand": "starlink",
+   "set": "iconify:arcticons"
+  }
+ ],
+ "Grok": [
+  {
+   "cand": "grok",
+   "set": "dashboard-icons"
+  },
+  {
+   "cand": "xai",
+   "set": "iconify:token"
+  }
+ ],
+ "PlayStation": [
+  {
+   "cand": "playstation",
+   "set": "dashboard-icons"
+  }
+ ]
+}

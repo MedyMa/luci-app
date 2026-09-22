@@ -138,6 +138,10 @@ msgid "Application name"
 msgstr "应用"
 
 #: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Application / site / type"
+msgstr "应用 / 站点 / 类型"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "Total traffic"
 msgstr "总量"
 
@@ -152,6 +156,18 @@ msgstr "上传"
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "Client count"
 msgstr "客户端数"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Peak clients/hour"
+msgstr "单小时客户端峰值"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "maximum number of clients seen in any single hour of this range"
+msgstr "所选范围中任一小时观察到的最大客户端数；跨小时未去重"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "number of clients seen for this application in the current session"
+msgstr "本次运行中此应用的客户端数"
 
 # The strip box for the same figure uses its own word: sitting next to
 # "客户端合计" (the bytes) a second "客户端数" reads as more of the same thing,
@@ -169,6 +185,10 @@ msgstr "设备数"
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "Apps"
 msgstr "应用"
+
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Apps and sites"
+msgstr "应用与站点"
 
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "No samples yet"
@@ -339,6 +359,10 @@ msgstr "所选时间范围内最忙的客户端，取自归档的客户端记录
 msgid "Other apps"
 msgstr "其余应用"
 
+#: htdocs/luci-static/resources/view/traffic/overview.js
+msgid "Other listed traffic"
+msgstr "其余已列流量"
+
 # --- 环形图代表总计，不再是已归属 ---------------------------------------------
 # 环里「没能归属」的那一段：本窗口的总量减去应用/客户端归属能说出名字的部分。
 # 开流卸载或走代理隧道时它很大（实测占 62%），所以它必须有一眼可辨的颜色：中性
@@ -352,3 +376,9 @@ msgstr "未归属"
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "Traffic breakdown"
 msgstr "流量构成"
+
+msgid "Show domains"
+msgstr "展开域名"
+
+msgid "of all traffic"
+msgstr "占全部流量"

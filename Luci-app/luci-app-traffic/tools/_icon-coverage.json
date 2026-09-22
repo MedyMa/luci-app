@@ -1,0 +1,4883 @@
+{
+ "rows": 32068,
+ "names": 1657,
+ "have": 751,
+ "covered": 682,
+ "missing": [
+  {
+   "name": "360",
+   "d": 256,
+   "sample": "0360.cn"
+  },
+  {
+   "name": "Kingsoft",
+   "d": 254,
+   "sample": "35go.cn"
+  },
+  {
+   "name": "Huaweicloud",
+   "d": 189,
+   "sample": "26r9y.cn"
+  },
+  {
+   "name": "WangSuKeJi",
+   "d": 189,
+   "sample": "51cdn.com"
+  },
+  {
+   "name": "Mailru",
+   "d": 172,
+   "sample": "algoritmika.org"
+  },
+  {
+   "name": "IFlytek",
+   "d": 152,
+   "sample": "4006806555.com"
+  },
+  {
+   "name": "Gmo Internet",
+   "d": 135,
+   "sample": "1-account.com"
+  },
+  {
+   "name": "RT",
+   "d": 112,
+   "sample": "1917live.red"
+  },
+  {
+   "name": "BianFeng",
+   "d": 99,
+   "sample": "17et.com"
+  },
+  {
+   "name": "Bridgestone",
+   "d": 94,
+   "sample": "bandag.cc"
+  },
+  {
+   "name": "YuanFuDao",
+   "d": 92,
+   "sample": "52ml.net"
+  },
+  {
+   "name": "ChinaTelecom",
+   "d": 88,
+   "sample": "01058511989.com"
+  },
+  {
+   "name": "No-IP",
+   "d": 83,
+   "sample": "3utilities.com"
+  },
+  {
+   "name": "CIBN",
+   "d": 71,
+   "sample": "apecn.com"
+  },
+  {
+   "name": "Epoch Media",
+   "d": 68,
+   "sample": "dajiyuan.com"
+  },
+  {
+   "name": "58.com",
+   "d": 62,
+   "sample": "58.com"
+  },
+  {
+   "name": "Newscorp",
+   "d": 60,
+   "sample": "1degree.com.au"
+  },
+  {
+   "name": "Bloomberg",
+   "d": 60,
+   "sample": "bbgevent.com"
+  },
+  {
+   "name": "BaiShanYunKeJi",
+   "d": 59,
+   "sample": "5gcdnx.com"
+  },
+  {
+   "name": "Durex",
+   "d": 59,
+   "sample": "dewitwithdurex.com"
+  },
+  {
+   "name": "Sakurafrp",
+   "d": 58,
+   "sample": "13a.com"
+  },
+  {
+   "name": "17173",
+   "d": 57,
+   "sample": "168kaifu.com"
+  },
+  {
+   "name": "ICBC",
+   "d": 57,
+   "sample": "95588.com"
+  },
+  {
+   "name": "Sohu",
+   "d": 54,
+   "sample": "acoloo.com"
+  },
+  {
+   "name": "QiNiuYun",
+   "d": 53,
+   "sample": "atlab.ai"
+  },
+  {
+   "name": "HuluUSA",
+   "d": 51,
+   "sample": "112263.com"
+  },
+  {
+   "name": "18comic",
+   "d": 51,
+   "sample": "18comic-god.cc"
+  },
+  {
+   "name": "VOA",
+   "d": 51,
+   "sample": "amerikaninsesi.com"
+  },
+  {
+   "name": "Geely",
+   "d": 50,
+   "sample": "51caocao.cn"
+  },
+  {
+   "name": "Verisign Pki",
+   "d": 50,
+   "sample": "adobe-crl.verisign.com"
+  },
+  {
+   "name": "Z Library",
+   "d": 48,
+   "sample": "1lib.cloud"
+  },
+  {
+   "name": "AmazonCN",
+   "d": 45,
+   "sample": "a2z.org.cn"
+  },
+  {
+   "name": "AppleMedia",
+   "d": 45,
+   "sample": "aod.itunes.apple.com"
+  },
+  {
+   "name": "ChinaMobile",
+   "d": 44,
+   "sample": "10086.cn"
+  },
+  {
+   "name": "Blizzard",
+   "d": 44,
+   "sample": "battlenet.com"
+  },
+  {
+   "name": "Ctyun",
+   "d": 44,
+   "sample": "bjctyiptv.cn"
+  },
+  {
+   "name": "Dewu",
+   "d": 44,
+   "sample": "dewu-inc.com"
+  },
+  {
+   "name": "Feishu",
+   "d": 43,
+   "sample": "anycross.com"
+  },
+  {
+   "name": "Jlc",
+   "d": 43,
+   "sample": "fa-part.com"
+  },
+  {
+   "name": "Yto Express",
+   "d": 43,
+   "sample": "gpall.cn"
+  },
+  {
+   "name": "Veet",
+   "d": 43,
+   "sample": "veet.at"
+  },
+  {
+   "name": "CCTV",
+   "d": 42,
+   "sample": "cctv.cn"
+  },
+  {
+   "name": "ChinaUnicom",
+   "d": 40,
+   "sample": "10010.cn"
+  },
+  {
+   "name": "AirWick",
+   "d": 40,
+   "sample": "airwick.at"
+  },
+  {
+   "name": "Globo",
+   "d": 40,
+   "sample": "autoesporte.com"
+  },
+  {
+   "name": "Falungong",
+   "d": 39,
+   "sample": "aboluowang.com"
+  },
+  {
+   "name": "Finish",
+   "d": 39,
+   "sample": "finish.at"
+  },
+  {
+   "name": "TaiKang",
+   "d": 38,
+   "sample": "12333tc.com"
+  },
+  {
+   "name": "ChunYou",
+   "d": 38,
+   "sample": "3304399.com"
+  },
+  {
+   "name": "Douyin",
+   "d": 37,
+   "sample": "activity-wbsj.com"
+  },
+  {
+   "name": "Ucoz",
+   "d": 37,
+   "sample": "at.ua"
+  },
+  {
+   "name": "LanZouYun",
+   "d": 36,
+   "sample": "baidupan.com"
+  },
+  {
+   "name": "Ifanr",
+   "d": 35,
+   "sample": "01hub.com"
+  },
+  {
+   "name": "Likee",
+   "d": 35,
+   "sample": "agb9r0ad.qllfkl.com"
+  },
+  {
+   "name": "LastFM",
+   "d": 34,
+   "sample": "audioscrobbler.com"
+  },
+  {
+   "name": "Dettol",
+   "d": 34,
+   "sample": "dettol-prize.com"
+  },
+  {
+   "name": "EastMoney",
+   "d": 33,
+   "sample": "1234567.com.cn"
+  },
+  {
+   "name": "ShiJiChaoXing",
+   "d": 33,
+   "sample": "16q.cn"
+  },
+  {
+   "name": "17zuoye",
+   "d": 33,
+   "sample": "17beijiang.com"
+  },
+  {
+   "name": "CNNIC",
+   "d": 33,
+   "sample": "6pilot.cn"
+  },
+  {
+   "name": "Blued",
+   "d": 33,
+   "sample": "bf99.com"
+  },
+  {
+   "name": "Miniso",
+   "d": 33,
+   "sample": "loveminiso.com.br"
+  },
+  {
+   "name": "Verisign",
+   "d": 33,
+   "sample": "verisign.asia"
+  },
+  {
+   "name": "X5",
+   "d": 32,
+   "sample": "5ka.ru"
+  },
+  {
+   "name": "AppleDaily",
+   "d": 32,
+   "sample": "appledaily.com"
+  },
+  {
+   "name": "Bushiroad",
+   "d": 32,
+   "sample": "argo-bdp.com"
+  },
+  {
+   "name": "YunFanJiaSu",
+   "d": 32,
+   "sample": "cdndns2.cn"
+  },
+  {
+   "name": "Reagroup",
+   "d": 32,
+   "sample": "flatmates.com.au"
+  },
+  {
+   "name": "Suning",
+   "d": 31,
+   "sample": "10035.com.cn"
+  },
+  {
+   "name": "Doubao",
+   "d": 31,
+   "sample": "api-building.fun"
+  },
+  {
+   "name": "ThomsonReuters",
+   "d": 31,
+   "sample": "aranzadi.es"
+  },
+  {
+   "name": "Strepsils",
+   "d": 31,
+   "sample": "cepacol.ca"
+  },
+  {
+   "name": "Swisssign",
+   "d": 31,
+   "sample": "digital-id.ch"
+  },
+  {
+   "name": "Group Ib",
+   "d": 30,
+   "sample": "antiphishing.nl"
+  },
+  {
+   "name": "Rferl",
+   "d": 30,
+   "sample": "azadiradio.com"
+  },
+  {
+   "name": "Sankei",
+   "d": 30,
+   "sample": "business-i.jp"
+  },
+  {
+   "name": "800best",
+   "d": 29,
+   "sample": "56laile.com"
+  },
+  {
+   "name": "Illusion Nonofficial",
+   "d": 29,
+   "sample": "acgcf.com"
+  },
+  {
+   "name": "Oup",
+   "d": 29,
+   "sample": "amamanualofstyle.com"
+  },
+  {
+   "name": "NGAA",
+   "d": 29,
+   "sample": "chinagslb.cn"
+  },
+  {
+   "name": "WanKaHuanJu",
+   "d": 29,
+   "sample": "daxianglingke.cn"
+  },
+  {
+   "name": "PingAn",
+   "d": 27,
+   "sample": "1010-0000.com"
+  },
+  {
+   "name": "NaSDDNS",
+   "d": 27,
+   "sample": "3322.net"
+  },
+  {
+   "name": "XieCheng",
+   "d": 27,
+   "sample": "c-ctrip.com"
+  },
+  {
+   "name": "WangXinKeJi",
+   "d": 26,
+   "sample": "0101cdn.com"
+  },
+  {
+   "name": "Didi",
+   "d": 26,
+   "sample": "apptaxi.com.cn"
+  },
+  {
+   "name": "ZhangYue",
+   "d": 26,
+   "sample": "corp3g.cn"
+  },
+  {
+   "name": "Domob",
+   "d": 26,
+   "sample": "dmaow.com"
+  },
+  {
+   "name": "Nurofen",
+   "d": 26,
+   "sample": "nurofen.at"
+  },
+  {
+   "name": "4399",
+   "d": 25,
+   "sample": "3839apk.com"
+  },
+  {
+   "name": "Gettyimages",
+   "d": 25,
+   "sample": "gettyimages.ae"
+  },
+  {
+   "name": "Jushuitan",
+   "d": 24,
+   "sample": "315dian.com"
+  },
+  {
+   "name": "Auxgroup",
+   "d": 24,
+   "sample": "aux-home.com"
+  },
+  {
+   "name": "CaiXinChuanMei",
+   "d": 24,
+   "sample": "caing.cn"
+  },
+  {
+   "name": "Selectel",
+   "d": 24,
+   "sample": "chipcore.com"
+  },
+  {
+   "name": "KuangShi",
+   "d": 23,
+   "sample": "brainplusplus.com.cn"
+  },
+  {
+   "name": "Rarbg",
+   "d": 23,
+   "sample": "dyncdn.me"
+  },
+  {
+   "name": "Westerndigital",
+   "d": 23,
+   "sample": "g-technology.com"
+  },
+  {
+   "name": "Dynu",
+   "d": 22,
+   "sample": "1cooldns.com"
+  },
+  {
+   "name": "TianWeiChengXin",
+   "d": 22,
+   "sample": "4006663999.cn"
+  },
+  {
+   "name": "RuanMei",
+   "d": 22,
+   "sample": "6655.com"
+  },
+  {
+   "name": "CMB",
+   "d": 22,
+   "sample": "8008205555.cn"
+  },
+  {
+   "name": "KouDaiShiShang",
+   "d": 22,
+   "sample": "91ruyu.com"
+  },
+  {
+   "name": "Ft",
+   "d": 22,
+   "sample": "agendaweek.com"
+  },
+  {
+   "name": "HamiVideo",
+   "d": 22,
+   "sample": "apl-hamivideo.cdn.hinet.net"
+  },
+  {
+   "name": "Jtexpress",
+   "d": 22,
+   "sample": "bxexpress.com.cn"
+  },
+  {
+   "name": "BlockHttpDNS",
+   "d": 22,
+   "sample": "dns.jd.com"
+  },
+  {
+   "name": "Uu Chat",
+   "d": 22,
+   "sample": "uug22.com"
+  },
+  {
+   "name": "YouMengChuangXiang",
+   "d": 21,
+   "sample": "97973.com"
+  },
+  {
+   "name": "Abema",
+   "d": 21,
+   "sample": "abema-tv.com"
+  },
+  {
+   "name": "Envybox",
+   "d": 21,
+   "sample": "bananacall.ru"
+  },
+  {
+   "name": "Mediachinesegroup",
+   "d": 21,
+   "sample": "chinapress.com.my"
+  },
+  {
+   "name": "YYeTs",
+   "d": 21,
+   "sample": "got001.com"
+  },
+  {
+   "name": "Ibkr",
+   "d": 21,
+   "sample": "ibkr.ca"
+  },
+  {
+   "name": "ZhongXingTongXun",
+   "d": 20,
+   "sample": "3gcare.cn"
+  },
+  {
+   "name": "HuanJu",
+   "d": 20,
+   "sample": "5253.com"
+  },
+  {
+   "name": "Vokino",
+   "d": 20,
+   "sample": "85b6b2.ws"
+  },
+  {
+   "name": "FeiZhu",
+   "d": 20,
+   "sample": "alitrip.com"
+  },
+  {
+   "name": "Harpercollins",
+   "d": 20,
+   "sample": "bookclubgirl.com"
+  },
+  {
+   "name": "Rb",
+   "d": 20,
+   "sample": "digital-rb.com"
+  },
+  {
+   "name": "SFExpress",
+   "d": 20,
+   "sample": "feng1.com"
+  },
+  {
+   "name": "51Job",
+   "d": 19,
+   "sample": "51hr.com"
+  },
+  {
+   "name": "6jianfang",
+   "d": 19,
+   "sample": "6.cn"
+  },
+  {
+   "name": "AsianMedia",
+   "d": 19,
+   "sample": "akmcdnoversea-tw.inter.iqiyi.com"
+  },
+  {
+   "name": "Ok",
+   "d": 19,
+   "sample": "apiok.ru"
+  },
+  {
+   "name": "Garena",
+   "d": 19,
+   "sample": "avatargarenanow-a.akamaihd.net"
+  },
+  {
+   "name": "XingKongWuXian",
+   "d": 19,
+   "sample": "avstar01.me"
+  },
+  {
+   "name": "PPTV",
+   "d": 19,
+   "sample": "bkrent.cn"
+  },
+  {
+   "name": "Faronics",
+   "d": 19,
+   "sample": "clickedu.co.uk"
+  },
+  {
+   "name": "FangZhengDianZi",
+   "d": 19,
+   "sample": "cloudpress.cn"
+  },
+  {
+   "name": "TigerFintech",
+   "d": 19,
+   "sample": "ftfast.com"
+  },
+  {
+   "name": "Guo",
+   "d": 19,
+   "sample": "g-tvapp.com"
+  },
+  {
+   "name": "HBOHK",
+   "d": 19,
+   "sample": "hboasia.com"
+  },
+  {
+   "name": "Chinapost",
+   "d": 18,
+   "sample": "11183.com.cn"
+  },
+  {
+   "name": "178",
+   "d": 18,
+   "sample": "178.net"
+  },
+  {
+   "name": "Rossiyasegodnya",
+   "d": 18,
+   "sample": "1prime.ru"
+  },
+  {
+   "name": "MingLueZhaoHui",
+   "d": 18,
+   "sample": "3wnet.cn"
+  },
+  {
+   "name": "Singtaonewscorp",
+   "d": 18,
+   "sample": "bastillepost.com"
+  },
+  {
+   "name": "CNKI",
+   "d": 18,
+   "sample": "bbf.org.cn"
+  },
+  {
+   "name": "Calgoncarbon",
+   "d": 18,
+   "sample": "calgon.at"
+  },
+  {
+   "name": "CCB",
+   "d": 18,
+   "sample": "ccb-life.com.cn"
+  },
+  {
+   "name": "Xhamster",
+   "d": 18,
+   "sample": "freexh.blog"
+  },
+  {
+   "name": "Huffpost",
+   "d": 18,
+   "sample": "huffingtonpost.ca"
+  },
+  {
+   "name": "KugouKuwo",
+   "d": 17,
+   "sample": "2496.cn"
+  },
+  {
+   "name": "DtDNS",
+   "d": 17,
+   "sample": "3d-game.com"
+  },
+  {
+   "name": "JiGuangTuiSong",
+   "d": 17,
+   "sample": "42r.cn"
+  },
+  {
+   "name": "HBOAsia",
+   "d": 17,
+   "sample": "44wilhpljf.execute-api.ap-southeast-1.amazonaws.com"
+  },
+  {
+   "name": "ZhiYinManKe",
+   "d": 17,
+   "sample": "51kanmanhua.com"
+  },
+  {
+   "name": "XiaoGouKeJi",
+   "d": 17,
+   "sample": "8moom.com"
+  },
+  {
+   "name": "ZhongWeiShiJi",
+   "d": 17,
+   "sample": "afdvr.cc"
+  },
+  {
+   "name": "PrimeVideo",
+   "d": 17,
+   "sample": "amazonvideo.com"
+  },
+  {
+   "name": "Dailymail",
+   "d": 17,
+   "sample": "anm.co.uk"
+  },
+  {
+   "name": "BrightCove",
+   "d": 17,
+   "sample": "bcove.video"
+  },
+  {
+   "name": "TVB",
+   "d": 17,
+   "sample": "bigbigchannel.com.hk"
+  },
+  {
+   "name": "LuDaShi",
+   "d": 17,
+   "sample": "birdpaper.cn"
+  },
+  {
+   "name": "Haitang",
+   "d": 17,
+   "sample": "haitangbook.com"
+  },
+  {
+   "name": "Realclear",
+   "d": 17,
+   "sample": "realclear.com"
+  },
+  {
+   "name": "DingXiangYuan",
+   "d": 16,
+   "sample": "0dxy.cn"
+  },
+  {
+   "name": "PCCW",
+   "d": 16,
+   "sample": "1010.com.hk"
+  },
+  {
+   "name": "GovCN",
+   "d": 16,
+   "sample": "91huayi.cn"
+  },
+  {
+   "name": "Himalaya",
+   "d": 16,
+   "sample": "9nali.com"
+  },
+  {
+   "name": "UPYun",
+   "d": 16,
+   "sample": "aicdn.com"
+  },
+  {
+   "name": "Raiffeisenbank",
+   "d": 16,
+   "sample": "aval.ua"
+  },
+  {
+   "name": "Insider",
+   "d": 16,
+   "sample": "businessinsider.co.za"
+  },
+  {
+   "name": "NYTimes",
+   "d": 16,
+   "sample": "d1f1eryiqyjs0r.cloudfront.net"
+  },
+  {
+   "name": "Kanzhongguo",
+   "d": 16,
+   "sample": "es-visiontimes.com"
+  },
+  {
+   "name": "115",
+   "d": 15,
+   "sample": "115.com"
+  },
+  {
+   "name": "12306",
+   "d": 15,
+   "sample": "12306.cn"
+  },
+  {
+   "name": "SmarTone",
+   "d": 15,
+   "sample": "barkadahansasmartone.com"
+  },
+  {
+   "name": "CEB",
+   "d": 15,
+   "sample": "cebbank.com"
+  },
+  {
+   "name": "Connectivity Check",
+   "d": 15,
+   "sample": "connectivity-check.ubuntu.com"
+  },
+  {
+   "name": "DigiCert",
+   "d": 15,
+   "sample": "dcocsp.cn"
+  },
+  {
+   "name": "GlobalSign",
+   "d": 15,
+   "sample": "globalsign-media.com"
+  },
+  {
+   "name": "Agilebits",
+   "d": 14,
+   "sample": "1infra.net"
+  },
+  {
+   "name": "Aisiku",
+   "d": 14,
+   "sample": "1tyy.cn"
+  },
+  {
+   "name": "SuiShiChuanMei",
+   "d": 14,
+   "sample": "91friend.com"
+  },
+  {
+   "name": "9News",
+   "d": 14,
+   "sample": "9cdn.net"
+  },
+  {
+   "name": "Visualarts",
+   "d": 14,
+   "sample": "abow.jp"
+  },
+  {
+   "name": "DiLianWangLuo",
+   "d": 14,
+   "sample": "acadn.cn"
+  },
+  {
+   "name": "Qcloud",
+   "d": 14,
+   "sample": "aegis.qq.com"
+  },
+  {
+   "name": "Wantmedia",
+   "d": 14,
+   "sample": "benliton.com"
+  },
+  {
+   "name": "Cloudflarecn",
+   "d": 14,
+   "sample": "cf-ns.com"
+  },
+  {
+   "name": "DiscoveryPlus",
+   "d": 14,
+   "sample": "content-ause1-ur-discovery1.uplynk.com"
+  },
+  {
+   "name": "DingTalk",
+   "d": 14,
+   "sample": "ddurl.to"
+  },
+  {
+   "name": "PChome",
+   "d": 14,
+   "sample": "ecapi-pchome.cdn.hinet.net"
+  },
+  {
+   "name": "RTHK",
+   "d": 14,
+   "sample": "etvonline.hk"
+  },
+  {
+   "name": "YiXiaKeJi",
+   "d": 14,
+   "sample": "huangka.com"
+  },
+  {
+   "name": "LianMeng",
+   "d": 13,
+   "sample": "2333333333333.com"
+  },
+  {
+   "name": "CKJR",
+   "d": 13,
+   "sample": "51ckjr.com"
+  },
+  {
+   "name": "Cainiao",
+   "d": 13,
+   "sample": "56che.com"
+  },
+  {
+   "name": "Zto Express",
+   "d": 13,
+   "sample": "95311.com"
+  },
+  {
+   "name": "Gaijin",
+   "d": 13,
+   "sample": "acesofthunder.net"
+  },
+  {
+   "name": "Douyu",
+   "d": 13,
+   "sample": "bytefcdnrd.com"
+  },
+  {
+   "name": "Yomiuri",
+   "d": 13,
+   "sample": "chuokoron.jp"
+  },
+  {
+   "name": "Erolabs",
+   "d": 13,
+   "sample": "ero-labs.cloud"
+  },
+  {
+   "name": "Ifast",
+   "d": 13,
+   "sample": "fsmone.com"
+  },
+  {
+   "name": "TianYaForum",
+   "d": 13,
+   "sample": "gz12301.com"
+  },
+  {
+   "name": "ShenMa",
+   "d": 13,
+   "sample": "shenma-inc.com"
+  },
+  {
+   "name": "XueErSi",
+   "d": 12,
+   "sample": "100tal.com"
+  },
+  {
+   "name": "SkyGO",
+   "d": 12,
+   "sample": "2cnt.net"
+  },
+  {
+   "name": "Hupu",
+   "d": 12,
+   "sample": "afpchinesesports.com"
+  },
+  {
+   "name": "Yuewen",
+   "d": 12,
+   "sample": "aireads.cn"
+  },
+  {
+   "name": "AmazonPrimeVideo",
+   "d": 12,
+   "sample": "amazonprimevideo.cn"
+  },
+  {
+   "name": "QingCloud",
+   "d": 12,
+   "sample": "anybox.com"
+  },
+  {
+   "name": "Sectigo",
+   "d": 12,
+   "sample": "aoc.cat"
+  },
+  {
+   "name": "Mindbox",
+   "d": 12,
+   "sample": "botmechanic.io"
+  },
+  {
+   "name": "Carrotquest",
+   "d": 12,
+   "sample": "carrot-mail.io"
+  },
+  {
+   "name": "Squareup",
+   "d": 12,
+   "sample": "cash.app"
+  },
+  {
+   "name": "Citic",
+   "d": 12,
+   "sample": "cfc108.com"
+  },
+  {
+   "name": "Otpbank",
+   "d": 12,
+   "sample": "ckb.me"
+  },
+  {
+   "name": "PikPak",
+   "d": 12,
+   "sample": "dlandroid.rcv.sandai.net"
+  },
+  {
+   "name": "Drweb",
+   "d": 12,
+   "sample": "drweb-av.de"
+  },
+  {
+   "name": "HoYoverse",
+   "d": 12,
+   "sample": "honkaiimpact3.com"
+  },
+  {
+   "name": "Megafon",
+   "d": 12,
+   "sample": "inplat.ru"
+  },
+  {
+   "name": "Japonx",
+   "d": 12,
+   "sample": "japonx.com"
+  },
+  {
+   "name": "Longbridge",
+   "d": 12,
+   "sample": "lbctrl.com"
+  },
+  {
+   "name": "LiTV",
+   "d": 12,
+   "sample": "litv.tv"
+  },
+  {
+   "name": "Manorama",
+   "d": 12,
+   "sample": "malayalamanorama.com"
+  },
+  {
+   "name": "Overclockers Ru",
+   "d": 12,
+   "sample": "ovcl.ru"
+  },
+  {
+   "name": "Xtom",
+   "d": 12,
+   "sample": "v.ps"
+  },
+  {
+   "name": "Wenshushu",
+   "d": 12,
+   "sample": "wenshushu.cn"
+  },
+  {
+   "name": "ZDNS",
+   "d": 12,
+   "sample": "zcmbc.com.cn"
+  },
+  {
+   "name": "Wanmei",
+   "d": 11,
+   "sample": "111.com"
+  },
+  {
+   "name": "Qihoo360",
+   "d": 11,
+   "sample": "360.net"
+  },
+  {
+   "name": "Trustasia",
+   "d": 11,
+   "sample": "51ssl.cn"
+  },
+  {
+   "name": "XueQiu",
+   "d": 11,
+   "sample": "aiganggu.com"
+  },
+  {
+   "name": "AnTianKeJi",
+   "d": 11,
+   "sample": "antiy.cn"
+  },
+  {
+   "name": "Hketgroup",
+   "d": 11,
+   "sample": "apexprint.com.hk"
+  },
+  {
+   "name": "DaMai",
+   "d": 11,
+   "sample": "baotoo.com"
+  },
+  {
+   "name": "Picacg",
+   "d": 11,
+   "sample": "bikaa.xyz"
+  },
+  {
+   "name": "GuiGuDongLi",
+   "d": 11,
+   "sample": "ciweekforum.com"
+  },
+  {
+   "name": "WanMeiShiJie",
+   "d": 11,
+   "sample": "counter-strike.cn"
+  },
+  {
+   "name": "Espn",
+   "d": 11,
+   "sample": "dtci.co"
+  },
+  {
+   "name": "Ku6",
+   "d": 11,
+   "sample": "feedsp.com"
+  },
+  {
+   "name": "Majsoul",
+   "d": 11,
+   "sample": "game.maj-soul.com"
+  },
+  {
+   "name": "Hdrezka",
+   "d": 11,
+   "sample": "hdrezka-home.tv"
+  },
+  {
+   "name": "Wargaming",
+   "d": 11,
+   "sample": "masteroforion.com"
+  },
+  {
+   "name": "Manhuaren",
+   "d": 10,
+   "sample": "1kkk.com"
+  },
+  {
+   "name": "56",
+   "d": 10,
+   "sample": "56.com"
+  },
+  {
+   "name": "Funshion",
+   "d": 10,
+   "sample": "9iwanwan.com"
+  },
+  {
+   "name": "BardAI",
+   "d": 10,
+   "sample": "ai.google.dev"
+  },
+  {
+   "name": "Youquan",
+   "d": 10,
+   "sample": "aitcfw.com"
+  },
+  {
+   "name": "Gigabyte",
+   "d": 10,
+   "sample": "aorus.com"
+  },
+  {
+   "name": "Greatfire",
+   "d": 10,
+   "sample": "applecensorship.com"
+  },
+  {
+   "name": "BaiFenDian",
+   "d": 10,
+   "sample": "baifendian.com"
+  },
+  {
+   "name": "Dedao",
+   "d": 10,
+   "sample": "biji.com"
+  },
+  {
+   "name": "Dlsite",
+   "d": 10,
+   "sample": "chobit.cc"
+  },
+  {
+   "name": "Mts Ru",
+   "d": 10,
+   "sample": "dbo-dengi.online"
+  },
+  {
+   "name": "SouFang",
+   "d": 10,
+   "sample": "fang.com"
+  },
+  {
+   "name": "Kugou",
+   "d": 10,
+   "sample": "fanxingliveshow.com"
+  },
+  {
+   "name": "HanYi",
+   "d": 10,
+   "sample": "fontstar.com.cn"
+  },
+  {
+   "name": "Sumkoo",
+   "d": 10,
+   "sample": "gongqingyun.cn"
+  },
+  {
+   "name": "Huobi",
+   "d": 10,
+   "sample": "hbabit.com"
+  },
+  {
+   "name": "Teambition",
+   "d": 10,
+   "sample": "jianliao.com"
+  },
+  {
+   "name": "Mainichi",
+   "d": 10,
+   "sample": "machigoto.jp"
+  },
+  {
+   "name": "Mortein",
+   "d": 10,
+   "sample": "mortein.co.in"
+  },
+  {
+   "name": "Ddmaicai",
+   "d": 9,
+   "sample": "100.me"
+  },
+  {
+   "name": "Shuqi",
+   "d": 9,
+   "sample": "11222.cn"
+  },
+  {
+   "name": "DanDanZan",
+   "d": 9,
+   "sample": "343480.com"
+  },
+  {
+   "name": "Kyodonews",
+   "d": 9,
+   "sample": "47gyosei.jp"
+  },
+  {
+   "name": "GaoDe",
+   "d": 9,
+   "sample": "a-map.cn"
+  },
+  {
+   "name": "OuPeng",
+   "d": 9,
+   "sample": "adbxb.cn"
+  },
+  {
+   "name": "Entrust",
+   "d": 9,
+   "sample": "affirmtrust.com"
+  },
+  {
+   "name": "Talkatone",
+   "d": 9,
+   "sample": "agkn.com"
+  },
+  {
+   "name": "Anexia",
+   "d": 9,
+   "sample": "anexia-engine.com"
+  },
+  {
+   "name": "Mindgeek Porn",
+   "d": 9,
+   "sample": "babes.com"
+  },
+  {
+   "name": "ZhongYuanYiShang",
+   "d": 9,
+   "sample": "bjesound.com"
+  },
+  {
+   "name": "Vixengroup",
+   "d": 9,
+   "sample": "blacked.com"
+  },
+  {
+   "name": "Chinanews",
+   "d": 9,
+   "sample": "chinanews.com"
+  },
+  {
+   "name": "HBOUSA",
+   "d": 9,
+   "sample": "cinemax.com"
+  },
+  {
+   "name": "Comssone",
+   "d": 9,
+   "sample": "comss.club"
+  },
+  {
+   "name": "Thetimes",
+   "d": 9,
+   "sample": "driving.co.uk"
+  },
+  {
+   "name": "Genotek Ru",
+   "d": 9,
+   "sample": "eligens.cl"
+  },
+  {
+   "name": "FengHuangWang",
+   "d": 9,
+   "sample": "fengcx.com"
+  },
+  {
+   "name": "Ishumei",
+   "d": 9,
+   "sample": "fengkongbao.com"
+  },
+  {
+   "name": "Pornhub",
+   "d": 9,
+   "sample": "gaytube.com"
+  },
+  {
+   "name": "Olevod",
+   "d": 9,
+   "sample": "haiwaikan.com"
+  },
+  {
+   "name": "Midea",
+   "d": 9,
+   "sample": "irsnp.com"
+  },
+  {
+   "name": "Ixbt",
+   "d": 9,
+   "sample": "ixbt.com"
+  },
+  {
+   "name": "Mogujie",
+   "d": 9,
+   "sample": "juangua.com"
+  },
+  {
+   "name": "Rutracker",
+   "d": 9,
+   "sample": "maintracker.org"
+  },
+  {
+   "name": "Pixnet",
+   "d": 9,
+   "sample": "pimg.tw"
+  },
+  {
+   "name": "Yundaex",
+   "d": 9,
+   "sample": "udalogistic.cn"
+  },
+  {
+   "name": "Vilavpn",
+   "d": 9,
+   "sample": "vilavpn.com"
+  },
+  {
+   "name": "ZeeTV",
+   "d": 9,
+   "sample": "z5.app"
+  },
+  {
+   "name": "Chinabroadnet",
+   "d": 8,
+   "sample": "10099.com.cn"
+  },
+  {
+   "name": "TongCheng",
+   "d": 8,
+   "sample": "17u.cn"
+  },
+  {
+   "name": "ZhiYunZhong",
+   "d": 8,
+   "sample": "2taobao2jd.com"
+  },
+  {
+   "name": "Camera360",
+   "d": 8,
+   "sample": "360in.com"
+  },
+  {
+   "name": "Tmtpost",
+   "d": 8,
+   "sample": "72whys.com"
+  },
+  {
+   "name": "TaiheMusic",
+   "d": 8,
+   "sample": "91q.com"
+  },
+  {
+   "name": "Zhangtao",
+   "d": 8,
+   "sample": "accuratead.cn"
+  },
+  {
+   "name": "BaoFengYingYin",
+   "d": 8,
+   "sample": "baofeng.com"
+  },
+  {
+   "name": "Soundofhope",
+   "d": 8,
+   "sample": "bayvoice.net"
+  },
+  {
+   "name": "Beisen",
+   "d": 8,
+   "sample": "beisen.cn"
+  },
+  {
+   "name": "DynDNS",
+   "d": 8,
+   "sample": "blogdns.org"
+  },
+  {
+   "name": "Cnblogs",
+   "d": 8,
+   "sample": "blogjava.net"
+  },
+  {
+   "name": "Jiemian",
+   "d": 8,
+   "sample": "cailianpress.com"
+  },
+  {
+   "name": "ViuTV",
+   "d": 8,
+   "sample": "cognito-identity.us-east-1.amazonaws.com"
+  },
+  {
+   "name": "Cuhk",
+   "d": 8,
+   "sample": "cuhk.edu.hk"
+  },
+  {
+   "name": "Hooligapps",
+   "d": 8,
+   "sample": "cuntempire.com"
+  },
+  {
+   "name": "Limelight",
+   "d": 8,
+   "sample": "delvenetworks.com"
+  },
+  {
+   "name": "Eset",
+   "d": 8,
+   "sample": "e5.sk"
+  },
+  {
+   "name": "Eduhk",
+   "d": 8,
+   "sample": "eduhk.edu.hk"
+  },
+  {
+   "name": "Youporn",
+   "d": 8,
+   "sample": "extremetube.com"
+  },
+  {
+   "name": "Gateio",
+   "d": 8,
+   "sample": "gate.com"
+  },
+  {
+   "name": "Libgen",
+   "d": 8,
+   "sample": "gen.lib.rus.ec"
+  },
+  {
+   "name": "Headhunter",
+   "d": 8,
+   "sample": "hh.by"
+  },
+  {
+   "name": "Hkbu",
+   "d": 8,
+   "sample": "hkbu.edu.hk"
+  },
+  {
+   "name": "Idg",
+   "d": 8,
+   "sample": "idg.com"
+  },
+  {
+   "name": "Mucinex",
+   "d": 8,
+   "sample": "mucinex.ca"
+  },
+  {
+   "name": "DianCeWangKe",
+   "d": 8,
+   "sample": "pgyer.cc"
+  },
+  {
+   "name": "Yostar",
+   "d": 8,
+   "sample": "stargazer-games.com"
+  },
+  {
+   "name": "FengXiaWangLuo",
+   "d": 7,
+   "sample": "158c.com"
+  },
+  {
+   "name": "Copymanga",
+   "d": 7,
+   "sample": "2025copy.com"
+  },
+  {
+   "name": "Nodeseek",
+   "d": 7,
+   "sample": "22112211.xyz"
+  },
+  {
+   "name": "2K Games",
+   "d": 7,
+   "sample": "2k.com"
+  },
+  {
+   "name": "6park",
+   "d": 7,
+   "sample": "6park.com"
+  },
+  {
+   "name": "Qianxin",
+   "d": 7,
+   "sample": "95015.com"
+  },
+  {
+   "name": "9to5",
+   "d": 7,
+   "sample": "9to5google.com"
+  },
+  {
+   "name": "AbemaTV",
+   "d": 7,
+   "sample": "abematv.akamaized.net"
+  },
+  {
+   "name": "Anjuke",
+   "d": 7,
+   "sample": "aifang.com"
+  },
+  {
+   "name": "Mojitianqi",
+   "d": 7,
+   "sample": "airnut.com"
+  },
+  {
+   "name": "ALJazeera",
+   "d": 7,
+   "sample": "ajplus.net"
+  },
+  {
+   "name": "Kurogames",
+   "d": 7,
+   "sample": "aki-game.com"
+  },
+  {
+   "name": "Archivetoday",
+   "d": 7,
+   "sample": "archive.fo"
+  },
+  {
+   "name": "Pingcap",
+   "d": 7,
+   "sample": "asktug.com"
+  },
+  {
+   "name": "Avaxhome",
+   "d": 7,
+   "sample": "avh.world"
+  },
+  {
+   "name": "Bandwagonhost",
+   "d": 7,
+   "sample": "bandwagonhost.com"
+  },
+  {
+   "name": "BritboxUK",
+   "d": 7,
+   "sample": "bb-static.com"
+  },
+  {
+   "name": "BesTV",
+   "d": 7,
+   "sample": "bbtv.cn"
+  },
+  {
+   "name": "DuoWan",
+   "d": 7,
+   "sample": "bcshipgo.com"
+  },
+  {
+   "name": "NivodTV",
+   "d": 7,
+   "sample": "biggggg.com"
+  },
+  {
+   "name": "Cambridge",
+   "d": 7,
+   "sample": "cam.ac.uk"
+  },
+  {
+   "name": "FOXPlus",
+   "d": 7,
+   "sample": "cdn-fox-networks-group-green.akamaized.net"
+  },
+  {
+   "name": "Cian",
+   "d": 7,
+   "sample": "cian.ru"
+  },
+  {
+   "name": "YouZan",
+   "d": 7,
+   "sample": "daogou.ai"
+  },
+  {
+   "name": "Yokaverse",
+   "d": 7,
+   "sample": "dobest.com"
+  },
+  {
+   "name": "Thesun",
+   "d": 7,
+   "sample": "dreamteamfc.com"
+  },
+  {
+   "name": "Nbcuniversal",
+   "d": 7,
+   "sample": "dreamworks.com"
+  },
+  {
+   "name": "Getui",
+   "d": 7,
+   "sample": "gepush.com"
+  },
+  {
+   "name": "Gismeteo",
+   "d": 7,
+   "sample": "gismeteo.by"
+  },
+  {
+   "name": "HunanTV",
+   "d": 7,
+   "sample": "hifuntv.com"
+  },
+  {
+   "name": "Skyperfect",
+   "d": 7,
+   "sample": "hominis.media"
+  },
+  {
+   "name": "Movefree",
+   "d": 7,
+   "sample": "keepmovingwithmovefree.com"
+  },
+  {
+   "name": "KKBOX",
+   "d": 7,
+   "sample": "kfs.io"
+  },
+  {
+   "name": "Landian",
+   "d": 7,
+   "sample": "lancdn.com"
+  },
+  {
+   "name": "Lysol",
+   "d": 7,
+   "sample": "lizol.co.in"
+  },
+  {
+   "name": "Missav",
+   "d": 7,
+   "sample": "missav.ai"
+  },
+  {
+   "name": "Muji",
+   "d": 7,
+   "sample": "muji.com"
+  },
+  {
+   "name": "Pinduoduo",
+   "d": 7,
+   "sample": "pddcdn.com"
+  },
+  {
+   "name": "Theporndude",
+   "d": 7,
+   "sample": "porndude2.com"
+  },
+  {
+   "name": "BOCOM",
+   "d": 6,
+   "sample": "95559.com.cn"
+  },
+  {
+   "name": "AcFun",
+   "d": 6,
+   "sample": "ac.fun"
+  },
+  {
+   "name": "QuickConnect",
+   "d": 6,
+   "sample": "account.synology.com"
+  },
+  {
+   "name": "Cern",
+   "d": 6,
+   "sample": "ams02.space"
+  },
+  {
+   "name": "LvMiLianChuang",
+   "d": 6,
+   "sample": "aqara.cn"
+  },
+  {
+   "name": "ATTWatchTV",
+   "d": 6,
+   "sample": "att.tv"
+  },
+  {
+   "name": "KuaiDi100",
+   "d": 6,
+   "sample": "baidiapp.com"
+  },
+  {
+   "name": "Braveux",
+   "d": 6,
+   "sample": "braventures.com"
+  },
+  {
+   "name": "Colorfulclouds",
+   "d": 6,
+   "sample": "caiyunai.com"
+  },
+  {
+   "name": "JinJiangWenXue",
+   "d": 6,
+   "sample": "chaba123.com"
+  },
+  {
+   "name": "Gucci",
+   "d": 6,
+   "sample": "chimeforchange.org"
+  },
+  {
+   "name": "LineTV",
+   "d": 6,
+   "sample": "chocotv.com.tw"
+  },
+  {
+   "name": "Comodo",
+   "d": 6,
+   "sample": "comodo.com"
+  },
+  {
+   "name": "HKBN",
+   "d": 6,
+   "sample": "csifund.org"
+  },
+  {
+   "name": "Wbgames",
+   "d": 6,
+   "sample": "datarouter.apps.netherrealm.com"
+  },
+  {
+   "name": "Growingio",
+   "d": 6,
+   "sample": "datayi.cn"
+  },
+  {
+   "name": "Yunlaopo",
+   "d": 6,
+   "sample": "doure.net"
+  },
+  {
+   "name": "EHGallery",
+   "d": 6,
+   "sample": "e-hentai.org"
+  },
+  {
+   "name": "Familymart",
+   "d": 6,
+   "sample": "famifun.com.tw"
+  },
+  {
+   "name": "Ficbook",
+   "d": 6,
+   "sample": "fanfictionero.com"
+  },
+  {
+   "name": "Gemfury",
+   "d": 6,
+   "sample": "fury.blog"
+  },
+  {
+   "name": "Sonemic",
+   "d": 6,
+   "sample": "glitchwave.com"
+  },
+  {
+   "name": "Lizhi",
+   "d": 6,
+   "sample": "gzlzfm.com"
+  },
+  {
+   "name": "Hentaichen",
+   "d": 6,
+   "sample": "h-chan.me"
+  },
+  {
+   "name": "Hisense",
+   "d": 6,
+   "sample": "hisense-home.com"
+  },
+  {
+   "name": "HuaShuTV",
+   "d": 6,
+   "sample": "hzcnc.com"
+  },
+  {
+   "name": "Qimao",
+   "d": 6,
+   "sample": "jiuyue919.com"
+  },
+  {
+   "name": "Jwplayer",
+   "d": 6,
+   "sample": "jwpcdn.com"
+  },
+  {
+   "name": "Lumion",
+   "d": 6,
+   "sample": "lumion-la.com"
+  },
+  {
+   "name": "Nikkei",
+   "d": 6,
+   "sample": "nikkei-cnbc.co.jp"
+  },
+  {
+   "name": "Picsee",
+   "d": 6,
+   "sample": "pics.ee"
+  },
+  {
+   "name": "XiaoYuanKeJi",
+   "d": 5,
+   "sample": "10010mx.com"
+  },
+  {
+   "name": "HaiNanHangKong",
+   "d": 5,
+   "sample": "10044.cn"
+  },
+  {
+   "name": "Zhimeishe",
+   "d": 5,
+   "sample": "168sex.top"
+  },
+  {
+   "name": "Fansta",
+   "d": 5,
+   "sample": "2023aga.oen.tw"
+  },
+  {
+   "name": "36Kr",
+   "d": 5,
+   "sample": "36dianping.com"
+  },
+  {
+   "name": "8BTC",
+   "d": 5,
+   "sample": "8btc.com"
+  },
+  {
+   "name": "Aamgame",
+   "d": 5,
+   "sample": "aamgame.com"
+  },
+  {
+   "name": "Purikonejp",
+   "d": 5,
+   "sample": "api-priconne-redive.cygames.jp"
+  },
+  {
+   "name": "Autoru",
+   "d": 5,
+   "sample": "apiauto.ru"
+  },
+  {
+   "name": "Oan",
+   "d": 5,
+   "sample": "aweencore.com"
+  },
+  {
+   "name": "Awempire",
+   "d": 5,
+   "sample": "awempire.com"
+  },
+  {
+   "name": "JianShu",
+   "d": 5,
+   "sample": "baijii.com"
+  },
+  {
+   "name": "EncoreTVB",
+   "d": 5,
+   "sample": "bcbolt446c5271-a.akamaihd.net"
+  },
+  {
+   "name": "Bongacams",
+   "d": 5,
+   "sample": "bcicdn.com"
+  },
+  {
+   "name": "Lianjia",
+   "d": 5,
+   "sample": "beckyroom.com"
+  },
+  {
+   "name": "YiChe",
+   "d": 5,
+   "sample": "bitauto.com"
+  },
+  {
+   "name": "Borneoschematics",
+   "d": 5,
+   "sample": "borneo.world"
+  },
+  {
+   "name": "Boylove",
+   "d": 5,
+   "sample": "boylove.cc"
+  },
+  {
+   "name": "Brazzers",
+   "d": 5,
+   "sample": "brazzer.com"
+  },
+  {
+   "name": "ShangHaiJuXiao",
+   "d": 5,
+   "sample": "bubuying.net"
+  },
+  {
+   "name": "ChuangKeTie",
+   "d": 5,
+   "sample": "byfan.cn"
+  },
+  {
+   "name": "Alphabet",
+   "d": 5,
+   "sample": "calicolabs.com"
+  },
+  {
+   "name": "Hujiang",
+   "d": 5,
+   "sample": "cctalk.com"
+  },
+  {
+   "name": "Chatwhores",
+   "d": 5,
+   "sample": "chatwhores.com"
+  },
+  {
+   "name": "Chinatower",
+   "d": 5,
+   "sample": "china-tower.com"
+  },
+  {
+   "name": "CHT",
+   "d": 5,
+   "sample": "cht.com.tw"
+  },
+  {
+   "name": "Polyu",
+   "d": 5,
+   "sample": "cpce-polyu.edu.hk"
+  },
+  {
+   "name": "Netcraze",
+   "d": 5,
+   "sample": "crazedns.ru"
+  },
+  {
+   "name": "CWSeed",
+   "d": 5,
+   "sample": "cwseed.com"
+  },
+  {
+   "name": "Dingdatech",
+   "d": 5,
+   "sample": "diiing.cn"
+  },
+  {
+   "name": "Fqnovel",
+   "d": 5,
+   "sample": "fanqienovel.com"
+  },
+  {
+   "name": "Suishouji",
+   "d": 5,
+   "sample": "feidee.cn"
+  },
+  {
+   "name": "Focuschina",
+   "d": 5,
+   "sample": "focuschina.com"
+  },
+  {
+   "name": "Gannett",
+   "d": 5,
+   "sample": "gannett-cdn.com"
+  },
+  {
+   "name": "JianGuoYun",
+   "d": 5,
+   "sample": "gdfgq.club"
+  },
+  {
+   "name": "HuluJP",
+   "d": 5,
+   "sample": "happyon.jp"
+  },
+  {
+   "name": "Qweather",
+   "d": 5,
+   "sample": "hecdn.net"
+  },
+  {
+   "name": "Herogame",
+   "d": 5,
+   "sample": "hero.com"
+  },
+  {
+   "name": "Weathercn",
+   "d": 5,
+   "sample": "hf-aw.cn"
+  },
+  {
+   "name": "YiZhiBo",
+   "d": 5,
+   "sample": "hifengli.com"
+  },
+  {
+   "name": "Hpplay",
+   "d": 5,
+   "sample": "hpplay.cn"
+  },
+  {
+   "name": "Hupun",
+   "d": 5,
+   "sample": "hupun.com"
+  },
+  {
+   "name": "Yuanbei",
+   "d": 5,
+   "sample": "i2oo.cn"
+  },
+  {
+   "name": "Okjike",
+   "d": 5,
+   "sample": "jike.city"
+  },
+  {
+   "name": "Jkf",
+   "d": 5,
+   "sample": "jkf.net"
+  },
+  {
+   "name": "Kodik",
+   "d": 5,
+   "sample": "kodik-storage.com"
+  },
+  {
+   "name": "Redtube",
+   "d": 5,
+   "sample": "livehdcams.com"
+  },
+  {
+   "name": "Metart",
+   "d": 5,
+   "sample": "metart.com"
+  },
+  {
+   "name": "Redotpay",
+   "d": 5,
+   "sample": "pod-15-sunco-ws.zendesk.com"
+  },
+  {
+   "name": "ZhongGuoShiHua",
+   "d": 5,
+   "sample": "sinopec-usa.com"
+  },
+  {
+   "name": "Zhubajie",
+   "d": 5,
+   "sample": "tianpeng.com"
+  },
+  {
+   "name": "WoLai",
+   "d": 5,
+   "sample": "wol.tv"
+  },
+  {
+   "name": "Woolite",
+   "d": 5,
+   "sample": "woolite.ca"
+  },
+  {
+   "name": "Xvideos",
+   "d": 5,
+   "sample": "xv-ru.com"
+  },
+  {
+   "name": "NGA",
+   "d": 4,
+   "sample": "178.com"
+  },
+  {
+   "name": "2ch",
+   "d": 4,
+   "sample": "2ch.hk"
+  },
+  {
+   "name": "54647",
+   "d": 4,
+   "sample": "54647.global"
+  },
+  {
+   "name": "Petrochina",
+   "d": 4,
+   "sample": "95504.net"
+  },
+  {
+   "name": "CGB",
+   "d": 4,
+   "sample": "95508.com"
+  },
+  {
+   "name": "Aligames",
+   "d": 4,
+   "sample": "aligames.com"
+  },
+  {
+   "name": "Newsmax",
+   "d": 4,
+   "sample": "andysparis.com"
+  },
+  {
+   "name": "Dongjiao",
+   "d": 4,
+   "sample": "anmo.com"
+  },
+  {
+   "name": "ClubhouseIP",
+   "d": 4,
+   "sample": "ap-oversea-tls.agora.io"
+  },
+  {
+   "name": "Piratebay",
+   "d": 4,
+   "sample": "apibay.org"
+  },
+  {
+   "name": "Arphic",
+   "d": 4,
+   "sample": "arphic.com"
+  },
+  {
+   "name": "Classic",
+   "d": 4,
+   "sample": "asia.battle.net"
+  },
+  {
+   "name": "B3log",
+   "d": 4,
+   "sample": "b3log.org"
+  },
+  {
+   "name": "Baltamatica",
+   "d": 4,
+   "sample": "baltamatica.cn"
+  },
+  {
+   "name": "Barrons",
+   "d": 4,
+   "sample": "barrons-advisor.com"
+  },
+  {
+   "name": "Monotype",
+   "d": 4,
+   "sample": "bitstream.com"
+  },
+  {
+   "name": "Bjyouth",
+   "d": 4,
+   "sample": "bjyouth.gov.cn"
+  },
+  {
+   "name": "Fonbet",
+   "d": 4,
+   "sample": "bk6bba-resources.com"
+  },
+  {
+   "name": "Boboporn",
+   "d": 4,
+   "sample": "boboporn.com"
+  },
+  {
+   "name": "Bttzyw",
+   "d": 4,
+   "sample": "btt804.com"
+  },
+  {
+   "name": "Intsig",
+   "d": 4,
+   "sample": "camcard.com"
+  },
+  {
+   "name": "Wangsu",
+   "d": 4,
+   "sample": "cdnmg.com"
+  },
+  {
+   "name": "Cheetahmobile",
+   "d": 4,
+   "sample": "cheetahfun.com"
+  },
+  {
+   "name": "Cityu Hk",
+   "d": 4,
+   "sample": "cityu.edu.hk"
+  },
+  {
+   "name": "Cloudcone",
+   "d": 4,
+   "sample": "clco.cc"
+  },
+  {
+   "name": "Tendcloud",
+   "d": 4,
+   "sample": "cpatrk.net"
+  },
+  {
+   "name": "SMG",
+   "d": 4,
+   "sample": "cptn.tv"
+  },
+  {
+   "name": "ChengTongWangPan",
+   "d": 4,
+   "sample": "ctfile.com"
+  },
+  {
+   "name": "Dcard",
+   "d": 4,
+   "sample": "dcard.cc"
+  },
+  {
+   "name": "WeiZhiYunDong",
+   "d": 4,
+   "sample": "dicom365.com"
+  },
+  {
+   "name": "Dowjones",
+   "d": 4,
+   "sample": "djreprints.com"
+  },
+  {
+   "name": "Dlercloud",
+   "d": 4,
+   "sample": "dlercloud.com"
+  },
+  {
+   "name": "Hinet Eca",
+   "d": 4,
+   "sample": "eca.hinet.net"
+  },
+  {
+   "name": "Economist",
+   "d": 4,
+   "sample": "economist.com"
+  },
+  {
+   "name": "Haier",
+   "d": 4,
+   "sample": "ehaier.com"
+  },
+  {
+   "name": "Emojipedia",
+   "d": 4,
+   "sample": "emojipedia.org"
+  },
+  {
+   "name": "Weiphone",
+   "d": 4,
+   "sample": "feng.com"
+  },
+  {
+   "name": "Fiio",
+   "d": 4,
+   "sample": "fiio.cn"
+  },
+  {
+   "name": "Fontshop",
+   "d": 4,
+   "sample": "fontbook.com"
+  },
+  {
+   "name": "Xedge",
+   "d": 4,
+   "sample": "ganjiangvpn.com"
+  },
+  {
+   "name": "Gimy",
+   "d": 4,
+   "sample": "gimy.cc"
+  },
+  {
+   "name": "Linakesi",
+   "d": 4,
+   "sample": "heiyu.space"
+  },
+  {
+   "name": "Hentaivn",
+   "d": 4,
+   "sample": "hentaivn.de"
+  },
+  {
+   "name": "Hku",
+   "d": 4,
+   "sample": "hku.edu.hk"
+  },
+  {
+   "name": "Hkust",
+   "d": 4,
+   "sample": "hkust.edu.hk"
+  },
+  {
+   "name": "Huya",
+   "d": 4,
+   "sample": "huya.com"
+  },
+  {
+   "name": "TianTianKanKan",
+   "d": 4,
+   "sample": "ibangtiao.com"
+  },
+  {
+   "name": "Imperialcollege",
+   "d": 4,
+   "sample": "ic.ac.uk"
+  },
+  {
+   "name": "Javdb",
+   "d": 4,
+   "sample": "jav.app"
+  },
+  {
+   "name": "Justmysocks",
+   "d": 4,
+   "sample": "justmysocks.net"
+  },
+  {
+   "name": "Magnit",
+   "d": 4,
+   "sample": "kazanexpress.ru"
+  },
+  {
+   "name": "KingSmith",
+   "d": 4,
+   "sample": "kingsmith.cn"
+  },
+  {
+   "name": "KKTV",
+   "d": 4,
+   "sample": "kktv-theater.kk.stream"
+  },
+  {
+   "name": "Ligastavok",
+   "d": 4,
+   "sample": "ligadobra.ru"
+  },
+  {
+   "name": "Uoliv",
+   "d": 4,
+   "sample": "liv.ac.uk"
+  },
+  {
+   "name": "Madshi",
+   "d": 4,
+   "sample": "madshi.net"
+  },
+  {
+   "name": "Mailcom",
+   "d": 4,
+   "sample": "mail.com"
+  },
+  {
+   "name": "Matters",
+   "d": 4,
+   "sample": "matters.news"
+  },
+  {
+   "name": "Meadjohnson",
+   "d": 4,
+   "sample": "meadjohnson.com"
+  },
+  {
+   "name": "MOMOShop",
+   "d": 4,
+   "sample": "momo.dm"
+  },
+  {
+   "name": "Sxl",
+   "d": 4,
+   "sample": "mysxl.cn"
+  },
+  {
+   "name": "MyTVSUPER",
+   "d": 4,
+   "sample": "mytvsuper.com"
+  },
+  {
+   "name": "Nowcoder",
+   "d": 4,
+   "sample": "newcoder.com"
+  },
+  {
+   "name": "Nudevista",
+   "d": 4,
+   "sample": "nudevista.com"
+  },
+  {
+   "name": "Unext",
+   "d": 4,
+   "sample": "nxtv.jp"
+  },
+  {
+   "name": "Okko",
+   "d": 4,
+   "sample": "okko.sport"
+  },
+  {
+   "name": "Onekey",
+   "d": 4,
+   "sample": "onekey-asset.com"
+  },
+  {
+   "name": "Projectpoi",
+   "d": 4,
+   "sample": "poi.icu"
+  },
+  {
+   "name": "Umeng",
+   "d": 4,
+   "sample": "puata.info"
+  },
+  {
+   "name": "Standardchartered",
+   "d": 4,
+   "sample": "sc.com"
+  },
+  {
+   "name": "WenJuanXing",
+   "d": 4,
+   "sample": "sojump.com"
+  },
+  {
+   "name": "Starplus",
+   "d": 4,
+   "sample": "star.api.edge.bamgrid.com"
+  },
+  {
+   "name": "Starworld",
+   "d": 4,
+   "sample": "starworldgames.com"
+  },
+  {
+   "name": "Taylorfrancis",
+   "d": 4,
+   "sample": "tandf.co.uk"
+  },
+  {
+   "name": "Udn",
+   "d": 4,
+   "sample": "udn.com"
+  },
+  {
+   "name": "Vrzwk",
+   "d": 4,
+   "sample": "vrzwk.cn"
+  },
+  {
+   "name": "Wisekey",
+   "d": 4,
+   "sample": "wisecoin.com"
+  },
+  {
+   "name": "Zb",
+   "d": 4,
+   "sample": "zb.app"
+  },
+  {
+   "name": "ZhuanZhuan",
+   "d": 4,
+   "sample": "zhuan-zhuan.cn"
+  },
+  {
+   "name": "Changyou",
+   "d": 3,
+   "sample": "17173cdn.com"
+  },
+  {
+   "name": "5ch",
+   "d": 3,
+   "sample": "2ch.net"
+  },
+  {
+   "name": "Ftv",
+   "d": 3,
+   "sample": "4gtv.tv"
+  },
+  {
+   "name": "BeStore",
+   "d": 3,
+   "sample": "517lppz.com"
+  },
+  {
+   "name": "PSBC",
+   "d": 3,
+   "sample": "95580.net"
+  },
+  {
+   "name": "Mvideo",
+   "d": 3,
+   "sample": "acmvid.com"
+  },
+  {
+   "name": "Cdek",
+   "d": 3,
+   "sample": "ad-cdek.ru"
+  },
+  {
+   "name": "Pubmatic",
+   "d": 3,
+   "sample": "ads.pubmatic.com"
+  },
+  {
+   "name": "Aerogard",
+   "d": 3,
+   "sample": "aerogard.com.au"
+  },
+  {
+   "name": "DiSiFanShi",
+   "d": 3,
+   "sample": "aihero100.com"
+  },
+  {
+   "name": "Ssrcloud",
+   "d": 3,
+   "sample": "airport-gov-cn.com"
+  },
+  {
+   "name": "Akiko",
+   "d": 3,
+   "sample": "akikocorp.cn"
+  },
+  {
+   "name": "AmazonTrust",
+   "d": 3,
+   "sample": "amazontrust.com"
+  },
+  {
+   "name": "Atomdata",
+   "d": 3,
+   "sample": "analytics-data.io"
+  },
+  {
+   "name": "ITalkBB",
+   "d": 3,
+   "sample": "api.tv.colnv.com"
+  },
+  {
+   "name": "Asobo",
+   "d": 3,
+   "sample": "asobostudio.com"
+  },
+  {
+   "name": "Avmoo",
+   "d": 3,
+   "sample": "avmoo.click"
+  },
+  {
+   "name": "T2 Ru",
+   "d": 3,
+   "sample": "b2c-digest.ru"
+  },
+  {
+   "name": "Infowars",
+   "d": 3,
+   "sample": "banned.video"
+  },
+  {
+   "name": "Bestchange",
+   "d": 3,
+   "sample": "bestchange.com"
+  },
+  {
+   "name": "Bilibili2",
+   "d": 3,
+   "sample": "bili2.cc"
+  },
+  {
+   "name": "Bitsquare",
+   "d": 3,
+   "sample": "bisq.io"
+  },
+  {
+   "name": "Bootcss",
+   "d": 3,
+   "sample": "bootcdn.cn"
+  },
+  {
+   "name": "Hcaptcha",
+   "d": 3,
+   "sample": "botstop.com"
+  },
+  {
+   "name": "Dslreports",
+   "d": 3,
+   "sample": "broadbandreports.com"
+  },
+  {
+   "name": "Cowtransfer",
+   "d": 3,
+   "sample": "c-t.work"
+  },
+  {
+   "name": "Clips4sale",
+   "d": 3,
+   "sample": "c4slive.com"
+  },
+  {
+   "name": "CableTV",
+   "d": 3,
+   "sample": "cabletv.com.hk"
+  },
+  {
+   "name": "Seasun",
+   "d": 3,
+   "sample": "cbjq.com"
+  },
+  {
+   "name": "Jable",
+   "d": 3,
+   "sample": "cdnlab.live"
+  },
+  {
+   "name": "CETV",
+   "d": 3,
+   "sample": "centv.cn"
+  },
+  {
+   "name": "Certum",
+   "d": 3,
+   "sample": "certum.pl"
+  },
+  {
+   "name": "My5",
+   "d": 3,
+   "sample": "channel5.com"
+  },
+  {
+   "name": "Ciweimao",
+   "d": 3,
+   "sample": "ciweimao.com"
+  },
+  {
+   "name": "Ck101",
+   "d": 3,
+   "sample": "ck101.com"
+  },
+  {
+   "name": "Scaleflex",
+   "d": 3,
+   "sample": "cloudimage.io"
+  },
+  {
+   "name": "Migu",
+   "d": 3,
+   "sample": "cmvideo.cn"
+  },
+  {
+   "name": "Cnbeta",
+   "d": 3,
+   "sample": "cnbeta.com"
+  },
+  {
+   "name": "Coinone",
+   "d": 3,
+   "sample": "coinone.co.kr"
+  },
+  {
+   "name": "Coolapk",
+   "d": 3,
+   "sample": "coolapk.com"
+  },
+  {
+   "name": "Coomer",
+   "d": 3,
+   "sample": "coomer.party"
+  },
+  {
+   "name": "Straitsx",
+   "d": 3,
+   "sample": "d3r7nsslvs6aaf.cloudfront.net"
+  },
+  {
+   "name": "Kuaiyikeji",
+   "d": 3,
+   "sample": "dengguobi.com"
+  },
+  {
+   "name": "Deppon",
+   "d": 3,
+   "sample": "deppon.com"
+  },
+  {
+   "name": "Divar",
+   "d": 3,
+   "sample": "divar.cloud"
+  },
+  {
+   "name": "HKedcity",
+   "d": 3,
+   "sample": "edcity.hk"
+  },
+  {
+   "name": "Escapefromtarkov",
+   "d": 3,
+   "sample": "eft-store.com"
+  },
+  {
+   "name": "Embedly",
+   "d": 3,
+   "sample": "embed.ly"
+  },
+  {
+   "name": "Formula1",
+   "d": 3,
+   "sample": "f1.com"
+  },
+  {
+   "name": "Fibank",
+   "d": 3,
+   "sample": "fibank.bg"
+  },
+  {
+   "name": "Flyio",
+   "d": 3,
+   "sample": "fly.dev"
+  },
+  {
+   "name": "FindMy",
+   "d": 3,
+   "sample": "fmfmobile.icloud.com"
+  },
+  {
+   "name": "FOXNOW",
+   "d": 3,
+   "sample": "fox.com"
+  },
+  {
+   "name": "Funpay",
+   "d": 3,
+   "sample": "funpay.com"
+  },
+  {
+   "name": "Gamesplanet",
+   "d": 3,
+   "sample": "gamesplanet.com"
+  },
+  {
+   "name": "Jutongbao",
+   "d": 3,
+   "sample": "guanggaotongapp.cn"
+  },
+  {
+   "name": "HibyMusic",
+   "d": 3,
+   "sample": "hiby.cd"
+  },
+  {
+   "name": "Justav",
+   "d": 3,
+   "sample": "hkporn.net"
+  },
+  {
+   "name": "Hugecore",
+   "d": 3,
+   "sample": "hugecore.net"
+  },
+  {
+   "name": "JOOX",
+   "d": 3,
+   "sample": "i-joox.com"
+  },
+  {
+   "name": "Imgbb",
+   "d": 3,
+   "sample": "ibb.co"
+  },
+  {
+   "name": "Identrust",
+   "d": 3,
+   "sample": "identrust.co.uk"
+  },
+  {
+   "name": "Imagecurl",
+   "d": 3,
+   "sample": "imagecurl.com"
+  },
+  {
+   "name": "Inshot",
+   "d": 3,
+   "sample": "inshot.cc"
+  },
+  {
+   "name": "Tonec",
+   "d": 3,
+   "sample": "internetdownloadmanager.com"
+  },
+  {
+   "name": "Meipian",
+   "d": 3,
+   "sample": "ivwen.com"
+  },
+  {
+   "name": "Javbus",
+   "d": 3,
+   "sample": "javbus.com"
+  },
+  {
+   "name": "Jibencaozuo",
+   "d": 3,
+   "sample": "jbcz.tv"
+  },
+  {
+   "name": "Jinshuju",
+   "d": 3,
+   "sample": "jinshuju.net"
+  },
+  {
+   "name": "Kemono",
+   "d": 3,
+   "sample": "kemono.cr"
+  },
+  {
+   "name": "Kuaikan",
+   "d": 3,
+   "sample": "kkmh.com"
+  },
+  {
+   "name": "Kontur",
+   "d": 3,
+   "sample": "kontur-inc.com"
+  },
+  {
+   "name": "Koolearn",
+   "d": 3,
+   "sample": "koocdn.com"
+  },
+  {
+   "name": "KuKeMusic",
+   "d": 3,
+   "sample": "kuke.com"
+  },
+  {
+   "name": "Le",
+   "d": 3,
+   "sample": "leautolink.com"
+  },
+  {
+   "name": "Liepin",
+   "d": 3,
+   "sample": "liepin.com"
+  },
+  {
+   "name": "Lighter",
+   "d": 3,
+   "sample": "lighter.exchange"
+  },
+  {
+   "name": "LivePerson",
+   "d": 3,
+   "sample": "liveperson.com"
+  },
+  {
+   "name": "Lkcoffee",
+   "d": 3,
+   "sample": "lkcoffee.com"
+  },
+  {
+   "name": "Localizejs",
+   "d": 3,
+   "sample": "localizecdn.com"
+  },
+  {
+   "name": "Mafengwo",
+   "d": 3,
+   "sample": "mafengwo.cn"
+  },
+  {
+   "name": "Maocloud",
+   "d": 3,
+   "sample": "maoyun.com"
+  },
+  {
+   "name": "Tongfang",
+   "d": 3,
+   "sample": "mechrevo.com"
+  },
+  {
+   "name": "MiWu",
+   "d": 3,
+   "sample": "miiiw.cn"
+  },
+  {
+   "name": "Mojang",
+   "d": 3,
+   "sample": "minecraft-services.net"
+  },
+  {
+   "name": "Mixi",
+   "d": 3,
+   "sample": "mixi.co.jp"
+  },
+  {
+   "name": "Moji",
+   "d": 3,
+   "sample": "moji001.com"
+  },
+  {
+   "name": "Strikingly",
+   "d": 3,
+   "sample": "mystrikingly.com"
+  },
+  {
+   "name": "N3ro",
+   "d": 3,
+   "sample": "n3ro.lol"
+  },
+  {
+   "name": "Netflav",
+   "d": 3,
+   "sample": "netflav.com"
+  },
+  {
+   "name": "Nexitally",
+   "d": 3,
+   "sample": "nexitally.com"
+  },
+  {
+   "name": "Nhk",
+   "d": 3,
+   "sample": "nhk.jp"
+  },
+  {
+   "name": "Mudvod",
+   "d": 3,
+   "sample": "nivod.tv"
+  },
+  {
+   "name": "NYPost",
+   "d": 3,
+   "sample": "nypost.com"
+  },
+  {
+   "name": "OP",
+   "d": 3,
+   "sample": "op.gg"
+  },
+  {
+   "name": "Vpngate",
+   "d": 3,
+   "sample": "opengw.net"
+  },
+  {
+   "name": "Scenesource",
+   "d": 3,
+   "sample": "predb.me"
+  },
+  {
+   "name": "Ptt",
+   "d": 3,
+   "sample": "ptt.cc"
+  },
+  {
+   "name": "Pugpig",
+   "d": 3,
+   "sample": "pugpig-dev.com"
+  },
+  {
+   "name": "Radiko",
+   "d": 3,
+   "sample": "radiko-cf.com"
+  },
+  {
+   "name": "Regru",
+   "d": 3,
+   "sample": "reg.cloud"
+  },
+  {
+   "name": "Spankbang",
+   "d": 3,
+   "sample": "sb-cd.com"
+  },
+  {
+   "name": "ShiNongZhiKe",
+   "d": 3,
+   "sample": "senseagro.cn"
+  },
+  {
+   "name": "Taihe",
+   "d": 3,
+   "sample": "showstart.com"
+  },
+  {
+   "name": "Steaminventoryhelper",
+   "d": 3,
+   "sample": "sih-db.com"
+  },
+  {
+   "name": "Snk",
+   "d": 3,
+   "sample": "snk-corp.co.jp"
+  },
+  {
+   "name": "Snodehome",
+   "d": 3,
+   "sample": "snodehome.cn"
+  },
+  {
+   "name": "Trackernetwork",
+   "d": 3,
+   "sample": "thetrackernetwork.com"
+  },
+  {
+   "name": "Timeweb",
+   "d": 3,
+   "sample": "timeweb.cloud"
+  },
+  {
+   "name": "Truyen Hentai",
+   "d": 3,
+   "sample": "truyen-hentai.com"
+  },
+  {
+   "name": "U17",
+   "d": 3,
+   "sample": "u17.com"
+  },
+  {
+   "name": "Vancl",
+   "d": 3,
+   "sample": "vancl.com"
+  },
+  {
+   "name": "Vrcdn",
+   "d": 3,
+   "sample": "vrcdn.cloud"
+  },
+  {
+   "name": "Winline",
+   "d": 3,
+   "sample": "win-line.ru"
+  },
+  {
+   "name": "XiamiMusic",
+   "d": 3,
+   "sample": "xiami.com"
+  },
+  {
+   "name": "Ymtc",
+   "d": 3,
+   "sample": "ymtc.cn"
+  },
+  {
+   "name": "Zaobao",
+   "d": 3,
+   "sample": "zaobao.com"
+  },
+  {
+   "name": "Zynga",
+   "d": 3,
+   "sample": "zynga.com"
+  },
+  {
+   "name": "4plebs",
+   "d": 2,
+   "sample": "4pcdn.org"
+  },
+  {
+   "name": "Mobile01",
+   "d": 2,
+   "sample": "5i01.com"
+  },
+  {
+   "name": "HWTV",
+   "d": 2,
+   "sample": "5itv.tv"
+  },
+  {
+   "name": "Taomee",
+   "d": 2,
+   "sample": "61.com"
+  },
+  {
+   "name": "7tv",
+   "d": 2,
+   "sample": "7tv.app"
+  },
+  {
+   "name": "928plus",
+   "d": 2,
+   "sample": "928.plus"
+  },
+  {
+   "name": "Amap",
+   "d": 2,
+   "sample": "acloudrender.com"
+  },
+  {
+   "name": "Acplay",
+   "d": 2,
+   "sample": "acplay.net"
+  },
+  {
+   "name": "Actalis",
+   "d": 2,
+   "sample": "actalis.com"
+  },
+  {
+   "name": "AFP",
+   "d": 2,
+   "sample": "afp.com"
+  },
+  {
+   "name": "AiXcoder",
+   "d": 2,
+   "sample": "aixcoder.com"
+  },
+  {
+   "name": "Flowus",
+   "d": 2,
+   "sample": "allflow.cn"
+  },
+  {
+   "name": "FitnessPlus",
+   "d": 2,
+   "sample": "amp-api.fitness.apple.com"
+  },
+  {
+   "name": "Anonv",
+   "d": 2,
+   "sample": "anon-v.com"
+  },
+  {
+   "name": "Ap",
+   "d": 2,
+   "sample": "ap.org"
+  },
+  {
+   "name": "Apipost",
+   "d": 2,
+   "sample": "apipost.cn"
+  },
+  {
+   "name": "AppLovin",
+   "d": 2,
+   "sample": "applovin.com"
+  },
+  {
+   "name": "Applysquare",
+   "d": 2,
+   "sample": "applysquare.com"
+  },
+  {
+   "name": "Askdiandian",
+   "d": 2,
+   "sample": "askdiandian.com"
+  },
+  {
+   "name": "Asproex",
+   "d": 2,
+   "sample": "asproex.com"
+  },
+  {
+   "name": "Shanbay",
+   "d": 2,
+   "sample": "baydn.com"
+  },
+  {
+   "name": "UKMedia",
+   "d": 2,
+   "sample": "bbc-reporting-api.app"
+  },
+  {
+   "name": "Bdsmhub",
+   "d": 2,
+   "sample": "bdsm123.xyz"
+  },
+  {
+   "name": "Beget",
+   "d": 2,
+   "sample": "beget.com"
+  },
+  {
+   "name": "TestFlight",
+   "d": 2,
+   "sample": "beta.apple.com"
+  },
+  {
+   "name": "Betboom",
+   "d": 2,
+   "sample": "betboom.ru"
+  },
+  {
+   "name": "Bitflyer",
+   "d": 2,
+   "sample": "bitflyer.com"
+  },
+  {
+   "name": "Bluearchive",
+   "d": 2,
+   "sample": "bluearchive.jp"
+  },
+  {
+   "name": "Blurams",
+   "d": 2,
+   "sample": "blurams.app"
+  },
+  {
+   "name": "Boomerang",
+   "d": 2,
+   "sample": "boomerang.com"
+  },
+  {
+   "name": "Boslife",
+   "d": 2,
+   "sample": "boslife.biz"
+  },
+  {
+   "name": "BoXun",
+   "d": 2,
+   "sample": "bowenpress.com"
+  },
+  {
+   "name": "C Span",
+   "d": 2,
+   "sample": "c-span.org"
+  },
+  {
+   "name": "All4",
+   "d": 2,
+   "sample": "c4assets.com"
+  },
+  {
+   "name": "Camwhores",
+   "d": 2,
+   "sample": "camwhores.tv"
+  },
+  {
+   "name": "Capitalonline",
+   "d": 2,
+   "sample": "capitalonline.net"
+  },
+  {
+   "name": "Catchplay",
+   "d": 2,
+   "sample": "catchplay.com"
+  },
+  {
+   "name": "Cavporn",
+   "d": 2,
+   "sample": "cavporn.com"
+  },
+  {
+   "name": "Cdn77",
+   "d": 2,
+   "sample": "cdn77.com"
+  },
+  {
+   "name": "Cowlevel",
+   "d": 2,
+   "sample": "cdncl.net"
+  },
+  {
+   "name": "Ceno",
+   "d": 2,
+   "sample": "ceno.app"
+  },
+  {
+   "name": "Certinomis",
+   "d": 2,
+   "sample": "certinomis.com"
+  },
+  {
+   "name": "Chegg",
+   "d": 2,
+   "sample": "chegg.com"
+  },
+  {
+   "name": "Chesscom",
+   "d": 2,
+   "sample": "chess.com"
+  },
+  {
+   "name": "Chinaz",
+   "d": 2,
+   "sample": "chinaz.com"
+  },
+  {
+   "name": "Citizenlab",
+   "d": 2,
+   "sample": "citizenlab.ca"
+  },
+  {
+   "name": "Cloudns",
+   "d": 2,
+   "sample": "cloudns.nz"
+  },
+  {
+   "name": "Coupang",
+   "d": 2,
+   "sample": "coupang.com"
+  },
+  {
+   "name": "Csis",
+   "d": 2,
+   "sample": "csis-prod.s3.amazonaws.com"
+  },
+  {
+   "name": "Cuinc",
+   "d": 2,
+   "sample": "cuinc.oen.tw"
+  },
+  {
+   "name": "CyberTrust",
+   "d": 2,
+   "sample": "cybertrust.co.jp"
+  },
+  {
+   "name": "Cylink",
+   "d": 2,
+   "sample": "cylink.pro"
+  },
+  {
+   "name": "Dandanplay",
+   "d": 2,
+   "sample": "dandanplay.net"
+  },
+  {
+   "name": "DangDang",
+   "d": 2,
+   "sample": "dangdang.com"
+  },
+  {
+   "name": "Linguee",
+   "d": 2,
+   "sample": "deepl.com"
+  },
+  {
+   "name": "Deribit",
+   "d": 2,
+   "sample": "deribit.cdn.prismic.io"
+  },
+  {
+   "name": "Dw",
+   "d": 2,
+   "sample": "deutschewelle.h-cdn.com"
+  },
+  {
+   "name": "Digitalplayground",
+   "d": 2,
+   "sample": "digitalplayground.com"
+  },
+  {
+   "name": "Dmit",
+   "d": 2,
+   "sample": "dmit.io"
+  },
+  {
+   "name": "Openrec",
+   "d": 2,
+   "sample": "dqd0jw5gvbchn.cloudfront.net"
+  },
+  {
+   "name": "Duitang",
+   "d": 2,
+   "sample": "dtstatic.com"
+  },
+  {
+   "name": "Dubox",
+   "d": 2,
+   "sample": "dubox.com"
+  },
+  {
+   "name": "Duyaoss",
+   "d": 2,
+   "sample": "duyaoss.com"
+  },
+  {
+   "name": "Dzen",
+   "d": 2,
+   "sample": "dzen.ru"
+  },
+  {
+   "name": "Z3x Team",
+   "d": 2,
+   "sample": "easy-jtag.com"
+  },
+  {
+   "name": "Easylist",
+   "d": 2,
+   "sample": "easylist.to"
+  },
+  {
+   "name": "Hongkongpost",
+   "d": 2,
+   "sample": "ecert.gov.hk"
+  },
+  {
+   "name": "Ehentai",
+   "d": 2,
+   "sample": "ehtracker.org"
+  },
+  {
+   "name": "Streamable",
+   "d": 2,
+   "sample": "embed-cdn.com"
+  },
+  {
+   "name": "Eneba",
+   "d": 2,
+   "sample": "eneba.com"
+  },
+  {
+   "name": "Entermediadb",
+   "d": 2,
+   "sample": "entermediadb.net"
+  },
+  {
+   "name": "Fans66",
+   "d": 2,
+   "sample": "fans66.tw"
+  },
+  {
+   "name": "HKOpenTV",
+   "d": 2,
+   "sample": "fantv.hk"
+  },
+  {
+   "name": "Fcbox",
+   "d": 2,
+   "sample": "fcbox.com"
+  },
+  {
+   "name": "FriDay",
+   "d": 2,
+   "sample": "fetnet.net"
+  },
+  {
+   "name": "Fzdm",
+   "d": 2,
+   "sample": "fffdm.com"
+  },
+  {
+   "name": "Fflogs",
+   "d": 2,
+   "sample": "fflogs.com"
+  },
+  {
+   "name": "Filimo",
+   "d": 2,
+   "sample": "filimo.com"
+  },
+  {
+   "name": "Flibusta",
+   "d": 2,
+   "sample": "flibusta.is"
+  },
+  {
+   "name": "Flowwow",
+   "d": 2,
+   "sample": "flowwow-images.com"
+  },
+  {
+   "name": "Forbes",
+   "d": 2,
+   "sample": "forbes.com"
+  },
+  {
+   "name": "Forza",
+   "d": 2,
+   "sample": "forza.net"
+  },
+  {
+   "name": "LondonReal",
+   "d": 2,
+   "sample": "freedomplatform.tv"
+  },
+  {
+   "name": "Geetest",
+   "d": 2,
+   "sample": "geetest.com"
+  },
+  {
+   "name": "Nikkan Gendai",
+   "d": 2,
+   "sample": "gendai.net"
+  },
+  {
+   "name": "Lantern",
+   "d": 2,
+   "sample": "getlantern.org"
+  },
+  {
+   "name": "Ggsel",
+   "d": 2,
+   "sample": "ggsel.com"
+  },
+  {
+   "name": "Giffgaff",
+   "d": 2,
+   "sample": "giffgaff.com"
+  },
+  {
+   "name": "Globalvoices",
+   "d": 2,
+   "sample": "globalvoices.org"
+  },
+  {
+   "name": "Gracg",
+   "d": 2,
+   "sample": "gracg.com"
+  },
+  {
+   "name": "Guokr",
+   "d": 2,
+   "sample": "guokr.com"
+  },
+  {
+   "name": "TaiWanGood",
+   "d": 2,
+   "sample": "hamifans.emome.net"
+  },
+  {
+   "name": "Heyzo",
+   "d": 2,
+   "sample": "heydoga.com"
+  },
+  {
+   "name": "Hitun",
+   "d": 2,
+   "sample": "hitun.io"
+  },
+  {
+   "name": "Hkgolden",
+   "d": 2,
+   "sample": "hkgolden.com"
+  },
+  {
+   "name": "Homedepot",
+   "d": 2,
+   "sample": "homedepot-static.com"
+  },
+  {
+   "name": "Ihuman",
+   "d": 2,
+   "sample": "hongen.com"
+  },
+  {
+   "name": "Hubblephone",
+   "d": 2,
+   "sample": "hubblephone.com"
+  },
+  {
+   "name": "Scmp",
+   "d": 2,
+   "sample": "i-scmp.com"
+  },
+  {
+   "name": "Subscene",
+   "d": 2,
+   "sample": "i.jeded.com"
+  },
+  {
+   "name": "Sf Express",
+   "d": 2,
+   "sample": "ibobscs.com"
+  },
+  {
+   "name": "Illgames",
+   "d": 2,
+   "sample": "illgames.jp"
+  },
+  {
+   "name": "Illusion",
+   "d": 2,
+   "sample": "illusion.co.jp"
+  },
+  {
+   "name": "Imageshack",
+   "d": 2,
+   "sample": "imageshack.com"
+  },
+  {
+   "name": "Imgix",
+   "d": 2,
+   "sample": "imgix.com"
+  },
+  {
+   "name": "Theinitium",
+   "d": 2,
+   "sample": "init.shop"
+  },
+  {
+   "name": "Isgd",
+   "d": 2,
+   "sample": "is.gd"
+  },
+  {
+   "name": "Itchio",
+   "d": 2,
+   "sample": "itch.io"
+  },
+  {
+   "name": "Ixsystems",
+   "d": 2,
+   "sample": "ixsystems.com"
+  },
+  {
+   "name": "Iyf",
+   "d": 2,
+   "sample": "iyf.tv"
+  },
+  {
+   "name": "Javcc",
+   "d": 2,
+   "sample": "javcc.cc"
+  },
+  {
+   "name": "Javwide",
+   "d": 2,
+   "sample": "javwide.com"
+  },
+  {
+   "name": "Smtiaojiaoshi",
+   "d": 2,
+   "sample": "jhxl.org"
+  },
+  {
+   "name": "Johren",
+   "d": 2,
+   "sample": "johren.games"
+  },
+  {
+   "name": "Pandanet",
+   "d": 2,
+   "sample": "joyjoy.net"
+  },
+  {
+   "name": "Kechuang",
+   "d": 2,
+   "sample": "kechuang.org"
+  },
+  {
+   "name": "Kingkonglive",
+   "d": 2,
+   "sample": "kingkong.com.tw"
+  },
+  {
+   "name": "PandoraTV",
+   "d": 2,
+   "sample": "kmplayer.com"
+  },
+  {
+   "name": "Konachan",
+   "d": 2,
+   "sample": "konachan.com"
+  },
+  {
+   "name": "Kubakuba",
+   "d": 2,
+   "sample": "kubakuba.global"
+  },
+  {
+   "name": "Lagou",
+   "d": 2,
+   "sample": "lagou.com"
+  },
+  {
+   "name": "Lethalhardcore",
+   "d": 2,
+   "sample": "lethalhardcore.com"
+  },
+  {
+   "name": "Thelinuxfoundation",
+   "d": 2,
+   "sample": "lfai.foundation"
+  },
+  {
+   "name": "Lihkg",
+   "d": 2,
+   "sample": "lih.kg"
+  },
+  {
+   "name": "Lisiku",
+   "d": 2,
+   "sample": "lisiku.com"
+  },
+  {
+   "name": "Localbitcoins",
+   "d": 2,
+   "sample": "localbitcoins.com"
+  },
+  {
+   "name": "Ltn",
+   "d": 2,
+   "sample": "ltn.com.tw"
+  },
+  {
+   "name": "Manhuagui",
+   "d": 2,
+   "sample": "manhuagui.com"
+  },
+  {
+   "name": "Manoto",
+   "d": 2,
+   "sample": "manoto1.tv"
+  },
+  {
+   "name": "Manus",
+   "d": 2,
+   "sample": "manus.im"
+  },
+  {
+   "name": "Mydirtyhobby",
+   "d": 2,
+   "sample": "mdhcdn.com"
+  },
+  {
+   "name": "Meduza",
+   "d": 2,
+   "sample": "meduza-flutter.firebaseapp.com"
+  },
+  {
+   "name": "Miaomiaozhe",
+   "d": 2,
+   "sample": "miaomiaoz.com"
+  },
+  {
+   "name": "Moonvy",
+   "d": 2,
+   "sample": "moonvy.com"
+  },
+  {
+   "name": "MOOV",
+   "d": 2,
+   "sample": "moov.hk"
+  },
+  {
+   "name": "Morisawa",
+   "d": 2,
+   "sample": "morisawa.co.jp"
+  },
+  {
+   "name": "Mosmetro",
+   "d": 2,
+   "sample": "mosmetro.ru"
+  },
+  {
+   "name": "Volmoe",
+   "d": 2,
+   "sample": "mox.moe"
+  },
+  {
+   "name": "Moxing",
+   "d": 2,
+   "sample": "moxing.mobi"
+  },
+  {
+   "name": "Musixmatch",
+   "d": 2,
+   "sample": "musixmatch.com"
+  },
+  {
+   "name": "Myfonts",
+   "d": 2,
+   "sample": "myfonts.com"
+  },
+  {
+   "name": "Myoffice Ru",
+   "d": 2,
+   "sample": "myoffice.ru"
+  },
+  {
+   "name": "Myradio",
+   "d": 2,
+   "sample": "myradio.com.hk"
+  },
+  {
+   "name": "Narwal",
+   "d": 2,
+   "sample": "narwal.com"
+  },
+  {
+   "name": "NaverTV",
+   "d": 2,
+   "sample": "naver.com"
+  },
+  {
+   "name": "Neowin",
+   "d": 2,
+   "sample": "neow.in"
+  },
+  {
+   "name": "Nicegram",
+   "d": 2,
+   "sample": "nicegram.app"
+  },
+  {
+   "name": "Nordstrom",
+   "d": 2,
+   "sample": "nordstrom.com"
+  },
+  {
+   "name": "NowE",
+   "d": 2,
+   "sample": "nowe.com"
+  },
+  {
+   "name": "Nutaku",
+   "d": 2,
+   "sample": "nutaku.com"
+  },
+  {
+   "name": "Nyaa",
+   "d": 2,
+   "sample": "nyaa.net"
+  },
+  {
+   "name": "Shanling",
+   "d": 2,
+   "sample": "onixhiend.com"
+  },
+  {
+   "name": "Ubuntukylin",
+   "d": 2,
+   "sample": "openkylin.top"
+  },
+  {
+   "name": "Openweather",
+   "d": 2,
+   "sample": "openweather.co.uk"
+  },
+  {
+   "name": "Oskelly",
+   "d": 2,
+   "sample": "oskelly.co"
+  },
+  {
+   "name": "Pagecdn",
+   "d": 2,
+   "sample": "pagecdn.com"
+  },
+  {
+   "name": "Paofuyun",
+   "d": 2,
+   "sample": "paofu.cloud"
+  },
+  {
+   "name": "Pawchive",
+   "d": 2,
+   "sample": "pawchive.pw"
+  },
+  {
+   "name": "VikACG",
+   "d": 2,
+   "sample": "picjs.xyz"
+  },
+  {
+   "name": "Pingsx",
+   "d": 2,
+   "sample": "ping.sx"
+  },
+  {
+   "name": "Pinggy",
+   "d": 2,
+   "sample": "pinggy.io"
+  },
+  {
+   "name": "Pinkcore",
+   "d": 2,
+   "sample": "pinkcore.com"
+  },
+  {
+   "name": "Projectsekai",
+   "d": 2,
+   "sample": "pjsekai.sega.jp"
+  },
+  {
+   "name": "Playboy",
+   "d": 2,
+   "sample": "playboy.com"
+  },
+  {
+   "name": "Playcover",
+   "d": 2,
+   "sample": "playcover.io"
+  },
+  {
+   "name": "Polocloud",
+   "d": 2,
+   "sample": "polocloud.net"
+  },
+  {
+   "name": "Polyv",
+   "d": 2,
+   "sample": "polyv.net"
+  },
+  {
+   "name": "Pornpros",
+   "d": 2,
+   "sample": "pornpros.com"
+  },
+  {
+   "name": "Postimages",
+   "d": 2,
+   "sample": "postimages.org"
+  },
+  {
+   "name": "Proquest",
+   "d": 2,
+   "sample": "proquest.com"
+  },
+  {
+   "name": "PS Store",
+   "d": 2,
+   "sample": "psn.com"
+  },
+  {
+   "name": "Qcc",
+   "d": 2,
+   "sample": "qcc.com"
+  },
+  {
+   "name": "Qingtingfm",
+   "d": 2,
+   "sample": "qingting.fm"
+  },
+  {
+   "name": "QQ Music",
+   "d": 2,
+   "sample": "qqmusic.qq.com"
+  },
+  {
+   "name": "Yuketang",
+   "d": 2,
+   "sample": "rainclassroom.com"
+  },
+  {
+   "name": "Rebrandly",
+   "d": 2,
+   "sample": "rb.gy"
+  },
+  {
+   "name": "Reabble",
+   "d": 2,
+   "sample": "reabble.cn"
+  },
+  {
+   "name": "Realitykings",
+   "d": 2,
+   "sample": "realitykings.com"
+  },
+  {
+   "name": "Realtype",
+   "d": 2,
+   "sample": "realtype.co.jp"
+  },
+  {
+   "name": "Ruten",
+   "d": 2,
+   "sample": "rimg.com.tw"
+  },
+  {
+   "name": "Ruleoflaw",
+   "d": 2,
+   "sample": "rolfoundation.org"
+  },
+  {
+   "name": "Rubychina",
+   "d": 2,
+   "sample": "ruby-china.org"
+  },
+  {
+   "name": "Stage1st",
+   "d": 2,
+   "sample": "saraba1st.com"
+  },
+  {
+   "name": "Schoopia",
+   "d": 2,
+   "sample": "schoopia.com"
+  },
+  {
+   "name": "Sciencedirect",
+   "d": 2,
+   "sample": "sciencedirect.com"
+  },
+  {
+   "name": "Segmentfault",
+   "d": 2,
+   "sample": "segmentfault.com"
+  },
+  {
+   "name": "Sehuatang",
+   "d": 2,
+   "sample": "sehuatang.net"
+  },
+  {
+   "name": "Servicepipe",
+   "d": 2,
+   "sample": "servicepipe.ru"
+  },
+  {
+   "name": "Setn",
+   "d": 2,
+   "sample": "setn.com"
+  },
+  {
+   "name": "Shadowsockscom",
+   "d": 2,
+   "sample": "shadowsocks.com"
+  },
+  {
+   "name": "Shireyishunjian",
+   "d": 2,
+   "sample": "shireyishunjian.com"
+  },
+  {
+   "name": "Skyeng",
+   "d": 2,
+   "sample": "sky.pro"
+  },
+  {
+   "name": "Softether",
+   "d": 2,
+   "sample": "softether-download.com"
+  },
+  {
+   "name": "Sokolov",
+   "d": 2,
+   "sample": "sokolov.io"
+  },
+  {
+   "name": "Soyjakparty",
+   "d": 2,
+   "sample": "soyjak.party"
+  },
+  {
+   "name": "Squirrelvpn",
+   "d": 2,
+   "sample": "squirrelgroup.net"
+  },
+  {
+   "name": "Surflite",
+   "d": 2,
+   "sample": "surflite.co"
+  },
+  {
+   "name": "Suruga Ya",
+   "d": 2,
+   "sample": "suruga-ya.com"
+  },
+  {
+   "name": "Techpowerup",
+   "d": 2,
+   "sample": "techpowerup.com"
+  },
+  {
+   "name": "Thetype",
+   "d": 2,
+   "sample": "thetype.com"
+  },
+  {
+   "name": "Tiancity",
+   "d": 2,
+   "sample": "tiancity.com"
+  },
+  {
+   "name": "Tmall",
+   "d": 2,
+   "sample": "tmall.com"
+  },
+  {
+   "name": "Translatewiki",
+   "d": 2,
+   "sample": "translatewiki.net"
+  },
+  {
+   "name": "TruthSocial",
+   "d": 2,
+   "sample": "trk.bonsa.net"
+  },
+  {
+   "name": "Tube8",
+   "d": 2,
+   "sample": "tube8.com"
+  },
+  {
+   "name": "Usersdrive",
+   "d": 2,
+   "sample": "userdrive.org"
+  },
+  {
+   "name": "Vaptcha",
+   "d": 2,
+   "sample": "vaptcha.com"
+  },
+  {
+   "name": "Watchout",
+   "d": 2,
+   "sample": "waa.tw"
+  },
+  {
+   "name": "Wallhaven",
+   "d": 2,
+   "sample": "wallhaven.cc"
+  },
+  {
+   "name": "Wiwide",
+   "d": 2,
+   "sample": "wamawama.com"
+  },
+  {
+   "name": "Wanfang",
+   "d": 2,
+   "sample": "wanfangdata.com.cn"
+  },
+  {
+   "name": "Wynd",
+   "d": 2,
+   "sample": "wynd.network"
+  },
+  {
+   "name": "Youjizz",
+   "d": 2,
+   "sample": "yjcontentdelivery.com"
+  },
+  {
+   "name": "Ziroom",
+   "d": 2,
+   "sample": "ziroom.com"
+  },
+  {
+   "name": "1688",
+   "d": 1,
+   "sample": "1688.com"
+  },
+  {
+   "name": "3DM",
+   "d": 1,
+   "sample": "3dmgame.com"
+  },
+  {
+   "name": "3type",
+   "d": 1,
+   "sample": "3type.cn"
+  },
+  {
+   "name": "4Paradigm",
+   "d": 1,
+   "sample": "4paradigm.com"
+  },
+  {
+   "name": "4pda",
+   "d": 1,
+   "sample": "4pda.to"
+  },
+  {
+   "name": "51nod",
+   "d": 1,
+   "sample": "51nod.com"
+  },
+  {
+   "name": "Addtoany",
+   "d": 1,
+   "sample": "addtoany.com"
+  },
+  {
+   "name": "Wteam",
+   "d": 1,
+   "sample": "ads.wteam.xyz"
+  },
+  {
+   "name": "Wasu",
+   "d": 1,
+   "sample": "aichongzoo.cn"
+  },
+  {
+   "name": "AiQiCha",
+   "d": 1,
+   "sample": "aiqicha.baidu.com"
+  },
+  {
+   "name": "Ali213",
+   "d": 1,
+   "sample": "ali213.net"
+  },
+  {
+   "name": "AliCDN",
+   "d": 1,
+   "sample": "alicdn.com"
+  },
+  {
+   "name": "Americasvoice",
+   "d": 1,
+   "sample": "americasvoice.news"
+  },
+  {
+   "name": "AnandTech",
+   "d": 1,
+   "sample": "anandtech.com"
+  },
+  {
+   "name": "Antutu",
+   "d": 1,
+   "sample": "antutu.com"
+  },
+  {
+   "name": "APKCombo",
+   "d": 1,
+   "sample": "apkcombo.com"
+  },
+  {
+   "name": "Bamtech",
+   "d": 1,
+   "sample": "bamtech.net"
+  },
+  {
+   "name": "Betterexplained",
+   "d": 1,
+   "sample": "betterexplained.com"
+  },
+  {
+   "name": "Blogspot",
+   "d": 1,
+   "sample": "blogger.googleusercontent.com"
+  },
+  {
+   "name": "Bluepoch",
+   "d": 1,
+   "sample": "bluepoch.com"
+  },
+  {
+   "name": "Bootcdn",
+   "d": 1,
+   "sample": "bootcdn.net"
+  },
+  {
+   "name": "Btdig",
+   "d": 1,
+   "sample": "btdig.com"
+  },
+  {
+   "name": "Casimages",
+   "d": 1,
+   "sample": "casimages.com"
+  },
+  {
+   "name": "Cerebras",
+   "d": 1,
+   "sample": "cerebras.ai"
+  },
+  {
+   "name": "Chatango",
+   "d": 1,
+   "sample": "chatango.com"
+  },
+  {
+   "name": "Chinapower",
+   "d": 1,
+   "sample": "chinapower.csis.org"
+  },
+  {
+   "name": "Civitai",
+   "d": 1,
+   "sample": "civitai.com"
+  },
+  {
+   "name": "Clearasil",
+   "d": 1,
+   "sample": "clearasil.us"
+  },
+  {
+   "name": "Cloudconvert",
+   "d": 1,
+   "sample": "cloudconvert.com"
+  },
+  {
+   "name": "Craigslist",
+   "d": 1,
+   "sample": "craigslist.org"
+  },
+  {
+   "name": "Cuttly",
+   "d": 1,
+   "sample": "cutt.ly"
+  },
+  {
+   "name": "Flurry",
+   "d": 1,
+   "sample": "data.flurry.com"
+  },
+  {
+   "name": "Chaoxing",
+   "d": 1,
+   "sample": "dayainfo.com"
+  },
+  {
+   "name": "Decryptipastore",
+   "d": 1,
+   "sample": "decrypt.day"
+  },
+  {
+   "name": "Demonoid",
+   "d": 1,
+   "sample": "demonoid.is"
+  },
+  {
+   "name": "Dnspod",
+   "d": 1,
+   "sample": "dot.pub"
+  },
+  {
+   "name": "Ebuyer",
+   "d": 1,
+   "sample": "ebuyer.com"
+  },
+  {
+   "name": "Epicbrowser",
+   "d": 1,
+   "sample": "epicbrowser.com"
+  },
+  {
+   "name": "Faststone",
+   "d": 1,
+   "sample": "faststone.org"
+  },
+  {
+   "name": "Fontexplorer",
+   "d": 1,
+   "sample": "fontexplorerx.com"
+  },
+  {
+   "name": "Fontsinuse",
+   "d": 1,
+   "sample": "fontsinuse.com"
+  },
+  {
+   "name": "Freenode",
+   "d": 1,
+   "sample": "freenode.net"
+  },
+  {
+   "name": "Pgyer",
+   "d": 1,
+   "sample": "frontjs.com"
+  },
+  {
+   "name": "Gamersky",
+   "d": 1,
+   "sample": "gamersky.com"
+  },
+  {
+   "name": "Genshin Impact",
+   "d": 1,
+   "sample": "genshinimpact.com"
+  },
+  {
+   "name": "Gfycat",
+   "d": 1,
+   "sample": "gfycat.com"
+  },
+  {
+   "name": "Github1s",
+   "d": 1,
+   "sample": "github1s.com"
+  },
+  {
+   "name": "Glyphs",
+   "d": 1,
+   "sample": "glyphsapp.com"
+  },
+  {
+   "name": "Goproxy",
+   "d": 1,
+   "sample": "goproxy.io"
+  },
+  {
+   "name": "Jetbrains AI",
+   "d": 1,
+   "sample": "grazie.aws.intellij.net"
+  },
+  {
+   "name": "Groq",
+   "d": 1,
+   "sample": "groq.com"
+  },
+  {
+   "name": "Hurricaneelectric",
+   "d": 1,
+   "sample": "he.net"
+  },
+  {
+   "name": "Hm",
+   "d": 1,
+   "sample": "hm.com"
+  },
+  {
+   "name": "Huanghuagang",
+   "d": 1,
+   "sample": "huanghuagang.org"
+  },
+  {
+   "name": "Icable",
+   "d": 1,
+   "sample": "i-cablecomm.com"
+  },
+  {
+   "name": "Iina",
+   "d": 1,
+   "sample": "iina.io"
+  },
+  {
+   "name": "Imagebam",
+   "d": 1,
+   "sample": "imagebam.com"
+  },
+  {
+   "name": "Imagetwist",
+   "d": 1,
+   "sample": "imagetwist.com"
+  },
+  {
+   "name": "Kantv",
+   "d": 1,
+   "sample": "imkan.tv"
+  },
+  {
+   "name": "Infrapedia",
+   "d": 1,
+   "sample": "infrapedia.com"
+  },
+  {
+   "name": "Ipip",
+   "d": 1,
+   "sample": "ipip.net"
+  },
+  {
+   "name": "Itiger",
+   "d": 1,
+   "sample": "itigergrowth.com"
+  },
+  {
+   "name": "Jiguang",
+   "d": 1,
+   "sample": "jiguang.cn"
+  },
+  {
+   "name": "Jiyukobo",
+   "d": 1,
+   "sample": "jiyu-kobo.co.jp"
+  },
+  {
+   "name": "Jjwxc",
+   "d": 1,
+   "sample": "jjwxc.net"
+  },
+  {
+   "name": "Kernel",
+   "d": 1,
+   "sample": "kernel.org"
+  },
+  {
+   "name": "Kindle4rss",
+   "d": 1,
+   "sample": "kindle4rss.com"
+  },
+  {
+   "name": "Kuwo",
+   "d": 1,
+   "sample": "kuwo.cn"
+  },
+  {
+   "name": "Lavteam",
+   "d": 1,
+   "sample": "lavteam.org"
+  },
+  {
+   "name": "Lifewire",
+   "d": 1,
+   "sample": "lifewire.com"
+  },
+  {
+   "name": "Linotype",
+   "d": 1,
+   "sample": "linotype.com"
+  },
+  {
+   "name": "Louisvuitton",
+   "d": 1,
+   "sample": "louisvuitton.com"
+  },
+  {
+   "name": "Lowiro",
+   "d": 1,
+   "sample": "lowiro.com"
+  },
+  {
+   "name": "Bartender",
+   "d": 1,
+   "sample": "macbartender.com"
+  },
+  {
+   "name": "Masterclass",
+   "d": 1,
+   "sample": "masterclass.com"
+  },
+  {
+   "name": "MeWatch",
+   "d": 1,
+   "sample": "mewatch.sg"
+  },
+  {
+   "name": "Mango TV",
+   "d": 1,
+   "sample": "mgtv.com"
+  },
+  {
+   "name": "Mindgeek",
+   "d": 1,
+   "sample": "mindgeek.com"
+  },
+  {
+   "name": "Mzed",
+   "d": 1,
+   "sample": "mzed.com"
+  },
+  {
+   "name": "Neuralink",
+   "d": 1,
+   "sample": "neuralink.com"
+  },
+  {
+   "name": "Npmjs",
+   "d": 1,
+   "sample": "npm.community"
+  },
+  {
+   "name": "Okaapps",
+   "d": 1,
+   "sample": "okaapps.com"
+  },
+  {
+   "name": "Oschina",
+   "d": 1,
+   "sample": "oschina.net"
+  },
+  {
+   "name": "Panic",
+   "d": 1,
+   "sample": "panic.com"
+  },
+  {
+   "name": "Paskoocheh",
+   "d": 1,
+   "sample": "paskoocheh.com"
+  },
+  {
+   "name": "PBS",
+   "d": 1,
+   "sample": "pbs.org"
+  },
+  {
+   "name": "Pingpe",
+   "d": 1,
+   "sample": "ping.pe"
+  },
+  {
+   "name": "Pixelmator",
+   "d": 1,
+   "sample": "pixelmator.com"
+  },
+  {
+   "name": "Pixhost",
+   "d": 1,
+   "sample": "pixhost.to"
+  },
+  {
+   "name": "Peppy",
+   "d": 1,
+   "sample": "ppy.sh"
+  },
+  {
+   "name": "Pstorage",
+   "d": 1,
+   "sample": "pstorage.space"
+  },
+  {
+   "name": "WildRift",
+   "d": 1,
+   "sample": "pvp.net"
+  },
+  {
+   "name": "Qidian",
+   "d": 1,
+   "sample": "qidian.com"
+  },
+  {
+   "name": "Qixin",
+   "d": 1,
+   "sample": "qixin.com"
+  },
+  {
+   "name": "QQ Browser",
+   "d": 1,
+   "sample": "qqbrowser.com"
+  },
+  {
+   "name": "QQ Mail",
+   "d": 1,
+   "sample": "qqmail.com"
+  },
+  {
+   "name": "Qunar",
+   "d": 1,
+   "sample": "qunar.com"
+  },
+  {
+   "name": "Qyyjt",
+   "d": 1,
+   "sample": "qyyjt.cn"
+  },
+  {
+   "name": "Reeder",
+   "d": 1,
+   "sample": "reederapp.com"
+  },
+  {
+   "name": "Reurl",
+   "d": 1,
+   "sample": "reurl.cc"
+  },
+  {
+   "name": "Sharethis",
+   "d": 1,
+   "sample": "sharethis.com"
+  },
+  {
+   "name": "Shorturl",
+   "d": 1,
+   "sample": "shorturl.at"
+  },
+  {
+   "name": "Showtimeanytime",
+   "d": 1,
+   "sample": "showtimeanytime.com"
+  },
+  {
+   "name": "Bluepoch Games",
+   "d": 1,
+   "sample": "sl916.com"
+  },
+  {
+   "name": "Spacemail",
+   "d": 1,
+   "sample": "spacemail.com"
+  },
+  {
+   "name": "Sslcom",
+   "d": 1,
+   "sample": "ssl.com"
+  },
+  {
+   "name": "Starfieldtech",
+   "d": 1,
+   "sample": "starfieldtech.com"
+  },
+  {
+   "name": "Staticfile",
+   "d": 1,
+   "sample": "staticfile.net"
+  },
+  {
+   "name": "Svp",
+   "d": 1,
+   "sample": "svp-team.com"
+  },
+  {
+   "name": "Techtimes",
+   "d": 1,
+   "sample": "techtimes.com"
+  },
+  {
+   "name": "Tidelift",
+   "d": 1,
+   "sample": "tidelift.com"
+  },
+  {
+   "name": "Tinyurl",
+   "d": 1,
+   "sample": "tinyurl.com"
+  },
+  {
+   "name": "Trustwallet",
+   "d": 1,
+   "sample": "trustwallet.com"
+  },
+  {
+   "name": "TrustWave",
+   "d": 1,
+   "sample": "trustwave.com"
+  },
+  {
+   "name": "Tsquare",
+   "d": 1,
+   "sample": "tsquare.tv"
+  },
+  {
+   "name": "Twca",
+   "d": 1,
+   "sample": "twca.com.tw"
+  },
+  {
+   "name": "Typenetwork",
+   "d": 1,
+   "sample": "typenetwork.com"
+  },
+  {
+   "name": "Unitychina",
+   "d": 1,
+   "sample": "u3d.cn"
+  },
+  {
+   "name": "Vgtime",
+   "d": 1,
+   "sample": "vgtime.com"
+  },
+  {
+   "name": "VidolTV",
+   "d": 1,
+   "sample": "vidol.tv"
+  },
+  {
+   "name": "Webtype",
+   "d": 1,
+   "sample": "webtype.com"
+  },
+  {
+   "name": "Xdty",
+   "d": 1,
+   "sample": "xdty.org"
+  },
+  {
+   "name": "Ximalaya",
+   "d": 1,
+   "sample": "ximalaya.com"
+  },
+  {
+   "name": "Xingrz",
+   "d": 1,
+   "sample": "xingrz.me"
+  },
+  {
+   "name": "Ynoproject",
+   "d": 1,
+   "sample": "ynoproject.net"
+  },
+  {
+   "name": "Zhanqi",
+   "d": 1,
+   "sample": "zhanqi.tv"
+  },
+  {
+   "name": "Zongheng",
+   "d": 1,
+   "sample": "zongheng.com"
+  }
+ ]
+}

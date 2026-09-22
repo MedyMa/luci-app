@@ -7,14 +7,13 @@
  * exist that no manifest row records - which is how a stale directory once
  * shipped 813 files while the generator reported 751.  This script is the check
  * that catches all three, and it reports coverage the way the page experiences
- * it rather than the way the disk counts it:
+ * it at the direct filename layer:
  *
  *   name coverage             names with an icon / all catalogue names
  *   domain-weighted coverage  1 - (domains of names without an icon / all domains)
  *
- * The second number is the one that matches what a user sees: the top of the
- * list is what carries the traffic, and 40% of the names can be 70% of the eye
- * contact.  Neither number is a target in itself.
+ * These are catalogue rule counts, not observed traffic coverage. Page aliases
+ * and the separate domain index are exercised by icon-resolution-selftest.js.
  *
  * Usage: node tools/check-icons.js [--write]
  *   --write   also refresh tools/icons-index.json
@@ -74,7 +73,8 @@ if (!fs.existsSync(MANIFEST)) {
 	}
 	for (const r of manifestRows) {
 		if (!have.has(r.file)) problems.push(`manifest lists ${r.file} but the file does not exist`);
-		if (!r.source) warnings.push(`${r.file} has no source set recorded`);
+		if (!r.source || r.source === 'unknown' || !r.licence || !r.url)
+			problems.push(`${r.file} has incomplete source/licence metadata`);
 	}
 	for (const f of have) {
 		if (!seen.has(f)) problems.push(`${f} ships in the package but has no manifest row`);
