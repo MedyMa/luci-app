@@ -580,7 +580,7 @@ function makeRow(name, bucket, child, grouped) {
 		 * the column the names need.  The glyph, the italic name and the muted
 		 * colour already carry the only distinction that matters: a kind of
 		 * traffic rather than a product. */
-		el('td', { 'class': 'tf-app' }, (toggle ? [ toggle, icon, nameEl ] : [ icon, nameEl ])),
+		el('td', { 'class': 'tf-app' }, (toggle ? [ icon, toggle, nameEl ] : [ icon, nameEl ])),
 		cells.total, cells.down, cells.up, cells.top, cells.clients
 	]);
 	return { tr: tr, cells: cells, toggle: toggle };
@@ -2530,7 +2530,7 @@ function injectCss() {
 		'background:transparent;color:var(--tf-dim);cursor:pointer;font-size:1rem;line-height:1;}',
 		'.tf-page .tf-disclose[aria-expanded="true"]{transform:rotate(90deg);}',
 		'.tf-page .tf-disclose:focus-visible{outline:2px solid var(--tf-down);border-radius:3px;}',
-		'.tf-page .tf-domain-child>.tf-app{padding-left:2rem;}',
+		'.tf-page .tf-domain-child>.tf-app{padding-left:calc(16px + .55rem);}',
 		'.tf-page .tf-domain-child .tf-app-name{color:var(--tf-dim);font-size:.82rem;}',
 		/* a bucket is a kind of traffic, not a product: muted name plus a tag,
 		 * so it never reads as if it were an application */

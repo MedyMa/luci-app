@@ -824,6 +824,11 @@ chk(!!vSites.rowCache.Samsung && /<0\.1%/.test(flat(vSites.rowCache.Samsung.cell
   '非零小占比显示为 <0.1%');
 chk(!!vSites.rowCache.Samsung && !!vSites.rowCache.Samsung.toggle,
   '归并行提供展开域名的控件');
+const groupCell=vSites.rowCache.Samsung.tr.children[0];
+chk(groupCell.children[0].attrs.class==='tf-icon' &&
+    groupCell.children[1]===vSites.rowCache.Samsung.toggle &&
+    groupCell.children[2].attrs.class==='tf-app-name',
+  '归并行按图标、展开按钮、名称排列');
 if(vSites.rowCache.Samsung && vSites.rowCache.Samsung.toggle &&
    vSites.rowCache.Samsung.toggle._listeners.click)
   vSites.rowCache.Samsung.toggle._listeners.click();
