@@ -86,5 +86,27 @@ roll_hour
 chk 'counters off: an apptop row is archived' 1 \
     "$(grep -c 'apptop' "$CFG_DATADIR/hourly.tsv" || true)"
 
+# The interface and router totals are differenced in the shell, not in awk, and
+# a byte count above 2 GiB has to survive that too.  awk's %d was fixed for
+# exactly this reason, but these deltas never pass through awk: they are
+# $((...)) results handed straight to printf, so nothing in the collector suite
+# covers them.  How wide the shell's arithmetic is belongs to the platform, not
+# to this script - BusyBox ash computes in 64 bits where it is built that way
+# and in 32 where it is not, and a 32-bit build wraps these deltas, after which
+# the `-ge 0` clamp turns them into zero and the hour is archived wrong with
+# nothing to show for it.  Asserting the result here means a target that cannot
+# do it fails loudly instead.  If this ever fails, the deltas have to move into
+# awk like every other byte count in the collector.
+printf '9000000000\n' > "$STATE_DIR/router.tsv"
+printf '1000000000\n' > "$STATE_DIR/arch/router"
+printf '7000000000\n3000000000\n' > "$STATE_DIR/wan.tsv"
+printf '1000000000\n500000000\n' > "$STATE_DIR/arch/wan.snap"
+: > "$CFG_DATADIR/hourly.tsv"
+roll_hour
+chk 'a router delta above 2 GiB is archived in full' 1 \
+    "$(grep -c '	router	proxy	8000000000	0$' "$CFG_DATADIR/hourly.tsv" || true)"
+chk 'a wan delta above 2 GiB keeps both directions' 1 \
+    "$(grep -c '	wan	-	6000000000	2500000000$' "$CFG_DATADIR/hourly.tsv" || true)"
+
 [ "$fail" = 0 ] || exit 1
 echo 'rollhour-selftest: all checks passed'

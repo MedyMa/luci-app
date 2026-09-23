@@ -2565,8 +2565,14 @@ function injectCss() {
 		'.tf-page .tf-donut-wrap{justify-content:center;}',
 		'.tf-page .tf-stat-strip{gap:.35rem;}',
 		/* Three boxes to a row instead of two, which is the difference between a
-		 * five-row strip and a four-row one on a 360px phone.  A 5.3rem box still
-		 * holds the longest label (客户端合计 is 58px against 85 - 11 of padding). */
+		 * five-row strip and a four-row one on a 360px phone.  A 5.3rem box leaves
+		 * 73.6px of text once the .35rem side padding is off, and a Chinese caption
+		 * costs 11.2px a character plus .03em of tracking, so five characters
+		 * (58px: 客户端合计, 客户端计数) fit and a sixth does not.  The caption
+		 * wraps rather than overflowing, so breaking this is silent - which is why
+		 * the budget is written here: "客户端计数来源" was seven characters and put
+		 * this box on two lines on every phone.  Widen the box only with the row
+		 * count in mind, since three 5.3rem boxes are what fit a 360px screen. */
 		'.tf-page .tf-stat{flex:0 0 5.3rem;min-width:5.3rem;max-width:5.3rem;}',
 		/* the list scrolls sideways here instead of squeezing the name column:
 		 * every column stays readable and nothing wraps into a second line */
