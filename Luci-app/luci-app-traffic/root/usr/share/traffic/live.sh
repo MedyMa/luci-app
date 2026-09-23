@@ -260,11 +260,12 @@ sample_ct() {
 			if (du < 0) du = cu[k]          # the entry was recreated
 			if (dd < 0) dd = cd[k]
 			tu += du; td += dd
-			print k "\t" cu[k] "\t" cd[k] > newst
+			# Keep decimal byte counters; awk print may use scientific notation.
+			printf "%s\t%.0f\t%.0f\n", k, cu[k], cd[k] > newst
 		}
 		# How many flows were matched, first, because the caller has to know
 		# whether this sample is worth keeping as a baseline.
-		printf "%d\t%d\t%d\n", nk, td, tu
+		printf "%d\t%.0f\t%.0f\n", nk, td, tu
 	}' "$CT" 2>/dev/null)
 	# A sample that matched no flow at all must NOT replace the baseline with an
 	# empty file.  The next sample would then see every live flow as new, and an

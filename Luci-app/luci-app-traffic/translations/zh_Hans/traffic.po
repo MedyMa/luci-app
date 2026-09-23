@@ -252,7 +252,7 @@ msgstr "在 LAN 接口处逐包计数，包含被代理的流量"
 
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "Client totals"
-msgstr "总量来源"
+msgstr "客户端计数来源"
 
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "nft counters"

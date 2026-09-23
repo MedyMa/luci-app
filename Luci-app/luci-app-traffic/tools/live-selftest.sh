@@ -141,6 +141,16 @@ ck_delta "conntrack download counts reply growth" "160000" down
 ck_delta "conntrack upload counts client growth" "500" up
 ck "conntrack sample is ready" "1" "$(ready)"
 
+# A single busy flow can exceed signed 32-bit bytes. Keep both its stored
+# baseline and the published rate as full decimal integers.
+cat > "$CT" <<'EOF'
+ipv4 2 tcp 6 100 ESTABLISHED src=192.168.1.5 dst=1.2.3.4 sport=40000 dport=443 packets=12 bytes=3000001500 src=1.2.3.4 dst=192.168.1.5 sport=443 dport=40000 packets=20 bytes=3000250000 [ASSURED]
+EOF
+run_live
+ck_delta "large conntrack download is not clamped" "3000000000" down
+ck_delta "large conntrack upload is not clamped" "3000000000" up
+ck "large flow baseline stays decimal" "3000250000" "$(awk -F'\t' 'NR==1{print $3}' "$STATE_DIR/live.flows")"
+
 # a flow that disappears between samples must not produce negative traffic
 rm -f "$STATE_DIR/live.flows"
 : > "$CT"

@@ -958,16 +958,18 @@ account_clients() {
         END {
             for (ip in seen) {
                 td[ip] += down[ip]; tu[ip] += up[ip]
-                if (down[ip] + up[ip] > 0) printf "%s\t%d\t%d\n", ip, down[ip], up[ip] > dl
+                if (down[ip] + up[ip] > 0) printf "%s\t%.0f\t%.0f\n", ip, down[ip], up[ip] > dl
             }
-            for (ip in td) printf "%s\t%d\t%d\n", ip, td[ip], tu[ip] > cum
+            for (ip in td) printf "%s\t%.0f\t%.0f\n", ip, td[ip], tu[ip] > cum
         }' "$STATE_DIR/acct.new" 2>/dev/null
     mv -f "$STATE_DIR/acct.new" "$STATE_DIR/acct.abs"
 
     # clients.tsv is what the page lists: when the counters are running they are
     # the client totals, and conntrack only supplies the application attribution.
     if [ "$ACCT_ON" = "1" ] && [ -f "$STATE_DIR/acct.tsv" ]; then
-        awk -F'\t' '{ if ($2 + $3 > 0) printf "%s\t%d\t%d\t%d\n", $1, $2 + $3, $2, $3 }' \
+        # BusyBox awk's %d saturates at 2147483647. Byte counts must use
+        # %.0f so both the TSV state and the JSON snapshot keep full integers.
+        awk -F'\t' '{ if ($2 + $3 > 0) printf "%s\t%.0f\t%.0f\t%.0f\n", $1, $2 + $3, $2, $3 }' \
             "$STATE_DIR/acct.tsv" > "$STATE_DIR/clients.new" 2>/dev/null \
             && mv -f "$STATE_DIR/clients.new" "$STATE_DIR/clients.tsv"
     fi
@@ -1280,19 +1282,19 @@ classify() {
         sd += d; su += u
     }
     END {
-        for (x in up) { if (up[x] + dn[x] > 0) printf "%s\t%d\t%d\n", x, up[x], dn[x] > tot }
+        for (x in up) { if (up[x] + dn[x] > 0) printf "%s\t%.0f\t%.0f\n", x, up[x], dn[x] > tot }
         # The client totals come from the nft counters when they are running:
         # they see every packet, and the conntrack side of a proxied flow is not
         # where its bytes end up.  Only when the counters are unavailable does
         # the conntrack total stand in for them.
-        if (!acct) for (y in cb) { if (cb[y] > 0) printf "%s\t%d\n", y, cb[y] > cli }
-        printf "%d\n", rb_total + rb["proxy"] > rt
-        printf "%d\t%d\t%d\t%d\n", m_c, m_g, k_b, k_o > st
-        printf "%d\n%d\n", sd, su > smp
+        if (!acct) for (y in cb) { if (cb[y] > 0) printf "%s\t%.0f\n", y, cb[y] > cli }
+        printf "%.0f\n", rb_total + rb["proxy"] > rt
+        printf "%.0f\t%.0f\t%.0f\t%.0f\n", m_c, m_g, k_b, k_o > st
+        printf "%.0f\n%.0f\n", sd, su > smp
         for (z in ac) {
             if (ac[z] <= 0) continue
             split(z, zp, "|")
-            printf "%s\t%s\t%d\n", zp[1], zp[2], ac[z] > acnew
+            printf "%s\t%s\t%.0f\n", zp[1], zp[2], ac[z] > acnew
         }
     }' "$STATE_DIR/flow.delta"
     [ -f "$STATE_DIR/ac.new" ] && mv -f "$STATE_DIR/ac.new" "$STATE_DIR/ac.tsv"
@@ -1489,8 +1491,8 @@ publish_current() {
             if (u < 0) u = 0
             if (d < 0) d = 0
             if (u + d > 0) {
-                if (aw[$1] != "") printf "%s\t%d\t%d\t%s\t%d\t%d\n", $1, d, u, aw[$1], ab[$1], ac[$1]
-                else printf "%s\t%d\t%d\n", $1, d, u
+                if (aw[$1] != "") printf "%s\t%.0f\t%.0f\t%s\t%.0f\t%.0f\n", $1, d, u, aw[$1], ab[$1], ac[$1]
+                else printf "%s\t%.0f\t%.0f\n", $1, d, u
             }
         }' "$STATE_DIR/totals.tsv" > "$STATE_DIR/cur.apps.new" 2>/dev/null \
         && mv -f "$STATE_DIR/cur.apps.new" "$STATE_DIR/cur.apps"
@@ -1507,7 +1509,7 @@ publish_current() {
             d = $2 - sd[$1]; u = $3 - su[$1]
             if (d < 0) d = 0
             if (u < 0) u = 0
-            if (d + u > 0) printf "%s\t%d\n", $1, d + u
+            if (d + u > 0) printf "%s\t%.0f\n", $1, d + u
         }' "$STATE_DIR/acct.tsv" > "$STATE_DIR/cur.clients.new" 2>/dev/null \
         && mv -f "$STATE_DIR/cur.clients.new" "$STATE_DIR/cur.clients"
 
@@ -1644,10 +1646,10 @@ roll_hour() {
             if (u < 0) u = 0
             if (d < 0) d = 0
             if (u + d <= 0) next
-            printf "%s\tapp\t%s\t%d\t%d\n", h, $1, d, u
+            printf "%s\tapp\t%s\t%.0f\t%.0f\n", h, $1, d, u
             td += d; tu += u
         }
-        END { printf "%s\t%d\t%d\n", t, td + rt, tu > pt }
+        END { printf "%s\t%.0f\t%.0f\n", t, td + rt, tu > pt }
     ' "$STATE_DIR/totals.tsv" >> "$CFG_DATADIR/hourly.tsv"
     cat "$arch/point" >> "$CFG_DATADIR/series1h.tsv" 2>/dev/null
     n=$(wc -l < "$CFG_DATADIR/series1h.tsv" 2>/dev/null || echo 0)
@@ -1677,7 +1679,7 @@ roll_hour() {
                 if (d + u <= 0) next
                 # the reader of these rows only ever uses the down column, so the
                 # two directions go there as one figure
-                printf "%s\tclient\t%s\t%d\t0\n", h, $1, d + u
+                printf "%s\tclient\t%s\t%.0f\t0\n", h, $1, d + u
             }
         ' "$STATE_DIR/acct.tsv" >> "$CFG_DATADIR/hourly.tsv"
     elif [ -s "$STATE_DIR/clients.tsv" ]; then
@@ -1689,7 +1691,7 @@ roll_hour() {
             {
                 b = $2 - sb[$1]
                 if (b < 0) b = 0
-                if (b > 0) printf "%s\tclient\t%s\t%d\t0\n", h, $1, b
+                if (b > 0) printf "%s\tclient\t%s\t%.0f\t0\n", h, $1, b
             }
         ' "$STATE_DIR/clients.tsv" >> "$CFG_DATADIR/hourly.tsv"
     fi
@@ -1710,12 +1712,12 @@ roll_hour() {
     # ever carried a busiest client and every range view showed a dash.
     if [ -s "$STATE_DIR/ac.agg" ]; then
         awk -F'\t' -v h="$hour" '
-            $1 != "" && $4 != "" { printf "%s\tapptop\t%s\t%s\t%d\t%d\n", h, $1, $4, $3 + 0, $2 + 0 }
+            $1 != "" && $4 != "" { printf "%s\tapptop\t%s\t%s\t%.0f\t%.0f\n", h, $1, $4, $3 + 0, $2 + 0 }
         ' "$STATE_DIR/ac.agg" >> "$CFG_DATADIR/hourly.tsv"
     fi
 
     if [ "$dhr" -gt 0 ]; then
-        printf '%s\trouter\tproxy\t%d\t0\n' "$hour" "$dhr" >> "$CFG_DATADIR/hourly.tsv"
+        printf '%s\trouter\tproxy\t%s\t0\n' "$hour" "$dhr" >> "$CFG_DATADIR/hourly.tsv"
     fi
 
     # The interface counters for this hour, as one more kind of row.  The name
@@ -1726,7 +1728,7 @@ roll_hour() {
     # how the router row above keeps a repeated roll of the same hour from
     # archiving the same bytes twice.
     if [ "$dwd" -gt 0 ] || [ "$dwu" -gt 0 ]; then
-        printf '%s\twan\t-\t%d\t%d\n' "$hour" "$dwd" "$dwu" >> "$CFG_DATADIR/hourly.tsv"
+        printf '%s\twan\t-\t%s\t%s\n' "$hour" "$dwd" "$dwu" >> "$CFG_DATADIR/hourly.tsv"
     fi
 
     # The snapshot is taken after the history has been appended, so a failure to
@@ -1817,7 +1819,7 @@ write_summary() {
         [ "$ACCT_ON" = "1" ] && [ "$ACCT_OFFLOAD" = "1" ] && printf ',"acct_offload":1'
         if [ "$ACCT_ON" = "1" ]; then
             printf ',"accounted":{'
-            awk -F'\t' '{ d += $2; u += $3 } END { printf "\"down\":%d,\"up\":%d}", d + 0, u + 0 }' \
+            awk -F'\t' '{ d += $2; u += $3 } END { printf "\"down\":%.0f,\"up\":%.0f}", d + 0, u + 0 }' \
                 "$STATE_DIR/acct.tsv" 2>/dev/null || printf '"down":0,"up":0}'
         fi
         [ -s "$STATE_DIR/acct.off" ] && printf ',"acct_error":"%s"' "$(json_escape "$(sed -n '1p' "$STATE_DIR/acct.off")")"
@@ -1855,7 +1857,7 @@ write_summary() {
         awk -F'\t' '
             { sum[$1] += $3; cnt[$1] += 1
               if ($3 > best[$1]) { best[$1] = $3; who[$1] = $2 } }
-            END { for (k in sum) printf "%s\t%d\t%d\t%s\n", k, cnt[k], best[k], who[k] }
+            END { for (k in sum) printf "%s\t%.0f\t%.0f\t%s\n", k, cnt[k], best[k], who[k] }
         ' "$STATE_DIR/ac.tsv" 2>/dev/null > "$STATE_DIR/ac.agg"
 
         printf ',"querylog":"%s","apps":[' "$(json_escape "$CFG_QUERYLOG")"
@@ -1909,7 +1911,7 @@ write_summary() {
                   who = act[key[i]]; wb = acb[key[i]]
                   disp = (who in lname) ? lname[who] : who
                   if (i > 1) printf ","
-                  printf "{\"name\":\"%s\",\"down\":%d,\"up\":%d,\"clients\":%d,\"top\":\"%s\",\"top_bytes\":%d%s}",
+                  printf "{\"name\":\"%s\",\"down\":%.0f,\"up\":%.0f,\"clients\":%.0f,\"top\":\"%s\",\"top_bytes\":%.0f%s}",
                          key[i], dnv[i], upv[i], acn[key[i]], disp, wb, (key[i] in proto) ? ",\"proto\":1" : ""
               }
           }' "$STATE_DIR/totals.tsv" 2>/dev/null
@@ -1940,7 +1942,7 @@ write_summary() {
                                 ti = cip[i]; cip[i] = cip[m]; cip[m] = ti }
                   disp = (cip[i] in lname) ? lname[cip[i]] : cip[i]
                   if (i > 1) printf ","
-                  printf "{\"ip\":\"%s\",\"name\":\"%s\",\"bytes\":%d}", cip[i], disp, cby[i]
+                  printf "{\"ip\":\"%s\",\"name\":\"%s\",\"bytes\":%.0f}", cip[i], disp, cby[i]
               }
           }' "$STATE_DIR/clients.tsv" 2>/dev/null
         printf '],"totals":{'
@@ -1955,12 +1957,12 @@ write_summary() {
             up += $2; down += $3
             if ($1 == "Other") ou += $2 + $3
         } END {
-            printf "\"down\":%d,\"up\":%d,\"other\":%d,\"client_bytes\":%d", down, up, ou, client_bytes
+            printf "\"down\":%.0f,\"up\":%.0f,\"other\":%.0f,\"client_bytes\":%.0f", down, up, ou, client_bytes
         }' "$STATE_DIR/totals.tsv" 2>/dev/null
         printf ',"router":%s' "$(cat "$STATE_DIR/router.tsv" 2>/dev/null || echo 0)"
         printf ',"client_count":%s' "$(wc -l < "$STATE_DIR/clients.tsv" 2>/dev/null || echo 0)"
         # stat.tsv: <named via same client> <named via any client> <bucket> <other>
-        awk -F'\t' '{ printf ",\"exact\":%d,\"any\":%d,\"bucket\":%d,\"residual\":%d", $1, $2, $3, $4 }' \
+        awk -F'\t' '{ printf ",\"exact\":%.0f,\"any\":%.0f,\"bucket\":%.0f,\"residual\":%.0f", $1, $2, $3, $4 }' \
             "$STATE_DIR/stat.tsv" 2>/dev/null
         printf '}}\n'
     } > "$STATE_DIR/summary.json.new" 2>/dev/null \

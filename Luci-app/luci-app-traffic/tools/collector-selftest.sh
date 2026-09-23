@@ -562,6 +562,33 @@ chk "23f4 夹具可辨别列 2 与列 3"            "different" \
 acctf() { grep -o '"accounted":{[^}]*}' "$1" | sed -n "s/.*\"$2\":\([0-9]*\).*/\1/p"; }
 chk "23g 快照报告计数器总量（下行）"        "10000"             "$(acctf "$T/state5/summary.json" down)"
 chk "23g2 快照报告计数器总量（上行）"       "1000"              "$(acctf "$T/state5/summary.json" up)"
+# Large byte counters must survive every TSV and JSON serialization step.
+# A 32-bit awk printf %d clamps them to 2147483647 on the router.
+mkdir -p "$T/large"
+: > "$T/large/flow.state"
+: > "$T/large/dnsmap.tsv"
+printf 'Large App\t1000000000\t3000000000\nOther\t0\t0\n' > "$T/large/totals.tsv"
+printf '192.168.2.50\t4000000000\n192.168.2.51\t1000000000\n' > "$T/large/clients.tsv"
+printf 'Large App\t192.168.2.50\t3000000000\n' > "$T/large/ac.tsv"
+printf '0\t0\t0\t0\n' > "$T/large/stat.tsv"
+printf '0\n0\n' > "$T/large/wan.tsv"
+sed '$d' "$COLLECTOR" > "$T/collector-functions.sh"
+(
+    . "$T/collector-functions.sh"
+    STATE_DIR="$T/large"
+    WAN_IF=
+    ACCT_ON=0
+    CFG_TOP_APPS=10
+    CFG_TOP_CLIENTS=10
+    TRAFFIC_LEASES=/nonexistent
+    write_summary
+)
+chk "23g3 大流量应用下行不截断" "3000000000" "$(grep -o '"name":"Large App","down":[0-9]*' "$T/large/summary.json" | cut -d: -f3)"
+chk "23g4 大流量应用上行不截断" "1000000000" "$(grep -o '"name":"Large App"[^}]*"up":[0-9]*' "$T/large/summary.json" | sed -n 's/.*"up":\([0-9]*\).*/\1/p')"
+chk "23g5 大流量应用主客户端不截断" "3000000000" "$(grep -o '"name":"Large App"[^}]*"top_bytes":[0-9]*' "$T/large/summary.json" | sed -n 's/.*"top_bytes":\([0-9]*\).*/\1/p')"
+chk "23g6 大流量客户端不截断" "4000000000" "$(grep -o '"ip":"192.168.2.50"[^}]*"bytes":[0-9]*' "$T/large/summary.json" | sed -n 's/.*"bytes":\([0-9]*\).*/\1/p')"
+chk "23g7 汇总下行不截断" "3000000000" "$(totf "$T/large/summary.json" down)"
+chk "23g8 客户端总和不截断" "5000000000" "$(totf "$T/large/summary.json" client_bytes)"
 # second round: only the increase is added, not the absolute counter again
 printf '192.168.2.50 3000\n192.168.2.51 0\n' > "$T/nft5/counters.pre"
 printf '192.168.2.50 25000\n192.168.2.51 0\n' > "$T/nft5/counters.post"
