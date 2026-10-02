@@ -11,13 +11,14 @@ IWPRIV=${WIFI_IWPRIV:-iwpriv}
 SYS_NET=${WIFI_SYS_NET:-/sys/class/net}
 STAT_AWK=${WIFI_STAT_AWK:-/usr/share/router-status/wifi-stat.awk}
 DELTA_AWK=${WIFI_DELTA_AWK:-/usr/share/router-status/wifi-delta.awk}
+HISTORY_AWK=${WIFI_HISTORY_AWK:-/usr/share/router-status/wifi-history.awk}
 
 sample_once() {
     local now raw indexes index name ifname up rx tx stats
     local current result next history
     now=${WIFI_NOW:-$(date +%s)}
     case "$now" in ''|*[!0-9]*) return 0 ;; esac
-    mkdir -p "$STATE_DIR" || return 0
+    [ -d "$STATE_DIR" ] || mkdir -p "$STATE_DIR" || return 0
     raw=$("$RPCD" call getWirelessStatus 2>/dev/null) || return 0
     json_load "$raw" 2>/dev/null || return 0
     json_select radios 2>/dev/null || return 0
@@ -39,8 +40,8 @@ sample_once() {
         case "$up" in 1|true) : ;; *) continue ;; esac
         [ -r "$SYS_NET/$ifname/statistics/rx_bytes" ] || continue
         [ -r "$SYS_NET/$ifname/statistics/tx_bytes" ] || continue
-        rx=$(cat "$SYS_NET/$ifname/statistics/rx_bytes")
-        tx=$(cat "$SYS_NET/$ifname/statistics/tx_bytes")
+        read -r rx < "$SYS_NET/$ifname/statistics/rx_bytes" || continue
+        read -r tx < "$SYS_NET/$ifname/statistics/tx_bytes" || continue
         case "$rx:$tx" in *[!0-9:]*|:*|*:) continue ;; esac
         stats=$("$IWPRIV" "$ifname" stat 2>/dev/null | awk -f "$STAT_AWK")
         set -- $stats
@@ -50,18 +51,18 @@ sample_once() {
     done
 
     if [ -r "$STATE_DIR/wifi-prev.tsv" ]; then
-        cat "$STATE_DIR/wifi-prev.tsv" "$current" |
-            awk -F '\t' -f "$DELTA_AWK" > "$result"
+        awk -F '\t' -f "$DELTA_AWK" "$STATE_DIR/wifi-prev.tsv" "$current" > "$result"
     else
         awk -F '\t' -f "$DELTA_AWK" "$current" > "$result"
     fi
     awk -F '\t' '$1 == "N" { sub(/^N/, "P"); print }' "$result" > "$next"
     mv "$next" "$STATE_DIR/wifi-prev.tsv"
-    {
-        [ ! -r "$STATE_DIR/wifi-history.tsv" ] || cat "$STATE_DIR/wifi-history.tsv"
-        awk -F '\t' '$1 == "H" { sub(/^H\t/, ""); print }' "$result"
-    } | awk -F '\t' -v cutoff="$((now - 86400))" \
-        'NF == 6 && $1 + 0 >= cutoff { print }' | tail -n 12000 > "$history"
+    [ -e "$STATE_DIR/wifi-history.tsv" ] || : > "$STATE_DIR/wifi-history.tsv"
+    if ! awk -F '\t' -v cutoff="$((now - 86400))" -f "$HISTORY_AWK" \
+        "$STATE_DIR/wifi-history.tsv" "$result" > "$history"; then
+        rm -f "$current" "$result" "$history"
+        return 0
+    fi
     mv "$history" "$STATE_DIR/wifi-history.tsv"
     rm -f "$current" "$result"
 }

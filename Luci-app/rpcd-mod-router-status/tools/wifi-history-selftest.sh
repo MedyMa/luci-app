@@ -4,6 +4,7 @@ set -eu
 ROOT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 AWK="$ROOT/root/usr/share/router-status/wifi-delta.awk"
 STAT_AWK="$ROOT/root/usr/share/router-status/wifi-stat.awk"
+HISTORY_AWK="$ROOT/root/usr/share/router-status/wifi-history.awk"
 COLLECTOR_SHELL="${WIFI_TEST_SHELL:-sh}"
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
@@ -96,9 +97,12 @@ printf '%s\n' 100000 > "$TMP/net/rai0/statistics/rx_bytes"
 printf '%s\n' 50000 > "$TMP/net/rai0/statistics/tx_bytes"
 WIFI_STATE_DIR="$TMP/state" WIFI_RPCD="$TMP/rpcd" \
     WIFI_IWPRIV="$TMP/iwpriv" WIFI_JSHN="$TMP/jshn.sh" \
-    WIFI_SYS_NET="$TMP/net" WIFI_STAT_AWK="$STAT_AWK" WIFI_DELTA_AWK="$AWK" \
+    WIFI_SYS_NET="$TMP/net" WIFI_STAT_AWK="$STAT_AWK" WIFI_DELTA_AWK="$AWK" WIFI_HISTORY_AWK="$HISTORY_AWK" \
     WIFI_TEST_STAT="$TMP/stat" WIFI_NOW=100 \
     "$COLLECTOR_SHELL" "$ROOT/root/usr/share/router-status/wifi-collector.sh" once
+
+# A prior sample in the same public five-minute bucket must be replaced.
+printf '130\tMT7990_1_2\t400\t200\t-\t-\n' > "$TMP/state/wifi-history.tsv"
 
 sed 's/3467814/3467934/; s/223665/223675/; s/13846075/13846375/; s/2649709/2649714/' \
     "$TMP/stat" > "$TMP/stat2"
@@ -106,15 +110,39 @@ printf '%s\n' 160000 > "$TMP/net/rai0/statistics/rx_bytes"
 printf '%s\n' 80000 > "$TMP/net/rai0/statistics/tx_bytes"
 WIFI_STATE_DIR="$TMP/state" WIFI_RPCD="$TMP/rpcd" \
     WIFI_IWPRIV="$TMP/iwpriv" WIFI_JSHN="$TMP/jshn.sh" \
-    WIFI_SYS_NET="$TMP/net" WIFI_STAT_AWK="$STAT_AWK" WIFI_DELTA_AWK="$AWK" \
+    WIFI_SYS_NET="$TMP/net" WIFI_STAT_AWK="$STAT_AWK" WIFI_DELTA_AWK="$AWK" WIFI_HISTORY_AWK="$HISTORY_AWK" \
     WIFI_TEST_STAT="$TMP/stat2" WIFI_NOW=160 \
     "$COLLECTOR_SHELL" "$ROOT/root/usr/share/router-status/wifi-collector.sh" once
 grep -Fqx '160	MT7990_1_2	1000	500	7.7	1.6' "$TMP/state/wifi-history.tsv"
 
+[ "$(wc -l < "$TMP/state/wifi-history.tsv")" -eq 1 ] || { echo 'redundant minute samples retained in one public bucket' >&2; exit 1; }
+
+# One complete aligned day: three radios, 1,440 minute samples each.
+# Storage must match the already public last-sample-per-five-minute view.
+awk 'BEGIN { OFS="\t"; for (n=0;n<1440;n++) for(r=1;r<=3;r++)
+    print 288000+n*60, "radio" r, n, r, "-", "-" }' > "$TMP/full-day"
+awk -F '\t' -v cutoff=288000 -f "$HISTORY_AWK" "$TMP/full-day" > "$TMP/compact-day"
+awk 'BEGIN { OFS="\t"; for (n=4;n<1440;n+=5) for(r=1;r<=3;r++)
+    print 288000+n*60, "radio" r, n, r, "-", "-" }' > "$TMP/expected-day"
+cmp "$TMP/expected-day" "$TMP/compact-day"
+[ "$(wc -l < "$TMP/compact-day")" -eq 864 ]
+awk 'BEGIN { OFS="\t"; for (r=1;r<=12010;r++)
+    print 288000, "radio" r, 0, 0, "-", "-" }' > "$TMP/large-history"
+awk -F '\t' -v cutoff=288000 -f "$HISTORY_AWK" "$TMP/large-history" > "$TMP/capped-history"
+[ "$(wc -l < "$TMP/capped-history")" -eq 12000 ]
+printf '287999\tradio1\t1\t1\t-\t-\n300000\tbad"name\t1\t1\t-\t-\n' > "$TMP/invalid-history"
+awk -F '\t' -v cutoff=288000 -f "$HISTORY_AWK" "$TMP/invalid-history" > "$TMP/filtered-history"
+[ ! -s "$TMP/filtered-history" ]
+
+# A clock rollback must retain a revisited bucket as a new segment.
+printf '3600\tradio1\t1\t1\t-\t-\n3900\tradio1\t2\t2\t-\t-\n3600\tradio1\t3\t3\t-\t-\n' > "$TMP/rollback"
+awk -F '\t' -v cutoff=0 -f "$HISTORY_AWK" "$TMP/rollback" > "$TMP/rollback-actual"
+cmp "$TMP/rollback" "$TMP/rollback-actual"
+
 # The reported device fault was a daemon crash loop, not merely bad output.
 WIFI_STATE_DIR="$TMP/state" WIFI_RPCD="$TMP/rpcd" \
     WIFI_IWPRIV="$TMP/iwpriv" WIFI_JSHN="$TMP/jshn.sh" \
-    WIFI_SYS_NET="$TMP/net" WIFI_STAT_AWK="$STAT_AWK" WIFI_DELTA_AWK="$AWK" \
+    WIFI_SYS_NET="$TMP/net" WIFI_STAT_AWK="$STAT_AWK" WIFI_DELTA_AWK="$AWK" WIFI_HISTORY_AWK="$HISTORY_AWK" \
     WIFI_TEST_STAT="$TMP/stat2" WIFI_NOW=220 WIFI_SAMPLE_SECONDS=1 \
     "$COLLECTOR_SHELL" "$ROOT/root/usr/share/router-status/wifi-collector.sh" \
     > "$TMP/daemon.log" 2>&1 &

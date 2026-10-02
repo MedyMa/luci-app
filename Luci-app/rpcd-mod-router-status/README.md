@@ -19,7 +19,13 @@ retry counts and client signal distribution are not fabricated.
 
 `router-status` runs independently under procd. Samples are collected once per
 minute in `/tmp/router-status`, retained for 24 hours and returned at five-minute
-resolution. There is no history before the first pair of samples. A reboot
+resolution. Since 0.1.1, RAM storage also retains only the latest minute sample
+in each five-minute bucket; legacy files compact automatically on the next sample.
+For an aligned full day with three radios, 4,320 rows become 864, while the public
+history points and their rate/failure semantics stay the same. Sysfs counters use
+shell built-ins and history merging uses one awk pass to reduce process launches.
+This reduces stored records and repeated file reads; it is not a measured claim
+about total process RSS or CPU usage. There is no history before the first pair of samples. A reboot
 clears history; a normal service restart or package upgrade preserves it.
 
 ## Installation / migration
