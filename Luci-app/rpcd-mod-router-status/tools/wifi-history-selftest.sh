@@ -2,8 +2,8 @@
 set -eu
 
 ROOT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
-AWK="$ROOT/root/usr/share/traffic/wifi-delta.awk"
-STAT_AWK="$ROOT/root/usr/share/traffic/wifi-stat.awk"
+AWK="$ROOT/root/usr/share/router-status/wifi-delta.awk"
+STAT_AWK="$ROOT/root/usr/share/router-status/wifi-stat.awk"
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
@@ -79,7 +79,7 @@ WIFI_STATE_DIR="$TMP/state" WIFI_RPCD="$TMP/rpcd" \
     WIFI_IWPRIV="$TMP/iwpriv" WIFI_JSHN="$TMP/jshn.sh" \
     WIFI_SYS_NET="$TMP/net" WIFI_STAT_AWK="$STAT_AWK" WIFI_DELTA_AWK="$AWK" \
     WIFI_TEST_STAT="$TMP/stat" WIFI_NOW=100 \
-    sh "$ROOT/root/usr/share/traffic/wifi-collector.sh" once
+    sh "$ROOT/root/usr/share/router-status/wifi-collector.sh" once
 
 sed 's/3467814/3467934/; s/223665/223675/; s/13846075/13846375/; s/2649709/2649714/' \
     "$TMP/stat" > "$TMP/stat2"
@@ -89,7 +89,7 @@ WIFI_STATE_DIR="$TMP/state" WIFI_RPCD="$TMP/rpcd" \
     WIFI_IWPRIV="$TMP/iwpriv" WIFI_JSHN="$TMP/jshn.sh" \
     WIFI_SYS_NET="$TMP/net" WIFI_STAT_AWK="$STAT_AWK" WIFI_DELTA_AWK="$AWK" \
     WIFI_TEST_STAT="$TMP/stat2" WIFI_NOW=160 \
-    sh "$ROOT/root/usr/share/traffic/wifi-collector.sh" once
+    sh "$ROOT/root/usr/share/router-status/wifi-collector.sh" once
 grep -Fqx '160	MT7990_1_2	1000	500	7.7	1.6' "$TMP/state/wifi-history.tsv"
 
 echo 'Wi-Fi counter history: PASS'

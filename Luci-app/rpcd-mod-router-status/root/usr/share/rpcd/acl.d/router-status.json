@@ -1,0 +1,11 @@
+{
+  "router-status": {
+    "description": "Read router CPU and sanitized wireless status",
+    "read": {
+      "ubus": {
+        "router.status": ["getSystemMetrics", "getWirelessStatus", "getWirelessHistory"],
+        "system": ["info"]
+      }
+    }
+  }
+}

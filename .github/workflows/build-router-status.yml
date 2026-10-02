@@ -1,0 +1,261 @@
+name: Build rpcd-mod-router-status
+
+on:
+  workflow_dispatch:
+    inputs:
+      openwrt_target:
+        description: OpenWrt target
+        required: false
+        default: 'mediatek'
+      openwrt_subtarget:
+        description: OpenWrt subtarget
+        required: false
+        default: 'filogic'
+  push:
+    branches:
+      - main
+    tags:
+      - 'router-status-v*'
+    paths:
+      - '.github/workflows/build-router-status.yml'
+      - 'rpcd-mod-router-status/**'
+      - 'Luci-app/rpcd-mod-router-status/**'
+      - 'tools/router-status-boundary-test.js'
+      - 'Luci-app/luci-app-traffic/root/**'
+  pull_request:
+    paths:
+      - '.github/workflows/build-router-status.yml'
+      - 'rpcd-mod-router-status/**'
+      - 'Luci-app/rpcd-mod-router-status/**'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - build_profile: 24.10-ipk
+            sdk_distribution: immortalwrt
+            openwrt_version: 24.10.6
+            pkg_format: ipk
+          - build_profile: 25.12-apk
+            sdk_distribution: immortalwrt
+            openwrt_version: 25.12-SNAPSHOT
+            pkg_format: apk
+
+    env:
+      BUILD_PROFILE: ${{ matrix.build_profile }}
+      SDK_DISTRIBUTION: ${{ matrix.sdk_distribution }}
+      OPENWRT_VERSION: ${{ matrix.openwrt_version }}
+      OPENWRT_TARGET: ${{ inputs.openwrt_target || 'mediatek' }}
+      OPENWRT_SUBTARGET: ${{ inputs.openwrt_subtarget || 'filogic' }}
+      PKG_FORMAT: ${{ matrix.pkg_format }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.2
+
+      - name: Verify independent status and history
+        run: |
+          set -eux
+          node tools/router-status-boundary-test.js
+          sh Luci-app/rpcd-mod-router-status/tools/status-selftest.sh
+          sh Luci-app/rpcd-mod-router-status/tools/wifi-history-selftest.sh
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            clang \
+            curl \
+            file \
+            flex \
+            bison \
+            g++ \
+            gawk \
+            gcc-multilib \
+            gettext \
+            git \
+            libncurses5-dev \
+            libssl-dev \
+            python3 \
+            python3-pyelftools \
+            python3-setuptools \
+            rsync \
+            subversion \
+            swig \
+            unzip \
+            wget \
+            zlib1g-dev \
+            zstd
+
+      - name: Download SDK
+        run: |
+          set -eux
+          case "$SDK_DISTRIBUTION" in
+            openwrt)
+              sdk_base_url="https://downloads.openwrt.org/releases/${OPENWRT_VERSION}/targets/${OPENWRT_TARGET}/${OPENWRT_SUBTARGET}"
+              sdk_prefix='openwrt-sdk'
+              sdk_ext='.tar.zst'
+              ;;
+            immortalwrt)
+              if echo "$OPENWRT_VERSION" | grep -q 'SNAPSHOT'; then
+                sdk_base_url="https://downloads.immortalwrt.org/snapshots/targets/${OPENWRT_TARGET}/${OPENWRT_SUBTARGET}"
+              else
+                sdk_base_url="https://downloads.immortalwrt.org/releases/${OPENWRT_VERSION}/targets/${OPENWRT_TARGET}/${OPENWRT_SUBTARGET}"
+              fi
+              sdk_prefix='immortalwrt-sdk'
+              sdk_ext='.tar.zst'
+              ;;
+            *)
+              echo "Unsupported SDK distribution: $SDK_DISTRIBUTION" >&2
+              exit 1
+              ;;
+          esac
+
+          sdk_target_id="${OPENWRT_TARGET}-${OPENWRT_SUBTARGET}"
+
+          _find_sdk() {
+            local base_url="$1" prefix="$2" ver="$3" tid="$4" ext="$5"
+            local page sdk_fname gcc_ver
+
+            # Strategy 1: scrape directory listing (fastest when CDN cooperates)
+            page="$(curl -sSL --retry 2 --retry-delay 5 --max-time 30 "$base_url/" 2>/dev/null || true)"
+            if [ -n "$page" ]; then
+              sdk_fname="$(printf '%s\n' "$page" | grep -oE "${prefix}-${ver}-${tid}_[^\"]+${ext}" | head -n1)"
+              [ -z "$sdk_fname" ] && sdk_fname="$(printf '%s\n' "$page" | grep -oE "${prefix}-${tid}_[^\"]+${ext}" | head -n1)"
+              [ -n "$sdk_fname" ] && printf '%s\n' "$sdk_fname" && return 0
+            fi
+
+            # Strategy 2: probe common GCC versions (bypasses CDN listing issues)
+            for gcc_ver in 14.3.0 14.2.0 14.1.0 13.3.0 13.2.0 12.3.0 12.2.0 11.4.0 11.3.0; do
+              sdk_fname="${prefix}-${ver}-${tid}_gcc-${gcc_ver}_musl.Linux-x86_64${ext}"
+              if wget --spider -q --timeout=10 "$base_url/$sdk_fname" 2>/dev/null; then
+                printf '%s\n' "$sdk_fname" && return 0
+              fi
+              sdk_fname="${prefix}-${tid}_gcc-${gcc_ver}_musl.Linux-x86_64${ext}"
+              if wget --spider -q --timeout=10 "$base_url/$sdk_fname" 2>/dev/null; then
+                printf '%s\n' "$sdk_fname" && return 0
+              fi
+            done
+
+            return 1
+          }
+
+          sdk_file="$(_find_sdk "$sdk_base_url" "$sdk_prefix" "$OPENWRT_VERSION" "$sdk_target_id" "$sdk_ext")"
+          test -n "$sdk_file"
+          echo "Found SDK: $sdk_file"
+          wget -q --timeout=30 --tries=5 "$sdk_base_url/$sdk_file" -O sdk.tar.zst
+          tar --zstd -xf sdk.tar.zst
+          sdk_dir="$(find . -maxdepth 1 -type d -name "${sdk_prefix}-*" | head -n1)"
+          test -n "$sdk_dir"
+          echo "SDK_DIR=$sdk_dir" >> "$GITHUB_ENV"
+
+      - name: Update feeds
+        working-directory: ${{ env.SDK_DIR }}
+        run: |
+          set -eux
+          ./scripts/feeds update -a
+
+      - name: Inject package into LuCI feed
+        run: |
+          set -eux
+          package_makefile="$(find "$GITHUB_WORKSPACE" -type f -name Makefile \
+            -not -path "$GITHUB_WORKSPACE/.git/*" \
+            -not -path "$GITHUB_WORKSPACE/openwrt-sdk-*/*" \
+            -not -path "$GITHUB_WORKSPACE/immortalwrt-sdk-*/*" \
+            -print | while IFS= read -r candidate; do
+              if sed 's/\r$//' "$candidate" | grep -q '^PKG_NAME:=rpcd-mod-router-status$'; then
+                printf '%s\n' "$candidate"
+                break
+              fi
+            done | head -n1)"
+          package_src="${package_makefile%/Makefile}"
+
+          if [ -z "$package_makefile" ] || [ ! -f "$package_makefile" ]; then
+            echo "Unable to locate rpcd-mod-router-status Makefile in workspace" >&2
+            echo "Searched under $GITHUB_WORKSPACE for PKG_NAME:=rpcd-mod-router-status" >&2
+            exit 1
+          fi
+
+          sed 's/\r$//' "$package_makefile" | grep -q '^PKG_NAME:=rpcd-mod-router-status$'
+
+          sdk_feed_dir="$SDK_DIR/feeds/luci/applications/rpcd-mod-router-status"
+          sdk_pkg_dir="$SDK_DIR/package/feeds/luci/rpcd-mod-router-status"
+
+          mkdir -p "$SDK_DIR/feeds/luci/applications"
+          mkdir -p "$SDK_DIR/package/feeds/luci"
+          rm -rf "$sdk_feed_dir" "$sdk_pkg_dir"
+
+          rsync -a \
+            --exclude '.git/' \
+            --exclude '.github/' \
+            --exclude 'openwrt-sdk-*' \
+            --exclude 'immortalwrt-sdk-*' \
+            "$package_src/" "$sdk_feed_dir/"
+
+          find "$sdk_feed_dir" -type f \( \
+            -name Makefile -o \
+            -name '*.sh' -o \
+            -path '*/root/etc/init.d/*' -o \
+            -path '*/root/etc/uci-defaults/*' -o \
+            -path '*/root/usr/libexec/*' \
+          \) -exec sed -i 's/\r$//' {} +
+
+          ln -sfn "../../../feeds/luci/applications/rpcd-mod-router-status" "$sdk_pkg_dir"
+          test -f "$sdk_feed_dir/Makefile"
+          test -f "$sdk_pkg_dir/Makefile"
+          sed 's/\r$//' "$sdk_feed_dir/Makefile" | grep -q '^PKG_NAME:=rpcd-mod-router-status$'
+
+      - name: Install package definitions
+        working-directory: ${{ env.SDK_DIR }}
+        run: |
+          set -eux
+          ./scripts/feeds install -a
+
+      - name: Configure SDK
+        working-directory: ${{ env.SDK_DIR }}
+        run: |
+          set -eux
+          echo 'CONFIG_PACKAGE_rpcd-mod-router-status=y' >> .config
+          make defconfig
+          grep '^CONFIG_PACKAGE_rpcd-mod-router-status=y' .config
+
+      - name: Compile package
+        working-directory: ${{ env.SDK_DIR }}
+        run: |
+          set -eux
+          make package/feeds/luci/rpcd-mod-router-status/compile -j"$(nproc)" V=s
+
+      - name: Collect build artifacts
+        run: |
+          set -eux
+          artifact_dir="$RUNNER_TEMP/rpcd-mod-router-status-artifacts"
+          rm -rf "$artifact_dir"
+          mkdir -p "$artifact_dir"
+
+          pkg_ext=".${PKG_FORMAT:-apk}"
+          find "$SDK_DIR/bin/packages" -type f \( \
+            -name "rpcd-mod-router-status*${pkg_ext}" \
+            -o -path '*/luci/Packages*' \
+          \) -exec cp -f {} "$artifact_dir/" \;
+
+          if ! find "$artifact_dir" -maxdepth 1 -type f -name "rpcd-mod-router-status*${pkg_ext}" | grep -q .; then
+            echo "No rpcd-mod-router-status ${pkg_ext} was produced by the build." >&2
+            find "$SDK_DIR/bin/packages" -maxdepth 4 -type f | sort >&2
+            exit 1
+          fi
+
+          echo "ARTIFACT_DIR=$artifact_dir" >> "$GITHUB_ENV"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: rpcd-mod-router-status-${{ env.BUILD_PROFILE }}-${{ env.SDK_DISTRIBUTION }}-${{ env.OPENWRT_TARGET }}-${{ env.OPENWRT_SUBTARGET }}
+          path: ${{ env.ARTIFACT_DIR }}/
+          if-no-files-found: error

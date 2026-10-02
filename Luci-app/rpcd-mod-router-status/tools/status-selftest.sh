@@ -2,7 +2,7 @@
 set -eu
 
 ROOT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
-RPCD=${RPCD_SRC:-"$ROOT/root/usr/libexec/rpcd/luci.traffic"}
+RPCD=${RPCD_SRC:-"$ROOT/root/usr/libexec/rpcd/router.status"}
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
@@ -93,5 +93,5 @@ if printf '%s\n' "$history" | grep -Fq '[160,"MT7990_1_2"'; then
     exit 1
 fi
 
-grep -q 'getSystemMetrics.*getWirelessStatus' "$ROOT/root/usr/share/rpcd/acl.d/luci-app-traffic.json"
+grep -q 'getSystemMetrics.*getWirelessStatus' "$ROOT/root/usr/share/rpcd/acl.d/router-status.json"
 echo 'mobile status RPC: PASS'

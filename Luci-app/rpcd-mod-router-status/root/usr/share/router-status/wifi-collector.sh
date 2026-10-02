@@ -1,16 +1,16 @@
 #!/bin/sh
-# One-minute BE14 counter samples. Files stay in RAM under /tmp/traffic.
+# One-minute BE14 counter samples. Files stay in RAM under /tmp/router-status.
 set -u
 umask 077
 
 . "${WIFI_JSHN:-/usr/share/libubox/jshn.sh}"
 
-STATE_DIR=${WIFI_STATE_DIR:-/tmp/traffic}
-RPCD=${WIFI_RPCD:-/usr/libexec/rpcd/luci.traffic}
+STATE_DIR=${WIFI_STATE_DIR:-/tmp/router-status}
+RPCD=${WIFI_RPCD:-/usr/libexec/rpcd/router.status}
 IWPRIV=${WIFI_IWPRIV:-iwpriv}
 SYS_NET=${WIFI_SYS_NET:-/sys/class/net}
-STAT_AWK=${WIFI_STAT_AWK:-/usr/share/traffic/wifi-stat.awk}
-DELTA_AWK=${WIFI_DELTA_AWK:-/usr/share/traffic/wifi-delta.awk}
+STAT_AWK=${WIFI_STAT_AWK:-/usr/share/router-status/wifi-stat.awk}
+DELTA_AWK=${WIFI_DELTA_AWK:-/usr/share/router-status/wifi-delta.awk}
 
 sample_once() {
     local now raw indexes index name ifname up rx tx stats
