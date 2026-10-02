@@ -19,6 +19,10 @@ get_system_metrics() {
 	[ -n "${1:-}" ] && json_add_string total "$1"
 	[ -n "${2:-}" ] && json_add_string idle "$2"
 	json_close_object
+	if [ -r "${TEMPERATURE_SOURCE:-/usr/share/router-status/temperatures.sh}" ]; then
+		. "${TEMPERATURE_SOURCE:-/usr/share/router-status/temperatures.sh}"
+		get_temperatures
+	fi
 	json_dump
 }
 

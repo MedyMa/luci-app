@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=rpcd-mod-router-status
-PKG_VERSION:=0.1.1
+PKG_VERSION:=0.1.2
 PKG_RELEASE:=1
 PKG_LICENSE:=Apache-2.0
 PKGARCH:=all
@@ -30,6 +30,7 @@ define Package/$(PKG_NAME)/install
 	$(INSTALL_BIN) ./root/etc/init.d/router-status $(1)/etc/init.d/router-status
 	$(INSTALL_BIN) ./root/usr/share/router-status/wifi-collector.sh $(1)/usr/share/router-status/
 	$(INSTALL_DATA) ./root/usr/share/router-status/*.awk $(1)/usr/share/router-status/
+	$(INSTALL_DATA) ./root/usr/share/router-status/temperatures.sh $(1)/usr/share/router-status/
 	$(INSTALL_DATA) ./root/usr/share/rpcd/acl.d/router-status.json $(1)/usr/share/rpcd/acl.d/
 endef
 

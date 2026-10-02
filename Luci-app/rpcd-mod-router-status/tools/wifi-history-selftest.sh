@@ -10,6 +10,7 @@ TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
 cat > "$TMP/stat" <<'EOF'
+CurrentTemperature = 46
 Tx success                      = 3467814
 Tx fail count                   = 223665, PER=6.0%
 Rx success                      = 13846075
@@ -17,7 +18,9 @@ Rx with CRC                     = 2649709, PER=16.0%
 Rssi: -63 -65 -57 -127 -127
 EOF
 awk -f "$STAT_AWK" "$TMP/stat" > "$TMP/parsed"
-grep -Fqx '3467814	223665	13846075	2649709' "$TMP/parsed"
+grep -Fqx '3467814	223665	13846075	2649709	46' "$TMP/parsed"
+printf 'CurrentTemperature = -10\n' | awk -f "$STAT_AWK" | grep -Fqx -- '-1	-1	-1	-1	-1'
+printf 'CurrentTemperature = error123\n' | awk -f "$STAT_AWK" | grep -Fqx -- '-1	-1	-1	-1	-1'
 
 cat > "$TMP/previous" <<'EOF'
 P	MT7990_1_2	100	1000	100	2000	100	100000	50000
@@ -102,6 +105,7 @@ WIFI_STATE_DIR="$TMP/state" WIFI_RPCD="$TMP/rpcd" \
     "$COLLECTOR_SHELL" "$ROOT/root/usr/share/router-status/wifi-collector.sh" once
 
 # A prior sample in the same public five-minute bucket must be replaced.
+grep -Fqx '100	MT7990_1_2	46' "$TMP/state/wifi-temperatures.tsv"
 printf '130\tMT7990_1_2\t400\t200\t-\t-\n' > "$TMP/state/wifi-history.tsv"
 
 sed 's/3467814/3467934/; s/223665/223675/; s/13846075/13846375/; s/2649709/2649714/' \

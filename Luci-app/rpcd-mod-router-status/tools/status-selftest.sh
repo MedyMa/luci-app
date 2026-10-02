@@ -74,6 +74,28 @@ if printf '%s\n' "$wireless" | grep -q 'never-expose\|key='; then
 fi
 
 mkdir -p "$TMP/state"
+mkdir -p "$TMP/thermal/thermal_zone0" "$TMP/thermal/thermal_zone1" "$TMP/hwmon/hwmon0"
+printf 'cpu-thermal\n' > "$TMP/thermal/thermal_zone0/type"
+printf '52000\n' > "$TMP/thermal/thermal_zone0/temp"
+printf 'unknown-sensor\n' > "$TMP/thermal/thermal_zone1/type"
+printf '99000\n' > "$TMP/thermal/thermal_zone1/temp"
+printf 'nvme\n' > "$TMP/hwmon/hwmon0/name"
+printf '39000\n' > "$TMP/hwmon/hwmon0/temp1_input"
+printf '1000\tMT7990_1_2\t46\n' > "$TMP/state/wifi-temperatures.tsv"
+temperature_source="$ROOT/root/usr/share/router-status/temperatures.sh"
+metrics=$(STATE_DIR="$TMP/state" THERMAL_ROOT="$TMP/thermal" HWMON_ROOT="$TMP/hwmon" \
+    TEMPERATURE_SOURCE="$temperature_source" TEMPERATURE_NOW=1100 sh "$TMP/rpcd" call getSystemMetrics)
+printf '%s\n' "$metrics" | grep -q '^celsius=52.0$'
+printf '%s\n' "$metrics" | grep -q '^celsius=46.0$'
+printf '%s\n' "$metrics" | grep -q '^celsius=39.0$'
+if printf '%s\n' "$metrics" | grep -q '99.0'; then exit 1; fi
+printf 'bogus\n' > "$TMP/thermal/thermal_zone0/temp"
+printf '999999\n' > "$TMP/hwmon/hwmon0/temp1_input"
+metrics=$(STATE_DIR="$TMP/state" THERMAL_ROOT="$TMP/thermal" HWMON_ROOT="$TMP/hwmon" \
+    TEMPERATURE_SOURCE="$temperature_source" TEMPERATURE_NOW=1200 sh "$TMP/rpcd" call getSystemMetrics)
+if printf '%s\n' "$metrics" | grep -q '^celsius='; then
+    echo 'invalid or stale temperature exposed' >&2; exit 1
+fi
 printf '160\tMT7990_1_2\t1000\t500\t7.7\t1.6\n' > "$TMP/state/wifi-history.tsv"
 printf '161\tbad"name\t1\t2\t3\t4\n' >> "$TMP/state/wifi-history.tsv"
 history=$(STATE_DIR="$TMP/state" sh "$TMP/rpcd" call getWirelessHistory </dev/null)

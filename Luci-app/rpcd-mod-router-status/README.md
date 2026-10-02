@@ -1,5 +1,7 @@
 # rpcd-mod-router-status
 
+Version 0.1.2 adds `temperatures` to `getSystemMetrics`: sanitized records with `kind` (`cpu`, `wifi`, `disk`), `name`, `celsius`, and epoch `sampled_at`. CPU/SoC thermal zones and NVMe/drivetemp hwmon files are read on demand. BE14 readings reuse the one-minute collector's existing `iwpriv stat` call; cache entries older than 180 seconds are omitted. No new daemon, package dependency, or wireless driver call is added. Unsupported sensors remain absent; the mobile app shows a dash.
+
 Independent, read-only device telemetry for the ImmortalWrt mobile app.
 No dependency on LuCI, traffic statistics, traffic configuration or traffic caches.
 

@@ -1,5 +1,5 @@
 BEGIN {
-    tx_ok = tx_fail = rx_ok = rx_crc = -1
+    tx_ok = tx_fail = rx_ok = rx_crc = temperature = -1
     OFS = "\t"
 }
 
@@ -15,4 +15,12 @@ function first_number(value, parts, count, number) {
 /^Rx success[[:space:]]*=/ { rx_ok = first_number($0); next }
 /^Rx with CRC[[:space:]]*=/ { rx_crc = first_number($0); next }
 
-END { print tx_ok, tx_fail, rx_ok, rx_crc }
+/^CurrentTemperature[[:space:]]*=/ {
+    value = $0
+    sub(/^[^=]*=[[:space:]]*/, "", value)
+    sub(/[[:space:]]*$/, "", value)
+    if (value ~ /^[0-9]+$/ && value + 0 <= 150) temperature = value + 0
+    next
+}
+
+END { print tx_ok, tx_fail, rx_ok, rx_crc, temperature }

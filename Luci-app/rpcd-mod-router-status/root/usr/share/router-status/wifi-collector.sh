@@ -15,7 +15,7 @@ HISTORY_AWK=${WIFI_HISTORY_AWK:-/usr/share/router-status/wifi-history.awk}
 
 sample_once() {
     local now raw indexes index name ifname up rx tx stats
-    local current result next history
+    local current result next history temperatures
     now=${WIFI_NOW:-$(date +%s)}
     case "$now" in ''|*[!0-9]*) return 0 ;; esac
     [ -d "$STATE_DIR" ] || mkdir -p "$STATE_DIR" || return 0
@@ -28,7 +28,9 @@ sample_once() {
     result="$STATE_DIR/wifi-result.$$"
     next="$STATE_DIR/wifi-next.$$"
     history="$STATE_DIR/wifi-history.$$"
+    temperatures="$STATE_DIR/wifi-temperatures.$$"
     : > "$current" || return 0
+    : > "$temperatures" || return 0
     for index in $indexes; do
         json_select "$index" 2>/dev/null || continue
         json_get_var name name
@@ -45,10 +47,16 @@ sample_once() {
         case "$rx:$tx" in *[!0-9:]*|:*|*:) continue ;; esac
         stats=$("$IWPRIV" "$ifname" stat 2>/dev/null | awk -f "$STAT_AWK")
         set -- $stats
-        [ "$#" -eq 4 ] || set -- -1 -1 -1 -1
+        [ "$#" -eq 5 ] || set -- -1 -1 -1 -1 -1
+        case "$5" in ''|*[!0-9]*) : ;; *)
+            if [ "$5" -le 150 ]; then
+                printf '%s\t%s\t%s\n' "$now" "$name" "$5" >> "$temperatures"
+            fi ;;
+        esac
         printf 'C\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
             "$name" "$now" "$1" "$2" "$3" "$4" "$rx" "$tx" >> "$current"
     done
+    mv "$temperatures" "$STATE_DIR/wifi-temperatures.tsv"
 
     if [ -r "$STATE_DIR/wifi-prev.tsv" ]; then
         awk -F '\t' -f "$DELTA_AWK" "$STATE_DIR/wifi-prev.tsv" "$current" > "$result"
