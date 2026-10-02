@@ -29,6 +29,15 @@ response. Both methods are covered by the package's read ACL and
 `tools/mobile-status-selftest.sh`. SFP link status comes from the separate
 `luci-app-sfp-status` package.
 
+Version 1.1.6 adds BE14 channel width and an AP-interface BSSID to the
+sanitized radio status, plus `getWirelessHistory`. A separate one-minute
+collector reads AP-interface byte counters and the vendor driver's cumulative
+TX success/failure and RX success/CRC counters. The read-only RPC reduces
+24 hours of RAM-only samples to five-minute points. TX failure and RX CRC are
+interval ratios, not airtime occupancy or retry counts. The observed driver
+does not provide `nl80211` survey data or a usable station list, so neither
+airtime occupancy nor client signal distribution is reported.
+
 ## How it works
 
 ```

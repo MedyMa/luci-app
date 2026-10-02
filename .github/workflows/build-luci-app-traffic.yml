@@ -99,6 +99,7 @@ jobs:
           sh  tools/live-selftest.sh
           sh  tools/rpcd-selftest.sh
           sh  tools/mobile-status-selftest.sh
+          sh  tools/wifi-history-selftest.sh
           sh  tools/peak-selftest.sh
           sh  tools/fetch-icons-selftest.sh
           node tools/page-render-selftest.js
