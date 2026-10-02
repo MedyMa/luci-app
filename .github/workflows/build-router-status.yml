@@ -65,6 +65,11 @@ jobs:
           node tools/router-status-boundary-test.js
           sh Luci-app/rpcd-mod-router-status/tools/status-selftest.sh
           sh Luci-app/rpcd-mod-router-status/tools/wifi-history-selftest.sh
+          curl --fail --silent --show-error --location \
+            https://raw.githubusercontent.com/openwrt/libubox/8c7b489daa029b3841584f6ac76e2a0b68d74ef3/sh/jshn.sh \
+            -o "$RUNNER_TEMP/router-status-jshn.sh"
+          WIFI_TEST_JSHN_LIBRARY="$RUNNER_TEMP/router-status-jshn.sh" WIFI_TEST_SHELL=bash \
+            sh Luci-app/rpcd-mod-router-status/tools/wifi-history-selftest.sh
 
       - name: Install build dependencies
         run: |

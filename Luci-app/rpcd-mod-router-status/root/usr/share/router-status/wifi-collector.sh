@@ -1,6 +1,6 @@
 #!/bin/sh
 # One-minute BE14 counter samples. Files stay in RAM under /tmp/router-status.
-set -u
+# jshn reads optional parameters and unset internal variables; nounset is incompatible.
 umask 077
 
 . "${WIFI_JSHN:-/usr/share/libubox/jshn.sh}"

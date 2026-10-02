@@ -10,7 +10,7 @@ cat > "$TMP/jshn.sh" <<'EOF'
 json_init() { CURRENT=root; }
 json_load() { CURRENT=root; [ -n "$1" ]; }
 json_get_keys() {
-    if [ "$CURRENT" = interfaces ]; then eval "$1='1'"
+    if [ "$CURRENT" = interfaces ]; then eval "$1=' 1 2'"
     else eval "$1='MT7990_1_1 MT7990_1_2 MT7990_2'"; fi
 }
 json_select() {

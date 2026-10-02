@@ -4,6 +4,7 @@ set -eu
 ROOT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 AWK="$ROOT/root/usr/share/router-status/wifi-delta.awk"
 STAT_AWK="$ROOT/root/usr/share/router-status/wifi-stat.awk"
+COLLECTOR_SHELL="${WIFI_TEST_SHELL:-sh}"
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
@@ -52,7 +53,7 @@ json_select() {
         *) return 1 ;;
     esac
 }
-json_get_keys() { eval "$1='1'"; }
+json_get_keys() { [ -n "$2" ] && :; eval "$1='1'"; }
 json_get_var() {
     case "$2" in
         name) value=MT7990_1_2 ;;
@@ -63,6 +64,24 @@ json_get_var() {
     eval "$1=\$value"
 }
 EOF
+# Exercise the production JSON library when supplied by CI, rather than only
+# the lightweight fixture. Only the external JSON decoder is replaced.
+if [ -n "${WIFI_TEST_JSHN_LIBRARY:-}" ]; then
+    cp "$WIFI_TEST_JSHN_LIBRARY" "$TMP/jshn.sh"
+    cat >> "$TMP/jshn.sh" <<'REALJSON'
+json_load() {
+    json_init
+    json_add_array radios
+    json_add_object ''
+    json_add_string name MT7990_1_2
+    json_add_string ifname rai0
+    json_add_boolean up 1
+    json_close_object
+    json_close_array
+}
+REALJSON
+fi
+
 cat > "$TMP/rpcd" <<'EOF'
 #!/bin/sh
 printf '%s\n' '{"radios":[{"name":"MT7990_1_2","ifname":"rai0","up":true}]}'
@@ -79,7 +98,7 @@ WIFI_STATE_DIR="$TMP/state" WIFI_RPCD="$TMP/rpcd" \
     WIFI_IWPRIV="$TMP/iwpriv" WIFI_JSHN="$TMP/jshn.sh" \
     WIFI_SYS_NET="$TMP/net" WIFI_STAT_AWK="$STAT_AWK" WIFI_DELTA_AWK="$AWK" \
     WIFI_TEST_STAT="$TMP/stat" WIFI_NOW=100 \
-    sh "$ROOT/root/usr/share/router-status/wifi-collector.sh" once
+    "$COLLECTOR_SHELL" "$ROOT/root/usr/share/router-status/wifi-collector.sh" once
 
 sed 's/3467814/3467934/; s/223665/223675/; s/13846075/13846375/; s/2649709/2649714/' \
     "$TMP/stat" > "$TMP/stat2"
@@ -89,7 +108,7 @@ WIFI_STATE_DIR="$TMP/state" WIFI_RPCD="$TMP/rpcd" \
     WIFI_IWPRIV="$TMP/iwpriv" WIFI_JSHN="$TMP/jshn.sh" \
     WIFI_SYS_NET="$TMP/net" WIFI_STAT_AWK="$STAT_AWK" WIFI_DELTA_AWK="$AWK" \
     WIFI_TEST_STAT="$TMP/stat2" WIFI_NOW=160 \
-    sh "$ROOT/root/usr/share/router-status/wifi-collector.sh" once
+    "$COLLECTOR_SHELL" "$ROOT/root/usr/share/router-status/wifi-collector.sh" once
 grep -Fqx '160	MT7990_1_2	1000	500	7.7	1.6' "$TMP/state/wifi-history.tsv"
 
 echo 'Wi-Fi counter history: PASS'

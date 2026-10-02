@@ -49,7 +49,9 @@ get_wireless_status() {
 		fi
 		if json_select interfaces 2>/dev/null; then
 			json_get_keys interface_keys
-			first_interface=${interface_keys%% *}
+			first_interface=''
+			# Older jshn versions return key lists with a leading space.
+			for first_interface in $interface_keys; do break; done
 			if [ -n "$first_interface" ] && json_select "$first_interface" 2>/dev/null; then
 				json_get_var ifname ifname
 				json_select ..
