@@ -111,4 +111,21 @@ WIFI_STATE_DIR="$TMP/state" WIFI_RPCD="$TMP/rpcd" \
     "$COLLECTOR_SHELL" "$ROOT/root/usr/share/router-status/wifi-collector.sh" once
 grep -Fqx '160	MT7990_1_2	1000	500	7.7	1.6' "$TMP/state/wifi-history.tsv"
 
+# The reported device fault was a daemon crash loop, not merely bad output.
+WIFI_STATE_DIR="$TMP/state" WIFI_RPCD="$TMP/rpcd" \
+    WIFI_IWPRIV="$TMP/iwpriv" WIFI_JSHN="$TMP/jshn.sh" \
+    WIFI_SYS_NET="$TMP/net" WIFI_STAT_AWK="$STAT_AWK" WIFI_DELTA_AWK="$AWK" \
+    WIFI_TEST_STAT="$TMP/stat2" WIFI_NOW=220 WIFI_SAMPLE_SECONDS=1 \
+    "$COLLECTOR_SHELL" "$ROOT/root/usr/share/router-status/wifi-collector.sh" \
+    > "$TMP/daemon.log" 2>&1 &
+daemon_pid=$!
+sleep 3
+if ! kill -0 "$daemon_pid" 2>/dev/null; then
+    cat "$TMP/daemon.log" >&2
+    echo 'wireless sampler exited during repeated sampling' >&2
+    exit 1
+fi
+kill "$daemon_pid"
+wait "$daemon_pid" 2>/dev/null || :
+
 echo 'Wi-Fi counter history: PASS'
