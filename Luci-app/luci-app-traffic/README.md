@@ -18,6 +18,17 @@ the domain a client resolved, and it can see how many bytes each flow carried.
 This package joins those two facts and reports per-application traffic that an
 upstream gateway fundamentally cannot.
 
+## Mobile read-only status
+
+Version 1.1.5 adds two read-only RPC methods for the companion mobile app.
+`getSystemMetrics` returns aggregate `/proc/stat` CPU counters; the app derives
+CPU usage from successive samples. `getWirelessStatus` calls netifd locally
+and returns only radio name, enabled state, band, and channel. It does not
+forward configured SSIDs or Wi-Fi keys from the raw `network.wireless status`
+response. Both methods are covered by the package's read ACL and
+`tools/mobile-status-selftest.sh`. SFP link status comes from the separate
+`luci-app-sfp-status` package.
+
 ## How it works
 
 ```

@@ -367,11 +367,77 @@ get_live() {
 	fi
 }
 
+# Expose aggregate CPU counters. The phone computes usage from two samples;
+# load average is not a CPU percentage.
+get_system_metrics() {
+	local counters total idle
+	counters=$(awk '$1 == "cpu" {
+		for (i = 2; i <= 9; i++) total += $i
+		idle = $5 + $6
+		printf "%.0f %.0f\n", total, idle
+		exit
+	}' "${PROC_STAT_PATH:-/proc/stat}" 2>/dev/null)
+	set -- $counters
+	json_init
+	json_add_object cpu
+	[ -n "${1:-}" ] && json_add_string total "$1"
+	[ -n "${2:-}" ] && json_add_string idle "$2"
+	json_close_object
+	json_dump
+}
+
+# Return only operational radio fields. The raw netifd response also contains
+# configured Wi-Fi keys, which must never leave the router through this API.
+get_wireless_status() {
+	local raw keys key up band channel records item old_ifs
+	raw=$(ubus -S call network.wireless status 2>/dev/null) || raw=''
+	if [ -z "$raw" ] || ! json_load "$raw" 2>/dev/null; then
+		json_init
+		json_add_array radios; json_close_array
+		json_add_string error 'wireless status unavailable'
+		json_dump
+		return
+	fi
+	json_get_keys keys
+	records=''
+	for key in $keys; do
+		case "$key" in ''|*[!A-Za-z0-9_.-]*) continue ;; esac
+		json_select "$key" || continue
+		json_get_var up up
+		band=''; channel=''
+		if json_select config 2>/dev/null; then
+			json_get_var band band
+			json_get_var channel channel
+			json_select ..
+		fi
+		json_select ..
+		case "$up" in 1|true) up=1 ;; *) up=0 ;; esac
+		case "$band" in ''|*[!A-Za-z0-9.]* ) band='' ;; esac
+		case "$channel" in ''|*[!0-9]* ) channel='' ;; esac
+		records="$records $key|$up|$band|$channel"
+	done
+	json_init
+	json_add_array radios
+	for item in $records; do
+		old_ifs=$IFS; IFS='|'; set -- $item; IFS=$old_ifs
+		json_add_object ''
+		json_add_string name "$1"
+		json_add_boolean up "$2"
+		[ -n "${3:-}" ] && json_add_string band "$3"
+		[ -n "${4:-}" ] && json_add_string channel "$4"
+		json_close_object
+	done
+	json_close_array
+	json_dump
+}
+
 case "$1" in
 	list)
 		json_init
 		json_add_object "getSummary"; json_close_object
 		json_add_object "getLive"; json_close_object
+		json_add_object "getSystemMetrics"; json_close_object
+		json_add_object "getWirelessStatus"; json_close_object
 		json_add_object "getHourly"
 		json_add_string "hours" "integer"
 		json_close_object
@@ -400,6 +466,8 @@ case "$1" in
 		case "$2" in
 			getSummary) get_summary ;;
 			getLive)    get_live ;;
+			getSystemMetrics) get_system_metrics ;;
+			getWirelessStatus) get_wireless_status ;;
 			getHourly)  get_hourly "$arg_hours" ;;
 			getConfig)  get_config ;;
 			getSeries)  get_series "$arg_range" ;;
