@@ -13,6 +13,34 @@ function M.host(name)
   return name
 end
 function M.public(ip)
+  if type(ip)~='string' then return false end
+  if ip:find(':',1,true) then
+    -- Only ordinary global unicast IPv6. Reject scoped, mapped, translation,
+    -- tunnelling and special-use addresses rather than reaching local services.
+    if not ip:match('^[0-9a-fA-F:]+$') then return false end
+    local left,right=ip:match('^(.-)::(.-)$')
+    local groups={}
+    local function parse(part)
+      if part=='' then return true end
+      if part:sub(1,1)==':' or part:sub(-1)==':' or part:find('::',1,true) then return false end
+      for word in part:gmatch('[^:]+') do
+        if #word>4 then return false end
+        groups[#groups+1]=tonumber(word,16)
+      end
+      return true
+    end
+    if left then
+      if not parse(left) then return false end
+      local nleft=#groups
+      if not parse(right) or #groups>=8 then return false end
+      local missing=8-#groups
+      for i=1,missing do table.insert(groups,nleft+1,0) end
+    elseif not parse(ip) or #groups~=8 then return false end
+    local a,b=groups[1],groups[2]
+    return a>=0x2000 and a<0x4000 and a~=0x2002 and
+      not(a==0x2001 and (b<0x200 or b==0xdb8)) and
+      not(a==0x3fff and b<0x1000)
+  end
   local a,b,c,d=ip:match('^(%d+)%.(%d+)%.(%d+)%.(%d+)$')
   a,b,c,d=tonumber(a),tonumber(b),tonumber(c),tonumber(d)
   return a and b and c and d and a>0 and a<224 and b<256 and c<256 and d<256 and

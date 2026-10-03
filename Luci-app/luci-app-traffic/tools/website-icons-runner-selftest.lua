@@ -5,6 +5,8 @@ local png='\137PNG\13\10\26\10'..string.rep('\0',8)..'\0\0\0\32\0\0\0\32'..strin
 local files={['/proc/mounts']='/dev/nvme0n1p1 /mnt/nvme ext4 rw 0 0\n'}
 local dirs,links={['/mnt/nvme']=true},{}
 local requests, private, locked=0,false,false
+local dns_case='ipv4'
+local expected_pin='comfylink.com:443:93.184.216.34'
 local function check_mode(mode, expected)
   assert(type(mode)=='string' and mode:match('^[0-7][0-7][0-7]$'),
     'nixio permissions must be an octal string, not a decimal integer')
@@ -36,7 +38,14 @@ package.loaded.nixio={
     check_mode(mode,'600')
     return {lock=function() if locked then return nil end; locked=true; return true end,
     close=function() locked=false end} end,
-  getaddrinfo=function() return {{address=private and '192.168.2.1' or '93.184.216.34'}} end
+  getaddrinfo=function(host,family)
+    assert(host=='comfylink.com' and family=='any','dual-stack DNS lookup')
+    if private then return {{address=dns_case=='ipv6' and 'fd12::1' or '192.168.2.1'}} end
+    if dns_case=='ipv6' then return {{address='240e:ff:e020:966:0:ff:b042:f296'}} end
+    if dns_case=='dual' then return {{address='93.184.216.34'},
+      {address='2606:4700:4700::1111'},{address='93.184.216.34'}} end
+    return {{address='93.184.216.34'}}
+  end
 }
 dofile=function(path) if path=='/usr/share/traffic/website-icons-core.lua' then path=core_path end; return real_dofile(path) end
 io.open=function(path,mode)
@@ -48,7 +57,8 @@ end
 io.popen=function(command)
   requests=requests+1
   assert(command:find('--max-filesize 65536',1,true),'transfer cap')
-  assert(command:find('--resolve',1,true) and command:find('93.184.216.34',1,true),'validated DNS pin')
+  assert(command:find('--resolve',1,true) and command:find(expected_pin,1,true),'validated DNS pin')
+  assert(command:find('--max-time 4 --connect-timeout 2',1,true),'dual-stack preserves time budget')
   assert(command:find('--noproxy "*"',1,true),'no proxy credentials')
   assert(not command:find(' -L',1,true),'no unchecked redirect')
   return {read=function() return png end,close=function() return true end}
@@ -64,5 +74,21 @@ files['/mnt/nvme/traffic-site-icons/comfylink.com.png']=nil
 private=true
 dofile(runner_path)
 assert(requests==1,'private DNS never reaches curl')
-print('website-icons-runner-selftest: passed (NVMe, publish, DNS pin, no repeat transfer, private DNS, metrics)')
+local function reset_cache()
+  files['/mnt/nvme/traffic-site-icons/records.tsv']=nil
+  files['/mnt/nvme/traffic-site-icons/comfylink.com.png']=nil
+end
+private=false; dns_case='ipv6'; reset_cache()
+expected_pin='comfylink.com:443:[240e:ff:e020:966:0:ff:b042:f296]'
+dofile(runner_path)
+assert(requests==2 and files['/mnt/nvme/traffic-site-icons/websites.tsv']:find('comfylink.com.png',1,true),
+  'IPv6-only site is fetched and published')
+dns_case='dual'; reset_cache()
+expected_pin='comfylink.com:443:[2606:4700:4700::1111],93.184.216.34'
+dofile(runner_path)
+assert(requests==3,'dual-stack list deduplicated and pinned in a single curl transfer')
+private=true; dns_case='ipv6'; reset_cache()
+dofile(runner_path)
+assert(requests==3,'private IPv6 never reaches curl')
+print('website-icons-runner-selftest: passed (permissions, NVMe, publish, IPv4/IPv6 DNS pin, no repeat transfer, private DNS, metrics)')
 io.open,io.popen,dofile=real_open,real_popen,real_dofile

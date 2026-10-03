@@ -13,6 +13,14 @@ local env = {
 local function check(v, why) assert(v, why); print('ok '..why) end
 check(not M.host('SSL/TLS') and not M.host('192.168.2.1') and not M.host('../example.com') and not M.host('router.local'), 'reject names and local destinations')
 check(M.public('93.184.216.34') and not M.public('10.1.2.3') and not M.public('100.64.0.1') and not M.public('::1'), 'public IPv4 restriction')
+check(M.public('240e:ff:e020:966:0:ff:b042:f296') and M.public('2606:4700:4700::1111') and
+  M.public('2001:4860:4860:0:0:0:0:8888'), 'public IPv6 addresses including compressed notation')
+for _,ip in ipairs({'::','::1','fc00::1','fd12::1','fe80::1','ff02::1',
+  '::ffff:192.168.1.1','::ffff:c0a8:101','64:ff9b::c0a8:101','2001:db8::1',
+  '2001::1','2002:c0a8:101::1','3fff::1','5f00::1','2606::1%eth0',
+  '2606:::1','2606::1::2','2606:4700:1','2606:4700:0:0:0:0:0:0:1','2606:47000::1'}) do
+  check(not M.public(ip), 'reject non-public or malformed IPv6 '..ip)
+end
 check(M.storage('/dev/nvme0n1p1 /mnt/nvme ext4 rw,relatime 0 0\n', function() return true end) == '/mnt/nvme/traffic-site-icons', 'automatic NVMe storage')
 check(M.storage('/dev/nvme0n1p1 /mnt/nvme ext4 ro 0 0\n', function() return true end) == '/tmp/traffic-site-icons', 'read-only NVMe falls back')
 check(M.storage('/dev/sda1 /mnt/usb ext4 rw 0 0\n', function() return true end) == '/tmp/traffic-site-icons', 'no writes to flash or arbitrary disks')
