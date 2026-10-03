@@ -5,6 +5,10 @@ local png='\137PNG\13\10\26\10'..string.rep('\0',8)..'\0\0\0\32\0\0\0\32'..strin
 local files={['/proc/mounts']='/dev/nvme0n1p1 /mnt/nvme ext4 rw 0 0\n'}
 local dirs,links={['/mnt/nvme']=true},{}
 local requests, private, locked=0,false,false
+local real_time=os.time
+local stamp,total_opens=1000000,0
+local total_rows={'comfylink.com\t50\t20'}
+os.time=function() return stamp end
 local dns_case='ipv4'
 local expected_pin='comfylink.com:443:93.184.216.34'
 local function check_mode(mode, expected)
@@ -39,7 +43,7 @@ package.loaded.nixio={
     return {lock=function() if locked then return nil end; locked=true; return true end,
     close=function() locked=false end} end,
   getaddrinfo=function(host,family)
-    assert(host=='comfylink.com' and family=='any','dual-stack DNS lookup')
+    assert(family=='any','dual-stack DNS lookup')
     if private then return {{address=dns_case=='ipv6' and 'fd12::1' or '192.168.2.1'}} end
     if dns_case=='ipv6' then return {{address='240e:ff:e020:966:0:ff:b042:f296'}} end
     if dns_case=='dual' then return {{address='93.184.216.34'},
@@ -50,7 +54,8 @@ package.loaded.nixio={
 dofile=function(path) if path=='/usr/share/traffic/website-icons-core.lua' then path=core_path end; return real_dofile(path) end
 io.open=function(path,mode)
   if path=='/tmp/traffic/totals.tsv' then
-    local sent=false; return {lines=function() return function() if not sent then sent=true; return 'comfylink.com\t50\t20' end end end,close=function() end}
+    total_opens=total_opens+1
+    local i=0; return {lines=function() return function() i=i+1; return total_rows[i] end end,close=function() end}
   end
   return real_open(path,mode)
 end
@@ -90,5 +95,14 @@ assert(requests==3,'dual-stack list deduplicated and pinned in a single curl tra
 private=true; dns_case='ipv6'; reset_cache()
 dofile(runner_path)
 assert(requests==3,'private IPv6 never reaches curl')
+assert(total_opens==1,'minute worker reuses full scan snapshot for one hour')
+for i=1,300 do total_rows[#total_rows+1]='site'..i..'.com\t1\t0' end
+stamp=stamp+3600
+dofile(runner_path)
+assert(total_opens==2,'full website list scanned again after one hour')
+assert(files['/tmp/traffic/website-icons.metrics']:find('candidate_sites=301',1,true),
+  'hourly discovery includes all 301 websites without ranking cutoff')
+assert(files['/tmp/traffic/website-sites.tsv']:find('site300.com',1,true),'later websites enter work queue')
 print('website-icons-runner-selftest: passed (permissions, NVMe, publish, IPv4/IPv6 DNS pin, no repeat transfer, private DNS, metrics)')
 io.open,io.popen,dofile=real_open,real_popen,real_dofile
+os.time=real_time

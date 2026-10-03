@@ -84,7 +84,7 @@ function ImageStub(){
 const factory=new Function('view','rpc','dom','poll','_','E','L','document','Image','confirm',
   src.replace(/return view\.extend\(/,
     'global.__injectCss = injectCss;\n' +
-    'global.__iconTest = {makeIcon:makeIcon,setPending:function(p){iconIndexPromise=p;shippedIcons={};cachedIcons=null;},' +
+    'global.__iconTest = {makeIcon:makeIcon,loadWebsites:loadWebsiteIndex,setPending:function(p){iconIndexPromise=p;shippedIcons={};cachedIcons=null;},' +
     'setShipped:function(m){shippedIcons=m;},setDomains:function(m){domainIcons=m;},setWebsites:function(m){websiteIcons=m;cachedIcons={};shippedIndexFailed=false;}};\nreturn view.extend('));
 const viewStub={extend(o){ viewStub.__obj=o; return o; }};
 const domStub={content(node,ch){ node.children=[]; (Array.isArray(ch)?ch:[ch]).forEach(x=>{ if(x) node.appendChild(x); }); }};
@@ -938,9 +938,16 @@ pendingIndex.then(()=>{
   chk(imageRequests.includes('/traffic-site-icons/comfylink.com.png?v=100') &&
       imageRequests.includes('/traffic-site-icons/starrydyn.com.ico?v=100'),
     '网站缓存 PNG / ICO 从路由器同源读取并带更新版本');
-  return Promise.resolve().then(()=>{
+  return Promise.resolve().then(async ()=>{
     chk([pngBox,icoBox].every(box=>box.children.some(n=>n.tag==='img')),
       '网站 PNG / ICO 加载完成后实际替换字母占位');
+    const originalFetch=global.fetch;
+    global.fetch=async()=>({ok:true,text:async()=>Array.from({length:300},(_,i)=>
+      `site${i}.com\tsite${i}.com.png\t100`).join('\n')});
+    const fullIndex=await global.__iconTest.loadWebsites();
+    global.fetch=originalFetch;
+    chk(Object.keys(fullIndex).length===300 && fullIndex['site299.com'],
+      '网页读取全部缓存索引，超过 256 个网站也不截断');
     console.log(fail?`\n  ${fail} 项失败`:'\n  页面渲染验证全部通过');
     process.exit(fail?1:0);
   });

@@ -469,12 +469,13 @@ added with a matching `SOURCES.tsv` provenance row and then checked with
 
 - 自动选择已挂载、可写的 NVMe；无可用 NVMe 时放在 `/tmp/traffic-site-icons`，缓存不写系统闪存。`/www/traffic-site-icons` 只建立发布缓存的符号链接。
 - 每分钟最多处理一个网站，使用独占进程锁；整个任务最多 20 秒，单次 HTTPS 请求最多 4 秒。与流量采集并行，不增加常驻进程，不阻塞实时速率。
-- 单图下载最多 64 KiB，总缓存最多 16 MiB（按磁盘分配量计入图片，预留索引、失败记录与临时替换空间）。最多缓存 256 个高流量、未收录站点；完整应用/站点列表不裁剪，其他站点使用字母回退。
+- 每小时扫描 `totals.tsv` 中完整的网站清单并生成待处理快照，不按流量排名截取前 256 个网站。每分钟沿游标继续处理一个缺失或到期站点，缓存淘汰后也不会反复处理前几个网站而遗漏后面的站点。
+- 单图下载最多 64 KiB，总缓存最多 16 MiB（按磁盘分配量计入图片，并动态预留索引、失败记录与临时替换空间）。最多保留 4096 条缓存记录；下载队列覆盖全部已发现网站，容量不足时淘汰旧记录。网页和手机完整读取已有索引。
 - 成功缓存 7 天后按需更新，失败至少 24 小时后再试；未活跃超过 7 天的记录清理。索引仅在内容变化时原子替换，避免重复写入。
 - 只访问 HTTPS 公网 IPv4 / IPv6 地址，固定经过校验的 DNS 结果，每种地址最多尝试 4 个，由 curl 在同一次下载中选择可连接的地址；每次传输总时限仍为 4 秒。不跟随重定向、不发送代理、Cookie 或路由器凭据。当前接受 PNG / ICO，并检查图标尺寸；主动内容 SVG、其他格式及无法访问的站点使用已有图标或字母回退。
 - `/tmp` 占用 RAM，重启后丢失；NVMe 缓存可跨重启保留。16 MiB 是上限，并非预分配量；对于 4 GB 内存约为 0.4%，Lua / curl 运行时内存另计。
 
-实际占用可查看 `cat /tmp/traffic/website-icons.metrics`：包含自动目录、实际分配字节数、记录数量、Lua 堆内存与该轮 CPU 时间。Lua 堆不等于进程 RSS，也不包含 curl；整机峰值需在路由器运行采集任务时测量 `/proc/<pid>/status`。本机策略测试不能代替 MT7988 实测。
+实际占用可查看 `cat /tmp/traffic/website-icons.metrics`：包含自动目录、实际分配字节数、记录数量、候选网站数 `candidate_sites`、全量扫描时间 `scan_at`、Lua 堆内存与该轮 CPU 时间。Lua 堆不等于进程 RSS，也不包含 curl；整机峰值需在路由器运行采集任务时测量 `/proc/<pid>/status`。本机策略测试不能代替 MT7988 实测。
 
 Direct filename matching covers **835 / 1,669 catalogue names** and **77.7% of
 catalogue rules**. The actual page resolver, including aliases, covers

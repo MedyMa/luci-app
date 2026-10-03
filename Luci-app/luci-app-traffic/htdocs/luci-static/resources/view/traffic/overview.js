@@ -242,7 +242,7 @@ function loadWebsiteIndex() {
 		.then(function(text) {
 			if (text === null) return websiteIcons;
 			var map = {};
-			text.split('\n').slice(0, 256).forEach(function(line) {
+			text.split('\n').forEach(function(line) {
 				var cols = line.trim().split('\t'), host = cols[0];
 				if (cols.length < 2 || cols.length > 3 || !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(host) || host.indexOf('..') >= 0) return;
 				if (cols[1] !== host + '.png' && cols[1] !== host + '.ico') return;

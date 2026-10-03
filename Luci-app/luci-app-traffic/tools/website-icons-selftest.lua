@@ -73,5 +73,21 @@ files['records.tsv'].data=manifest
 M.run(env, {'new.com'}, {})
 local bytes,count=0,0
 for p,f in pairs(files) do bytes=bytes+math.ceil(#f.data/4096)*4096; if p:match('%.png$') then count=count+1 end end
-check(bytes<=16*1024*1024 and count<=256, 'bounded cache including metadata')
+check(bytes<=16*1024*1024 and count<=M.count, 'bounded cache including metadata')
+local fullfiles, fetched={},{}
+local fullenv={now=function() return stamp end,
+  read=function(p) return fullfiles[p] end,
+  write=function(p,data) fullfiles[p]=data; return true end,
+  remove=function(p) fullfiles[p]=nil end,
+  list=function() local r={}; for p in pairs(fullfiles) do r[#r+1]=p end; return r end,
+  stat=function(p) return fullfiles[p] and {size=#fullfiles[p],blocks=8} end,
+  fetch=function(url) fetched[url]=true; return png end}
+local all={}; for i=1,300 do all[i]='site'..i..'.com' end
+for i=1,300 do M.run(fullenv,all,{}) end
+local successes=0; for _ in fullfiles['websites.tsv']:gmatch('[^\n]+') do successes=successes+1 end
+check(successes==300, 'all 300 small website icons remain available beyond old 256 limit')
+local oldcount=M.count; M.count=2; fullfiles={}; fetched={}
+for i=1,6 do M.run(fullenv,{'first.com','second.com','third.com'},{}) end
+check(fetched['https://third.com/favicon.ico'], 'bounded cache cannot starve later websites')
+M.count=oldcount
 print('website-icons-selftest: passed')

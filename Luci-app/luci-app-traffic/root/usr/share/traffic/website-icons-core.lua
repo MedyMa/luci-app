@@ -1,5 +1,5 @@
 -- Bounded website icon cache policy. Lua 5.1; IO/network supplied by the runner.
-local M = {limit=65536, budget=16*1024*1024, count=256}
+local M = {limit=65536, budget=16*1024*1024, count=4096}
 function M.host(name)
   if type(name)~='string' or #name>253 then return nil end
   name=name:lower()
@@ -110,23 +110,26 @@ function M.candidates(page, host)
   return result
 end
 local function trim(env, records)
-  local entries,bytes,dirty={},0,false
+  local entries,bytes,dirty,metadata={},0,false,0
   for host,r in pairs(records) do
     local stat=r.file~='' and env.stat(r.file)
     local size=stat and (stat.blocks and stat.blocks*512 or math.ceil(stat.size/4096)*4096) or 0
     if stat and stat.size>M.limit then env.remove(r.file); r.file=''; r.good=0; size=0; dirty=true end
-    entries[#entries+1]={host=host,r=r,size=size}; bytes=bytes+size
+    -- Allow both current and atomic replacement indexes, including blocks.
+    local meta=2*(#host+32+#r.file+(r.file~='' and #host+16+#r.file or 0))
+    metadata=metadata+meta
+    entries[#entries+1]={host=host,r=r,size=size,meta=meta}; bytes=bytes+size
   end
   table.sort(entries,function(a,b)
     local aa,bb=math.max(a.r.good,a.r.bad),math.max(b.r.good,b.r.bad)
     return aa==bb and a.host<b.host or aa<bb
   end)
   local count=#entries
-  -- Reserve 512 KiB for both indexes, atomic replacements and one 64 KiB fetch.
+  -- The 16 MiB cap includes growing metadata, not just compressed images.
   for _,e in ipairs(entries) do
-    if count>M.count or bytes>M.budget-512*1024 then
+    if count>M.count or bytes>M.budget-math.max(512*1024,metadata+128*1024) then
       if e.r.file~='' then env.remove(e.r.file) end
-      records[e.host]=nil; count=count-1; bytes=bytes-e.size; dirty=true
+      records[e.host]=nil; count=count-1; bytes=bytes-e.size; metadata=metadata-e.meta; dirty=true
     else break end
   end
   return count,bytes,dirty
@@ -169,7 +172,10 @@ function M.run(env, names, packaged)
       if r.file~='' then env.remove(r.file) end; records[host]=nil; dirty=true
     end
   end
-  for _,name in ipairs(names) do
+  local cursor=env.read('scan-cursor.txt') or ''
+  local start=0; for i,name in ipairs(names) do if name==cursor then start=i; break end end
+  for offset=1,#names do
+    local name=names[(start+offset-1)%#names+1]
     local host=M.host(name)
     local r=host and records[host]
     if host and not packaged[host] and (not r or
@@ -179,6 +185,7 @@ function M.run(env, names, packaged)
       -- Persist cooldown BEFORE DNS/download. A killed/timed-out task must not
       -- retry the same unresponsive site on every minute of the collector.
       r.bad=now; records[host]=r
+      env.write('scan-cursor.txt',host)
       local count,bytes=trim(env,records)
       if not publish(env,records) then return {index='',entries=count,bytes=bytes,dirty=true} end
       local data=env.fetch('https://'..host..'/favicon.ico',M.limit)
