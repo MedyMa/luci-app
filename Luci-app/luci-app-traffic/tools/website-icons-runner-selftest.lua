@@ -5,10 +5,15 @@ local png='\137PNG\13\10\26\10'..string.rep('\0',8)..'\0\0\0\32\0\0\0\32'..strin
 local files={['/proc/mounts']='/dev/nvme0n1p1 /mnt/nvme ext4 rw 0 0\n'}
 local dirs,links={['/mnt/nvme']=true},{}
 local requests, private, locked=0,false,false
+local function check_mode(mode, expected)
+  assert(type(mode)=='string' and mode:match('^[0-7][0-7][0-7]$'),
+    'nixio permissions must be an octal string, not a decimal integer')
+  assert(mode==expected,'unexpected permissions')
+end
 local fs={
   readfile=function(p) return files[p] end,
   access=function(p) return dirs[p] end,
-  mkdir=function(p) dirs[p]=true; return true end,
+  mkdir=function(p,mode) check_mode(mode,'755'); dirs[p]=true; return true end,
   writefile=function(p,data) files[p]=data; return true end,
   lstat=function(p) return links[p] and {type='lnk'} end,
   readlink=function(p) return links[p] end,
@@ -26,7 +31,10 @@ local fs={
 }
 package.loaded['nixio.fs']=fs
 package.loaded.nixio={
-  open=function() return {lock=function() if locked then return nil end; locked=true; return true end,
+  open=function(p,flags,mode)
+    assert(p=='/tmp/traffic-website-icons.lock' and flags=='w','lock open contract')
+    check_mode(mode,'600')
+    return {lock=function() if locked then return nil end; locked=true; return true end,
     close=function() locked=false end} end,
   getaddrinfo=function() return {{address=private and '192.168.2.1' or '93.184.216.34'}} end
 }

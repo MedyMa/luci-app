@@ -1,11 +1,11 @@
 #!/usr/bin/lua
 local nixio,fs=require('nixio'),require('nixio.fs')
 local M=dofile('/usr/share/traffic/website-icons-core.lua')
-local lock=nixio.open('/tmp/traffic-website-icons.lock','w',384)
+local lock=nixio.open('/tmp/traffic-website-icons.lock','w','600')
 if not lock or not lock:lock('tlock') then os.exit(0) end
 local cache=M.storage(fs.readfile('/proc/mounts',65536),function(p) return fs.access(p,'w') end)
-fs.mkdir(cache,493)
-if not fs.access(cache,'w') then cache='/tmp/traffic-site-icons'; fs.mkdir(cache,493) end
+fs.mkdir(cache,'755')
+if not fs.access(cache,'w') then cache='/tmp/traffic-site-icons'; fs.mkdir(cache,'755') end
 local st=fs.lstat('/www/traffic-site-icons')
 if not st or st.type=='lnk' then
   if fs.readlink('/www/traffic-site-icons')~=cache then
