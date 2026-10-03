@@ -2,13 +2,13 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-traffic
 PKG_VERSION:=1.1.7
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 PKG_LICENSE:=Apache-2.0
 LUCI_PKGARCH:=all
 
 LUCI_TITLE:=LuCI per-application traffic statistics
 LUCI_DESCRIPTION:=Per-application traffic statistics, UCG style: the totals come from the WAN interface counters, so they stay right with flow offloading on; the per-application breakdown comes from conntrack correlated with AdGuard Home DNS answers, and the proxy tunnel is accounted separately.
-LUCI_DEPENDS:=+luci-base +lua
+LUCI_DEPENDS:=+luci-base +lua +luci-lib-nixio +curl +ca-bundle +coreutils-timeout
 
 define Build/Prepare/$(PKG_NAME)
 	$(call Build/Prepare/Default)
@@ -17,6 +17,7 @@ define Build/Prepare/$(PKG_NAME)
 	chmod 0755 $(PKG_BUILD_DIR)/root/usr/libexec/rpcd/luci.traffic
 	chmod 0755 $(PKG_BUILD_DIR)/root/usr/share/traffic/collector.sh
 	chmod 0755 $(PKG_BUILD_DIR)/root/usr/share/traffic/fetch-icons.sh
+	chmod 0755 $(PKG_BUILD_DIR)/root/usr/share/traffic/website-icons.sh
 	chmod 0755 $(PKG_BUILD_DIR)/root/usr/share/traffic/live.sh
 	$(SED) 's|^COLLECTOR_VERSION=.*|COLLECTOR_VERSION=$(PKG_VERSION)-r$(PKG_RELEASE)|' \
 		$(PKG_BUILD_DIR)/root/usr/share/traffic/collector.sh

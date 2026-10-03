@@ -75,7 +75,7 @@ const factory=new Function('view','rpc','dom','poll','_','E','L','document','Ima
   src.replace(/return view\.extend\(/,
     'global.__injectCss = injectCss;\n' +
     'global.__iconTest = {makeIcon:makeIcon,setPending:function(p){iconIndexPromise=p;shippedIcons={};cachedIcons=null;},' +
-    'setShipped:function(m){shippedIcons=m;},setDomains:function(m){domainIcons=m;}};\nreturn view.extend('));
+    'setShipped:function(m){shippedIcons=m;},setDomains:function(m){domainIcons=m;},setWebsites:function(m){websiteIcons=m;cachedIcons={};shippedIndexFailed=false;}};\nreturn view.extend('));
 const viewStub={extend(o){ viewStub.__obj=o; return o; }};
 const domStub={content(node,ch){ node.children=[]; (Array.isArray(ch)?ch:[ch]).forEach(x=>{ if(x) node.appendChild(x); }); }};
 const _id=s=>s;
@@ -918,6 +918,12 @@ pendingIndex.then(()=>{
   const unknownIcon=global.__iconTest.makeIcon('qrstuuvwxyzab.com');
   chk(flat(unknownIcon).indexOf('QR')>=0,
     '无图标的域名显示可区分的双字母标识');
+  global.__iconTest.setWebsites({'comfylink.com':'comfylink.com.png?v=100','starrydyn.com':'starrydyn.com.ico?v=100'});
+  global.__iconTest.makeIcon('comfylink.com');
+  global.__iconTest.makeIcon('starrydyn.com');
+  chk(imageRequests.includes('/traffic-site-icons/comfylink.com.png?v=100') &&
+      imageRequests.includes('/traffic-site-icons/starrydyn.com.ico?v=100'),
+    '网站缓存 PNG / ICO 从路由器同源读取并带更新版本');
   console.log(fail?`\n  ${fail} 项失败`:'\n  页面渲染验证全部通过');
   process.exit(fail?1:0);
 });

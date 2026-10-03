@@ -2022,11 +2022,12 @@ run() {
         printf '%s\n' "$ROUNDS" > "$STATE_DIR/rounds"
         publish_current
         write_summary
-        # Icons for applications the package does not ship one for.  Off by
-        # default, and the script exits at once when it is, so this costs one
-        # test on a normal round.  It happens here rather than in the browser
-        # because the page must never depend on an upstream host being reachable.
-        [ "$CFG_ICONS_FETCH" = "1" ] && /usr/share/traffic/fetch-icons.sh
+        # Website fetching is independent of accounting and requires no settings.
+        # One asynchronous pass per minute; the runner locks and times out itself.
+        if [ "$((now - ${SITE_ICONS_AT:-0}))" -ge 60 ]; then
+            SITE_ICONS_AT=$now
+            /bin/sh /usr/share/traffic/website-icons.sh >/dev/null 2>&1 &
+        fi
         # The page's realtime meter samples once a second, which is finer than a
         # round.  This is a tick loop rather than one `sleep $CFG_INTERVAL` so the
         # sampler can run between rounds.  live.sh exits after two stat() calls

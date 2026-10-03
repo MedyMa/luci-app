@@ -89,6 +89,8 @@ jobs:
       - name: Run the self-tests
         run: |
           set -eux
+          sudo apt-get update -qq
+          sudo apt-get install -y lua5.1
           # These suites existed and passed, but nothing ran them: this workflow
           # only built the package, so router-side code had no automated gate at
           # all.  A collector that died on its first round therefore shipped four
@@ -101,6 +103,8 @@ jobs:
           node ../../tools/router-status-boundary-test.js
           sh  tools/peak-selftest.sh
           sh  tools/fetch-icons-selftest.sh
+          lua5.1 tools/website-icons-selftest.lua root/usr/share/traffic/website-icons-core.lua
+          lua5.1 tools/website-icons-runner-selftest.lua root/usr/share/traffic/website-icons-core.lua root/usr/share/traffic/website-icons.lua
           node tools/page-render-selftest.js
           node tools/catalog-selftest.js
           node tools/icon-resolution-selftest.js

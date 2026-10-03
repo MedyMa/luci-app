@@ -234,7 +234,35 @@ function fmtRate(bps) {
  * whole page load, far worse than a few 404s, so in that case the URL is tried
  * as before. */
 var shippedIcons = null, cachedIcons = null, shippedIndexFailed = false,
-	iconIndexPromise = null, domainIcons = {};
+	iconIndexPromise = null, domainIcons = {}, websiteIcons = {};
+
+function loadWebsiteIndex() {
+	return fetch('/traffic-site-icons/websites.tsv', { cache: 'no-cache' })
+		.then(function(r) { return r.ok ? r.text() : null; })
+		.then(function(text) {
+			if (text === null) return websiteIcons;
+			var map = {};
+			text.split('\n').slice(0, 256).forEach(function(line) {
+				var cols = line.trim().split('\t'), host = cols[0];
+				if (cols.length < 2 || cols.length > 3 || !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(host) || host.indexOf('..') >= 0) return;
+				if (cols[1] !== host + '.png' && cols[1] !== host + '.ico') return;
+				if (cols.length === 3 && !/^\d+$/.test(cols[2])) return;
+				map[host] = cols[1] + (cols.length === 3 ? '?v=' + cols[2] : '');
+			});
+			return map;
+		}).catch(function() { return websiteIcons; });
+}
+
+function refreshWebsiteIcons() {
+	return loadWebsiteIndex().then(function(map) {
+		var previous = websiteIcons; websiteIcons = map;
+		document.querySelectorAll('.tf-icon[data-site]').forEach(function(box) {
+			var name = box.getAttribute('data-site'), host = name.toLowerCase();
+			if (map[host] && map[host] !== previous[host] && box.parentNode)
+				box.parentNode.replaceChild(makeIcon(name), box);
+		});
+	});
+}
 
 function loadIndex(url, onFail) {
 	return fetch(url)
@@ -271,8 +299,8 @@ function ensureIconIndexes() {
 	iconIndexPromise = Promise.all([
 		loadIndex(L.resource('traffic/icons/index.txt'), function() { shippedIndexFailed = true; }),
 		loadIndex('/traffic-icons/index.txt', function() {}),
-		loadDomainIndex()
-	]).then(function(m) { shippedIcons = m[0]; cachedIcons = m[1]; domainIcons = m[2]; });
+		loadDomainIndex(), loadWebsiteIndex()
+	]).then(function(m) { shippedIcons = m[0]; cachedIcons = m[1]; domainIcons = m[2]; websiteIcons = m[3]; });
 	return iconIndexPromise;
 }
 
@@ -351,6 +379,7 @@ function colorFor(name) {
 function makeIcon(name, color) {
 	var box = E('span', {
 		'class': 'tf-icon',
+		'data-site': String(name),
 		'style': 'background:' + (color || colorFor(name))
 	}, [ E('span', { 'class': 'tf-icon-letter' }, [ avatarLabel(name) ]) ]);
 
@@ -364,15 +393,19 @@ function makeIcon(name, color) {
 		tries.push(L.resource('traffic/icons/' + key + '.svg'));
 	if (cachedIcons && cachedIcons[key])
 		tries.push('/traffic-icons/' + key + '.svg');
+	var site = websiteIcons[String(name).toLowerCase()];
+	if (site) tries.push('/traffic-site-icons/' + site);
 	/* Nothing is known to exist.  Do not create an <img> at all: an empty src
 	 * makes the browser request the page itself, which is a worse request to
 	 * emit than the one this was meant to avoid.  The letter avatar above is
 	 * already the right answer. */
 	if (!tries.length) return;
 	var img = new Image();
+	img.loading = 'lazy';
+	img.decoding = 'async';
 	img.onload = function() {
 		box.textContent = '';
-		box.style.background = 'transparent';
+		box.style.background = site || /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(name) ? '#f8fafc' : 'transparent';
 		box.style.boxShadow = 'none';
 		img.className = 'tf-icon-img';
 		box.appendChild(img);
@@ -967,6 +1000,7 @@ return view.extend({
 		this.loadSeries();
 		poll.add(L.bind(function() {
 			this.ticks = (this.ticks || 0) + 1;
+			if (this.ticks % 12 === 0 && !document.hidden) refreshWebsiteIcons();
 			/* the chart moves on a slower clock than the counters: a redraw
 			 * every 5 s of 360 points is work nobody can see.  A tab that was
 			 * hidden is refreshed at once, though, so it never shows stale
