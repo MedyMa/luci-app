@@ -463,7 +463,7 @@ a third-party favicon service for each row. Additional packaged icons can be
 added with a matching `SOURCES.tsv` provenance row and then checked with
 `node tools/check-icons.js`.
 
-### 自动网站图标缓存（1.1.7-r2）
+### 自动网站图标缓存（1.1.8）
 
 无需任何设置。包内图标优先；未收录网站由路由器后台获取 favicon，网页与手机 App 共用 `/traffic-site-icons/websites.tsv` 索引及图片。获取失败保留旧图标；没有旧图标时显示域名前两个字母和固定配色。
 
