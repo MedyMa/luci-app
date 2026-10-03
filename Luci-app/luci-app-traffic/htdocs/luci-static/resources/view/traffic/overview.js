@@ -401,7 +401,8 @@ function makeIcon(name, color) {
 	 * already the right answer. */
 	if (!tries.length) return;
 	var img = new Image();
-	img.loading = 'lazy';
+	/* This image is attached only after onload, keeping the letter visible on
+	 * failure. Lazy loading a detached image prevents onload from ever firing. */
 	img.decoding = 'async';
 	img.onload = function() {
 		box.textContent = '';

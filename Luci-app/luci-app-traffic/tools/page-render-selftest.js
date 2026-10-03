@@ -65,10 +65,20 @@ const documentStub={
   hidden:false
 };
 const imageRequests=[];
+const imageObjects=[];
 function ImageStub(){
   let source='';
-  const img={onload:null,className:''};
-  Object.defineProperty(img,'src',{get(){return source;},set(v){source=v;imageRequests.push(v);}});
+  const img=mk(XHTML,'img');
+  imageObjects.push(img);
+  Object.defineProperty(img,'src',{get(){return source;},set(v){
+    source=v;imageRequests.push(v);
+    // Browsers defer a detached lazy image. An onload-only append must not
+    // deadlock: recording its URL alone does not prove that it is displayed.
+    queueMicrotask(()=>{
+      if(img.loading==='lazy'&&!img.parentNode)return;
+      if(img.onload)img.onload();
+    });
+  }});
   return img;
 }
 const factory=new Function('view','rpc','dom','poll','_','E','L','document','Image','confirm',
@@ -904,6 +914,10 @@ pendingIndex.then(()=>{
   global.__iconTest.makeIcon('Rockstar');
   return Promise.resolve();
 }).then(()=>{
+  chk(iconBox.children.some(n=>n.tag==='img'),
+    '索引到达后图标实际加入页面，而非仅设置图片地址');
+  chk(imageObjects.filter(n=>n.src).every(n=>n.parentNode),
+    '包内图标不会因脱离页面的懒加载而永久停在字母占位');
   chk(imageRequests.some(u=>u.indexOf('stripe.svg')>=0),
     '未收录服务的简单根域名可复用本地品牌图标');
   chk(imageRequests.some(u=>u.indexOf('cdn.svg')>=0),
@@ -919,11 +933,15 @@ pendingIndex.then(()=>{
   chk(flat(unknownIcon).indexOf('QR')>=0,
     '无图标的域名显示可区分的双字母标识');
   global.__iconTest.setWebsites({'comfylink.com':'comfylink.com.png?v=100','starrydyn.com':'starrydyn.com.ico?v=100'});
-  global.__iconTest.makeIcon('comfylink.com');
-  global.__iconTest.makeIcon('starrydyn.com');
+  const pngBox=global.__iconTest.makeIcon('comfylink.com');
+  const icoBox=global.__iconTest.makeIcon('starrydyn.com');
   chk(imageRequests.includes('/traffic-site-icons/comfylink.com.png?v=100') &&
       imageRequests.includes('/traffic-site-icons/starrydyn.com.ico?v=100'),
     '网站缓存 PNG / ICO 从路由器同源读取并带更新版本');
-  console.log(fail?`\n  ${fail} 项失败`:'\n  页面渲染验证全部通过');
-  process.exit(fail?1:0);
+  return Promise.resolve().then(()=>{
+    chk([pngBox,icoBox].every(box=>box.children.some(n=>n.tag==='img')),
+      '网站 PNG / ICO 加载完成后实际替换字母占位');
+    console.log(fail?`\n  ${fail} 项失败`:'\n  页面渲染验证全部通过');
+    process.exit(fail?1:0);
+  });
 });
