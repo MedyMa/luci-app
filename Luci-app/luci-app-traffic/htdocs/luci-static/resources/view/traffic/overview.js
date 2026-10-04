@@ -253,12 +253,32 @@ function loadWebsiteIndex() {
 		}).catch(function() { return websiteIcons; });
 }
 
+/* Exact host first, then the closest cached parent above a known suffix.
+ * Unknown suffixes stay exact-only. Shared hosting suffixes are boundaries too;
+ * this conservative set is not a complete public-suffix database. */
+function websiteIconFile(name, map) {
+	var host = String(name).toLowerCase();
+	if (map[host]) return map[host];
+	if (!/^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(host)) return null;
+	var labels = host.split('.'), lastTwo = labels.slice(-2).join('.');
+	var compound = /^(?:com\.cn|net\.cn|org\.cn|gov\.cn|edu\.cn|co\.uk|org\.uk|ac\.uk|gov\.uk|net\.uk|com\.au|net\.au|org\.au|edu\.au|gov\.au|co\.jp|ne\.jp|or\.jp|ac\.jp|go\.jp|co\.nz|net\.nz|org\.nz|co\.kr|com\.tw|com\.hk|com\.sg|com\.br|co\.in|co\.za)$/;
+	var shared = /^(?:github\.io|pages\.dev|workers\.dev|vercel\.app|netlify\.app|appspot\.com|blogspot\.com|cloudfront\.net|azurewebsites\.net|herokuapp\.com)$/;
+	var suffixLabels = compound.test(lastTwo) || shared.test(lastTwo) ? 2 :
+		/^(?:com|net|org|io|cn|ai|app|dev|co|tv|me)$/.test(labels[labels.length - 1]) ? 1 : 0;
+	if (!suffixLabels) return null;
+	for (var i = 1; i < labels.length - suffixLabels; i++) {
+		var file = map[labels.slice(i).join('.')];
+		if (file) return file;
+	}
+	return null;
+}
+
 function refreshWebsiteIcons() {
 	return loadWebsiteIndex().then(function(map) {
 		var previous = websiteIcons; websiteIcons = map;
 		document.querySelectorAll('.tf-icon[data-site]').forEach(function(box) {
-			var name = box.getAttribute('data-site'), host = name.toLowerCase();
-			if (map[host] && map[host] !== previous[host] && box.parentNode)
+			var name = box.getAttribute('data-site');
+			if (websiteIconFile(name, map) !== websiteIconFile(name, previous) && box.parentNode)
 				box.parentNode.replaceChild(makeIcon(name), box);
 		});
 	});
@@ -393,7 +413,7 @@ function makeIcon(name, color) {
 		tries.push(L.resource('traffic/icons/' + key + '.svg'));
 	if (cachedIcons && cachedIcons[key])
 		tries.push('/traffic-icons/' + key + '.svg');
-	var site = websiteIcons[String(name).toLowerCase()];
+	var site = websiteIconFile(name, websiteIcons);
 	if (site) tries.push('/traffic-site-icons/' + site);
 	/* Nothing is known to exist.  Do not create an <img> at all: an empty src
 	 * makes the browser request the page itself, which is a worse request to

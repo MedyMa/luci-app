@@ -84,7 +84,7 @@ function ImageStub(){
 const factory=new Function('view','rpc','dom','poll','_','E','L','document','Image','confirm',
   src.replace(/return view\.extend\(/,
     'global.__injectCss = injectCss;\n' +
-    'global.__iconTest = {makeIcon:makeIcon,loadWebsites:loadWebsiteIndex,setPending:function(p){iconIndexPromise=p;shippedIcons={};cachedIcons=null;},' +
+    'global.__iconTest = {makeIcon:makeIcon,loadWebsites:loadWebsiteIndex,refreshWebsites:refreshWebsiteIcons,setPending:function(p){iconIndexPromise=p;shippedIcons={};cachedIcons=null;},' +
     'setShipped:function(m){shippedIcons=m;},setDomains:function(m){domainIcons=m;},setWebsites:function(m){websiteIcons=m;cachedIcons={};shippedIndexFailed=false;}};\nreturn view.extend('));
 const viewStub={extend(o){ viewStub.__obj=o; return o; }};
 const domStub={content(node,ch){ node.children=[]; (Array.isArray(ch)?ch:[ch]).forEach(x=>{ if(x) node.appendChild(x); }); }};
@@ -935,6 +935,34 @@ pendingIndex.then(()=>{
   global.__iconTest.setWebsites({'comfylink.com':'comfylink.com.png?v=100','starrydyn.com':'starrydyn.com.ico?v=100'});
   const pngBox=global.__iconTest.makeIcon('comfylink.com');
   const icoBox=global.__iconTest.makeIcon('starrydyn.com');
+  global.__iconTest.setWebsites({'example.com':'example.com.png?v=1',
+    'api.example.com':'api.example.com.ico?v=2',
+    'example.co.uk':'example.co.uk.png','co.uk':'co.uk.png',
+    'example.com.cn':'example.com.cn.png','com.cn':'com.cn.png',
+    'unknown.xyz':'unknown.xyz.png','github.io':'github.io.png',
+    'stripe.com':'stripe.com.png'});
+  let requestStart=imageRequests.length;
+  global.__iconTest.makeIcon('api.example.com');
+  global.__iconTest.makeIcon('v1.api.example.com');
+  global.__iconTest.makeIcon('www.example.com');
+  global.__iconTest.makeIcon('api.example.co.uk');
+  global.__iconTest.makeIcon('api.example.com.cn');
+  chk(JSON.stringify(imageRequests.slice(requestStart))===JSON.stringify([
+    '/traffic-site-icons/api.example.com.ico?v=2',
+    '/traffic-site-icons/api.example.com.ico?v=2',
+    '/traffic-site-icons/example.com.png?v=1',
+    '/traffic-site-icons/example.co.uk.png',
+    '/traffic-site-icons/example.com.cn.png']),
+    '网站缓存优先精确域名，再使用最近的安全父域名');
+  requestStart=imageRequests.length;
+  ['api.unrelated.co.uk','api.unrelated.com.cn','api.unknown.xyz','tenant.github.io']
+    .forEach(name=>global.__iconTest.makeIcon(name));
+  chk(imageRequests.length===requestStart,
+    '父域缓存不得跨公共后缀或共享托管边界，未知后缀只用精确缓存');
+  global.__iconTest.setDomains({'1password.com':'1password','stripe.com':'stripe'});
+  global.__iconTest.makeIcon('api.stripe.com');
+  chk(imageRequests[imageRequests.length-1].includes('stripe.svg'),
+    '网站父域缓存不会覆盖包内品牌图标');
   chk(imageRequests.includes('/traffic-site-icons/comfylink.com.png?v=100') &&
       imageRequests.includes('/traffic-site-icons/starrydyn.com.ico?v=100'),
     '网站缓存 PNG / ICO 从路由器同源读取并带更新版本');
@@ -945,9 +973,24 @@ pendingIndex.then(()=>{
     global.fetch=async()=>({ok:true,text:async()=>Array.from({length:300},(_,i)=>
       `site${i}.com\tsite${i}.com.png\t100`).join('\n')});
     const fullIndex=await global.__iconTest.loadWebsites();
-    global.fetch=originalFetch;
     chk(Object.keys(fullIndex).length===300 && fullIndex['site299.com'],
       '网页读取全部缓存索引，超过 256 个网站也不截断');
+    global.__iconTest.setWebsites({});
+    const refreshedBox=global.__iconTest.makeIcon('api.example.com');
+    refreshedBox.getAttribute=key=>refreshedBox.attrs[key];
+    let replacement=null;
+    refreshedBox.parentNode={replaceChild(next,old){
+      if(old===refreshedBox) replacement=next;
+    }};
+    documentStub.querySelectorAll=()=>[refreshedBox];
+    global.fetch=async()=>({ok:true,text:async()=>
+      'example.com\texample.com.png\t3'});
+    await global.__iconTest.refreshWebsites();
+    chk(replacement && imageRequests[imageRequests.length-1]===
+      '/traffic-site-icons/example.com.png?v=3',
+      '父域缓存索引到达后，已显示的子域行自动替换图标');
+    delete documentStub.querySelectorAll;
+    global.fetch=originalFetch;
     console.log(fail?`\n  ${fail} 项失败`:'\n  页面渲染验证全部通过');
     process.exit(fail?1:0);
   });

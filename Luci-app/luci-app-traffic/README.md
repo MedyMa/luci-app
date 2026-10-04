@@ -467,6 +467,8 @@ added with a matching `SOURCES.tsv` provenance row and then checked with
 
 无需任何设置。包内图标优先；未收录网站由路由器后台获取 favicon，网页与手机 App 共用 `/traffic-site-icons/websites.tsv` 索引及图片。获取失败保留旧图标；没有旧图标时显示域名前两个字母和固定配色。
 
+缓存查询先匹配精确主机名，再匹配已识别后缀边界内最近的父域，例如 `api.example.com` 可以复用 `example.com`。不跨已列出的公共后缀和托管租户边界；未知后缀只匹配精确域名。父域缓存不覆盖包内品牌图标。
+
 - 自动选择已挂载、可写的 NVMe；无可用 NVMe 时放在 `/tmp/traffic-site-icons`，缓存不写系统闪存。`/www/traffic-site-icons` 只建立发布缓存的符号链接。
 - 每分钟最多处理一个网站，使用独占进程锁；整个任务最多 20 秒，单次 HTTPS 请求最多 4 秒。与流量采集并行，不增加常驻进程，不阻塞实时速率。
 - 每小时扫描 `totals.tsv` 中完整的网站清单并生成待处理快照，不按流量排名截取前 256 个网站。每分钟沿游标继续处理一个缺失或到期站点，缓存淘汰后也不会反复处理前几个网站而遗漏后面的站点。
