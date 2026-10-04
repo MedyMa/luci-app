@@ -39,6 +39,12 @@ check(M.candidates('<LINK REL=icon HREF=../img/icon.png?x=1&amp;y=2>', 'https://
   'https://www.example.com/img/icon.png?x=1&y=2', 'unquoted attributes and redirected relative base')
 check(M.candidates('<base href="/static/"><link rel="apple-touch-icon" href="logo.png">', 'https://example.com/app/')[1]==
   'https://example.com/static/logo.png', 'HTML base URL respected')
+check(M.candidates('<base target="_blank"><base href="/assets/"><link rel="icon" href="logo.png">', 'https://example.com/app/start')[1]==
+  'https://example.com/assets/logo.png', 'target-only base does not hide later href base')
+check(M.candidates('<base href="http://first.example.com/"><base href="https://second.example.com/"><link rel="icon" href="logo.png"><link rel="icon" href="https://cdn.example.com/logo.png">', 'https://example.com/')[1]==
+  'https://cdn.example.com/logo.png', 'unsupported first href does not select a different base or lose absolute HTTPS icons')
+check(M.url('https://example.com/','/icons//logo.png')=='https://example.com/icons//logo.png', 'meaningful repeated slashes preserved')
+check(M.url('https://example.com/','/a//b/../logo.png')=='https://example.com/a//logo.png', 'dot removal preserves empty segments')
 check(M.url('https://example.com/a/b','../icon.png')=='https://example.com/icon.png', 'dot segments resolved')
 check(not M.url('https://example.com/','https://user:pass@example.com/i.png') and
   not M.url('https://example.com/','https://example.com:444/i.png'), 'credentials and alternate ports rejected')

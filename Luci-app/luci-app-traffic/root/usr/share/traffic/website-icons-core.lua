@@ -115,11 +115,15 @@ function M.url(base, href)
   local query=path:match('(%?.*)$') or ''
   local raw=path:gsub('%?.*$','')
   local parts={}
-  for part in raw:gmatch('[^/]+') do
-    if part=='..' then table.remove(parts) elseif part~='.' then parts[#parts+1]=part end
+  -- Empty segments are meaningful: /icons//logo.png may be a different resource.
+  for part in (raw..'/'):gmatch('(.-)/') do
+    if part=='..' then
+      if #parts>1 then table.remove(parts) end
+    elseif part~='.' then parts[#parts+1]=part end
   end
-  local normalized='/'..table.concat(parts,'/')
-  if (raw:sub(-1)=='/' or raw:match('/%.%.?$')) and normalized~='/' then normalized=normalized..'/' end
+  if raw:match('/%.%.?$') then parts[#parts+1]='' end
+  local normalized=table.concat(parts,'/')
+  if normalized=='' then normalized='/' end
   return 'https://'..authority..normalized..query
 end
 local function attributes(tag)
@@ -140,7 +144,9 @@ function M.candidates(page, host)
   for tag in page:gmatch('<[^>]+>') do
     if tag:lower():match('^<base[%s>]') then
       local href=attributes(tag).href
-      base=(href and M.url(base,href)) or base; break
+      -- HTML selects the first base carrying href, even when our HTTPS policy
+      -- rejects it. In that case only explicit HTTPS icon URLs remain eligible.
+      if href~=nil then base=M.url(base,href); break end
     end
   end
   local result,seen={},{}
@@ -150,7 +156,7 @@ function M.candidates(page, host)
       local rel=(attrs.rel or ''):lower()
       local href=attrs.href
       if href and ((' '..rel..' '):find(' icon ',1,true) or rel=='apple-touch-icon') then
-        href=M.url(base,href)
+        href=M.url(base or '',href)
         local ext=href and href:lower():gsub('%?.*$',''):match('%.([a-z]+)$')
         local unsupported=({svg=true,webp=true,gif=true,jpg=true,jpeg=true,avif=true})[ext or '']
         if href and not unsupported and not seen[href] then
