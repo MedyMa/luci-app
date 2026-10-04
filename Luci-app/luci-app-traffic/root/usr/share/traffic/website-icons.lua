@@ -53,7 +53,10 @@ for line in (fs.readfile(pkg..'domains.tsv',262144) or ''):gmatch('[^\n]+') do
 end
 local names,seen_names={},{}
 local scan_file='/tmp/traffic/website-sites.tsv'
-local scan_at=tonumber(fs.readfile('/tmp/traffic/website-sites.at',32)) or 0
+-- nixio returns nil, errno, message for a missing file. Keep only its first
+-- value so errno cannot become tonumber's optional numeric-base argument.
+local scan_stamp=fs.readfile('/tmp/traffic/website-sites.at',32)
+local scan_at=tonumber(scan_stamp) or 0
 local snapshot=fs.readfile(scan_file,8*1024*1024)
 local now=os.time()
 if not snapshot or now<scan_at or now-scan_at>=3600 then

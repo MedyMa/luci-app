@@ -17,7 +17,10 @@ local function check_mode(mode, expected)
   assert(mode==expected,'unexpected permissions')
 end
 local fs={
-  readfile=function(p) return files[p] end,
+  readfile=function(p)
+    if files[p] == nil then return nil,2,'No such file or directory' end
+    return files[p]
+  end,
   access=function(p) return dirs[p] end,
   mkdir=function(p,mode) check_mode(mode,'755'); dirs[p]=true; return true end,
   writefile=function(p,data) files[p]=data; return true end,
@@ -103,6 +106,18 @@ assert(total_opens==2,'full website list scanned again after one hour')
 assert(files['/tmp/traffic/website-icons.metrics']:find('candidate_sites=301',1,true),
   'hourly discovery includes all 301 websites without ranking cutoff')
 assert(files['/tmp/traffic/website-sites.tsv']:find('site300.com',1,true),'later websites enter work queue')
+for _,bad_stamp in ipairs({false,'','not-a-timestamp'}) do
+  files['/tmp/traffic/website-sites.at']=bad_stamp or nil
+  if bad_stamp==false then
+    files['/tmp/traffic/website-sites.tsv']=nil
+    files['/tmp/traffic/website-icons.metrics']=nil
+  end
+  local opens=total_opens
+  dofile(runner_path)
+  assert(total_opens==opens+1,'missing or invalid scan timestamp triggers fresh discovery')
+  assert(tonumber(files['/tmp/traffic/website-sites.at'])==stamp,'scan timestamp restored')
+  assert(files['/tmp/traffic/website-icons.metrics'],'metrics restored after reboot')
+end
 print('website-icons-runner-selftest: passed (permissions, NVMe, publish, IPv4/IPv6 DNS pin, no repeat transfer, private DNS, metrics)')
 io.open,io.popen,dofile=real_open,real_popen,real_dofile
 os.time=real_time
