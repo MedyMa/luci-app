@@ -98,6 +98,7 @@ jobs:
           # meter stuck at zero - while every suite that would have caught it sat
           # unrun in tools/.  Anything that can fail in seconds is a gate now.
           cd Luci-app/luci-app-traffic
+          sh  tools/package-lifecycle-selftest.sh
           sh  tools/live-selftest.sh
           sh  tools/rpcd-selftest.sh
           node ../../tools/router-status-boundary-test.js

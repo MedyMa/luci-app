@@ -2,7 +2,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-traffic
 PKG_VERSION:=1.1.8
-PKG_RELEASE:=6
+PKG_RELEASE:=7
 PKG_LICENSE:=Apache-2.0
 LUCI_PKGARCH:=all
 
@@ -35,11 +35,18 @@ define Package/$(PKG_NAME)/prerm
 [ -n "$$IPKG_INSTROOT" ] && exit 0
 if [ -x /etc/init.d/traffic ]; then
 	/etc/init.d/traffic stop >/dev/null 2>&1
-	/etc/init.d/traffic disable >/dev/null 2>&1
+	if [ "$${1:-}" != "upgrade" ] && [ "$${PKG_UPGRADE:-0}" != "1" ]; then
+		/etc/init.d/traffic disable >/dev/null 2>&1
+	fi
 fi
 pkill -f '/usr/share/traffic/collector.sh' >/dev/null 2>&1
 nft delete table inet traffic_acct >/dev/null 2>&1
-rm -rf /tmp/traffic
+# opkg calls the installed prerm with "upgrade <new-version>". Preserve
+# counters AND archive snapshots so the next collector neither loses nor
+# double-archives the current hour. APK pre-deinstall has no argument.
+if [ "$${1:-}" != "upgrade" ] && [ "$${PKG_UPGRADE:-0}" != "1" ]; then
+	rm -rf /tmp/traffic
+fi
 exit 0
 endef
 
