@@ -87,20 +87,73 @@ function M.kind(s)
   end
   -- PNG and ICO cover favicons without accepting active SVG or large animations.
 end
+local function entity(s)
+  return (s:gsub('&amp;','&'):gsub('&quot;','"'):gsub('&#(%d+);',function(n)
+    n=tonumber(n); return n and n>=32 and n<127 and string.char(n) or ''
+  end))
+end
+-- Resolve only ordinary HTTPS URLs. Redirect destinations use the same parser.
+function M.url(base, href)
+  if type(href)~='string' or #href>2048 or href:find('[%s%c\\]') then return nil end
+  href=href:gsub('#.*$','')
+  if href:sub(1,2)=='//' then href='https:'..href end
+  if not href:match('^[%a][%w+.-]*:') then
+    local origin,path=base:match('^(https://[^/]+)(/.*)$')
+    if not origin then origin=base:match('^(https://[^/]+)$'); path='/' end
+    if not origin then return nil end
+    path=path:gsub('%?.*$','')
+    if href:sub(1,1)=='/' then href=origin..href
+    elseif href:sub(1,1)=='?' then href=origin..path..href
+    elseif href=='' then href=base:gsub('#.*$','')
+    else href=origin..(path:match('^(.*)/') or '')..'/'..href end
+  end
+  local authority,path=href:match('^https://([^/?#]+)(.*)$')
+  if not authority then return nil end
+  authority=authority:lower():gsub(':443$','')
+  if not M.host(authority) then return nil end
+  if path=='' or path:sub(1,1)=='?' then path='/'..path end
+  local query=path:match('(%?.*)$') or ''
+  local raw=path:gsub('%?.*$','')
+  local parts={}
+  for part in raw:gmatch('[^/]+') do
+    if part=='..' then table.remove(parts) elseif part~='.' then parts[#parts+1]=part end
+  end
+  local normalized='/'..table.concat(parts,'/')
+  if (raw:sub(-1)=='/' or raw:match('/%.%.?$')) and normalized~='/' then normalized=normalized..'/' end
+  return 'https://'..authority..normalized..query
+end
+local function attributes(tag)
+  local attrs={}
+  -- Remove quoted values before handling unquoted ones, so spaces inside quoted
+  -- URLs do not become new attributes and every form follows one validation path.
+  local rest=tag:gsub('([%w_-]+)%s*=%s*([\'"])(.-)%2',function(key,quote,value)
+    attrs[key:lower()]=entity(value); return ''
+  end)
+  for key,value in rest:gmatch('([%w_-]+)%s*=%s*([^%s>]+)') do
+    if not attrs[key:lower()] then attrs[key:lower()]=entity(value) end
+  end
+  return attrs
+end
 function M.candidates(page, host)
+  local base=host:match('^https://') and host or 'https://'..host..'/'
+  page=(page or ''):gsub('<!%-%-.-%-%->','')
+  for tag in page:gmatch('<[^>]+>') do
+    if tag:lower():match('^<base[%s>]') then
+      local href=attributes(tag).href
+      base=(href and M.url(base,href)) or base; break
+    end
+  end
   local result,seen={},{}
-  for tag in (page or ''):gmatch('<[^>]+>') do
-    if tag:sub(1,5):lower()=='<link' then
-      local attrs={}
-      for key,quote,value in tag:gmatch('([%w_-]+)%s*=%s*([\'"])(.-)%2') do attrs[key:lower()]=value end
+  for tag in page:gmatch('<[^>]+>') do
+    if tag:lower():match('^<link[%s>]') then
+      local attrs=attributes(tag)
       local rel=(attrs.rel or ''):lower()
       local href=attrs.href
       if href and ((' '..rel..' '):find(' icon ',1,true) or rel=='apple-touch-icon') then
-        href=href:gsub('&amp;','&')
-        if href:sub(1,2)=='//' then href='https:'..href
-        elseif href:sub(1,1)=='/' then href='https://'..host..href
-        elseif not href:find(':',1,true) then href='https://'..host..'/'..href end
-        if href:match('^https://') and not seen[href] then
+        href=M.url(base,href)
+        local ext=href and href:lower():gsub('%?.*$',''):match('%.([a-z]+)$')
+        local unsupported=({svg=true,webp=true,gif=true,jpg=true,jpeg=true,avif=true})[ext or '']
+        if href and not unsupported and not seen[href] then
           seen[href]=true; result[#result+1]=href
           if #result>=3 then break end
         end
@@ -116,7 +169,7 @@ local function trim(env, records)
     local size=stat and (stat.blocks and stat.blocks*512 or math.ceil(stat.size/4096)*4096) or 0
     if stat and stat.size>M.limit then env.remove(r.file); r.file=''; r.good=0; size=0; dirty=true end
     -- Allow both current and atomic replacement indexes, including blocks.
-    local meta=2*(#host+32+#r.file+(r.file~='' and #host+16+#r.file or 0))
+    local meta=2*(#host+33+#r.file+#(r.reason or '')+(r.file~='' and #host+16+#r.file or 0))
     metadata=metadata+meta
     entries[#entries+1]={host=host,r=r,size=size,meta=meta}; bytes=bytes+size
   end
@@ -139,7 +192,7 @@ local function publish(env, records)
   local manifest,index={},{}
   for _,host in ipairs(ordered) do
     local r=records[host]
-    manifest[#manifest+1]=table.concat({host,r.good,r.bad,r.file},'\t')..'\n'
+    manifest[#manifest+1]=table.concat({host,r.good,r.bad,r.file,r.reason or ''},'\t')..'\n'
     if r.file~='' then index[#index+1]=host..'\t'..r.file..'\t'..r.good..'\n' end
   end
   manifest,index=table.concat(manifest),table.concat(index)
@@ -151,9 +204,10 @@ function M.run(env, names, packaged)
   local records, now, dirty={},env.now(),false
   local old=env.read('records.tsv') or ''
   for line in old:gmatch('[^\n]+') do
-    local host,good,bad,file=line:match('^([^\t]+)\t(%d+)\t(%d+)\t([^\t]*)$')
+    local host,good,bad,file,reason=line:match('^([^\t]+)\t(%d+)\t(%d+)\t([^\t]*)\t?([^\t]*)$')
     if M.host(host) and (file=='' or file==host..'.png' or file==host..'.ico') then
-      records[host]={good=tonumber(good),bad=tonumber(bad),file=file}
+      records[host]={good=tonumber(good),bad=tonumber(bad),file=file,
+        reason=reason and reason:match('^[a-z0-9_]*$') and reason:sub(1,32) or ''}
     end
   end
   -- Account actual allocation, not just compressed image sizes. Remove orphans
@@ -184,25 +238,35 @@ function M.run(env, names, packaged)
       r=r or {good=0,bad=0,file=''}
       -- Persist cooldown BEFORE DNS/download. A killed/timed-out task must not
       -- retry the same unresponsive site on every minute of the collector.
-      r.bad=now; records[host]=r
+      r.bad=now; r.reason='interrupted'; records[host]=r
       env.write('scan-cursor.txt',host)
       local count,bytes=trim(env,records)
       if not publish(env,records) then return {index='',entries=count,bytes=bytes,dirty=true} end
-      local data=env.fetch('https://'..host..'/favicon.ico',M.limit)
-      local kind=M.kind(data)
-      if not kind then
-        local page=env.fetch('https://'..host..'/',M.limit)
-        for _,url in ipairs(M.candidates(page,host)) do
-          data=env.fetch(url,M.limit); kind=M.kind(data); if kind then break end
+      local data,kind,reason
+      local origins={host}
+      if host:sub(1,4)~='www.' then origins[2]='www.'..host end
+      for _,origin in ipairs(origins) do
+        local final,why
+        data,final,why=env.fetch('https://'..origin..'/favicon.ico',M.limit)
+        kind=M.kind(data); reason=why or (data and 'unsupported_format') or reason
+        if not kind then
+          local page,page_url,page_why=env.fetch('https://'..origin..'/',M.limit)
+          reason=page_why or (page and 'no_supported_icon') or reason
+          for _,url in ipairs(M.candidates(page,page_url or origin)) do
+            data,final,why=env.fetch(url,M.limit); kind=M.kind(data)
+            reason=why or (data and 'unsupported_format') or reason
+            if kind then break end
+          end
         end
+        if kind then break end
       end
       if kind then
         local file=host..'.'..kind
         if env.write(file,data) then
           if r.file~='' and r.file~=file then env.remove(r.file) end
-          r.file=file; r.good=now; r.bad=0
-        else r.bad=now end
-      else r.bad=now end
+          r.file=file; r.good=now; r.bad=0; r.reason='ok'
+        else r.bad=now; r.reason='storage' end
+      else r.bad=now; r.reason=reason or 'no_supported_icon' end
       records[host]=r; dirty=true; break -- one site per pass, never a download burst
     end
   end

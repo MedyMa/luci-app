@@ -33,10 +33,30 @@ local large_png=png:sub(1,16)..'\0\0\16\0\0\0\16\0'..png:sub(25)
 check(not M.kind(ico:sub(1,22)..large_png), 'embedded ICO PNG cannot bypass dimensions cap')
 check(M.candidates('<LINK href="/assets/Logo.png" rel="icon">','example.com')[1]=='https://example.com/assets/Logo.png', 'relative favicon discovery preserves path case')
 check(M.candidates('<link rel="icon" href="http://example.com/a.png">','example.com')[1]==nil, 'no HTTP fallback')
+check(M.candidates('<link rel="icon" href="/one.svg"><link rel="icon" href="/two.webp"><link rel="icon" href="/three.gif"><link rel="icon" href="/real.png">','example.com')[1]==
+  'https://example.com/real.png', 'unsupported declared formats do not crowd out raster icons')
+check(M.candidates('<LINK REL=icon HREF=../img/icon.png?x=1&amp;y=2>', 'https://www.example.com/app/start')[1]==
+  'https://www.example.com/img/icon.png?x=1&y=2', 'unquoted attributes and redirected relative base')
+check(M.candidates('<base href="/static/"><link rel="apple-touch-icon" href="logo.png">', 'https://example.com/app/')[1]==
+  'https://example.com/static/logo.png', 'HTML base URL respected')
+check(M.url('https://example.com/a/b','../icon.png')=='https://example.com/icon.png', 'dot segments resolved')
+check(not M.url('https://example.com/','https://user:pass@example.com/i.png') and
+  not M.url('https://example.com/','https://example.com:444/i.png'), 'credentials and alternate ports rejected')
 local r=M.run(env, {'example.com','second.com'}, {})
 check(requests==1 and r.index:find('example.com\texample.com.png',1,true), 'one download per run and same-origin index')
 M.run(env, {'example.com'}, {})
 check(requests==1, 'fresh success not fetched again')
+local original_fetch=env.fetch
+env.fetch=function(url)
+  if url=='https://www.fallback.com/favicon.ico' then return png,url end
+  return nil,nil,'http_404'
+end
+M.run(env,{'fallback.com'},{})
+check(files['websites.tsv'].data:find('fallback.com\tfallback.com.png',1,true), 'www fallback retains original cache key')
+env.fetch=function() return nil,nil,'timeout' end
+M.run(env,{'timedout.com'},{})
+check(files['records.tsv'].data:find('timedout.com\t0\t'..stamp..'\t\ttimeout',1,true), 'failure cause persists without changing public index')
+env.fetch=original_fetch
 stamp=stamp+7*86400+1
 M.run(env, {'example.com'}, {})
 check(requests==2, 'seven day success refresh')

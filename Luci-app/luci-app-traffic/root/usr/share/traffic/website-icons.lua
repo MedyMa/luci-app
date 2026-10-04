@@ -1,6 +1,7 @@
 #!/usr/bin/lua
 local nixio,fs=require('nixio'),require('nixio.fs')
 local M=dofile('/usr/share/traffic/website-icons-core.lua')
+local F=dofile('/usr/share/traffic/website-icons-fetch.lua')
 local lock=nixio.open('/tmp/traffic-website-icons.lock','w','600')
 if not lock or not lock:lock('tlock') then os.exit(0) end
 local started=os.clock()
@@ -15,34 +16,22 @@ if not st or st.type=='lnk' then
 end
 local cache_dev=fs.stat(cache,'dev')
 local function quote(s) return "'"..s:gsub("'","'\\''").."'" end
-local function fetch(url,limit)
-  if #url>2048 then return nil end
-  local host=url:match('^https://([a-z0-9%.%-]+)/[^%s]*$')
-  if not M.host(host) then return nil end
-  local addresses=nixio.getaddrinfo(host,'any')
-  if not addresses or #addresses==0 then return nil end
-  local ipv6,ipv4,seen={},{},{}
-  for _,a in ipairs(addresses) do
-    if not M.public(a.address) then return nil end
-    if not seen[a.address] then
-      seen[a.address]=true
-      local v6=a.address:find(':',1,true)
-      local target=v6 and ipv6 or ipv4
-      if #target<4 then target[#target+1]=v6 and '['..a.address..']' or a.address end
-    end
+local network_started=nixio.sysinfo().uptime
+local fetch,network_stats=F.new(M,{
+  now=function() return nixio.sysinfo().uptime end,
+  resolve=function(host) return nixio.getaddrinfo(host,'any') end,
+  request=function(url,host,ips,limit,seconds)
+    -- Every hop is pinned separately. Headers/body are bounded in memory, with
+    -- no temporary download files, proxy credentials, cookies or unchecked -L.
+    local cmd='curl --silent --include --max-time '..seconds..' --connect-timeout '..math.min(3,seconds)..
+      ' --max-filesize '..limit..' --proto "=https" --noproxy "*" --user-agent "TrafficIconCache/1.1" --resolve '..
+      quote(host..':443:'..table.concat(ips,','))..' --url '..quote(url)..
+      ' 2>/dev/null; printf "\\nTRAFFIC_CURL_EXIT:%s\\n" "$?"'
+    local p=io.popen(cmd,'r'); if not p then return {reason='transfer'} end
+    local raw=p:read(limit+16384+128); p:close()
+    return F.response(raw,limit)
   end
-  for _,ip in ipairs(ipv4) do ipv6[#ipv6+1]=ip end
-  -- Pin the validated address to prevent DNS rebinding. No proxies, cookies,
-  -- redirects, credentials or router session headers are used by this client.
-  local cmd='curl --silent --fail --max-time 4 --connect-timeout 2 --max-filesize '..limit..
-    ' --proto "=https" --noproxy "*" --resolve '..quote(host..':443:'..table.concat(ipv6,','))..
-    ' --url '..quote(url)..' 2>/dev/null'
-  local p=io.popen(cmd,'r'); if not p then return nil end
-  local data=p:read(limit+1)
-  local ok=p:close()
-  if not ok or not data or #data>limit then return nil end
-  return data
-end
+})
 local packaged={}
 local pkg='/www/luci-static/resources/traffic/icons/'
 local slugs={}
@@ -112,6 +101,7 @@ for file in fs.dir(cache) do
   if s and s.type=='reg' then allocated=allocated+(s.blocks or math.ceil(s.size/512))*512 end
 end
 fs.writefile('/tmp/traffic/website-icons.metrics',string.format(
-  'cache=%s\nallocated_bytes=%d\nentries=%d\ncandidate_sites=%d\nscan_at=%d\nlua_heap_kib=%.1f\ncpu_seconds=%.4f\nsampled_at=%d\n',
-  cache,allocated,result.entries,#names,scan_at,collectgarbage('count'),os.clock()-started,os.time()))
+  'cache=%s\nallocated_bytes=%d\nentries=%d\ncandidate_sites=%d\nscan_at=%d\nlua_heap_kib=%.1f\ncpu_seconds=%.4f\nnetwork_requests=%d\nwall_seconds=%d\nsampled_at=%d\n',
+  cache,allocated,result.entries,#names,scan_at,collectgarbage('count'),os.clock()-started,
+  network_stats.requests,nixio.sysinfo().uptime-network_started,os.time()))
 lock:close()

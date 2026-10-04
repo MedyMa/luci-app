@@ -40,6 +40,7 @@ local fs={
 }
 package.loaded['nixio.fs']=fs
 package.loaded.nixio={
+  sysinfo=function() return {uptime=stamp} end,
   open=function(p,flags,mode)
     assert(p=='/tmp/traffic-website-icons.lock' and flags=='w','lock open contract')
     check_mode(mode,'600')
@@ -54,7 +55,11 @@ package.loaded.nixio={
     return {{address='93.184.216.34'}}
   end
 }
-dofile=function(path) if path=='/usr/share/traffic/website-icons-core.lua' then path=core_path end; return real_dofile(path) end
+dofile=function(path)
+  if path=='/usr/share/traffic/website-icons-core.lua' then path=core_path end
+  if path=='/usr/share/traffic/website-icons-fetch.lua' then path=core_path:gsub('website%-icons%-core.lua$','website-icons-fetch.lua') end
+  return real_dofile(path)
+end
 io.open=function(path,mode)
   if path=='/tmp/traffic/totals.tsv' then
     total_opens=total_opens+1
@@ -66,10 +71,10 @@ io.popen=function(command)
   requests=requests+1
   assert(command:find('--max-filesize 65536',1,true),'transfer cap')
   assert(command:find('--resolve',1,true) and command:find(expected_pin,1,true),'validated DNS pin')
-  assert(command:find('--max-time 4 --connect-timeout 2',1,true),'dual-stack preserves time budget')
+  assert(command:find('--max-time 6 --connect-timeout 3',1,true),'bounded request time budget')
   assert(command:find('--noproxy "*"',1,true),'no proxy credentials')
   assert(not command:find(' -L',1,true),'no unchecked redirect')
-  return {read=function() return png end,close=function() return true end}
+  return {read=function() return 'HTTP/2 200\r\n\r\n'..png..'\nTRAFFIC_CURL_EXIT:0\n' end,close=function() return true end}
 end
 dofile(runner_path)
 assert(requests==1 and links['/www/traffic-site-icons']=='/mnt/nvme/traffic-site-icons','shared automatic NVMe cache')
