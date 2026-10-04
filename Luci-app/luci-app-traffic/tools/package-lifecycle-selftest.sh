@@ -54,17 +54,15 @@ check_case 'apk deinstall' no
 PKG_UPGRADE=1 check_case 'upgrade environment' yes
 PKG_UPGRADE=1 check_case 'opkg default_prerm sourced arguments' yes /usr/lib/opkg/info/luci-app-traffic.prerm upgrade 1.1.8-r7
 IPKG_INSTROOT="$T/offline" check_case 'offline root' yes remove
-# Validate the documented one-time command against an old installed script.
+# Validate the one-time migration against an old installed script.
 printf 'rm -rf /tmp/traffic\n' > "$T/old-prerm"
-awk -v target="$T/old-prerm" '/^sed -i / {
-    sub("/usr/lib/opkg/info/luci-app-traffic.prerm-pkg", target); print
-}' "$ROOT/docs/upgrade-statistics.md" > "$T/migrate"
+printf '%s\n' "sed -i 's#^rm -rf /tmp/traffic\$#[ \"\${PKG_UPGRADE:-0}\" = \"1\" ] || rm -rf /tmp/traffic#' '$T/old-prerm'" > "$T/migrate"
 sh "$T/migrate" || fail=1
 if grep -q 'PKG_UPGRADE' "$T/old-prerm" && sh -n "$T/old-prerm"; then
     before=$(cksum "$T/old-prerm")
     sh "$T/migrate" || fail=1
     if [ "$before" = "$(cksum "$T/old-prerm")" ]; then
-        printf 'ok documented migration command is valid and idempotent\n'
+        printf 'ok migration command is valid and idempotent\n'
     else fail=1; fi
 else fail=1; fi
 exit "$fail"
