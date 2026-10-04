@@ -245,7 +245,7 @@ function loadWebsiteIndex() {
 			text.split('\n').forEach(function(line) {
 				var cols = line.trim().split('\t'), host = cols[0];
 				if (cols.length < 2 || cols.length > 3 || !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(host) || host.indexOf('..') >= 0) return;
-				if (cols[1] !== host + '.png' && cols[1] !== host + '.ico') return;
+				if (cols[1] !== host + '.png' && cols[1] !== host + '.ico' && cols[1] !== host + '.svg') return;
 				if (cols.length === 3 && !/^\d+$/.test(cols[2])) return;
 				map[host] = cols[1] + (cols.length === 3 ? '?v=' + cols[2] : '');
 			});

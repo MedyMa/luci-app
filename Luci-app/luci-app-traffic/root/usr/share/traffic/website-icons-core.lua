@@ -1,5 +1,7 @@
 -- Bounded website icon cache policy. Lua 5.1; IO/network supplied by the runner.
 local M = {limit=65536, budget=16*1024*1024, count=4096}
+local source=debug.getinfo(1,'S').source:sub(2)
+local S=dofile(source:gsub('website%-icons%-core.lua$','website-icons-formats.lua'))
 function M.host(name)
   if type(name)~='string' or #name>253 then return nil end
   name=name:lower()
@@ -87,6 +89,22 @@ function M.kind(s)
   end
   -- PNG and ICO cover favicons without accepting active SVG or large animations.
 end
+function M.image(s)
+  local kind=M.kind(s)
+  if kind then return s,kind end
+  local clean=S.svg(s,M.limit)
+  if clean then return clean,'svg' end
+  return nil,nil,'unsupported_format'
+end
+function M.inline(uri)
+  if type(uri)~='string' then return nil end
+  local mime,encoded=uri:match('^data:(image/[%w.+-]+);base64,(.+)$')
+  local kinds={['image/png']='png',['image/x-icon']='ico',['image/vnd.microsoft.icon']='ico',['image/svg+xml']='svg'}
+  if not kinds[mime] then return nil end
+  local decoded=S.base64(encoded,M.limit)
+  local data,kind=M.image(decoded)
+  if kind==kinds[mime] then return data,kind end
+end
 local function entity(s)
   return (s:gsub('&amp;','&'):gsub('&quot;','"'):gsub('&#(%d+);',function(n)
     n=tonumber(n); return n and n>=32 and n<127 and string.char(n) or ''
@@ -149,23 +167,26 @@ function M.candidates(page, host)
       if href~=nil then base=M.url(base,href); break end
     end
   end
-  local result,seen={},{}
+  local result,vectors,seen={},{},{}
   for tag in page:gmatch('<[^>]+>') do
     if tag:lower():match('^<link[%s>]') then
       local attrs=attributes(tag)
       local rel=(attrs.rel or ''):lower()
       local href=attrs.href
-      if href and ((' '..rel..' '):find(' icon ',1,true) or rel=='apple-touch-icon') then
-        href=M.url(base or '',href)
+      if href and ((' '..rel..' '):find(' icon ',1,true) or rel=='apple-touch-icon' or rel=='apple-touch-icon-precomposed') then
+        href=href:match('^data:') and (M.inline(href) and href) or M.url(base or '',href)
         local ext=href and href:lower():gsub('%?.*$',''):match('%.([a-z]+)$')
-        local unsupported=({svg=true,webp=true,gif=true,jpg=true,jpeg=true,avif=true})[ext or '']
+        local unsupported=({webp=true,gif=true,jpg=true,jpeg=true,avif=true})[ext or '']
         if href and not unsupported and not seen[href] then
-          seen[href]=true; result[#result+1]=href
+          seen[href]=true
+          local target=(ext=='svg' or href:match('^data:image/svg')) and vectors or result
+          if #target<3 then target[#target+1]=href end
           if #result>=3 then break end
         end
       end
     end
   end
+  for _,href in ipairs(vectors) do if #result<3 then result[#result+1]=href end end
   return result
 end
 local function trim(env, records)
@@ -211,7 +232,7 @@ function M.run(env, names, packaged)
   local old=env.read('records.tsv') or ''
   for line in old:gmatch('[^\n]+') do
     local host,good,bad,file,reason=line:match('^([^\t]+)\t(%d+)\t(%d+)\t([^\t]*)\t?([^\t]*)$')
-    if M.host(host) and (file=='' or file==host..'.png' or file==host..'.ico') then
+    if M.host(host) and (file=='' or file==host..'.png' or file==host..'.ico' or file==host..'.svg') then
       records[host]={good=tonumber(good),bad=tonumber(bad),file=file,
         reason=reason and reason:match('^[a-z0-9_]*$') and reason:sub(1,32) or ''}
     end
@@ -220,7 +241,7 @@ function M.run(env, names, packaged)
   -- left by interruption and all .new files, under the runner's exclusive lock.
   for _,file in ipairs(env.list()) do
     if file:match('%.new$') then env.remove(file)
-    elseif file:match('%.png$') or file:match('%.ico$') then
+    elseif file:match('%.png$') or file:match('%.ico$') or file:match('%.svg$') then
       local host=file:gsub('%.[^.]+$','')
       if not records[host] or records[host].file~=file then env.remove(file); dirty=true end
     end
@@ -254,13 +275,14 @@ function M.run(env, names, packaged)
       for _,origin in ipairs(origins) do
         local final,why
         data,final,why=env.fetch('https://'..origin..'/favicon.ico',M.limit)
-        kind=M.kind(data); reason=why or (data and 'unsupported_format') or reason
+        data,kind=M.image(data); reason=why or (not kind and 'unsupported_format') or reason
         if not kind then
           local page,page_url,page_why=env.fetch('https://'..origin..'/',M.limit)
           reason=page_why or (page and 'no_supported_icon') or reason
           for _,url in ipairs(M.candidates(page,page_url or origin)) do
-            data,final,why=env.fetch(url,M.limit); kind=M.kind(data)
-            reason=why or (data and 'unsupported_format') or reason
+            if url:match('^data:') then data,kind=M.inline(url); why=nil
+            else data,final,why=env.fetch(url,M.limit); data,kind=M.image(data) end
+            reason=why or (not kind and 'unsupported_format') or reason
             if kind then break end
           end
         end

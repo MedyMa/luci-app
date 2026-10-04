@@ -932,9 +932,10 @@ pendingIndex.then(()=>{
   const unknownIcon=global.__iconTest.makeIcon('qrstuuvwxyzab.com');
   chk(flat(unknownIcon).indexOf('QR')>=0,
     '无图标的域名显示可区分的双字母标识');
-  global.__iconTest.setWebsites({'comfylink.com':'comfylink.com.png?v=100','starrydyn.com':'starrydyn.com.ico?v=100'});
+  global.__iconTest.setWebsites({'comfylink.com':'comfylink.com.png?v=100','starrydyn.com':'starrydyn.com.ico?v=100', 'vector.com':'vector.com.svg?v=100'});
   const pngBox=global.__iconTest.makeIcon('comfylink.com');
   const icoBox=global.__iconTest.makeIcon('starrydyn.com');
+  const svgBox=global.__iconTest.makeIcon('vector.com');
   global.__iconTest.setWebsites({'example.com':'example.com.png?v=1',
     'api.example.com':'api.example.com.ico?v=2',
     'example.co.uk':'example.co.uk.png','co.uk':'co.uk.png',
@@ -964,11 +965,12 @@ pendingIndex.then(()=>{
   chk(imageRequests[imageRequests.length-1].includes('stripe.svg'),
     '网站父域缓存不会覆盖包内品牌图标');
   chk(imageRequests.includes('/traffic-site-icons/comfylink.com.png?v=100') &&
-      imageRequests.includes('/traffic-site-icons/starrydyn.com.ico?v=100'),
-    '网站缓存 PNG / ICO 从路由器同源读取并带更新版本');
+      imageRequests.includes('/traffic-site-icons/starrydyn.com.ico?v=100') &&
+      imageRequests.includes('/traffic-site-icons/vector.com.svg?v=100'),
+    '网站缓存 PNG / ICO / SVG 从路由器同源读取并带更新版本');
   return Promise.resolve().then(async ()=>{
-    chk([pngBox,icoBox].every(box=>box.children.some(n=>n.tag==='img')),
-      '网站 PNG / ICO 加载完成后实际替换字母占位');
+    chk([pngBox,icoBox,svgBox].every(box=>box.children.some(n=>n.tag==='img')),
+      '网站 PNG / ICO / SVG 加载完成后实际替换字母占位');
     const originalFetch=global.fetch;
     global.fetch=async()=>({ok:true,text:async()=>Array.from({length:300},(_,i)=>
       `site${i}.com\tsite${i}.com.png\t100`).join('\n')});
