@@ -278,6 +278,29 @@ return view.extend({
 		linksBox.addEventListener('input', function() { channelSelect.value = 'custom'; });
 
 		var m = new form.Map('AdGuardHome', null, t('Grouped service, network, update and maintenance options. Use Save & Apply after changing UCI settings.', '设置项已按服务、网络、更新和维护分组。修改 UCI 配置后请点击保存并应用。'));
+		// Removal events can validate detached widgets while LuCI replaces the form.
+		// Check dependencies after replacement, then resume normal input validation.
+		var checkDepends = m.checkDepends;
+		var renderContents = m.renderContents;
+		m.checkDepends = function() {
+			if (this._aghRendering)
+				return;
+			return checkDepends.apply(this, arguments);
+		};
+		m.renderContents = function() {
+			var map = this;
+			map._aghRendering = true;
+			return Promise.resolve().then(function() {
+				return renderContents.call(map);
+			}).then(function(node) {
+				map._aghRendering = false;
+				map.checkDepends();
+				return node;
+			}, function(err) {
+				map._aghRendering = false;
+				throw err;
+			});
+		};
 		var s = m.section(form.NamedSection, 'AdGuardHome', 'AdGuardHome', t('Configuration', '配置'));
 		s.addremove = false;
 		s.anonymous = true;
@@ -322,7 +345,14 @@ return view.extend({
 		// DummyValue tools are rendered in their relevant tabs; they never write UCI.
 		function tools(tab, name, build) {
 			var item = s.taboption(tab, form.DummyValue, name, '');
-			item.renderWidget = function() { return build(); };
+			var renderDummy = item.renderWidget;
+			item.renderWidget = function() {
+				// Keep LuCI's registered Hiddenfield for dependency validation after save.
+				return E('div', {}, [
+					E('div', { 'style': 'display:none' }, renderDummy.apply(this, arguments)),
+					build()
+				]);
+			};
 		}
 		tools('service', '_agh_password', passwordCard);
 		tools('update', '_agh_core', function() { return updateCard(rpcError); });

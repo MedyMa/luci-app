@@ -37,7 +37,32 @@ permissions:
   contents: write
 
 jobs:
+  ui-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        luci_revision:
+          - 'ad0b5676921df503d322454029839a856d17a07c' # 24.10
+          - '2858f8d98b270bd3baf30a1d19c6e26df22c3197' # 25.12
+    env:
+      AGH_LUCI_REVISION: ${{ matrix.luci_revision }}
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.2
+      - name: Install browser test runtime
+        run: |
+          npm install --prefix "$RUNNER_TEMP/agh-ui" playwright@1.62.1
+          "$RUNNER_TEMP/agh-ui/node_modules/.bin/playwright" install --with-deps chromium
+          echo "NODE_PATH=$RUNNER_TEMP/agh-ui/node_modules" >> "$GITHUB_ENV"
+      - name: Run LuCI functional regression
+        run: node Luci-app/luci-app-adguardhome/tools/ui-regression.cjs
+
   build:
+    needs: ui-regression
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
