@@ -117,7 +117,8 @@ if(name==='yaml')await page.waitForFunction(()=>currentView._aghCmInstance);}
  await page.evaluate(async()=>{Object.defineProperty(document,'hidden',{value:true,configurable:true});for(const p of testPolls)await p.fn();delete document.hidden;});assert(!calls.some(c=>c.method==='getLog'));checks++;
  calls=[];await page.evaluate(()=>Promise.all(testPolls.flatMap(p=>[p.fn(),p.fn(),p.fn()])));assert.equal(calls.filter(c=>c.method==='getLog').length,1,'Concurrent log polling is coalesced');checks++;
  await open('overview');assert.equal(await page.locator('.agh-grid .agh-card').count(),4);checks++;
- await open('overview');assert.deepEqual(await page.evaluate(()=>testPolls.map(p=>p.interval)),[15,30]);checks++;
+ assert.equal(await page.locator('.agh-flow').count(),0);assert.equal(await page.locator('.agh-heading a').textContent(),'控制面板');assert(!/[↗→]/.test(await page.locator('.agh-ui').textContent()));assert.equal(new Set(await page.locator('.agh-stats-grid .agh-value').evaluateAll(es=>es.map(e=>getComputedStyle(e).color))).size,4);checks+=4;
+ await open('overview');assert.deepEqual(await page.evaluate(()=>testPolls.map(p=>p.interval)),[15,10]);checks++;
  calls=[];await page.evaluate(async()=>{Object.defineProperty(document,'hidden',{value:true,configurable:true});for(const p of testPolls)await p.fn();delete document.hidden;});assert.equal(calls.length,0,'Hidden overview performs no automatic requests');checks++;
  // Drain scheduled polling before explicitly controlling the response order.
  await page.evaluate(async()=>{const poll=await L.require('poll');poll.stop();for(const p of testPolls)await p.fn();});

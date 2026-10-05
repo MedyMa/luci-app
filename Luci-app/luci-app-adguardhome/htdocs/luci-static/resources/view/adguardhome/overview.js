@@ -340,35 +340,21 @@ return view.extend({
 			E('a', { 'class': 'btn', href: settingsUrl }, t('Open Settings'))
 		]));
 
-		var qCard = card(t('DNS Queries'), '—', '');
-		var bCard = card(t('Blocked'), '—', '');
-		var rCard = card(t('Blocked Ratio'), '—', '');
-		var aCard = card(t('Avg. Processing'), '—', '');
+		var qCard = card(t('DNS Queries'), '—', 'agh-stat-queries');
+		var bCard = card(t('Blocked'), '—', 'agh-stat-blocked');
+		var rCard = card(t('Blocked Ratio'), '—', 'agh-stat-ratio');
+		var aCard = card(t('Avg. Processing'), '—', 'agh-stat-latency');
 		var statsSectionRef = E('section', { 'class': 'agh-grid agh-stats-grid' }, [qCard,bCard,rCard,aCard]);
 		var queriesEl=qCard.querySelector('.agh-value'), blockedEl=bCard.querySelector('.agh-value');
 		var ratioEl=rCard.querySelector('.agh-value'), avgTimeEl=aCard.querySelector('.agh-value');
 		root.appendChild(statsSectionRef);
 		var statsNote=E('div',{'class':'agh-stat-note'},'');root.appendChild(statsNote);
 		updateStatsCards(stats);
-		function flowNode(name, label, active) {return E('div',{'class':'agh-flow-node'+(active?' agh-ok':'')},[aghui.icon(name),E('span',{},label)]);}
-		var flowContainer = E('div', { 'class':'agh-flow','aria-label':t('Configured DNS path','配置的 DNS 接入方式') });
-		var flowNote = E('p', { 'class':'agh-flow-note' });
-		function refreshFlow(s) {
-			var nodes=[flowNode('device',t('LAN devices','局域网设备'))];
-			if(effectiveRedirectMode(s)==='dnsmasq-upstream')nodes.push(flowNode('router','dnsmasq'));
-			nodes.push(flowNode('shield','AdGuard Home',yes(s.running)),flowNode('server',t('Upstream DNS','上游 DNS')));
-			flowContainer.replaceChildren();
-			nodes.forEach(function(node,i){if(i)flowContainer.appendChild(E('span',{'class':'agh-flow-arrow','aria-hidden':'true'},'→'));flowContainer.appendChild(node);});
-			flowNote.textContent = !yes(s.running) ? t('Service stopped; the configured DNS path is inactive.','服务已停止，图示仅表示配置的接入方式。') : !yes(s.redirected) && effectiveRedirectMode(s)==='none' ? t('DNS access is not active. Check settings.','DNS 接入尚未生效，请检查设置。') : '';
-		}
-		refreshFlow(status);
 		function infoRow(label, value, cls) {
 			return E('div', { 'class': 'agh-info-row' }, [E('span', {}, label), E('strong', { 'class': cls || '' }, value)]);
 		}
 		root.appendChild(E('section', { 'class': 'agh-card agh-access' }, [
 			E('h3', { 'class': 'agh-section-title' }, t('DNS Access', 'DNS 接入')),
-			flowContainer,
-			flowNote,
 			E('div', { 'class': 'agh-info' }, [
 				E('div', { 'class': 'agh-redirect-chip agh-info-row' }, [E('span', {}, t('Running Mode')), E('strong', {}, redirectModeLabel(effectiveRedirectMode(status)))]),
 				infoRow(t('DNS Port'), text(status.dns_port, rpcError ? '?' : '-')),
@@ -378,11 +364,11 @@ return view.extend({
 			(!rpcError && yes(status.redirect_compat)) ? renderRedirectCompatAlert(status) : ''
 		]));
 
-		function operation(name,title,detail,url){return E('a',{'class':'agh-operation','href':url},[aghui.icon(name),E('span',{},title),E('span',{},detail+' ↗')]);}
+		function operation(name,title,detail,url){return E('a',{'class':'agh-operation','href':url},[aghui.icon(name),E('span',{},title),E('span',{},detail)]);}
 		function check(label,ready){return E('div',{'class':'agh-check'},[E('span',{'class':ready?'agh-ok':'agh-warn'},aghui.icon('check')),E('span',{},label),E('span',{'class':ready?'agh-ok':'agh-warn'},ready?t('Ready','可用'):t('Missing','缺失'))]);}
 		var updateOperation=operation('update',t('Core update','核心更新'),yes(status.update_running)?t('Task running','任务运行中'):t('Check version','检查版本'),settingsUrl+'#update');
 		root.appendChild(E('div',{'class':'agh-bottom-grid'},[
-		 E('section',{'class':'agh-card'},[E('h3',{'class':'agh-section-title'},t('Common operations','常用操作')),operation('shield',t('Filters and clients','过滤规则与客户端'),t('In the native console','在原生控制台管理'),panelUrl(status)),operation('log',t('Runtime Logs','运行日志'),t('View service output','查看服务输出'),L.url('admin','services','adguardhome','log')),updateOperation]),
+		 E('section',{'class':'agh-card'},[E('h3',{'class':'agh-section-title'},t('Common operations','常用操作')),operation('shield',t('Filters and clients','过滤规则与客户端'),t('Control Panel','控制面板'),panelUrl(status)),operation('log',t('Runtime Logs','运行日志'),t('View service output','查看服务输出'),L.url('admin','services','adguardhome','log')),updateOperation]),
 		 E('section',{'class':'agh-card'},[E('h3',{'class':'agh-section-title'},t('Configuration checks','配置检查')),check(t('Core Binary','核心文件'),yes(status.core_ready)),check(t('Config File','配置文件'),yes(status.config_ready)),check(t('Workspace','工作目录'),yes(status.workdir_ready))])
 		]));
 		root.appendChild(E('details', { 'class': 'agh-card' }, [
@@ -407,9 +393,8 @@ return view.extend({
 				redirectChip.textContent = redirectModeLabel(effectiveRedirectMode(s));
 				redirectChip.className = isRedir ? 'agh-ok' : '';
 			}
-			refreshFlow(s);
 			var updateDetail=updateOperation.lastElementChild;
-			updateDetail.textContent=(yes(s.update_running)?t('Task running','任务运行中'):t('Check version','检查版本'))+' ↗';
+			updateDetail.textContent=(yes(s.update_running)?t('Task running','任务运行中'):t('Check version','检查版本'));
 			updateDetail.classList.toggle('agh-warn',yes(s.update_running));
 		}
 
@@ -456,7 +441,7 @@ return view.extend({
 			_pollHandles.length = 0;
 			if (typeof poll !== 'undefined' && poll.add) {
 				_pollHandles.push(poll.add(refreshStatus, 15));
-				_pollHandles.push(poll.add(refreshStats, 30));
+				_pollHandles.push(poll.add(refreshStats, 10));
 			}
 		}
 
