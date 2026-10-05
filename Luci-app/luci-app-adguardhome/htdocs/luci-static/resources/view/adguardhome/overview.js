@@ -331,7 +331,7 @@ return view.extend({
 			root.appendChild(E('section', { 'class': 'agh-alert' }, actionError(rpcError, t('Overview data unavailable'))));
 		if (!rpcError && yes(status.redirect_conflict))
 			root.appendChild(E('section', { 'class': 'agh-alert' }, redirectConflictMessage(status)));
-		root.appendChild(aghui.header('overview'));
+		root.appendChild(aghui.header());
 		root.appendChild(E('section', { 'class': 'agh-statusbar' }, [
 			E('div', {}, [
 				E('span', { 'class': 'agh-service-chip' }, E('strong', { 'class': 'agh-state ' + (rpcError ? 'agh-bad' : stateClass) }, rpcError ? t('Backend missing') : state)),

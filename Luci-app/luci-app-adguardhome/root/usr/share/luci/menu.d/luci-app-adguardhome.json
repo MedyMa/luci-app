@@ -2,36 +2,40 @@
 	"admin/services/adguardhome": {
 		"title": "AdGuard Home",
 		"order": 40,
-		"action": { "type": "view", "path": "adguardhome/overview" },
+		"action": { "type": "firstchild" },
 		"depends": { "acl": [ "luci-app-adguardhome" ] }
 	},
 
 	"admin/services/adguardhome/overview": {
+		"title": "Overview",
 		"order": 10,
 		"action": { "type": "view", "path": "adguardhome/overview" },
-		"depends": { "acl": [ "luci-app-adguardhome" ] },
-		"hidden": true
+		"depends": { "acl": [ "luci-app-adguardhome" ] }
 	},
 
 	"admin/services/adguardhome/settings": {
+		"title": "Settings",
 		"order": 20,
 		"action": { "type": "view", "path": "adguardhome/settings" },
-		"depends": { "acl": [ "luci-app-adguardhome" ] },
-		"hidden": true
+		"depends": { "acl": [ "luci-app-adguardhome" ] }
 	},
 
 	"admin/services/adguardhome/yaml": {
 		"hidden": true,
-		"order": 30,
+		"order": 40,
+		"action": { "type": "alias", "path": "admin/services/adguardhome/settings/yaml" },
+		"depends": { "acl": [ "luci-app-adguardhome" ] }
+	},
+	"admin/services/adguardhome/settings/yaml": {
+		"hidden": true,
 		"action": { "type": "view", "path": "adguardhome/yaml" },
 		"depends": { "acl": [ "luci-app-adguardhome" ] }
 	},
-
 	"admin/services/adguardhome/log": {
+		"title": "AdGuard Home Diagnostics",
 		"order": 30,
 		"action": { "type": "view", "path": "adguardhome/log" },
-		"depends": { "acl": [ "luci-app-adguardhome" ] },
-		"hidden": true
+		"depends": { "acl": [ "luci-app-adguardhome" ] }
 	},
 
 	"admin/services/AdGuardHome": {

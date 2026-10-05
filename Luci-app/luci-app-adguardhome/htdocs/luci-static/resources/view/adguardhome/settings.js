@@ -355,6 +355,7 @@ return view.extend({
 				]);
 			};
 		}
+		tools('files', '_agh_yaml', function(){return E('div',{'class':'agh-row'},E('a',{'class':'btn',href:L.url('admin','services','adguardhome','settings','yaml')},t('YAML Editor','YAML 编辑器')));});
 		tools('files', '_agh_password', function(){return E('details',{'class':'agh-settings-detail'},[E('summary',{},t('Password Hash Helper','密码哈希助手')),passwordCard()]);});
 		tools('update', '_agh_core', function() { return updateCard(rpcError); });
 		tools('update', '_agh_sources', function() { return linksCard(channelSelect, archSelect, linksBox, rpcError); });
@@ -363,7 +364,7 @@ return view.extend({
 		return m.render().then(function(formNode) {
 			return applyThemeClass(E('div', { 'class': 'agh-settings agh-ui' }, [
 				E('style', {}, style),
-				aghui.header('settings'),
+				aghui.header(),
 				formNode
 			]), 'agh-dark');
 		});

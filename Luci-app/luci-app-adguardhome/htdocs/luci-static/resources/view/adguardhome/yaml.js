@@ -334,8 +334,7 @@ return view.extend({
 
 		var node = applyThemeClass(E('div', { 'class': 'agh-yaml agh-ui' }, [
 			E('style', {}, style),
-			aghui.header('yaml'),
-			aghui.diagnostics('yaml'),
+			aghui.header(),
 			E('section', { 'class': 'agh-card' }, [
 				rpcError ? E('div', { 'class': 'agh-alert' }, actionError(rpcError, t('YAML backend unavailable', 'YAML 后端不可用'))) : '',
 				lockNote || '',

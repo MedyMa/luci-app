@@ -63,21 +63,22 @@ const server=http.createServer(async(req,res)=>{
  const browser=await chromium.launch({executablePath:process.env.AGH_BROWSER_PATH||undefined,headless:true});
  const page=await browser.newPage({viewport:{width:1280,height:1000}});
  const errors=[];page.on('pageerror',e=>errors.push(e.stack));let checks=0;
- async function open(name){calls=[];await page.goto(base);await page.waitForFunction(()=>L.loaded,{timeout:45000});await page.evaluate(async n=>{const poll=await L.require('poll');window.testPolls=[];const add=poll.add;poll.add=function(fn,interval){testPolls.push({fn,interval});return add.call(this,fn,interval);};window.currentView=await L.require('view.adguardhome.'+n)},name);await page.locator(name==='settings'?'.agh-settings':'.agh-ui').waitFor();
- await page.evaluate(async defs=>{
+ async function open(name){calls=[];await page.goto(base);await page.waitForFunction(()=>L.loaded,{timeout:45000});await page.evaluate(async n=>{window._=s=>translations[s]||s;const poll=await L.require('poll');window.testPolls=[];const add=poll.add;poll.add=function(fn,interval){testPolls.push({fn,interval});return add.call(this,fn,interval);};window.currentView=await L.require('view.adguardhome.'+n)},name);await page.locator(name==='settings'?'.agh-settings':'.agh-ui').waitFor();
+ await page.evaluate(async ({defs,name})=>{
   const tree={children:{}};
   for(const [url,entry] of Object.entries(defs)){let n=tree;for(const part of url.split('/')){n.children??={};n.children[part]??={children:{},satisfied:true};n=n.children[part];}Object.assign(n,entry,{satisfied:true});}
   const node=tree.children.admin.children.services.children.adguardhome;
   window.aghMenuTree=node;
   const source=await (await fetch('/menu-argon.js')).text();
   const theme=new Function('baseclass','ui',source)({extend:o=>o},L.ui);
+  L.env.dispatchpath=name==='yaml'?['admin','services','adguardhome','settings','yaml']:['admin','services','adguardhome',name];
   theme.renderTabMenu(node,'admin/services/adguardhome');
   tree.children.admin.children.services.title='服务';
-  L.env.dispatchpath=['admin','services','adguardhome'];
   theme.renderMainMenu(tree.children.admin,'admin');
- },menuConfig);
- assert.equal(await page.locator('#tabmenu a').count(),0,'No duplicate Argon navigation');
- assert.equal(await page.locator('.agh-nav a').count(),3);checks+=2;
+ },{defs:menuConfig,name});
+ assert.deepEqual(await page.locator('#tabmenu a').allTextContents(),['概览','设置','诊断']);
+ assert.equal(await page.locator('#tabmenu li.active a').getAttribute('href'),'/cgi-bin/luci/admin/services/adguardhome/'+(name==='yaml'?'settings':name));
+ assert.equal(await page.locator('.agh-nav,.agh-subnav').count(),0,'Only native Argon navigation');checks+=3;
 if(name==='yaml')await page.waitForFunction(()=>currentView._aghCmInstance);}
  async function clickAndWait(button,method){const response=page.waitForResponse(r=>r.request().method()==='POST'&&(method==='readDirect'?new URL(r.url()).pathname.endsWith('/cgi-download'):(r.request().postData()||'').includes('"'+method+'"')));await button.click();await response;}
  await open('settings');
@@ -91,6 +92,7 @@ if(name==='yaml')await page.waitForFunction(()=>currentView._aghCmInstance);}
  let invalid=false;try{await page.evaluate(()=>currentView.handleSave())}catch{invalid=true;}assert(invalid);assert.equal(config.httpport,'3000');await page.evaluate(()=>L.ui.hideModal());checks+=2;
  await page.locator('[data-name="httpport"] input').fill('3001');await page.evaluate(()=>currentView.handleSave());assert.equal(config.httpport,'3001');checks++;
 	await page.getByRole('link',{name:'高级选项',exact:true}).click();
+ assert.equal(await page.locator('[data-name=_agh_yaml] a.btn').getAttribute('href'),'/cgi-bin/luci/admin/services/adguardhome/settings/yaml');assert.equal(await page.locator('[data-name=_agh_yaml] a.btn').textContent(),'YAML 编辑器');checks+=2;
 	await page.locator('.agh-settings-detail summary').click();
  // Actual bundled bcrypt script runs; generated fields must reach actual UCI save.
  await page.locator('.agh-action-password input').fill('ui-regression-secret');await page.getByRole('button',{name:'生成哈希',exact:true}).click();
@@ -130,7 +132,7 @@ if(name==='yaml')await page.waitForFunction(()=>currentView._aghCmInstance);}
 
  running=false;await open('overview');assert.equal(await page.locator('.agh-stats-grid .agh-value').allTextContents().then(x=>x.join('|')),'—|—|—|—');assert(!calls.some(c=>c.method==='getStats'),'Stopped service does not query stats API');checks+=2;
  running=true;failure='getStats';await open('overview');assert.equal(await page.locator('.agh-stats-grid .agh-card').count(),4);assert((await page.locator('.agh-stat-note').textContent()).includes('统计暂不可用'));failure=null;checks+=2;
- await page.setViewportSize({width:2560,height:1440});await open('overview');await page.evaluate(()=>document.body.classList.add('dark'));await page.waitForTimeout(150);assert((await page.locator('.agh-ui').boundingBox()).width<=1120);assert.equal(await page.locator('.agh-nav').textContent(),'概览设置诊断');checks+=2;
+ await page.setViewportSize({width:2560,height:1440});await open('overview');await page.evaluate(()=>document.body.classList.add('dark'));await page.waitForTimeout(150);assert((await page.locator('.agh-ui').boundingBox()).width<=1120);assert.equal(await page.locator('#tabmenu').textContent(),'概览设置诊断');checks+=2;
  if(process.env.AGH_SCREENSHOT_DIR){fs.mkdirSync(process.env.AGH_SCREENSHOT_DIR,{recursive:true});await page.screenshot({path:path.join(process.env.AGH_SCREENSHOT_DIR,'real-argon-overview.png'),fullPage:true});await open('settings');await page.evaluate(()=>document.body.classList.add('dark'));await page.waitForTimeout(150);await page.getByRole('link',{name:'基础设置',exact:true}).click();await page.screenshot({path:path.join(process.env.AGH_SCREENSHOT_DIR,'real-argon-settings.png'),fullPage:true});}
  for(const name of ['overview','settings','log','yaml']){await open(name);await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,name+' mobile overflow');checks++;}
  await open('settings');await page.getByRole('link',{name:'基础设置',exact:true}).click();assert.equal(await page.locator('div[data-tab=service]').evaluate(e=>getComputedStyle(e).backgroundColor),'rgba(0, 0, 0, 0)');assert.equal(await page.locator('[data-name=username] .cbi-value-title').evaluate(e=>getComputedStyle(e).textAlign),'left');checks+=2;

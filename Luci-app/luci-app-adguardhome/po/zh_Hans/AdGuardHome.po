@@ -497,7 +497,7 @@ msgstr "网络 DNS 防护"
 
 #: htdocs/luci-static/resources/view/adguardhome/overview.js
 msgid "Control Panel"
-msgstr "打开面板"
+msgstr "控制面板"
 
 #: htdocs/luci-static/resources/view/adguardhome/overview.js
 msgid "Open Settings"
@@ -590,3 +590,19 @@ msgstr "工作目录"
 #: htdocs/luci-static/resources/view/adguardhome/overview.js
 msgid "DNS statistics fetch failed."
 msgstr "DNS 统计获取失败。"
+
+#: root/usr/share/luci/menu.d/luci-app-adguardhome.json
+msgid "Overview"
+msgstr "概览"
+
+#: root/usr/share/luci/menu.d/luci-app-adguardhome.json
+msgid "Settings"
+msgstr "设置"
+
+#: root/usr/share/luci/menu.d/luci-app-adguardhome.json
+msgid "AdGuard Home Diagnostics"
+msgstr "诊断"
+
+#: root/usr/share/luci/menu.d/luci-app-adguardhome.json
+msgid "YAML Editor"
+msgstr "YAML 编辑器"
