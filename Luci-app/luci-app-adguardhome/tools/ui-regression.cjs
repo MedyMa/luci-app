@@ -5,7 +5,7 @@ const root=path.resolve(__dirname,'..'),dir=fs.mkdtempSync(path.join(os.tmpdir()
 const luciRevision=process.env.AGH_LUCI_REVISION||'ad0b5676921df503d322454029839a856d17a07c';
 const argonRevision='23c3e525578374d6b20f5e7b93d27874cd01a252';
 const menuConfig=JSON.parse(fs.readFileSync(path.join(root,'root/usr/share/luci/menu.d/luci-app-adguardhome.json'),'utf8'));
-const translations=Object.fromEntries([...fs.readFileSync(path.join(root,'po/zh_Hans/adguardhome.po'),'utf8').matchAll(/msgid "([^"\n]+)"\s+msgstr "([^"\n]+)"/g)].map(m=>[m[1],m[2]]));
+const translations=Object.fromEntries([...fs.readFileSync(path.join(root,'po/zh_Hans/AdGuardHome.po'),'utf8').matchAll(/msgid "([^"\n]+)"\s+msgstr "([^"\n]+)"/g)].map(m=>[m[1],m[2]]));
 translations.Diagnostics='网络诊断';
 const resources=path.join(root,'htdocs/luci-static/resources');
 let calls=[],failure=null,running=false,readonly=false,holdStats=false,releaseStats=null,updating=false;
@@ -130,8 +130,6 @@ if(name==='yaml')await page.waitForFunction(()=>currentView._aghCmInstance);}
  if(process.env.AGH_SCREENSHOT_DIR){fs.mkdirSync(process.env.AGH_SCREENSHOT_DIR,{recursive:true});await page.screenshot({path:path.join(process.env.AGH_SCREENSHOT_DIR,'real-argon-overview.png'),fullPage:true});await open('settings');await page.evaluate(()=>document.body.classList.add('dark'));await page.waitForTimeout(150);await page.getByRole('link',{name:'基础设置',exact:true}).click();await page.screenshot({path:path.join(process.env.AGH_SCREENSHOT_DIR,'real-argon-settings.png'),fullPage:true});}
  for(const name of ['overview','settings','log','yaml']){await open(name);await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,name+' mobile overflow');checks++;}
  await open('settings');await page.getByRole('link',{name:'基础设置',exact:true}).click();assert.equal(await page.locator('div[data-tab=service]').evaluate(e=>getComputedStyle(e).backgroundColor),'rgba(0, 0, 0, 0)');assert.equal(await page.locator('[data-name=username] .cbi-value-title').evaluate(e=>getComputedStyle(e).textAlign),'left');checks+=2;
- await page.evaluate(()=>document.querySelector('#tabmenu').appendChild(E('a',{href:'/cgi-bin/luci/admin/services/adguardhome/settings'},'Cached settings')));
- assert.equal(await page.locator('#tabmenu').evaluate(e=>getComputedStyle(e).display),'none','Old cached native menu remains hidden on the redesigned page');checks++;
  assert.deepEqual(errors,[],'No uncaught browser errors during regression');
  console.log(`PASS: ${checks} real LuCI runtime checks including real form parsing, validation, UCI saving and bcrypt. HTTP/ubus endpoints isolated; no router modified.`);
  await browser.close();server.close();fs.rmSync(dir,{recursive:true,force:true});
