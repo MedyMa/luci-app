@@ -42,6 +42,15 @@ function text(value, fallback) {
 	return value || fallback || '-';
 }
 
+// AdGuard Home /control/stats reports average processing time in seconds.
+function formatProcessingTime(value) {
+	if (value == null || String(value).trim() === '') return '—';
+	var milliseconds = Number(value) * 1000;
+	if (!Number.isFinite(milliseconds) || milliseconds < 0) return '—';
+	if (milliseconds > 0 && milliseconds < 0.001) return '<0.001 ms';
+	return String(Number(milliseconds.toFixed(3))) + ' ms';
+}
+
 function isDarkTheme() {
 	if (typeof window === 'undefined' || typeof document === 'undefined' || !document.body)
 		return false;
@@ -436,11 +445,14 @@ return view.extend({
 			var qi = parseInt(s.num_dns_queries, 10) || 0;
 			var bi = parseInt(s.num_blocked_filtering, 10) || 0;
 			var pct = qi > 0 ? ((bi / qi) * 100).toFixed(1) : '0.0';
-			var at = text(s.avg_processing_time, '0');
+			var at = formatProcessingTime(s.avg_processing_time);
 			if (queriesEl) queriesEl.textContent = nq;
 			if (blockedEl) blockedEl.textContent = nb;
 			if (ratioEl) ratioEl.textContent = pct + '%';
-			if (avgTimeEl) avgTimeEl.textContent = at + ' ms';
+			if (avgTimeEl) {
+				if (at === '—') avgTimeEl.textContent = at;
+				else avgTimeEl.replaceChildren(document.createTextNode(at.slice(0, -3)), E('small', {}, ' ms'));
+			}
 		}
 
 		var _pollHandles = this._aghPollHandles;
