@@ -119,10 +119,12 @@ if(name==='yaml')await page.waitForFunction(()=>currentView._aghCmInstance);}
  await open('overview');assert.equal(await page.locator('.agh-grid .agh-card').count(),4);checks++;
  await open('overview');assert.deepEqual(await page.evaluate(()=>testPolls.map(p=>p.interval)),[15,30]);checks++;
  calls=[];await page.evaluate(async()=>{Object.defineProperty(document,'hidden',{value:true,configurable:true});for(const p of testPolls)await p.fn();delete document.hidden;});assert.equal(calls.length,0,'Hidden overview performs no automatic requests');checks++;
+ // Drain scheduled polling before explicitly controlling the response order.
+ await page.evaluate(async()=>{const poll=await L.require('poll');poll.stop();for(const p of testPolls)await p.fn();});
  holdStats=true;calls=[];await page.evaluate(()=>{window.delayedStats=testPolls[1].fn();});
  for(let n=0;!releaseStats&&n<100;n++)await new Promise(r=>setTimeout(r,20));assert(releaseStats,'Delayed stats request started');
  running=false;updating=true;await page.evaluate(()=>testPolls[0].fn());holdStats=false;releaseStats();releaseStats=null;await page.evaluate(()=>delayedStats);
- assert.equal(await page.locator('.agh-stats-grid .agh-value').allTextContents().then(x=>x.join('|')),'—|—|—|—');assert((await page.locator('.agh-bottom-grid').textContent()).includes('任务运行中'));updating=false;checks+=2;
+ assert.equal(await page.locator('.agh-stats-grid .agh-value').allTextContents().then(x=>x.join('|')),'—|—|—|—');assert.equal(await page.locator('.agh-bottom-grid .agh-operation').last().locator('span').last().evaluate(e=>e.classList.contains('agh-warn')),true,'Update task remains visibly active during status refresh');updating=false;checks+=2;
 
  running=false;await open('overview');assert.equal(await page.locator('.agh-stats-grid .agh-value').allTextContents().then(x=>x.join('|')),'—|—|—|—');assert(!calls.some(c=>c.method==='getStats'),'Stopped service does not query stats API');checks+=2;
  running=true;failure='getStats';await open('overview');assert.equal(await page.locator('.agh-stats-grid .agh-card').count(),4);assert((await page.locator('.agh-stat-note').textContent()).includes('统计暂不可用'));failure=null;checks+=2;
