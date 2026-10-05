@@ -302,11 +302,12 @@ return view.extend({
 			});
 		};
 		var s = m.section(form.NamedSection, 'AdGuardHome', 'AdGuardHome', t('Configuration', '配置'));
+		if (/^#(?:service|network|files|update|rules|maintenance)$/.test(window.location.hash))s.selected_tab=window.location.hash.slice(1);
 		s.addremove = false;
 		s.anonymous = true;
 		s.tab('service', t('Basic settings', '基础设置'), t('Enable the daemon and define how it starts.', '启用守护进程并设置启动方式。'));
 		s.tab('network', t('DNS Access', 'DNS 接入'), t('Management port and DNS redirect behaviour.', '网页管理端口与 DNS 重定向行为。'));
-		s.tab('files', t('File paths', '文件路径'), t('Binary, YAML, workspace and log paths.', '核心文件、YAML、工作目录和日志路径。'));
+		s.tab('files', t('Advanced options', '高级选项'), t('Binary, YAML, workspace and log paths.', '核心文件、YAML、工作目录和日志路径。'));
 		s.tab('update', t('Core update', '核心更新'), t('Core update source and startup update behaviour.', '核心更新源和启动更新行为。'));
 		s.tab('rules', t('GFW rules', 'GFW 规则'), t('GFW rule export and upstream options.', 'GFW 规则导出与上游 DNS 选项。'));
 		s.tab('maintenance', t('Backup and tasks', '备份与任务'), t('Backup, upgrade retention and scheduled tasks.', '备份、升级保留和计划任务。'));
@@ -315,7 +316,7 @@ return view.extend({
 		o = s.taboption('service', form.Flag, 'waitonboot', t('Wait for network on boot', '开机等待网络'), t('Delay service startup until the network is ready.', '开机时等待网络就绪后再启动服务。'));
 		o = s.taboption('service', form.Value, 'username', t('API login username', 'API 登录用户名'), t('Username LuCI uses for the local AdGuard Home API; keep it in sync with the AdGuard Home admin account.', 'LuCI 访问本地 AdGuard Home API 的用户名，需与管理员账号一致。')); o.placeholder = 'root'; o.rmempty = false;
 		o = s.taboption('service', form.Value, 'password', t('API login password', 'API 登录密码'), t('Password LuCI uses for the local AdGuard Home API; update it after changing the AdGuard Home web password.', 'LuCI 访问本地 AdGuard Home API 的密码，改后台密码后需同步更新。')); o.password = true; o.rmempty = true;
-		o = s.taboption('service', form.Value, 'hashpass', t('Web password bcrypt hash', 'Web 密码 bcrypt 哈希'), t('Use the password helper to generate a hash, then save and apply.', '可使用密码助手生成哈希，然后保存并应用。')); o.password = true; o.rmempty = true;
+		o = s.taboption('files', form.Value, 'hashpass', t('Web password bcrypt hash', 'Web 密码 bcrypt 哈希'), t('Use the password helper to generate a hash, then save and apply.', '可使用密码助手生成哈希，然后保存并应用。')); o.password = true; o.rmempty = true;
 
 		o = s.taboption('network', form.Value, 'httpport', t('Web console port', 'Web 控制台端口'), t('Port used by the AdGuard Home management UI.', 'AdGuard Home 管理界面使用的端口。')); o.datatype = 'port'; o.placeholder = '3000';
 		o = s.taboption('network', form.ListValue, 'redirect', t('DNS redirect mode', 'DNS 重定向模式'), t('Choose how LAN DNS traffic is handed to AdGuard Home.', '选择局域网 DNS 流量交给 AdGuard Home 的方式。')); o.default = 'dnsmasq-upstream'; o.value('none', t('None', '无')); o.value('dnsmasq-upstream', t('Use as dnsmasq upstream', '作为 dnsmasq 上游')); o.value('redirect', t('Redirect port 53', '重定向 53 端口')); o.value('exchange', t('Swap with dnsmasq port', '与 dnsmasq 交换端口'));
@@ -354,7 +355,7 @@ return view.extend({
 				]);
 			};
 		}
-		tools('service', '_agh_password', passwordCard);
+		tools('files', '_agh_password', function(){return E('details',{'class':'agh-settings-detail'},[E('summary',{},t('Password Hash Helper','密码哈希助手')),passwordCard()]);});
 		tools('update', '_agh_core', function() { return updateCard(rpcError); });
 		tools('update', '_agh_sources', function() { return linksCard(channelSelect, archSelect, linksBox, rpcError); });
 		tools('rules', '_agh_rules', function() { return gfwCard(rpcError, yes(status.running)); });

@@ -185,6 +185,7 @@ return view.extend({
 	},
 	render: function(data) {
 		var scope = 'runtime';
+		var inFlight = null, generation = 0;
 		var rpcError = data._rpc_error;
 		var positions = { runtime: Number(data.position || 0), update: 0 };
 		var terminalStates = { runtime: createTerminalState(), update: createTerminalState() };
@@ -221,8 +222,20 @@ return view.extend({
 			output.scrollTop = output.scrollHeight;
 		}
 
+		function fetchLog(reset) {
+			if (inFlight) return reset ? inFlight.then(function() { return fetchLog(true); }) : inFlight;
+			var requestedScope=scope, requestedGeneration=generation;
+			inFlight=callGetLog(requestedScope, reset ? 0 : positions[requestedScope] || 0).then(function(res) {
+				if(requestedScope===scope && requestedGeneration===generation)appendLog(res, reset);
+			}).catch(function(err) {
+				if(requestedScope===scope && requestedGeneration===generation)status.textContent=actionError(err,t('Loading log failed','载入日志失败'));
+			}).then(function() { inFlight=null; });
+			return inFlight;
+		}
+
 		function loadScope(nextScope) {
 			scope = nextScope;
+			generation++;
 			runtimeTab.classList.toggle('active', scope === 'runtime');
 			updateTab.classList.toggle('active', scope === 'update');
 			positions[scope] = 0;
@@ -231,35 +244,24 @@ return view.extend({
 			status.textContent = scope === 'update'
 				? t('Loading update log…', '正在载入更新日志…')
 				: t('Loading runtime log…', '正在载入运行日志…');
-			return callGetLog(scope, 0).then(function(res) {
-				appendLog(res, true);
-			}).catch(function(err) {
-				output.textContent = '';
-				status.textContent = actionError(err, t('Loading log failed', '载入日志失败'));
-			});
+			return fetchLog(true);
 		}
 
 		runtimeTab.addEventListener('click', function() { loadScope('runtime'); });
 		updateTab.addEventListener('click', function() { loadScope('update'); });
-		reloadButton.addEventListener('click', function() {
-			positions[scope] = 0;
-			callGetLog(scope, 0).then(function(res) {
-				appendLog(res, true);
-			}).catch(function(err) {
-				status.textContent = actionError(err, t('Reloading log failed', '重新载入日志失败'));
-			});
-		});
+		reloadButton.addEventListener('click', function() { loadScope(scope); });
 		clearButton.addEventListener('click', function() {
-			callClearLog(scope).then(function() {
+			var clearedScope=scope, clearedGeneration=++generation;
+			callClearLog(clearedScope).then(function() {
+				if(clearedScope!==scope || clearedGeneration!==generation)return;
 				positions[scope] = 0;
 				terminalStates[scope] = createTerminalState();
 				output.textContent = '';
 				status.textContent = t('Log cleared.', '日志已清空。');
-				return callGetLog(scope, 0).then(function(res) {
-					appendLog(res, true);
-				});
+				return fetchLog(true);
 			}).catch(function(err) {
-				status.textContent = actionError(err, t('Clearing log failed', '清空日志失败'));
+				if(clearedScope===scope && clearedGeneration===generation)
+					status.textContent = actionError(err, t('Clearing log failed', '清空日志失败'));
 			});
 		});
 
@@ -271,11 +273,8 @@ return view.extend({
 			}
 			if (typeof poll !== 'undefined' && poll.add)
 				this._aghPollHandle = poll.add(function() {
-					return callGetLog(scope, positions[scope] || 0).then(function(res) {
-						appendLog(res, false);
-					}).catch(function(err) {
-						status.textContent = actionError(err, t('Polling log failed', '轮询日志失败'));
-					});
+					if(document.hidden)return Promise.resolve();
+					return fetchLog(false);
 				}, 3);
 			else
 				this._aghPollHandle = null;   // prevent stale handle on re-render

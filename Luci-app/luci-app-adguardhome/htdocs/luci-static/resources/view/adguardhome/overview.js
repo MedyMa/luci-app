@@ -260,6 +260,7 @@ return view.extend({
 	_aghOnBeforeUnload: function() { this._aghStopAll(); },
 	_aghBoundPageHide: null,
 	_aghBoundBeforeUnload: null,
+	_aghBoundVisibility: null,
 
 	_aghStopPoll: function() {
 		var h;
@@ -279,6 +280,10 @@ return view.extend({
 	_aghStopAll: function() {
 		this._aghStopPoll();
 		this._aghStopTheme();
+		if (this._aghBoundVisibility) {
+			document.removeEventListener('visibilitychange', this._aghBoundVisibility);
+			this._aghBoundVisibility = null;
+		}
 		if (typeof window !== 'undefined') {
 			if (this._aghBoundPageHide) {
 				window.removeEventListener('pagehide', this._aghBoundPageHide);
@@ -303,10 +308,10 @@ return view.extend({
 	},
 
 	load: function() {
-		return Promise.all([
-			safeCall(callGetStatus(), {}),
-			safeCall(callGetStats(), { ok: false, num_dns_queries: 0, num_blocked_filtering: 0, avg_processing_time: '0' })
-		]);
+		return safeCall(callGetStatus(), {}).then(function(status) {
+			return (yes(status.running) ? safeCall(callGetStats(), { ok: false }) : Promise.resolve({ ok: false }))
+				.then(function(stats) { return [status, stats]; });
+		});
 	},
 	render: function(data) {
 		var status = data[0] || {};
@@ -316,7 +321,6 @@ return view.extend({
 		this._aghThemeRoot = root;
 		this._aghEnsureCleanup();
 		var rpcError = status._rpc_error;
-		var statsOk = stats.ok === true || stats.ok === 1 || stats.ok === '1';
 		var state = yes(status.running) ? t('Running') : t('Stopped');
 		var stateClass = yes(status.running) ? 'agh-ok' : 'agh-bad';
 		var settingsUrl = L.url('admin', 'services', 'adguardhome', 'settings');
@@ -336,58 +340,50 @@ return view.extend({
 			E('a', { 'class': 'btn', href: settingsUrl }, t('Open Settings'))
 		]));
 
-		var statsSectionRef = null;
-		var queriesEl = null;
-		var blockedEl = null;
-		var ratioEl = null;
-		var avgTimeEl = null;
-
-		if (statsOk) {
-			var numQueries = stats.num_dns_queries != null ? String(stats.num_dns_queries) : '0';
-			var numBlocked = stats.num_blocked_filtering != null ? String(stats.num_blocked_filtering) : '0';
-			var queriesInt = parseInt(stats.num_dns_queries, 10) || 0;
-			var blockedInt = parseInt(stats.num_blocked_filtering, 10) || 0;
-			var blockedPct = queriesInt > 0 ? ((blockedInt / queriesInt) * 100).toFixed(1) : '0.0';
-			var avgTime = text(stats.avg_processing_time, '0');
-
-			var qCard = card(t('DNS Queries'), numQueries, 'agh-ok');
-			var bCard = card(t('Blocked'), numBlocked, 'agh-bad');
-			var rCard = card(t('Blocked Ratio'), blockedPct + '%', blockedInt > 0 ? 'agh-bad' : 'agh-ok');
-			var aCard = card(t('Avg. Processing'), avgTime + ' ms', '');
-
-			statsSectionRef = E('section', { 'class': 'agh-grid agh-stats-grid' });
-			statsSectionRef.appendChild(qCard);
-			statsSectionRef.appendChild(bCard);
-			statsSectionRef.appendChild(rCard);
-			statsSectionRef.appendChild(aCard);
-			root.appendChild(statsSectionRef);
-
-			queriesEl = qCard.querySelector('.agh-value');
-			blockedEl = bCard.querySelector('.agh-value');
-			ratioEl = rCard.querySelector('.agh-value');
-			avgTimeEl = aCard.querySelector('.agh-value');
-		} else if (yes(status.running)) {
-			var statsErr = stats.error || '';
-			var statsMsg = t('DNS statistics unavailable. AdGuard Home API may require authentication from localhost.');
-			if (statsErr)
-				statsMsg = statsErr;
-			root.appendChild(E('section', { 'class': 'agh-alert agh-stats-error' }, statsMsg));
+		var qCard = card(t('DNS Queries'), '—', '');
+		var bCard = card(t('Blocked'), '—', '');
+		var rCard = card(t('Blocked Ratio'), '—', '');
+		var aCard = card(t('Avg. Processing'), '—', '');
+		var statsSectionRef = E('section', { 'class': 'agh-grid agh-stats-grid' }, [qCard,bCard,rCard,aCard]);
+		var queriesEl=qCard.querySelector('.agh-value'), blockedEl=bCard.querySelector('.agh-value');
+		var ratioEl=rCard.querySelector('.agh-value'), avgTimeEl=aCard.querySelector('.agh-value');
+		root.appendChild(statsSectionRef);
+		var statsNote=E('div',{'class':'agh-stat-note'},'');root.appendChild(statsNote);
+		updateStatsCards(stats);
+		function flowNode(name, label, active) {return E('div',{'class':'agh-flow-node'+(active?' agh-ok':'')},[aghui.icon(name),E('span',{},label)]);}
+		var flowContainer = E('div', { 'class':'agh-flow','aria-label':t('Configured DNS path','配置的 DNS 接入方式') });
+		var flowNote = E('p', { 'class':'agh-flow-note' });
+		function refreshFlow(s) {
+			var nodes=[flowNode('device',t('LAN devices','局域网设备'))];
+			if(effectiveRedirectMode(s)==='dnsmasq-upstream')nodes.push(flowNode('router','dnsmasq'));
+			nodes.push(flowNode('shield','AdGuard Home',yes(s.running)),flowNode('server',t('Upstream DNS','上游 DNS')));
+			flowContainer.replaceChildren();
+			nodes.forEach(function(node,i){if(i)flowContainer.appendChild(E('span',{'class':'agh-flow-arrow','aria-hidden':'true'},'→'));flowContainer.appendChild(node);});
+			flowNote.textContent = !yes(s.running) ? t('Service stopped; the configured DNS path is inactive.','服务已停止，图示仅表示配置的接入方式。') : !yes(s.redirected) && effectiveRedirectMode(s)==='none' ? t('DNS access is not active. Check settings.','DNS 接入尚未生效，请检查设置。') : '';
 		}
-
+		refreshFlow(status);
 		function infoRow(label, value, cls) {
 			return E('div', { 'class': 'agh-info-row' }, [E('span', {}, label), E('strong', { 'class': cls || '' }, value)]);
 		}
-		root.appendChild(E('section', { 'class': 'agh-card' }, [
+		root.appendChild(E('section', { 'class': 'agh-card agh-access' }, [
 			E('h3', { 'class': 'agh-section-title' }, t('DNS Access', 'DNS 接入')),
+			flowContainer,
+			flowNote,
 			E('div', { 'class': 'agh-info' }, [
 				E('div', { 'class': 'agh-redirect-chip agh-info-row' }, [E('span', {}, t('Running Mode')), E('strong', {}, redirectModeLabel(effectiveRedirectMode(status)))]),
 				infoRow(t('DNS Port'), text(status.dns_port, rpcError ? '?' : '-')),
 				infoRow(t('Web Console'), text(status.httpport, '3000')),
-				infoRow(t('Update Task'), yes(status.update_running) ? t('Running') : t('Idle'), yes(status.update_running) ? 'agh-warn' : ''),
-				infoRow(t('Config File'), yes(status.config_ready) ? t('Ready') : t('Missing'), yes(status.config_ready) ? 'agh-ok' : 'agh-warn'),
-				infoRow(t('Workspace'), yes(status.workdir_ready) ? t('Ready') : t('Missing'), yes(status.workdir_ready) ? 'agh-ok' : 'agh-warn')
+				infoRow(t('Compatibility','兼容状态'), yes(status.redirect_compat) ? 'PassWall · '+t('Ready','已适配') : t('Standard mode','标准接入'), yes(status.redirect_compat) ? 'agh-ok' : '')
 			]),
 			(!rpcError && yes(status.redirect_compat)) ? renderRedirectCompatAlert(status) : ''
+		]));
+
+		function operation(name,title,detail,url){return E('a',{'class':'agh-operation','href':url},[aghui.icon(name),E('span',{},title),E('span',{},detail+' ↗')]);}
+		function check(label,ready){return E('div',{'class':'agh-check'},[E('span',{'class':ready?'agh-ok':'agh-warn'},aghui.icon('check')),E('span',{},label),E('span',{'class':ready?'agh-ok':'agh-warn'},ready?t('Ready','可用'):t('Missing','缺失'))]);}
+		var updateOperation=operation('update',t('Core update','核心更新'),yes(status.update_running)?t('Task running','任务运行中'):t('Check version','检查版本'),settingsUrl+'#update');
+		root.appendChild(E('div',{'class':'agh-bottom-grid'},[
+		 E('section',{'class':'agh-card'},[E('h3',{'class':'agh-section-title'},t('Common operations','常用操作')),operation('shield',t('Filters and clients','过滤规则与客户端'),t('In the native console','在原生控制台管理'),panelUrl(status)),operation('log',t('Runtime Logs','运行日志'),t('View service output','查看服务输出'),L.url('admin','services','adguardhome','log')),updateOperation]),
+		 E('section',{'class':'agh-card'},[E('h3',{'class':'agh-section-title'},t('Configuration checks','配置检查')),check(t('Core Binary','核心文件'),yes(status.core_ready)),check(t('Config File','配置文件'),yes(status.config_ready)),check(t('Workspace','工作目录'),yes(status.workdir_ready))])
 		]));
 		root.appendChild(E('details', { 'class': 'agh-card' }, [
 			E('summary', {}, t('Configuration paths', '配置路径')),
@@ -411,24 +407,19 @@ return view.extend({
 				redirectChip.textContent = redirectModeLabel(effectiveRedirectMode(s));
 				redirectChip.className = isRedir ? 'agh-ok' : '';
 			}
+			refreshFlow(s);
+			var updateDetail=updateOperation.lastElementChild;
+			updateDetail.textContent=(yes(s.update_running)?t('Task running','任务运行中'):t('Check version','检查版本'))+' ↗';
+			updateDetail.classList.toggle('agh-warn',yes(s.update_running));
 		}
 
 		function updateStatsCards(s) {
-			if (!statsSectionRef) return;
-			if (s._rpc_error || s.ok !== true) {
-				var errEl = root.querySelector('.agh-stats-error');
-				if (!errEl) {
-					errEl = E('section', { 'class': 'agh-alert agh-stats-error' }, s.error || t('DNS statistics fetch failed.'));
-					statsSectionRef.parentNode && statsSectionRef.parentNode.insertBefore(errEl, statsSectionRef);
-					statsSectionRef.style.display = 'none';
-				}
+			if (!yes(status.running) || !yes(s.ok) || s._rpc_error) {
+				[queriesEl,blockedEl,ratioEl,avgTimeEl].forEach(function(el){el.textContent='—';});
+				statsNote.textContent=yes(status.running)?t('DNS statistics unavailable. Open settings to check the local API account.','统计暂不可用，请在设置中检查本地 API 账号。'):t('Start the service to load DNS statistics.','启动服务后显示 DNS 统计。');
 				return;
 			}
-			var errEl = root.querySelector('.agh-stats-error');
-			if (errEl && statsSectionRef.style.display === 'none') {
-				statsSectionRef.style.display = '';
-				errEl.parentNode && errEl.parentNode.removeChild(errEl);
-			}
+			statsNote.textContent=t('Current statistics period','当前统计周期');
 			var nq = s.num_dns_queries != null ? String(s.num_dns_queries) : '0';
 			var nb = s.num_blocked_filtering != null ? String(s.num_blocked_filtering) : '0';
 			var qi = parseInt(s.num_dns_queries, 10) || 0;
@@ -443,26 +434,36 @@ return view.extend({
 
 		var _pollHandles = this._aghPollHandles;
 		var _view = this;
+		var statusPending = null, statsPending = null;
+		function refreshStatus() {
+			if(document.hidden)return Promise.resolve();
+			if(statusPending)return statusPending;
+			statusPending=safeCall(callGetStatus(), {}).then(function(s) {
+				status=s; refreshStatusChips(s);
+				if(!yes(s.running))updateStatsCards({ok:false});
+			}).then(function(){statusPending=null;});
+			return statusPending;
+		}
+		function refreshStats() {
+			if(document.hidden || !yes(status.running))return Promise.resolve();
+			if(statsPending)return statsPending;
+			statsPending=safeCall(callGetStats(), {ok:false}).then(updateStatsCards).then(function(){statsPending=null;});
+			return statsPending;
+		}
 
 		function startPoll() {
 			_view._aghStopPoll();
 			_pollHandles.length = 0;
 			if (typeof poll !== 'undefined' && poll.add) {
-				_pollHandles.push(poll.add(function() {
-					return safeCall(callGetStatus(), {}).then(function(s) {
-						refreshStatusChips(s);
-					});
-				}, 5));
-				_pollHandles.push(poll.add(function() {
-					return safeCall(callGetStats(), { ok: false }).then(function(s) {
-						updateStatsCards(s);
-					});
-				}, 10));
+				_pollHandles.push(poll.add(refreshStatus, 15));
+				_pollHandles.push(poll.add(refreshStats, 30));
 			}
 		}
 
 		if (typeof poll !== 'undefined' && poll.add)
 			startPoll();
+		this._aghBoundVisibility=function(){if(!document.hidden)refreshStatus().then(refreshStats);};
+		document.addEventListener('visibilitychange',this._aghBoundVisibility);
 
 		return root;
 	}

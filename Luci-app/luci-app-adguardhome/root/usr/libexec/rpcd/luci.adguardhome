@@ -160,10 +160,33 @@ resolve_dns_port() {
 }
 
 resolve_core_version() {
-	local binpath="$1" version
+	local binpath="$1" version signature cached_signature cached_version cache_tmp cache_dir='/var/run/AdGuardHome-ui-cache' cache
 	[ -x "$binpath" ] || return 1
-	version=$($binpath --version 2>/dev/null | grep -m 1 -oE 'v?[0-9]+[.][A-Za-z0-9._-]+')
+	cache="$cache_dir/core-version"
+	# /var/run is root-owned. Never use predictable writable /tmp files.
+	if [ ! -d "$cache_dir" ] && [ ! -L "$cache_dir" ]; then
+		(umask 077; mkdir -m 700 "$cache_dir" 2>/dev/null) || :
+	fi
+	[ -d "$cache_dir" ] && [ ! -L "$cache_dir" ] || cache=''
+	# Do not repeatedly start the Go core for dashboard polling. A replacement,
+	# chmod, or modification invalidates the cache; never execute cached text.
+	signature=$(stat -L -c '%d:%i:%s:%Y:%Z' "$binpath" 2>/dev/null) || signature=''
+	if [ -n "$signature" ] && [ -f "$cache" ] && [ ! -L "$cache" ] && [ -r "$cache" ]; then
+		{ IFS= read -r cached_signature; IFS= read -r cached_version; } < "$cache"
+		if [ "$cached_signature" = "$binpath|$signature" ] && printf '%s\n' "$cached_version" | grep -qE '^v?[0-9]+[.][A-Za-z0-9._-]+$'; then
+			printf '%s\n' "$cached_version"
+			return 0
+		fi
+	fi
+	version=$("$binpath" --version 2>/dev/null | grep -m 1 -oE 'v?[0-9]+[.][A-Za-z0-9._-]+')
 	[ -n "$version" ] || return 1
+	if [ -n "$signature" ] && [ -n "$cache" ]; then
+		cache_tmp=$(umask 077; mktemp "$cache.XXXXXX" 2>/dev/null) || cache_tmp=''
+		if [ -n "$cache_tmp" ]; then
+			printf '%s\n%s\n' "$binpath|$signature" "$version" > "$cache_tmp" && mv -f "$cache_tmp" "$cache"
+			rm -f "$cache_tmp"
+		fi
+	fi
 	printf '%s\n' "$version"
 }
 

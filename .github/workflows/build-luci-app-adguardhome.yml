@@ -58,6 +58,8 @@ jobs:
           npm install --prefix "$RUNNER_TEMP/agh-ui" playwright@1.62.1
           "$RUNNER_TEMP/agh-ui/node_modules/.bin/playwright" install --with-deps chromium
           echo "NODE_PATH=$RUNNER_TEMP/agh-ui/node_modules" >> "$GITHUB_ENV"
+      - name: Run backend regression
+        run: sh Luci-app/luci-app-adguardhome/tools/backend-regression.sh
       - name: Run LuCI functional regression
         run: node Luci-app/luci-app-adguardhome/tools/ui-regression.cjs
 
