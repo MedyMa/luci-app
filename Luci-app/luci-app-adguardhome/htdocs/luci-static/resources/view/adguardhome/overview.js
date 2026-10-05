@@ -331,7 +331,7 @@ return view.extend({
 			root.appendChild(E('section', { 'class': 'agh-alert' }, actionError(rpcError, t('Overview data unavailable'))));
 		if (!rpcError && yes(status.redirect_conflict))
 			root.appendChild(E('section', { 'class': 'agh-alert' }, redirectConflictMessage(status)));
-		root.appendChild(aghui.header('overview', panelUrl(status)));
+		root.appendChild(aghui.header('overview'));
 		root.appendChild(E('section', { 'class': 'agh-statusbar' }, [
 			E('div', {}, [
 				E('span', { 'class': 'agh-service-chip' }, E('strong', { 'class': 'agh-state ' + (rpcError ? 'agh-bad' : stateClass) }, rpcError ? t('Backend missing') : state)),
@@ -364,7 +364,7 @@ return view.extend({
 			(!rpcError && yes(status.redirect_compat)) ? renderRedirectCompatAlert(status) : ''
 		]));
 
-		function operation(name,title,detail,url){return E('a',{'class':'agh-operation','href':url},[aghui.icon(name),E('span',{},title),E('span',{},detail)]);}
+		function operation(name,title,detail,url){return E('div',{'class':'agh-operation'},[aghui.icon(name),E('span',{},title),E('a',{'class':'btn','href':url},detail)]);}
 		function check(label,ready){return E('div',{'class':'agh-check'},[E('span',{'class':ready?'agh-ok':'agh-warn'},aghui.icon('check')),E('span',{},label),E('span',{'class':ready?'agh-ok':'agh-warn'},ready?t('Ready','可用'):t('Missing','缺失'))]);}
 		var updateOperation=operation('update',t('Core update','核心更新'),yes(status.update_running)?t('Task running','任务运行中'):t('Check version','检查版本'),settingsUrl+'#update');
 		root.appendChild(E('div',{'class':'agh-bottom-grid'},[
