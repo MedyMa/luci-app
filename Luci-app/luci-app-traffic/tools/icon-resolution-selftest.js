@@ -10,11 +10,17 @@ const entries = text => text.split(/\r?\n/).filter(x => x && !x.startsWith('#'))
 const have = Object.fromEntries(entries(read(path.join(dir, 'index.txt'))).map(k => [k, 1]));
 const domains = Object.fromEntries(entries(read(path.join(dir, 'domains.tsv'))).map(x => x.split('\t')));
 const src = read(path.join(root, 'htdocs/luci-static/resources/view/traffic/overview.js'));
+const meitu = read(path.join(dir, 'meitu.svg'));
+assert.notStrictEqual(meitu, read(path.join(dir, 'meituan.svg')),
+  'MeiTu must not ship the Meituan artwork');
+assert.strictEqual(meitu, read(path.join(__dirname, 'icons-local/meitu.svg')),
+  'MeiTu artwork must match its pinned verified source');
 const resolve = new Function('rpc', '_', 'have', 'domains', src.slice(0, src.indexOf('return view.extend({')) +
   '\nshippedIcons=have; cachedIcons={}; domainIcons=domains; return iconKey;')(
   { declare: () => () => {} }, x => x, have, domains);
 for (const [name, key] of [['producthunt.com','producthunt'], ['Product Hunt','producthunt'],
-  ['brandfetch.io','brandfetch'], ['login.1password.com','1password'], ['Rockstar','rockstargames']]) {
+  ['brandfetch.io','brandfetch'], ['login.1password.com','1password'], ['Rockstar','rockstargames'],
+  ['MeiTu', 'meitu'], ['Meituan', 'meituan']]) {
   assert.strictEqual(resolve(name), key, name);
   assert(have[key], name + ' packaged file');
 }

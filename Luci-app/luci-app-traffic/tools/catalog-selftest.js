@@ -6,7 +6,7 @@ const root = path.join(__dirname, '..');
 const source = fs.readFileSync(path.join(__dirname, 'build-catalog.js'), 'utf8');
 const candidateFunction = source.match(/function fuzzyIconNames\([\s\S]*?\n}/)[0];
 const candidates = new Function(candidateFunction + '; return fuzzyIconNames;')();
-for (const [query, unrelated] of [['blued', 'bluedriver'], ['sto', 'stoat'], ['friday', 'friday-night-funkin']]) {
+for (const [query, unrelated] of [['blued', 'bluedriver'], ['sto', 'stoat'], ['friday', 'friday-night-funkin'], ['meitu', 'meituan']]) {
   if (candidates([{set:new Set([unrelated]),rank:0}], query).length) {
     console.error(`FAIL ${query} must not select unrelated ${unrelated}`);
     process.exitCode = 1;

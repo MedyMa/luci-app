@@ -1,5 +1,5 @@
 {
- "generated": "2026-09-22",
+ "generated": "2026-10-05",
  "icons": 1503,
  "manifestRows": 1503,
  "catalogue": {
@@ -2888,10 +2888,10 @@
   "meitu": {
    "file": "meitu.svg",
    "application": "MeiTu",
-   "source": "simple-icons",
-   "upstream": "meituan",
-   "licence": "CC0-1.0 (trademarks: see DISCLAIMER.md)",
-   "url": "https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md"
+   "source": "iconify:arcticons",
+   "upstream": "meitu",
+   "licence": "CC-BY-SA-4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/"
   },
   "microsoft": {
    "file": "microsoft.svg",
