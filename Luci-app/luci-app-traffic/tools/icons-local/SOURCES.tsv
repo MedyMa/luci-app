@@ -71,4 +71,4 @@ geely.svg		local:neutral	geely	CC0-1.0	tools/repair-icon-sources.js	neutral plac
 geetest.svg		iconify:logos	geetest	see the collection licence	https://icon-sets.iconify.design/logos/geetest/	
 genshin-impact.svg		iconify:arcticons	genshin-impact	CC BY-SA 4.0	https://icon-sets.iconify.design/arcticons/genshin-impact/	
 giffgaff.svg		iconify:arcticons	giffgaff	CC BY-SA 4.0	https://icon-sets.iconify.design/arcticons/giffgaff/	
-meitu.svg	MeiTu	iconify:arcticons	meitu	CC-BY-SA-4.0	https://creativecommons.org/licenses/by-sa/4.0/	source: https://icon-sets.iconify.design/arcticons/meitu/
+meitu.svg	MeiTu	local:reference	meitu	User-provided reference (trademark rights retained)	tools/icons-local/meitu.svg in the luci-app-traffic source tree	Vector reconstruction of the user-provided red and white Meitu logo
