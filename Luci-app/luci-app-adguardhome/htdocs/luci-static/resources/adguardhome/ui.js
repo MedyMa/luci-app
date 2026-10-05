@@ -3,6 +3,8 @@
 
 /* One scoped visual system. Argon owns the surrounding page and theme switch. */
 var style = `
+/* A previously cached LuCI menu must not duplicate this page's navigation. */
+body:has(.agh-ui) #tabmenu{display:none!important}
 .cbi-page-actions .cbi-button-apply,.cbi-page-actions .cbi-button-save{background:var(--dark-primary,#4c3e87)!important;border-color:var(--dark-primary,#4c3e87)!important;color:#fff!important;-webkit-text-fill-color:#fff!important}
 .cbi-page-actions .cbi-button-reset{background:transparent!important;border:1px solid #8290a6!important;color:inherit!important;-webkit-text-fill-color:currentColor!important}
 .agh-ui h2::before,.agh-ui h2::after,.agh-ui h3::before,.agh-ui h3::after{display:none!important;content:none!important}
