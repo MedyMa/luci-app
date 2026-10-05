@@ -8,10 +8,10 @@ const menuConfig=JSON.parse(fs.readFileSync(path.join(root,'root/usr/share/luci/
 const translations=Object.fromEntries([...fs.readFileSync(path.join(root,'po/zh_Hans/AdGuardHome.po'),'utf8').matchAll(/msgid "([^"\n]+)"\s+msgstr "([^"\n]+)"/g)].map(m=>[m[1],m[2]]));
 translations.Diagnostics='网络诊断';
 const resources=path.join(root,'htdocs/luci-static/resources');
-let calls=[],failure=null,running=false,readonly=false,holdStats=false,releaseStats=null,updating=false;
+let calls=[],failure=null,running=false,readonly=false,holdStats=false,releaseStats=null,updating=false,coreVersion="v0.107.71",dnsPort=53,httpPort=3000,coreReady=true,redirectCompat=false,compatUpstream="53";
 const initial={'.type':'AdGuardHome','.name':'AdGuardHome','.anonymous':false,'.index':0,enabled:'0',waitonboot:'1',username:'root',password:'admin',hashpass:'',httpport:'3000',redirect:'dnsmasq-upstream',passwall_upstream_auto:'0',binpath:'/etc/AdGuardHome',configpath:'/etc/AdGuardHome.yaml',workdir:'/etc/agh-work',logfile:'syslog',verbose:'0',update:'1',upxflag:'',gfw:'0',gfwipset:'0',gfwupstream:'tls://1.1.1.1',upprotect:[],backup:'0',backupfile:['filters'],backupwdpath:'/etc/backup',crontab:[],downloadarch:'auto',release_channel:'release'};
 let config={...initial};
-const status=()=>({running,update_running:updating,core_ready:true,version:'v0.107.71',dns_port:53,httpport:3000,config_ready:true,workdir_ready:true,redirect:'dnsmasq-upstream',release_channel:'release',downloadarch:'auto'});
+const status=()=>({running,update_running:updating,core_ready:coreReady,version:coreVersion,dns_port:dnsPort,httpport:httpPort,config_ready:true,workdir_ready:true,redirect:'dnsmasq-upstream',release_channel:'release',downloadarch:'auto',redirect_compat:redirectCompat,redirect_compat_reason:'passwall2-dns-redirect',redirect_compat_upstream:compatUpstream});
 function response(msg){
  const [,object,method,args]=msg.params||[];calls.push({object,method,args});
  if(method===failure)return {jsonrpc:'2.0',id:msg.id,error:{code:-32000,message:'Regression failure fixture'}};
@@ -63,7 +63,7 @@ const server=http.createServer(async(req,res)=>{
  const browser=await chromium.launch({executablePath:process.env.AGH_BROWSER_PATH||undefined,headless:true});
  const page=await browser.newPage({viewport:{width:1280,height:1000}});
  const errors=[];page.on('pageerror',e=>errors.push(e.stack));let checks=0;
- async function open(name){calls=[];await page.goto(base);await page.waitForFunction(()=>L.loaded,{timeout:45000});await page.evaluate(async n=>{window._=s=>translations[s]||s;const poll=await L.require('poll');window.testPolls=[];const add=poll.add;poll.add=function(fn,interval){testPolls.push({fn,interval});return add.call(this,fn,interval);};window.currentView=await L.require('view.adguardhome.'+n)},name);await page.locator(name==='settings'?'.agh-settings':'.agh-ui').waitFor();
+ async function open(name,hash=""){calls=[];await page.goto(base+'?view='+name+hash);await page.waitForFunction(()=>L.loaded,{timeout:45000});await page.evaluate(async n=>{window._=s=>translations[s]||s;const poll=await L.require('poll');window.testPolls=[];const add=poll.add;poll.add=function(fn,interval){testPolls.push({fn,interval});return add.call(this,fn,interval);};window.currentView=await L.require('view.adguardhome.'+n)},name);await page.locator(name==='settings'?'.agh-settings':'.agh-ui').waitFor();
  await page.evaluate(async ({defs,name})=>{
   const tree={children:{}};
   for(const [url,entry] of Object.entries(defs)){let n=tree;for(const part of url.split('/')){n.children??={};n.children[part]??={children:{},satisfied:true};n=n.children[part];}Object.assign(n,entry,{satisfied:true});}
@@ -79,7 +79,7 @@ const server=http.createServer(async(req,res)=>{
  assert.deepEqual(await page.locator('#tabmenu a').allTextContents(),['概览','设置','诊断']);
  assert.equal(await page.locator('#tabmenu li.active a').getAttribute('href'),'/cgi-bin/luci/admin/services/adguardhome/'+(name==='yaml'?'settings':name));
  assert.equal(await page.locator('.agh-nav,.agh-subnav').count(),0,'Only native Argon navigation');checks+=3;
-if(name==='yaml')await page.waitForFunction(()=>currentView._aghCmInstance);}
+if(name==='yaml')await page.waitForFunction(()=>currentView._aghCmInstance);if(name==='log'||name==='yaml'){assert.equal(await page.locator('.cbi-page-actions').count(),0,'No unrelated save controls on '+name);checks++;}}
  async function clickAndWait(button,method){const response=page.waitForResponse(r=>r.request().method()==='POST'&&(method==='readDirect'?new URL(r.url()).pathname.endsWith('/cgi-download'):(r.request().postData()||'').includes('"'+method+'"')));await button.click();await response;}
  await open('settings');
  assert.equal(await page.locator('.cbi-value:not([data-name^="_agh_"])').count(),23);checks++;
@@ -115,7 +115,7 @@ if(name==='yaml')await page.waitForFunction(()=>currentView._aghCmInstance);}
  running=true;await open('yaml');assert.equal(await page.getByRole('button',{name:'保存并应用',exact:true}).isDisabled(),true);assert.equal(await page.evaluate(()=>currentView._aghCmInstance.getOption('readOnly')),'nocursor');checks+=2;
  await open('settings');await page.getByRole('link',{name:'GFW 规则',exact:true}).click();assert.equal(await page.locator('.agh-action-gfw button:disabled').count(),2);checks++;
  await open('log');await clickAndWait(page.getByRole('button',{name:'更新日志',exact:true}),'getLog');await clickAndWait(page.getByRole('button',{name:'清空',exact:true}),'clearLog');assert(calls.some(c=>c.method==='clearLog'&&c.args.scope==='update'));checks++;
- await open('log');await page.waitForFunction(()=>document.querySelector('.agh-console').textContent.includes('started'));calls=[];
+ await open('log');await page.waitForFunction(()=>document.querySelector('.agh-console').textContent.includes('started'));assert(!/\x1b/.test(await page.locator('.agh-console').textContent()));checks++;calls=[];
  await page.evaluate(async()=>{Object.defineProperty(document,'hidden',{value:true,configurable:true});for(const p of testPolls)await p.fn();delete document.hidden;});assert(!calls.some(c=>c.method==='getLog'));checks++;
  calls=[];await page.evaluate(()=>Promise.all(testPolls.flatMap(p=>[p.fn(),p.fn(),p.fn()])));assert.equal(calls.filter(c=>c.method==='getLog').length,1,'Concurrent log polling is coalesced');checks++;
  await open('overview');assert.equal(await page.locator('.agh-grid .agh-card').count(),4);checks++;
@@ -136,6 +136,26 @@ if(name==='yaml')await page.waitForFunction(()=>currentView._aghCmInstance);}
  if(process.env.AGH_SCREENSHOT_DIR){fs.mkdirSync(process.env.AGH_SCREENSHOT_DIR,{recursive:true});await page.screenshot({path:path.join(process.env.AGH_SCREENSHOT_DIR,'real-argon-overview.png'),fullPage:true});await open('settings');await page.evaluate(()=>document.body.classList.add('dark'));await page.waitForTimeout(150);await page.getByRole('link',{name:'基础设置',exact:true}).click();await page.screenshot({path:path.join(process.env.AGH_SCREENSHOT_DIR,'real-argon-settings.png'),fullPage:true});}
  for(const name of ['overview','settings','log','yaml']){await open(name);await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,name+' mobile overflow');checks++;}
  await open('settings');await page.getByRole('link',{name:'基础设置',exact:true}).click();assert.equal(await page.locator('div[data-tab=service]').evaluate(e=>getComputedStyle(e).backgroundColor),'rgba(0, 0, 0, 0)');assert.equal(await page.locator('[data-name=username] .cbi-value-title').evaluate(e=>getComputedStyle(e).textAlign),'left');checks+=2;
+ await open('overview');coreVersion='v0.107.79';dnsPort=536;httpPort=3002;coreReady=false;
+ await page.evaluate(()=>testPolls[0].fn());assert((await page.locator('.agh-core-chip').textContent()).includes('缺失'));assert.equal(await page.locator('.agh-access .agh-info-row strong').nth(1).textContent(),'536');assert.equal(await page.locator('.agh-access .agh-info-row strong').nth(2).textContent(),'3002');assert.equal(await page.locator('.agh-operation a').first().getAttribute('href'),'http://127.0.0.1:3002');assert.equal(await page.locator('.agh-check').first().locator('span').last().textContent(),'缺失');checks+=5;
+ coreReady=true;await page.evaluate(()=>testPolls[0].fn());assert((await page.locator('.agh-core-chip').textContent()).includes('v0.107.79'));checks++;coreVersion='v0.107.71';dnsPort=53;httpPort=3000;
+ redirectCompat=true;await page.evaluate(()=>testPolls[0].fn());await page.locator('.agh-alert-compat summary').click();await page.evaluate(()=>testPolls[0].fn());assert(await page.locator('.agh-alert-compat').evaluate(e=>e.open),'Compatibility detail stays expanded across polling');compatUpstream='5353';await page.evaluate(()=>testPolls[0].fn());assert(await page.locator('.agh-alert-compat').evaluate(e=>e.open));assert((await page.locator('.agh-alert-compat').textContent()).includes('5353'));redirectCompat=false;checks+=3;
+ for(const width of [320,390,1440])for(const name of ['overview','settings','log','yaml']){
+  await page.setViewportSize({width,height:900});await open(name);
+  for(const dark of [false,true]){
+   await page.evaluate(v=>document.body.classList.toggle('dark',v),dark);await page.waitForTimeout(80);
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`${name} ${width} ${dark?'dark':'light'} overflow `+JSON.stringify(await page.evaluate(()=>[...document.querySelectorAll('body *')].map(e=>({tag:e.tagName,cls:e.className,right:e.getBoundingClientRect().right,width:e.getBoundingClientRect().width})).filter(e=>e.right>innerWidth+1).slice(-8))));checks++;
+   if(name==='yaml'){assert.equal(await page.locator('.CodeMirror').evaluate(e=>getComputedStyle(e).backgroundColor),dark?'rgb(32, 36, 39)':'rgb(255, 255, 255)');checks++;}
+   if(width<720){const targets=await page.locator('.agh-ui a.btn,.agh-ui button').evaluateAll(es=>es.filter(e=>e.getClientRects().length&&getComputedStyle(e).visibility!=='hidden').map(e=>({label:e.textContent,height:e.getBoundingClientRect().height})));assert(targets.every(t=>t.height>=44),JSON.stringify({name,width,targets}));checks++;}
+   if(process.env.AGH_SCREENSHOT_DIR)await page.screenshot({path:path.join(process.env.AGH_SCREENSHOT_DIR,`${name}-${width}-${dark?'dark':'light'}.png`),fullPage:true});
+   if(name==='settings')for(const tab of ['基础设置','DNS 接入','高级选项','核心更新','GFW 规则','备份与任务']){
+    await page.locator('.cbi-tabmenu').getByRole('link',{name:tab,exact:true}).click();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`${tab} ${width} overflow `+JSON.stringify(await page.evaluate(()=>[...document.querySelectorAll('body *')].map(e=>({tag:e.tagName,cls:e.className,right:e.getBoundingClientRect().right,width:e.getBoundingClientRect().width})).filter(e=>e.right>innerWidth+1).slice(-8))));checks++;
+    if(process.env.AGH_SCREENSHOT_DIR&&width===320)await page.screenshot({path:path.join(process.env.AGH_SCREENSHOT_DIR,`settings-${tab}-${dark?'dark':'light'}.png`),fullPage:true});
+   }
+
+  }
+ }
+ await open('settings','#update');assert(await page.locator('.agh-action-update').isVisible(),'Core update shortcut opens its settings group');checks++;
  assert.deepEqual(errors,[],'No uncaught browser errors during regression');
  console.log(`PASS: ${checks} real LuCI runtime checks including real form parsing, validation, UCI saving and bcrypt. HTTP/ubus endpoints isolated; no router modified.`);
  await browser.close();server.close();fs.rmSync(dir,{recursive:true,force:true});

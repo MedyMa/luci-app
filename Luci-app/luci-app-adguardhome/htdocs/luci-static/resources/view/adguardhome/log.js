@@ -137,8 +137,12 @@ function applyThemeClass(node, darkClass) {
 }
 
 
+function stripLogStyles(content) {
+	return String(content || '').replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, '');
+}
+
 function normalizeLogContent(content) {
-	return String(content || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+	return stripLogStyles(content).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 }
 
 function createTerminalState() {
@@ -146,7 +150,7 @@ function createTerminalState() {
 }
 
 function renderTerminalContent(state, content, reset) {
-	var source = String(content || '');
+	var source = stripLogStyles(content);
 	var committed = reset ? '' : state.committed;
 	var line = reset ? '' : state.line;
 	var index;
@@ -298,13 +302,7 @@ return view.extend({
 		]), 'agh-dark');
 	},
 
-	handleSaveApply: function() {
-		/* Stop log polling when navigating away */
-		if (this._aghPollHandle != null && typeof poll !== 'undefined' && poll.remove) {
-			try { poll.remove(this._aghPollHandle); } catch(e) { /* already removed */ }
-			this._aghPollHandle = null;
-		}
-	},
+	handleSaveApply: null,
 	handleSave: null,
 	handleReset: null
 });

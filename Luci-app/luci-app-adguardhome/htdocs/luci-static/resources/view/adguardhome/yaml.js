@@ -170,7 +170,6 @@ function ensureScript(src, id) {
 
 function ensureCodeMirror() {
 	ensureStyle(L.resource('codemirror/lib/codemirror.css'), 'agh-cm-base');
-	ensureStyle(L.resource('codemirror/theme/dracula.css'), 'agh-cm-theme');
 	return ensureScript(L.resource('codemirror/lib/codemirror.js'), 'agh-cm-script').then(function() {
 		return ensureScript(L.resource('codemirror/mode/yaml/yaml.js'), 'agh-cm-yaml');
 	});
@@ -361,7 +360,7 @@ return view.extend({
 				return;
 			editor = window.CodeMirror.fromTextArea(textarea, {
 				mode: 'yaml',
-				theme: 'dracula',
+				theme: 'default',
 				lineNumbers: true,
 				lineWrapping: false,
 				indentUnit: 2,
@@ -396,18 +395,7 @@ return view.extend({
 		return node;
 	},
 
-	handleSaveApply: function() {
-		/* Destroy CodeMirror instance to prevent memory leak */
-		if (this._aghCmInstance && this._aghCmInstance.toTextArea) {
-			this._aghCmInstance.toTextArea();
-			this._aghCmInstance = null;
-		}
-		/* Stop status polling when navigating away */
-		if (this._aghPollHandle != null && typeof poll !== 'undefined' && poll.remove) {
-			try { poll.remove(this._aghPollHandle); } catch(e) { /* already removed */ }
-			this._aghPollHandle = null;
-		}
-	},
+	handleSaveApply: null,
 	handleSave: null,
 	handleReset: null
 });

@@ -353,22 +353,26 @@ return view.extend({
 		function infoRow(label, value, cls) {
 			return E('div', { 'class': 'agh-info-row' }, [E('span', {}, label), E('strong', { 'class': cls || '' }, value)]);
 		}
+		function compatKey(s){return JSON.stringify([s.redirect_compat,s.redirect_compat_reason,s.redirect_compat_upstream,s.passwall_upstream_auto]);}
+		var lastCompatKey=compatKey(status);
+		var compatNotice=E('div',{},(!rpcError && yes(status.redirect_compat)) ? renderRedirectCompatAlert(status) : '');
 		root.appendChild(E('section', { 'class': 'agh-card agh-access' }, [
 			E('h3', { 'class': 'agh-section-title' }, t('DNS Access', 'DNS 接入')),
 			E('div', { 'class': 'agh-info' }, [
 				E('div', { 'class': 'agh-redirect-chip agh-info-row' }, [E('span', {}, t('Running Mode')), E('strong', {}, redirectModeLabel(effectiveRedirectMode(status)))]),
 				infoRow(t('DNS Port'), text(status.dns_port, rpcError ? '?' : '-')),
 				infoRow(t('Web Console'), text(status.httpport, '3000')),
-				infoRow(t('Compatibility','兼容状态'), yes(status.redirect_compat) ? 'PassWall · '+t('Ready','已适配') : t('Standard mode','标准接入'), yes(status.redirect_compat) ? 'agh-ok' : '')
+				infoRow(t('Compatibility','兼容状态'), yes(status.redirect_compat) ? (status.redirect_compat_reason==='passwall2-dns-redirect'?'PassWall2':'PassWall')+' · '+t('Ready','已适配') : t('Standard mode','标准接入'), yes(status.redirect_compat) ? 'agh-ok' : '')
 			]),
-			(!rpcError && yes(status.redirect_compat)) ? renderRedirectCompatAlert(status) : ''
+			compatNotice
 		]));
 
 		function operation(name,title,detail,url){return E('div',{'class':'agh-operation'},[aghui.icon(name),E('span',{},title),E('a',{'class':'btn','href':url},detail)]);}
 		function check(label,ready){return E('div',{'class':'agh-check'},[E('span',{'class':ready?'agh-ok':'agh-warn'},aghui.icon('check')),E('span',{},label),E('span',{'class':ready?'agh-ok':'agh-warn'},ready?t('Ready','可用'):t('Missing','缺失'))]);}
 		var updateOperation=operation('update',t('Core update','核心更新'),yes(status.update_running)?t('Task running','任务运行中'):t('Check version','检查版本'),settingsUrl+'#update');
+		var panelOperation=operation('shield',t('Filters and clients','过滤规则与客户端'),t('Control Panel','控制面板'),panelUrl(status));
 		root.appendChild(E('div',{'class':'agh-bottom-grid'},[
-		 E('section',{'class':'agh-card'},[E('h3',{'class':'agh-section-title'},t('Common operations','常用操作')),operation('shield',t('Filters and clients','过滤规则与客户端'),t('Control Panel','控制面板'),panelUrl(status)),operation('log',t('Runtime Logs','运行日志'),t('View service output','查看服务输出'),L.url('admin','services','adguardhome','log')),updateOperation]),
+		 E('section',{'class':'agh-card'},[E('h3',{'class':'agh-section-title'},t('Common operations','常用操作')),panelOperation,operation('log',t('Runtime Logs','运行日志'),t('View service output','查看服务输出'),L.url('admin','services','adguardhome','log')),updateOperation]),
 		 E('section',{'class':'agh-card'},[E('h3',{'class':'agh-section-title'},t('Configuration checks','配置检查')),check(t('Core Binary','核心文件'),yes(status.core_ready)),check(t('Config File','配置文件'),yes(status.config_ready)),check(t('Workspace','工作目录'),yes(status.workdir_ready))])
 		]));
 		root.appendChild(E('details', { 'class': 'agh-card' }, [
@@ -385,8 +389,30 @@ return view.extend({
 			var redirectChip = root.querySelector('.agh-redirect-chip strong');
 			if (serviceChip) {
 				var isRun = yes(s.running);
-				serviceChip.textContent = isRun ? t('Running') : t('Stopped');
+				serviceChip.textContent = s._rpc_error ? t('Backend missing') : isRun ? t('Running') : t('Stopped');
 				serviceChip.className = 'agh-state ' + (isRun ? 'agh-ok' : 'agh-bad');
+			}
+			if(s._rpc_error)return;
+			root.querySelector('.agh-core-chip').textContent=t('Core')+' · '+(yes(s.core_ready)?text(s.version):t('Missing'));
+			var infoValues=root.querySelectorAll('.agh-access .agh-info-row strong');
+			infoValues[1].textContent=text(s.dns_port,'-');
+			infoValues[2].textContent=text(s.httpport,'3000');
+			infoValues[3].textContent=yes(s.redirect_compat)?(s.redirect_compat_reason==='passwall2-dns-redirect'?'PassWall2':'PassWall')+' · '+t('Ready','已适配'):t('Standard mode','标准接入');
+			infoValues[3].className=yes(s.redirect_compat)?'agh-ok':'';
+			panelOperation.lastElementChild.href=panelUrl(s);
+			var checks=root.querySelectorAll('.agh-check');
+			[s.core_ready,s.config_ready,s.workdir_ready].forEach(function(ready,i){
+				var cls=yes(ready)?'agh-ok':'agh-warn';
+				checks[i].firstElementChild.className=cls;
+				checks[i].lastElementChild.className=cls;
+				checks[i].lastElementChild.textContent=yes(ready)?t('Ready','可用'):t('Missing','缺失');
+			});
+			var nextCompatKey=compatKey(s);
+			if(nextCompatKey!==lastCompatKey){
+				var wasOpen=compatNotice.firstElementChild && compatNotice.firstElementChild.open;
+				compatNotice.replaceChildren();
+				if(yes(s.redirect_compat)){var notice=renderRedirectCompatAlert(s);notice.open=!!wasOpen;compatNotice.appendChild(notice);}
+				lastCompatKey=nextCompatKey;
 			}
 			if (redirectChip) {
 				var isRedir = yes(s.redirected);
