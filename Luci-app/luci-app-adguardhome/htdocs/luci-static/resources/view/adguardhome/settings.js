@@ -1,5 +1,6 @@
 'use strict';
 'require view';
+'require adguardhome.ui as aghui';
 'require form';
 'require rpc';
 'require uci';
@@ -196,12 +197,15 @@ function actionHeader(label, title) {
 
 function runRpcAction(button, statusBox, call, success, fallback) {
 	setBusy(button, true);
+	statusBox.className = 'agh-status agh-warn';
 	return call().then(function(res) {
 		if (res && res.ok === false)
 			throw new Error(res.error || fallback);
 		statusBox.textContent = success;
+		statusBox.className = 'agh-status agh-ok';
 	}).catch(function(err) {
 		statusBox.textContent = actionError(err, fallback);
+		statusBox.className = 'agh-status agh-bad';
 	}).finally(function() {
 		setBusy(button, false);
 	});
@@ -229,50 +233,7 @@ function softButtonClass(extraClass) {
 }
 
 
-var style = [
-	'.agh-settings{display:grid;gap:18px;--agh-ease-out:cubic-bezier(.23,1,.32,1);--agh-ease-in-out:cubic-bezier(.77,0,.175,1);color:var(--agh-text,var(--text-color-high,#203042));--agh-text:var(--text-color-high,#203042);--agh-text-high:var(--text-color-high,#17373c);--agh-text-muted:var(--text-color-medium,#667084);--agh-text-soft:#60708a;--agh-border:rgba(76,108,157,.14);--agh-border-soft:rgba(76,108,157,.08);--agh-card-bg:rgba(249,252,255,.98);--agh-card-grad:linear-gradient(180deg,rgba(255,255,255,.99) 0%,rgba(240,246,255,.99) 100%);--agh-surface-bg:rgba(232,240,251,.92);--agh-chip-bg:rgba(255,255,255,.97);--agh-chip-border:rgba(76,108,157,.14);--agh-chip-shadow:0 8px 24px rgba(25,50,87,.08);--agh-status-bg:rgba(232,240,251,.94);--agh-input-bg:rgba(255,255,255,.97);--agh-input-border:rgba(76,108,157,.18);--agh-tabmenu-bg:rgba(232,240,251,.94);--agh-tab-text:#4d617d;--agh-tab-active-text:var(--agh-text-high,#17373c);--agh-tab-active-bg:rgba(255,255,255,.98);--agh-badge-bg:rgba(61,103,159,.12);--agh-badge-fg:#315d9a;--agh-button-shadow:none;--agh-inline-btn-bg:rgba(61,103,159,.10);--agh-inline-btn-bg-hover:rgba(61,103,159,.16);--agh-inline-btn-border:rgba(61,103,159,.20);--agh-inline-btn-fg:#315d9a;--agh-hero-bg:linear-gradient(135deg,#294a7a 0%,#3d679f 54%,#6f93cc 100%);--agh-hero-shadow:0 18px 38px rgba(25,50,87,.16);--agh-form-shell-bg:rgba(255,255,255,.88);--agh-form-shell-border:rgba(76,108,157,.14);--agh-form-row-bg:rgba(255,255,255,.56);--agh-form-row-hover:rgba(245,249,255,.96);--agh-desc-bg:rgba(232,240,251,.72);--agh-page-actions-bg:rgba(249,252,255,.88);--agh-page-actions-border:rgba(76,108,157,.16);--agh-page-actions-shadow:0 -8px 26px rgba(17,48,54,.10);--agh-checkbox-bg:rgba(255,255,255,.96);--agh-checkbox-border:rgba(76,108,157,.24);--agh-checkbox-active-bg:linear-gradient(135deg,#4f6fb6 0%,#6887cf 100%);--agh-checkbox-active-border:#6b8ed6}',
-	'.agh-settings.agh-dark,body.dark .agh-settings,html.dark .agh-settings,body.mode-dark .agh-settings,body.argon-dark .agh-settings,html[data-theme="dark"] .agh-settings,body[data-theme="dark"] .agh-settings{--agh-text:#e7eef7;--agh-text-high:#f2f7ff;--agh-text-muted:#b9c8d8;--agh-text-soft:#c7d4e2;--agh-border:rgba(124,147,186,.24);--agh-border-soft:rgba(124,147,186,.16);--agh-card-bg:rgba(16,24,38,.96);--agh-card-grad:linear-gradient(180deg,rgba(18,28,44,.96) 0%,rgba(10,17,29,.98) 100%);--agh-surface-bg:rgba(9,15,27,.84);--agh-chip-bg:rgba(17,26,40,.94);--agh-chip-border:rgba(124,147,186,.18);--agh-chip-shadow:0 10px 26px rgba(0,0,0,.24);--agh-status-bg:rgba(9,15,27,.88);--agh-input-bg:rgba(8,14,24,.94);--agh-input-border:rgba(124,147,186,.22);--agh-tabmenu-bg:rgba(9,15,27,.88);--agh-tab-text:#d4dfeb;--agh-tab-active-text:#f2f7ff;--agh-tab-active-bg:rgba(23,35,52,.96);--agh-badge-bg:rgba(104,146,214,.18);--agh-badge-fg:#a9c6f3;--agh-inline-btn-bg:rgba(104,146,214,.16);--agh-inline-btn-bg-hover:rgba(104,146,214,.24);--agh-inline-btn-border:rgba(104,146,214,.28);--agh-inline-btn-fg:#c1d7f7;--agh-hero-bg:linear-gradient(135deg,#0c1424 0%,#15253d 54%,#234267 100%);--agh-hero-shadow:0 20px 40px rgba(0,0,0,.28);--agh-form-shell-bg:rgba(7,12,22,.82);--agh-form-shell-border:rgba(124,147,186,.20);--agh-form-row-bg:rgba(12,19,31,.42);--agh-form-row-hover:rgba(18,28,43,.80);--agh-desc-bg:rgba(12,19,31,.78);--agh-page-actions-bg:rgba(8,14,24,.86);--agh-page-actions-border:rgba(124,147,186,.20);--agh-page-actions-shadow:0 -12px 30px rgba(0,0,0,.30);--agh-checkbox-bg:rgba(14,22,35,.96);--agh-checkbox-border:rgba(124,147,186,.30);--agh-checkbox-active-bg:linear-gradient(135deg,#4966b2 0%,#6480d0 100%);--agh-checkbox-active-border:#7c97d1}',
-	'.agh-settings{--agh-ok-fg:#169f98;--agh-ok-glow:0 0 14px rgba(22,159,152,.18);--agh-live-fg:#1d8b5b;--agh-live-glow:0 0 14px rgba(29,139,91,.16)}',
-	'.agh-settings.agh-dark,body.dark .agh-settings,html.dark .agh-settings,body.mode-dark .agh-settings,body.argon-dark .agh-settings,html[data-theme="dark"] .agh-settings,body[data-theme="dark"] .agh-settings{--agh-ok-fg:#7de9df;--agh-ok-glow:0 0 18px rgba(125,233,223,.26);--agh-live-fg:#59d18f;--agh-live-glow:0 0 18px rgba(89,209,143,.24)}',
-	'.agh-hero{position:relative;overflow:hidden;border-radius:22px;padding:26px;color:#f7fbf8;background:var(--agh-hero-bg);box-shadow:var(--agh-hero-shadow)}',
-	'.agh-hero h2{all:unset;display:block!important;margin:0 0 10px!important;font-size:28px!important;line-height:1.18!important;font-weight:700!important;color:#fff!important;background:transparent!important;border:0!important;box-shadow:none!important}',
-	'.agh-hero p{max-width:72rem;margin:0;color:rgba(247,251,248,.86);font-size:14px;line-height:1.75}',
-	'.agh-status-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.agh-chip{padding:14px;border-radius:16px;background:var(--agh-chip-bg);border:1px solid var(--agh-chip-border);box-shadow:var(--agh-chip-shadow);min-width:0}.agh-chip span{display:block;font-size:12px;color:var(--agh-text-muted)}.agh-chip strong{display:block;margin-top:6px;font-size:18px;line-height:1.2;color:var(--agh-text-high);word-break:break-word}.agh-chip.agh-ok strong,.agh-chip strong.agh-ok{color:var(--agh-ok-fg)!important;-webkit-text-fill-color:var(--agh-ok-fg)!important;text-shadow:var(--agh-ok-glow)!important}.agh-chip.agh-live strong,.agh-chip strong.agh-live{color:var(--agh-live-fg)!important;-webkit-text-fill-color:var(--agh-live-fg)!important;text-shadow:var(--agh-live-glow)!important}.agh-chip.agh-warn strong,.agh-chip strong.agh-warn{color:#ad7417!important;-webkit-text-fill-color:#ad7417!important}.agh-chip.agh-bad strong,.agh-chip strong.agh-bad{color:#c94d5c!important;-webkit-text-fill-color:#c94d5c!important}',
-	'.agh-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}',
-	'.agh-action{position:relative;display:grid;align-content:start;gap:12px;padding:18px;border-radius:18px;background:linear-gradient(180deg,var(--agh-action-bg-start,var(--agh-card-bg)) 0%,var(--agh-action-bg-end,var(--agh-surface-bg)) 100%);border:1px solid var(--agh-border);box-shadow:0 10px 28px rgba(17,48,54,.07);min-width:0;overflow:hidden}',
-	'.agh-action:before{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:var(--agh-accent,#1f6a5d)}',
-	'.agh-action-head{display:grid;gap:8px;padding-bottom:2px}',
-	'.agh-action-badge{display:inline-flex;align-items:center;width:max-content;padding:5px 10px;border-radius:999px;background:var(--agh-action-badge-bg,var(--agh-badge-bg));color:var(--agh-action-badge-fg,var(--agh-badge-fg))!important;-webkit-text-fill-color:var(--agh-action-badge-fg,var(--agh-badge-fg))!important;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;text-shadow:none!important;opacity:1!important}',
-	'.agh-action h3{all:unset;display:block;font-size:17px;line-height:1.35;font-weight:700;color:var(--agh-text-high)!important;-webkit-text-fill-color:var(--agh-text-high)!important;text-shadow:none!important;opacity:1!important}',
-	'.agh-action p{margin:0;color:var(--agh-text)!important;-webkit-text-fill-color:var(--agh-text)!important;line-height:1.7;font-size:13px;text-shadow:none!important;opacity:1!important}',
-    '.agh-action textarea{width:100%;min-height:150px;border-radius:16px;border:1px solid var(--agh-input-border)!important;background:var(--agh-input-bg)!important;color:var(--agh-text-high)!important;-webkit-text-fill-color:var(--agh-text-high)!important;text-shadow:none!important;caret-color:var(--agh-text-high)!important;font-family:monospace;font-size:14px;line-height:1.6;font-weight:500;opacity:1!important;box-sizing:border-box;resize:vertical}.agh-action-links textarea{min-height:176px}',
-	'.agh-action textarea::placeholder,.agh-action input::placeholder{color:var(--agh-text-muted)!important;opacity:1!important}',
-	'.agh-action-update{--agh-accent:#2f6fb0;--agh-action-bg-start:var(--agh-card-bg);--agh-action-bg-end:rgba(47,111,176,.08);--agh-action-badge-bg:rgba(47,111,176,.12);--agh-action-badge-fg:#2b5f96}',
-	'.agh-action-links{--agh-accent:#3b82c4;--agh-action-bg-start:var(--agh-card-bg);--agh-action-bg-end:rgba(59,130,196,.08);--agh-action-badge-bg:rgba(59,130,196,.12);--agh-action-badge-fg:#316ea5}',
-	'.agh-action-password{--agh-accent:#5b78c7;--agh-action-bg-start:var(--agh-card-bg);--agh-action-bg-end:rgba(91,120,199,.08);--agh-action-badge-bg:rgba(91,120,199,.12);--agh-action-badge-fg:#4860ab}',
-	'.agh-action-gfw{--agh-accent:#5874b0;--agh-action-bg-start:var(--agh-card-bg);--agh-action-bg-end:rgba(88,116,176,.08);--agh-action-badge-bg:rgba(88,116,176,.12);--agh-action-badge-fg:#486396}',
-	'.agh-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.agh-row .btn{border-radius:12px;box-shadow:var(--agh-button-shadow)}',
-	'.agh-button-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:10px}',
-	'.agh-soft-btn{display:inline-flex!important;align-items:center;justify-content:center;min-height:40px;padding:9px 14px!important;border-radius:12px!important;border:1px solid var(--agh-inline-btn-border)!important;background:var(--agh-inline-btn-bg)!important;color:var(--agh-inline-btn-fg)!important;box-shadow:none!important;text-decoration:none!important;font-weight:600;line-height:1.4;transition:background-color .18s ease,border-color .18s ease,color .18s ease,transform .18s ease}',
-	'.agh-soft-btn:hover:not([disabled]),.agh-soft-btn:focus-visible:not([disabled]){background:var(--agh-inline-btn-bg-hover)!important;border-color:var(--agh-inline-btn-fg)!important;color:var(--agh-inline-btn-fg)!important;transform:translateY(-1px)}',
-	'.agh-soft-btn[disabled],.agh-soft-btn.spinning{opacity:.6;color:var(--agh-text-muted)!important;background:var(--agh-surface-bg)!important;border-color:var(--agh-border)!important;transform:none;cursor:not-allowed}',
-	'.agh-row select,.agh-row input{max-width:100%;min-height:34px;border:1px solid var(--agh-input-border)!important;border-radius:16px!important;background:var(--agh-input-bg)!important;color:var(--agh-text-high)!important;-webkit-text-fill-color:var(--agh-text-high)!important;text-shadow:none!important;opacity:1!important}',
-	'.agh-status{margin-top:12px;padding:12px 14px;border:1px solid var(--agh-border-soft);border-radius:16px;background:var(--agh-status-bg);color:var(--agh-text-soft);font-size:12px;line-height:1.6}',
-	'.agh-settings .cbi-map{border-radius:22px;border:1px solid var(--agh-border);box-shadow:0 12px 30px rgba(17,48,54,.08);overflow:visible;background:var(--agh-card-grad)}',
-	'.agh-settings .cbi-map>h2,.agh-settings .cbi-map>.cbi-map-descr{display:none}',
-	'.agh-settings .cbi-section{margin:0;padding:0 16px 18px;border:0;box-shadow:none;background:transparent}.agh-settings .cbi-section>h3{margin:0;padding:20px 22px 0;color:var(--agh-text-high)!important;font-size:24px;line-height:1.2}.agh-settings .cbi-section>.cbi-section-descr{margin:10px 22px 0;padding:12px 14px;border:1px solid var(--agh-border-soft);border-radius:16px;background:var(--agh-desc-bg);color:var(--agh-text-soft)!important;-webkit-text-fill-color:var(--agh-text-soft)!important;opacity:1!important;line-height:1.7}.agh-settings .cbi-section-node{margin-top:18px;padding-top:0;background:var(--agh-form-shell-bg);border:1px solid var(--agh-form-shell-border);border-radius:20px;overflow:hidden;box-shadow:0 14px 30px rgba(17,48,54,.08)}',
-	'.agh-settings .cbi-tabmenu{display:flex;flex-wrap:wrap;gap:8px;list-style:none;margin:0;padding:16px 18px 0;border-bottom:1px solid var(--agh-border-soft);background:var(--agh-tabmenu-bg)}.agh-settings .cbi-tab,.agh-settings .cbi-tab-disabled{margin:0;padding:0;border-radius:0;background:transparent;border:0}.agh-settings .cbi-tab>a,.agh-settings .cbi-tab-disabled>a{display:block;padding:10px 14px;border-radius:16px;color:var(--agh-tab-text)!important;background:transparent!important;text-shadow:none!important;font-weight:650;line-height:1.35;transition:background-color .18s ease,color .18s ease,box-shadow .18s ease}.agh-settings .cbi-tab>a:hover,.agh-settings .cbi-tab>a:focus-visible{background:var(--agh-surface-bg)!important;color:var(--agh-text-high)!important}.agh-settings .cbi-tab-disabled>a{opacity:.55}.agh-settings .cbi-tab-active,.agh-settings .cbi-tab-active>a{background:transparent!important}.agh-settings .cbi-tab-active>a{background:var(--agh-tab-active-bg)!important;color:var(--agh-tab-active-text)!important;box-shadow:0 10px 22px rgba(11,18,31,.18)}.agh-settings .cbi-tabcontainer{padding:12px 0 0;background:transparent}.agh-settings .cbi-tab-descr{margin:0 22px 14px;padding:12px 14px;border:1px solid var(--agh-border-soft);border-radius:16px;background:var(--agh-desc-bg);color:var(--agh-text-soft)!important;-webkit-text-fill-color:var(--agh-text-soft)!important;font-size:13px;line-height:1.7;text-shadow:none!important;opacity:1!important}',
-	'.agh-settings .cbi-value{display:grid;grid-template-columns:minmax(220px,280px) minmax(0,1fr);column-gap:22px;row-gap:12px;align-items:start;justify-items:stretch;padding:18px 22px;border-top:1px solid var(--agh-border-soft);background:var(--agh-form-row-bg);transition:background-color .18s ease,border-color .18s ease}.agh-settings .cbi-value:first-child{border-top:0}.agh-settings .cbi-value:hover{background:var(--agh-form-row-hover)}.agh-settings .cbi-value-title,.agh-settings label.cbi-value-title{display:block;grid-column:1;align-self:start;justify-self:stretch;width:100%!important;min-width:0!important;max-width:100%!important;box-sizing:border-box;margin:0;color:var(--agh-text-high)!important;-webkit-text-fill-color:var(--agh-text-high)!important;font-weight:700;line-height:1.55;text-shadow:none!important;opacity:1!important;overflow-wrap:anywhere;word-break:break-word}.agh-settings .cbi-value-field{grid-column:2;min-width:0;max-width:100%;width:100%;color:var(--agh-text)!important}.agh-settings .cbi-value-field,.agh-settings .cbi-value-field span,.agh-settings .cbi-value-field .hide-open,.agh-settings .cbi-value-field .hide-close{color:var(--agh-text)!important;-webkit-text-fill-color:var(--agh-text)!important;text-shadow:none!important;opacity:1!important}.agh-settings .cbi-value-description,.agh-settings .cbi-value-field .cbi-value-description{max-width:62rem;margin-top:10px;padding:12px 14px;border-radius:16px;border:1px solid var(--agh-border-soft);background:var(--agh-desc-bg);color:var(--agh-text-soft)!important;-webkit-text-fill-color:var(--agh-text-soft)!important;font-size:13px;line-height:1.7;opacity:1!important}.agh-settings .cbi-value-field .btn,.agh-settings .cbi-value-field .cbi-button{border-radius:16px!important;border:1px solid var(--agh-inline-btn-border)!important;background:var(--agh-inline-btn-bg)!important;color:var(--agh-inline-btn-fg)!important;box-shadow:none!important}',
-	'.agh-settings input[type="text"],.agh-settings input[type="password"],.agh-settings textarea,.agh-settings select{border-radius:16px;border-color:var(--agh-input-border);background:var(--agh-input-bg);color:var(--agh-text-high);-webkit-text-fill-color:var(--agh-text-high)!important;text-shadow:none!important;caret-color:var(--agh-text-high);box-shadow:none}',
-	'.agh-settings select option,.agh-settings select optgroup{background:var(--agh-input-bg)!important;color:var(--agh-text-high)!important}',
-	'.agh-settings input[type="text"]::placeholder,.agh-settings input[type="password"]::placeholder,.agh-settings textarea::placeholder{color:var(--agh-text-muted)}',
-	'.agh-settings .cbi-checkbox{display:flex;align-items:center;min-height:24px}.agh-settings .cbi-checkbox input{width:20px;height:20px;margin:0;accent-color:var(--agh-checkbox-active-border);box-shadow:none!important;outline:none}.agh-settings .cbi-checkbox input:focus,.agh-settings .cbi-checkbox input:focus-visible{box-shadow:0 0 0 3px rgba(104,146,214,.18)!important;border-radius:6px}.agh-settings .cbi-checkbox label{display:none!important}.agh-settings .cbi-radio label{border:1px solid var(--agh-checkbox-border)!important;background:var(--agh-checkbox-bg)!important;box-shadow:none!important}.agh-settings .cbi-radio input:checked + label{background:var(--agh-checkbox-active-bg)!important;border-color:var(--agh-checkbox-active-border)!important}.agh-settings .cbi-radio input:focus + label{box-shadow:0 0 0 3px rgba(104,146,214,.18)!important}',
-	'.agh-settings .cbi-dropdown,.agh-settings .cbi-dropdown ul{z-index:60}',
-	'.agh-settings .cbi-page-actions{position:sticky;bottom:0;z-index:25;display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;align-items:center;margin:18px -1px -1px;padding:16px 18px;border-top:1px solid var(--agh-page-actions-border);background:var(--agh-page-actions-bg);box-shadow:var(--agh-page-actions-shadow);backdrop-filter:blur(12px)}.agh-settings .cbi-page-actions .cbi-button,.agh-settings .cbi-page-actions .cbi-dropdown{min-height:40px;border-radius:16px!important;box-shadow:none!important}.agh-settings .cbi-page-actions .cbi-dropdown ul{padding:6px;background:var(--agh-card-bg)!important;border:1px solid var(--agh-border)!important;border-radius:16px;box-shadow:0 12px 30px rgba(0,0,0,.22)}.agh-settings .cbi-page-actions .cbi-dropdown li{padding:10px 12px;border-radius:12px;color:var(--agh-text-high)!important;background:transparent!important}.agh-settings .cbi-page-actions .cbi-dropdown li[selected],.agh-settings .cbi-page-actions .cbi-dropdown li:hover{background:var(--agh-surface-bg)!important}.agh-settings .cbi-page-actions .more,.agh-settings .cbi-page-actions .open{color:inherit!important}',
-	'@media(max-width:1180px){.agh-actions,.agh-status-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}',
-	'@media(max-width:860px){.agh-settings .cbi-value{grid-template-columns:1fr;gap:10px}.agh-settings .cbi-page-actions{justify-content:stretch}.agh-settings .cbi-page-actions .cbi-button,.agh-settings .cbi-page-actions .cbi-dropdown{flex:1 1 140px}}',
-	'@media(max-width:720px){.agh-actions,.agh-status-grid{grid-template-columns:1fr}.agh-hero{padding:20px}.agh-hero h2{font-size:24px!important}.agh-settings .cbi-section{padding:0 12px 14px}.agh-settings .cbi-section>h3{padding:18px 18px 0;font-size:22px}.agh-settings .cbi-section>.cbi-section-descr{margin:10px 18px 0;padding:12px 14px}.agh-settings .cbi-tabmenu{padding:14px 14px 0}.agh-settings .cbi-tab-descr{margin:0 16px 12px;padding:12px 14px}.agh-settings .cbi-value{padding:16px 16px}}'
-].join('\n');
+var style = aghui.style;
 
 return view.extend({
 	load: function() {
@@ -316,22 +277,22 @@ return view.extend({
 		});
 		linksBox.addEventListener('input', function() { channelSelect.value = 'custom'; });
 
-		var m = new form.Map('AdGuardHome', 'AdGuard Home', t('Grouped service, network, update and maintenance options. Use Save & Apply after changing UCI settings.', '设置项已按服务、网络、更新和维护分组。修改 UCI 配置后请点击保存并应用。'));
+		var m = new form.Map('AdGuardHome', null, t('Grouped service, network, update and maintenance options. Use Save & Apply after changing UCI settings.', '设置项已按服务、网络、更新和维护分组。修改 UCI 配置后请点击保存并应用。'));
 		var s = m.section(form.NamedSection, 'AdGuardHome', 'AdGuardHome', t('Configuration', '配置'));
 		s.addremove = false;
 		s.anonymous = true;
-		s.tab('service', t('Service', '服务'), t('Enable the daemon and define how it starts.', '启用守护进程并设置启动方式。'));
-		s.tab('network', t('Network', '网络'), t('Management port and DNS redirect behaviour.', '网页管理端口与 DNS 重定向行为。'));
-		s.tab('files', t('Files', '文件'), t('Binary, YAML, workspace and log paths.', '核心文件、YAML、工作目录和日志路径。'));
-		s.tab('update', t('Update', '更新'), t('Core update source and startup update behaviour.', '核心更新源和启动更新行为。'));
-		s.tab('rules', t('Rules', '规则'), t('GFW rule export and upstream options.', 'GFW 规则导出与上游 DNS 选项。'));
-		s.tab('maintenance', t('Maintenance', '维护'), t('Backup, upgrade retention and scheduled tasks.', '备份、升级保留和计划任务。'));
+		s.tab('service', t('Basic settings', '基础设置'), t('Enable the daemon and define how it starts.', '启用守护进程并设置启动方式。'));
+		s.tab('network', t('DNS Access', 'DNS 接入'), t('Management port and DNS redirect behaviour.', '网页管理端口与 DNS 重定向行为。'));
+		s.tab('files', t('File paths', '文件路径'), t('Binary, YAML, workspace and log paths.', '核心文件、YAML、工作目录和日志路径。'));
+		s.tab('update', t('Core update', '核心更新'), t('Core update source and startup update behaviour.', '核心更新源和启动更新行为。'));
+		s.tab('rules', t('GFW rules', 'GFW 规则'), t('GFW rule export and upstream options.', 'GFW 规则导出与上游 DNS 选项。'));
+		s.tab('maintenance', t('Backup and tasks', '备份与任务'), t('Backup, upgrade retention and scheduled tasks.', '备份、升级保留和计划任务。'));
 		var o;
 		o = s.taboption('service', form.Flag, 'enabled', t('Enable service', '启用服务'), t('Start AdGuard Home through procd when this option is enabled.', '启用后通过 procd 启动 AdGuard Home。'));
 		o = s.taboption('service', form.Flag, 'waitonboot', t('Wait for network on boot', '开机等待网络'), t('Delay service startup until the network is ready.', '开机时等待网络就绪后再启动服务。'));
 		o = s.taboption('service', form.Value, 'username', t('API login username', 'API 登录用户名'), t('Username LuCI uses for the local AdGuard Home API; keep it in sync with the AdGuard Home admin account.', 'LuCI 访问本地 AdGuard Home API 的用户名，需与管理员账号一致。')); o.placeholder = 'root'; o.rmempty = false;
 		o = s.taboption('service', form.Value, 'password', t('API login password', 'API 登录密码'), t('Password LuCI uses for the local AdGuard Home API; update it after changing the AdGuard Home web password.', 'LuCI 访问本地 AdGuard Home API 的密码，改后台密码后需同步更新。')); o.password = true; o.rmempty = true;
-		o = s.taboption('service', form.Value, 'hashpass', t('Web password bcrypt hash', 'Web 密码 bcrypt 哈希'), t('Use the password helper above to generate a hash, then save and apply.', '可使用上方密码助手生成哈希，然后保存并应用。')); o.password = true; o.rmempty = true;
+		o = s.taboption('service', form.Value, 'hashpass', t('Web password bcrypt hash', 'Web 密码 bcrypt 哈希'), t('Use the password helper to generate a hash, then save and apply.', '可使用密码助手生成哈希，然后保存并应用。')); o.password = true; o.rmempty = true;
 
 		o = s.taboption('network', form.Value, 'httpport', t('Web console port', 'Web 控制台端口'), t('Port used by the AdGuard Home management UI.', 'AdGuard Home 管理界面使用的端口。')); o.datatype = 'port'; o.placeholder = '3000';
 		o = s.taboption('network', form.ListValue, 'redirect', t('DNS redirect mode', 'DNS 重定向模式'), t('Choose how LAN DNS traffic is handed to AdGuard Home.', '选择局域网 DNS 流量交给 AdGuard Home 的方式。')); o.default = 'dnsmasq-upstream'; o.value('none', t('None', '无')); o.value('dnsmasq-upstream', t('Use as dnsmasq upstream', '作为 dnsmasq 上游')); o.value('redirect', t('Redirect port 53', '重定向 53 端口')); o.value('exchange', t('Swap with dnsmasq port', '与 dnsmasq 交换端口'));
@@ -358,35 +319,30 @@ return view.extend({
 		o = s.taboption('maintenance', form.Value, 'backupwdpath', t('Backup path', '备份路径'), t('Destination directory for shutdown backups.', '停止服务备份的目标目录。')); o.placeholder = '/etc/config/adGuardConfig/workspace';
 		o = s.taboption('maintenance', form.MultiValue, 'crontab', t('Scheduled tasks', '计划任务'), t('Legacy cron jobs managed by the init script.', '由 init 脚本维护的旧版计划任务。')); o.widget = 'checkbox'; o.value('autoupdate', t('Auto update core', '自动更新核心')); o.value('cutquerylog', t('Trim query log', '裁剪查询日志')); o.value('cutruntimelog', t('Trim runtime log', '裁剪运行日志')); o.value('autohost', t('Update IPv6 hosts', '更新 IPv6 hosts')); o.value('autogfw', t('Update GFW rule file', '更新 GFW 规则文件')); o.value('autogfwipset', t('Update GFW ipset', '更新 GFW ipset'));
 
+		// DummyValue tools are rendered in their relevant tabs; they never write UCI.
+		function tools(tab, name, build) {
+			var item = s.taboption(tab, form.DummyValue, name, '');
+			item.renderWidget = function() { return build(); };
+		}
+		tools('service', '_agh_password', passwordCard);
+		tools('update', '_agh_core', function() { return updateCard(rpcError); });
+		tools('update', '_agh_sources', function() { return linksCard(channelSelect, archSelect, linksBox, rpcError); });
+		tools('rules', '_agh_rules', function() { return gfwCard(rpcError, yes(status.running)); });
+
 		return m.render().then(function(formNode) {
-			return applyThemeClass(E('div', { 'class': 'agh-settings' }, [
+			return applyThemeClass(E('div', { 'class': 'agh-settings agh-ui' }, [
 				E('style', {}, style),
-				E('section', { 'class': 'agh-hero' }, [ E('h2', {}, t('AdGuard Home Settings', 'AdGuard Home 设置中心')) ]),
-				statusSummary(status, rpcError),
-				E('section', { 'class': 'agh-actions' }, [ updateCard(rpcError), linksCard(channelSelect, archSelect, linksBox, rpcError), passwordCard(), gfwCard(rpcError, yes(status.running)) ]),
+				aghui.header('settings'),
 				formNode
 			]), 'agh-dark');
 		});
 	}
 });
 
-function statusSummary(status, rpcError) {
-	return E('section', { 'class': 'agh-status-grid' }, [
-		chip(t('Service', '服务'), rpcError ? t('Backend missing', '后端未加载') : (yes(status.running) ? t('Running', '运行中') : t('Stopped', '未运行')), rpcError ? 'agh-bad' : (yes(status.running) ? 'agh-live' : 'agh-warn')),
-		chip(t('Core', '核心'), yes(status.core_ready) ? text(status.version, t('Ready', '就绪')) : t('Missing', '缺失'), yes(status.core_ready) ? 'agh-live' : 'agh-warn'),
-		chip(t('Download', '下载'), normalizeChannel(status.release_channel), 'agh-ok'),
-		chip(t('Architecture', '架构'), text(status.downloadarch, 'auto'), 'agh-ok')
-	]);
-}
-
-function chip(label, value, cls) {
-	return E('div', { 'class': 'agh-chip' + (cls ? ' ' + cls : '') }, [ E('span', {}, label), E('strong', { 'class': cls || '' }, value) ]);
-}
-
 function updateCard(rpcError) {
 	var statusBox = createStatusBox(rpcError ? actionError(rpcError, t('RPC backend unavailable', 'RPC 后端不可用')) : t('Ready.', '就绪。'));
 	var updateButton = E('button', { 'class': 'btn cbi-button cbi-button-action' }, t('Update', '更新'));
-	var forceButton = E('button', { 'class': 'btn cbi-button cbi-button-negative' }, t('Force update', '强制更新'));
+	var forceButton = E('button', { 'class': 'btn cbi-button agh-warning' }, t('Force update', '强制更新'));
 	if (rpcError) {
 		updateButton.disabled = true;
 		forceButton.disabled = true;
@@ -402,8 +358,7 @@ function updateCard(rpcError) {
 		E('p', {}, t('Queue a core upgrade task through rpcd and move to the log page when you need to track output.', '通过 rpcd 调度核心升级任务；需要查看执行输出时，可直接切换到运行日志页面。')),
 		E('div', { 'class': 'agh-row' }, [
 			updateButton,
-			forceButton,
-			E('a', { 'class': softButtonClass(), 'href': L.url('admin', 'services', 'adguardhome', 'log') }, t('Open Log', '打开日志'))
+			forceButton
 		]), statusBox
 	]);
 }
@@ -427,7 +382,7 @@ function linksCard(channelSelect, archSelect, linksBox, rpcError) {
 
 
 function passwordCard() {
-	var statusBox = createStatusBox(t('Generate a hash and it will be filled into the hash field below. The plain password field will also be updated for local API access.', '生成哈希后会自动写入下方哈希字段，并同步更新本地 API 使用的明文密码字段。'));
+	var statusBox = createStatusBox(t('Generate a hash and it will be filled into the hash field. The plain password field will also be updated for local API access.', '生成哈希后会自动写入哈希字段，并同步更新本地 API 使用的明文密码字段。'));
 	var input = E('input', { type: 'password', placeholder: t('New web password', '新的网页密码') });
 	var button = E('button', { 'class': softButtonClass(), 'click': function() { ensureBcrypt().then(function() { var bcrypt = window.TwinBcrypt || (window.dcodeIO && window.dcodeIO.bcrypt); var rawPassword = input.value || ''; var hash = bcrypt && bcrypt.hashSync ? bcrypt.hashSync(rawPassword, 10) : ''; var hashTarget = document.querySelector('[data-name="hashpass"] input'); var plainTarget = document.querySelector('[data-name="password"] input'); if (hashTarget && hash) { hashTarget.value = hash; if (plainTarget) plainTarget.value = rawPassword; statusBox.textContent = t('Hash generated and both password fields were updated.', '哈希已生成，并已同步更新两个密码字段。'); } else { statusBox.textContent = t('bcrypt library unavailable or hash generation failed.', 'bcrypt 库不可用，或哈希生成失败。'); } }); } }, t('Generate hash', '生成哈希'));
 	return E('div', { 'class': 'agh-action agh-action-password' }, [
@@ -441,7 +396,7 @@ function passwordCard() {
 function gfwCard(rpcError, running) {
 	var statusBox = createStatusBox(rpcError ? actionError(rpcError, t('RPC backend unavailable', 'RPC 后端不可用')) : t('Ready.', '就绪。'));
 	function button(action, text, label) {
-		var node = E('button', { 'class': softButtonClass() }, text);
+		var node = E('button', { 'class': action === 'del' || action === 'ipset_del' ? 'btn cbi-button-negative' : softButtonClass() }, text);
 		if (rpcError || (running && ACTION_MUTATES_GFW_YAML[action]))
 			node.disabled = true;
 		node.addEventListener('click', function() {

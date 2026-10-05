@@ -19,13 +19,14 @@
 	},
 	"admin/services/adguardhome/yaml": {
 		"title": "YAML 编辑器",
+		"hidden": true,
 		"order": 30,
 		"action": { "type": "view", "path": "adguardhome/yaml" },
 		"depends": { "acl": [ "luci-app-adguardhome" ] }
 	},
 	"admin/services/adguardhome/log": {
-		"title": "运行日志",
-		"order": 40,
+		"title": "诊断",
+		"order": 30,
 		"action": { "type": "view", "path": "adguardhome/log" },
 		"depends": { "acl": [ "luci-app-adguardhome" ] }
 	},

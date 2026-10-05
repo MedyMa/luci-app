@@ -1,5 +1,6 @@
 'use strict';
 'require view';
+'require adguardhome.ui as aghui';
 'require rpc';
 'require poll';
 
@@ -176,21 +177,7 @@ function renderTerminalContent(state, content, reset) {
 	return committed + line;
 }
 
-var style = [
-	'.agh-log{display:grid;gap:18px;--agh-ease-out:cubic-bezier(.23,1,.32,1);--agh-ease-in-out:cubic-bezier(.77,0,.175,1);color:var(--agh-text,var(--text-color-high,#203042));--agh-text:var(--text-color-high,#203042);--agh-border:rgba(76,108,157,.14);--agh-border-soft:rgba(76,108,157,.08);--agh-card-bg:rgba(249,252,255,.98);--agh-toolbar-bg:rgba(232,240,251,.94);--agh-tab-bg:rgba(224,235,250,.92);--agh-tab-active-bg:rgba(255,255,255,.98);--agh-tab-text:#5e6f88;--agh-tab-active-text:var(--text-color-high,#17373c);--agh-status-bg:rgba(232,240,251,.94);--agh-status-text:#5e6f88;--agh-console-bg:#0f1a2c;--agh-console-fg:#d7e8ff;--agh-alert-bg:#fff4df;--agh-alert-fg:#805718;--agh-hero-bg:linear-gradient(135deg,#294a7a 0%,#3d679f 52%,#6f93cc 100%);--agh-hero-shadow:0 20px 42px rgba(25,50,87,.16)}',
-	'.agh-log.agh-dark,body.dark .agh-log,html.dark .agh-log,body.mode-dark .agh-log,body.argon-dark .agh-log,html[data-theme="dark"] .agh-log,body[data-theme="dark"] .agh-log{--agh-border:rgba(124,147,186,.22);--agh-border-soft:rgba(124,147,186,.16);--agh-card-bg:rgba(16,24,38,.96);--agh-toolbar-bg:rgba(9,15,27,.84);--agh-tab-bg:rgba(10,17,30,.9);--agh-tab-active-bg:rgba(23,35,52,.96);--agh-tab-text:#9eb1c5;--agh-tab-active-text:#f1f6fc;--agh-status-bg:rgba(9,15,27,.88);--agh-status-text:#aebed0;--agh-console-bg:#08111d;--agh-console-fg:#dce7f8;--agh-alert-bg:rgba(92,68,24,.32);--agh-alert-fg:#f5d28a;--agh-hero-bg:linear-gradient(135deg,#0c1424 0%,#15253d 52%,#234267 100%);--agh-hero-shadow:0 22px 44px rgba(0,0,0,.3)}',
-	'.agh-hero{border-radius:24px;padding:26px;color:#f7fbf8;background:var(--agh-hero-bg);box-shadow:var(--agh-hero-shadow)}',
-	'.agh-hero h2{all:unset;display:block!important;margin:0 0 10px!important;font-size:28px!important;line-height:1.18!important;font-weight:700!important;color:#fff!important;background:transparent!important;border:0!important;box-shadow:none!important}',
-	'.agh-hero p{max-width:72rem;margin:0;color:rgba(247,251,248,.86);font-size:14px;line-height:1.75}',
-	'.agh-card{border-radius:22px;background:var(--agh-card-bg);border:1px solid var(--agh-border);box-shadow:0 12px 30px rgba(17,48,54,.08);overflow:hidden}',
-	'.agh-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:16px 18px;border-bottom:1px solid var(--agh-border-soft);background:var(--agh-toolbar-bg)}.agh-toolbar .btn{border-radius:12px}',
-	'.agh-toolbar .btn[disabled]{opacity:.6;cursor:not-allowed}',
-	'.agh-tabs{display:inline-flex;gap:6px;padding:4px;border-radius:14px;background:var(--agh-tab-bg)}.agh-tab{border:0;border-radius:10px;padding:8px 13px;background:transparent;color:var(--agh-tab-text);cursor:pointer}.agh-tab.active{background:var(--agh-tab-active-bg);color:var(--agh-tab-active-text);box-shadow:0 3px 12px rgba(17,48,54,.09)}',
-	'.agh-console{margin:0;min-height:560px;max-height:72vh;overflow:auto;padding:18px;background:var(--agh-console-bg);color:var(--agh-console-fg);font-family:ui-monospace,SFMono-Regular,Consolas,Monaco,monospace;font-size:12px;line-height:1.65;white-space:pre-wrap;word-break:break-word}',
-	'.agh-status{padding:12px 18px;border-top:1px solid var(--agh-border-soft);background:var(--agh-status-bg);color:var(--agh-status-text);font-size:12px;line-height:1.55}',
-	'.agh-alert{padding:16px 18px;border-bottom:1px solid var(--agh-border-soft);background:var(--agh-alert-bg);color:var(--agh-alert-fg);line-height:1.7}',
-	'@media(max-width:720px){.agh-hero{padding:20px}.agh-hero h2{font-size:24px!important}.agh-console{min-height:480px}}'
-].join('\n');
+var style = aghui.style;
 
 return view.extend({
 	load: function() {
@@ -296,9 +283,10 @@ return view.extend({
 			this._aghPollHandle = null;   // rpcError: clear handle from previous success
 		}
 
-		return applyThemeClass(E('div', { 'class': 'agh-log' }, [
+		return applyThemeClass(E('div', { 'class': 'agh-log agh-ui' }, [
 			E('style', {}, style),
-			E('section', { 'class': 'agh-hero' }, [ E('h2', {}, t('Runtime Logs', '运行日志')) ]),
+			aghui.header('log'),
+			aghui.diagnostics('log'),
 			E('section', { 'class': 'agh-card' }, [
 				rpcError ? E('div', { 'class': 'agh-alert' }, actionError(rpcError, t('Log backend unavailable', '日志后端不可用'))) : '',
 				E('div', { 'class': 'agh-toolbar' }, [

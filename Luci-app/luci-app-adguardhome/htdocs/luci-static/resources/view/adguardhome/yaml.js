@@ -1,5 +1,6 @@
 'use strict';
 'require view';
+'require adguardhome.ui as aghui';
 'require rpc';
 'require fs';
 'require poll';
@@ -183,22 +184,7 @@ function readCurrentYamlDirect(status) {
 	return L.resolveDefault(fs.read_direct(resolvedConfigPath(status), 'text'), '');
 }
 
-var style = [
-	'.agh-yaml{display:grid;gap:18px;--agh-ease-out:cubic-bezier(.23,1,.32,1);--agh-ease-in-out:cubic-bezier(.77,0,.175,1);color:var(--agh-text,var(--text-color-high,#203042));--agh-text:var(--text-color-high,#203042);--agh-border:rgba(76,108,157,.14);--agh-border-soft:rgba(76,108,157,.08);--agh-card-bg:rgba(249,252,255,.98);--agh-toolbar-bg:rgba(232,240,251,.94);--agh-status-bg:rgba(232,240,251,.94);--agh-status-text:#5e6f88;--agh-alert-bg:#fff4df;--agh-alert-fg:#805718;--agh-editor-bg:rgba(255,255,255,.99);--agh-hero-bg:linear-gradient(135deg,#294a7a 0%,#3d679f 52%,#6f93cc 100%);--agh-hero-shadow:0 20px 42px rgba(25,50,87,.16)}',
-	'.agh-yaml.agh-dark,body.dark .agh-yaml,html.dark .agh-yaml,body.mode-dark .agh-yaml,body.argon-dark .agh-yaml,html[data-theme="dark"] .agh-yaml,body[data-theme="dark"] .agh-yaml{--agh-border:rgba(124,147,186,.22);--agh-border-soft:rgba(124,147,186,.16);--agh-card-bg:rgba(16,24,38,.96);--agh-toolbar-bg:rgba(9,15,27,.84);--agh-status-bg:rgba(9,15,27,.88);--agh-status-text:#aebed0;--agh-alert-bg:rgba(92,68,24,.32);--agh-alert-fg:#f5d28a;--agh-editor-bg:rgba(8,14,24,.94);--agh-hero-bg:linear-gradient(135deg,#0c1424 0%,#15253d 52%,#234267 100%);--agh-hero-shadow:0 22px 44px rgba(0,0,0,.3)}',
-	'.agh-hero{border-radius:24px;padding:26px;color:#f7fbf8;background:var(--agh-hero-bg);box-shadow:var(--agh-hero-shadow)}',
-	'.agh-hero h2{all:unset;display:block!important;margin:0 0 10px!important;font-size:28px!important;line-height:1.18!important;font-weight:700!important;color:#fff!important;background:transparent!important;border:0!important;box-shadow:none!important}',
-	'.agh-hero p{max-width:72rem;margin:0;color:rgba(247,251,248,.86);font-size:14px;line-height:1.75}',
-	'.agh-card{border-radius:22px;background:var(--agh-card-bg);border:1px solid var(--agh-border);box-shadow:0 12px 30px rgba(17,48,54,.08);overflow:hidden}',
-	'.agh-toolbar{display:flex;gap:10px;flex-wrap:wrap;padding:16px 18px;border-bottom:1px solid var(--agh-border-soft);background:var(--agh-toolbar-bg)}.agh-toolbar .btn{border-radius:12px}',
-	'.agh-toolbar .btn[disabled]{opacity:.6;cursor:not-allowed}',
-	'.agh-editor{padding:0;background:var(--agh-editor-bg)}.agh-editor textarea{width:100%;min-height:620px;border:0;border-radius:0;font-family:monospace;font-size:13px;box-sizing:border-box;background:var(--agh-editor-bg);color:var(--agh-text)}',
-	'.agh-editor textarea[readonly]{cursor:not-allowed;opacity:.92}',
-	'.CodeMirror{height:auto;min-height:620px;font-size:13px;line-height:1.65}.CodeMirror-scroll{min-height:620px}',
-	'.agh-status{padding:12px 18px;border-top:1px solid var(--agh-border-soft);background:var(--agh-status-bg);color:var(--agh-status-text);font-size:12px;line-height:1.55;white-space:pre-wrap}',
-	'.agh-alert{padding:16px 18px;border-bottom:1px solid var(--agh-border-soft);background:var(--agh-alert-bg);color:var(--agh-alert-fg);line-height:1.7}',
-	'@media(max-width:720px){.agh-hero{padding:20px}.agh-hero h2{font-size:24px!important}.CodeMirror,.CodeMirror-scroll,.agh-editor textarea{min-height:520px}}'
-].join('\n');
+var style = aghui.style;
 
 return view.extend({
 	load: function() {
@@ -346,9 +332,10 @@ return view.extend({
 			});
 		});
 
-		var node = applyThemeClass(E('div', { 'class': 'agh-yaml' }, [
+		var node = applyThemeClass(E('div', { 'class': 'agh-yaml agh-ui' }, [
 			E('style', {}, style),
-			E('section', { 'class': 'agh-hero' }, [ E('h2', {}, t('YAML Editor', 'YAML 编辑器')) ]),
+			aghui.header('yaml'),
+			aghui.diagnostics('yaml'),
 			E('section', { 'class': 'agh-card' }, [
 				rpcError ? E('div', { 'class': 'agh-alert' }, actionError(rpcError, t('YAML backend unavailable', 'YAML 后端不可用'))) : '',
 				lockNote || '',
