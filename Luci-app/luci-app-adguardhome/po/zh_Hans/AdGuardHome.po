@@ -710,3 +710,7 @@ msgstr "选择发布通道和架构，点击保存源后生效；自定义地址
 #: htdocs/luci-static/resources/view/adguardhome/settings.js
 msgid "Custom download links"
 msgstr "自定义下载地址"
+
+#: htdocs/luci-static/resources/view/adguardhome/overview.js
+msgid "Network DNS protection"
+msgstr "网络 DNS 防护"

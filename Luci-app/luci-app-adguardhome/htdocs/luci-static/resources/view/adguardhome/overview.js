@@ -344,6 +344,7 @@ return view.extend({
 		root.appendChild(E('section', { 'class': 'agh-statusbar' }, [
 			E('div', {}, [
 				E('span', { 'class': 'agh-service-chip' }, E('strong', { 'class': 'agh-state ' + (rpcError ? 'agh-bad' : stateClass) }, rpcError ? t('Backend missing') : state)),
+				E('span', { 'class': 'agh-protection-chip', hidden: !rpcError && yes(status.running) ? null : '' }, t('Network DNS protection', '网络 DNS 防护')),
 				E('span', { 'class': 'agh-core-chip' }, t('Core') + ' · ' + (yes(status.core_ready) ? text(status.version) : t('Missing')))
 			]),
 			E('a', { 'class': 'btn', href: settingsUrl }, t('Open Settings'))
@@ -401,6 +402,7 @@ return view.extend({
 				serviceChip.textContent = s._rpc_error ? t('Backend missing') : isRun ? t('Running') : t('Stopped');
 				serviceChip.className = 'agh-state ' + (isRun ? 'agh-ok' : 'agh-bad');
 			}
+			root.querySelector('.agh-protection-chip').hidden = !!s._rpc_error || !yes(s.running);
 			if(s._rpc_error)return;
 			root.querySelector('.agh-core-chip').textContent=t('Core')+' · '+(yes(s.core_ready)?text(s.version):t('Missing'));
 			var infoValues=root.querySelectorAll('.agh-access .agh-info-row strong');
