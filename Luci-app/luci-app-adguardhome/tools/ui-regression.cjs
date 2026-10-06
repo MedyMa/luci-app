@@ -81,40 +81,66 @@ const server=http.createServer(async(req,res)=>{
  assert.deepEqual(await page.locator('.agh-nav a').allTextContents(),['设置','诊断'],'Internal navigation does not repeat overview');checks+=3;
 if(name==='yaml')await page.waitForFunction(()=>currentView._aghCmInstance);if(name==='log'||name==='yaml'){assert.equal(await page.locator('.cbi-page-actions').count(),0,'No unrelated save controls on '+name);checks++;}}
  async function clickAndWait(button,method){const response=page.waitForResponse(r=>r.request().method()==='POST'&&(method==='readDirect'?new URL(r.url()).pathname.endsWith('/cgi-download'):(r.request().postData()||'').includes('"'+method+'"')));await button.click();await response;}
+ async function toggleTask(name,value){const field=page.locator('[data-name="'+name+'"] .cbi-dropdown');await field.click();await field.locator('ul.dropdown>li[data-value="'+value+'"]').click();await page.locator('.agh-heading').click();}
  await open('settings');
- assert.equal(await page.locator('.cbi-value:not([data-name^="_agh_"])').count(),23);checks++;
+ assert.deepEqual(await page.locator('.cbi-tabmenu a').allTextContents(),['常规设置','核心更新','规则与分流','维护与高级']);checks++;
  assert.equal(await page.locator('[data-name=waitonboot] input[type=checkbox]').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(99, 102, 241)','Enabled switches use purple');assert.equal(await page.locator('[data-name=enabled] input[type=checkbox]').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(141, 151, 159)','Disabled switches remain gray');checks+=2;
  assert.equal(await page.locator('.agh-action-password').count(),1);assert.equal(await page.locator('.agh-action-update').count(),1);assert.equal(await page.locator('.agh-action-links').count(),1);assert.equal(await page.locator('.agh-action-gfw').count(),1);checks+=4;
+ assert.equal(await page.locator('.cbi-value:not([data-name^="_agh_"])').count(),25);checks++;
+ assert.equal(await page.locator('.agh-password-detail').evaluate(e=>e.open),false);checks++;
  // Real LuCI save parses every tab, including tool DummyValues.
  await page.locator('[data-name="username"] input').fill('regression-admin');
  await page.evaluate(()=>currentView.handleSave());assert.equal(config.username,'regression-admin');checks++;
- const writes=calls.filter(c=>c.object==='uci'&&['set','delete'].includes(c.method));assert(writes.length>0);assert(!writes.some(c=>JSON.stringify(c.args).includes('_agh_')));checks+=2;
- await page.getByRole('link',{name:'DNS 接入',exact:true}).click();await page.locator('[data-name="httpport"] input').fill('70000');
+ const writes=calls.filter(c=>c.object==='uci'&&['set','delete'].includes(c.method));assert(writes.length>0);assert(!writes.some(c=>/_agh_|scheduled_update|scheduled_rules/.test(JSON.stringify(c.args))));checks+=2;
+ await page.getByRole('link',{name:'常规设置',exact:true}).click();await page.locator('[data-name="httpport"] input').fill('70000');
  let invalid=false;try{await page.evaluate(()=>currentView.handleSave())}catch{invalid=true;}assert(invalid);assert.equal(config.httpport,'3000');await page.evaluate(()=>L.ui.hideModal());checks+=2;
  await page.locator('[data-name="httpport"] input').fill('3001');await page.evaluate(()=>currentView.handleSave());assert.equal(config.httpport,'3001');checks++;
-	await page.getByRole('link',{name:'高级选项',exact:true}).click();
+	await page.getByRole('link',{name:'维护与高级',exact:true}).click();
  assert.equal(await page.locator('[data-name=_agh_yaml] a.btn').getAttribute('href'),'/cgi-bin/luci/admin/services/adguardhome/settings/yaml');assert.equal(await page.locator('[data-name=_agh_yaml] a.btn').textContent(),'YAML 编辑器');checks+=2;
-	await page.locator('.agh-settings-detail summary').click();
+	await page.getByRole('link',{name:'常规设置',exact:true}).click();await page.locator('.agh-password-detail summary').click();
  // Actual bundled bcrypt script runs; generated fields must reach actual UCI save.
  await page.locator('.agh-action-password input').fill('ui-regression-secret');await page.getByRole('button',{name:'生成哈希',exact:true}).click();
  await page.waitForFunction(()=>document.querySelector('[data-name="hashpass"] input').value.startsWith('$2'));
  await page.evaluate(()=>currentView.handleSave());assert.equal(config.password,'ui-regression-secret');assert(/\$2[aby]\$10\$/.test(config.hashpass));checks+=2;
+ // Split task controls preserve other groups and unknown task tokens across saves.
+ config.crontab=['autogfw','cutquerylog','future-task'];await open('settings');
+ await page.getByRole('link',{name:'核心更新',exact:true}).click();
+ await page.locator('[data-name=scheduled_update] input[type=checkbox]').check();
+ await page.evaluate(()=>currentView.handleSave());assert.deepEqual([...config.crontab].sort(),['autogfw','autoupdate','cutquerylog','future-task'].sort());checks++;
+ await page.getByRole('link',{name:'规则与分流',exact:true}).click();
+ await toggleTask('scheduled_rules','autogfw');
+ await toggleTask('scheduled_rules','autogfwipset');
+ await page.evaluate(()=>currentView.handleSave());assert.deepEqual([...config.crontab].sort(),['autogfwipset','autoupdate','cutquerylog','future-task'].sort());checks++;
+ await page.getByRole('link',{name:'维护与高级',exact:true}).click();
+ await toggleTask('crontab','cutquerylog');
+ await toggleTask('crontab','autohost');
+ await page.evaluate(()=>currentView.handleSave());assert.deepEqual([...config.crontab].sort(),['autogfwipset','autoupdate','autohost','future-task'].sort());checks++;
+ await page.getByRole('link',{name:'核心更新',exact:true}).click();await page.locator('[data-name=scheduled_update] input[type=checkbox]').uncheck();await page.evaluate(()=>currentView.handleSave());assert.deepEqual([...config.crontab].sort(),['autogfwipset','autohost','future-task'].sort());assert.equal(config.update,'1','Disabling daily update leaves startup checks enabled');checks+=2;
+ await page.locator('[data-name=scheduled_update] input[type=checkbox]').check();await page.evaluate(()=>currentView.handleSave());assert.deepEqual([...config.crontab].sort(),['autogfwipset','autoupdate','autohost','future-task'].sort());checks++;
+ await page.getByRole('link',{name:'维护与高级',exact:true}).click();
+ assert.equal(await page.locator('[data-name=backupwdpath] input').isVisible(),false);assert.equal(config.backupwdpath,'/etc/backup');assert.deepEqual(config.backupfile,['filters']);checks+=3;
+ await page.locator('[data-name=backup] input[type=checkbox]').check();
+ await toggleTask('backupfile','stats.db');await toggleTask('upprotect','$configpath');
+ await page.locator('[data-name=backupwdpath] input').fill('/etc/new-backup');await page.evaluate(()=>currentView.handleSave());assert.equal(config.backupwdpath,'/etc/new-backup');checks++;
+ await page.locator('[data-name=backup] input[type=checkbox]').uncheck();await page.evaluate(()=>currentView.handleSave());assert.equal(config.backupwdpath,'/etc/new-backup');assert.deepEqual(config.backupfile,['filters','stats.db']);assert.deepEqual(config.upprotect,['$configpath']);checks+=3;
+ assert(!calls.filter(c=>c.object==='uci'&&c.method==='set').some(c=>/scheduled_update|scheduled_rules/.test(JSON.stringify(c.args))));checks++;
  await page.getByRole('link',{name:'核心更新',exact:true}).click();
  await page.getByRole('button',{name:'更新',exact:true}).click();await page.waitForFunction(()=>document.querySelector('.agh-action-update .agh-status').classList.contains('agh-ok'));
  await page.getByRole('button',{name:'强制更新',exact:true}).click();await page.waitForFunction(()=>document.querySelector('.agh-action-update .agh-status').classList.contains('agh-ok'));
  assert.deepEqual(calls.filter(c=>c.method==='startUpdate').map(c=>c.args.force),[false,true]);checks++;
  await page.getByRole('button',{name:'保存源',exact:true}).click();await page.waitForFunction(()=>document.querySelector('.agh-action-links .agh-status').classList.contains('agh-ok'));assert(calls.some(c=>c.method==='setLinks'&&c.args.content==='https://example.com/core.tar.gz'));checks++;
+ assert.equal(await page.locator('.agh-custom-source').evaluate(e=>e.open),false);checks++;await page.locator('.agh-action-links select').first().selectOption('custom');assert(await page.locator('.agh-custom-source').evaluate(e=>e.open));await page.locator('.agh-custom-source textarea').fill('https://example.com/custom.tar.gz');await page.locator('.agh-action-links select').nth(1).selectOption('arm64');await clickAndWait(page.getByRole('button',{name:'保存源',exact:true}),'setLinks');assert(calls.some(c=>c.method==='setLinks'&&c.args.channel==='custom'&&c.args.download_arch==='arm64'&&c.args.content==='https://example.com/custom.tar.gz'));checks+=2;
  failure='startUpdate';await page.getByRole('button',{name:'更新',exact:true}).click();await page.waitForFunction(()=>document.querySelector('.agh-action-update .agh-status').classList.contains('agh-bad'));assert.equal(await page.getByRole('button',{name:'更新',exact:true}).isDisabled(),false);failure=null;checks++;
- await page.getByRole('link',{name:'GFW 规则',exact:true}).click();
+ await page.getByRole('link',{name:'规则与分流',exact:true}).click();
  for(const btn of await page.locator('.agh-action-gfw button').all()){await btn.click();await page.waitForFunction(()=>!document.querySelector('.agh-action-gfw button:disabled'))}
- assert.deepEqual(calls.filter(c=>c.method==='gfwAction').map(c=>c.args.action),['add','del','import','remove_import','ipset_add','ipset_del']);checks++;
+ assert.deepEqual(calls.filter(c=>c.method==='gfwAction').map(c=>c.args.action),['add','del','ipset_add','ipset_del']);checks++;
  await page.screenshot({path:path.join(dir,'real-luci-settings.png'),fullPage:true});
  await open('yaml');await page.evaluate(()=>currentView._aghCmInstance.setValue('dns:\n  port: 5354\n'));await clickAndWait(page.getByRole('button',{name:'保存并应用',exact:true}),'saveYaml');assert(calls.some(c=>c.method==='saveYaml'&&c.args.content.includes('5354')));checks++;
  await clickAndWait(page.getByRole('button',{name:'使用模板',exact:true}),'getTemplateConfig');await page.waitForFunction(()=>currentView._aghCmInstance.getValue().includes('5353'));assert(calls.some(c=>c.method==='getTemplateConfig'));checks++;
  await clickAndWait(page.locator('.agh-toolbar button').last(),'readDirect');await page.waitForFunction(()=>currentView._aghCmInstance.getValue().includes('port: 53\n'));assert(calls.some(c=>c.method==='readDirect'));checks++;
  await clickAndWait(page.locator('.agh-toolbar button').last(),'discardYaml');assert(calls.some(c=>c.method==='discardYaml'));checks++;
  running=true;await open('yaml');assert.equal(await page.getByRole('button',{name:'保存并应用',exact:true}).isDisabled(),true);assert.equal(await page.evaluate(()=>currentView._aghCmInstance.getOption('readOnly')),'nocursor');checks+=2;
- await open('settings');await page.getByRole('link',{name:'GFW 规则',exact:true}).click();assert.equal(await page.locator('.agh-action-gfw button:disabled').count(),2);checks++;
+ await open('settings');await page.getByRole('link',{name:'规则与分流',exact:true}).click();assert.equal(await page.locator('.agh-action-gfw button:disabled').count(),2);checks++;
  await open('log');await clickAndWait(page.getByRole('button',{name:'更新日志',exact:true}),'getLog');await clickAndWait(page.getByRole('button',{name:'清空',exact:true}),'clearLog');assert(calls.some(c=>c.method==='clearLog'&&c.args.scope==='update'));checks++;
  await open('log');await page.waitForFunction(()=>document.querySelector('.agh-console').textContent.includes('started'));assert(!/\x1b/.test(await page.locator('.agh-console').textContent()));checks++;calls=[];
  await page.evaluate(async()=>{Object.defineProperty(document,'hidden',{value:true,configurable:true});for(const p of testPolls)await p.fn();delete document.hidden;});assert(!calls.some(c=>c.method==='getLog'));checks++;
@@ -134,9 +160,9 @@ if(name==='yaml')await page.waitForFunction(()=>currentView._aghCmInstance);if(n
  running=false;await open('overview');assert.equal(await page.locator('.agh-stats-grid .agh-value').allTextContents().then(x=>x.join('|')),'—|—|—|—');assert(!calls.some(c=>c.method==='getStats'),'Stopped service does not query stats API');checks+=2;
  running=true;failure='getStats';await open('overview');assert.equal(await page.locator('.agh-stats-grid .agh-card').count(),4);assert((await page.locator('.agh-stat-note').textContent()).includes('统计暂不可用'));failure=null;checks+=2;
  await page.setViewportSize({width:2560,height:1440});await open('overview');await page.evaluate(()=>document.body.classList.add('dark'));await page.waitForTimeout(150);const pageBounds=await page.locator('.agh-ui').boundingBox(),viewBounds=await page.locator('#view').boundingBox();assert(Math.abs(pageBounds.width-1120)<1 && Math.abs(pageBounds.x+pageBounds.width/2-viewBounds.x-viewBounds.width/2)<1,'Content is centered and limited to 1120px');assert.equal(await page.locator('#tabmenu').textContent(),'概览');checks+=2;
- if(process.env.AGH_SCREENSHOT_DIR){fs.mkdirSync(process.env.AGH_SCREENSHOT_DIR,{recursive:true});await page.screenshot({path:path.join(process.env.AGH_SCREENSHOT_DIR,'real-argon-overview.png'),fullPage:true});await open('settings');await page.evaluate(()=>document.body.classList.add('dark'));await page.waitForTimeout(150);await page.getByRole('link',{name:'基础设置',exact:true}).click();await page.screenshot({path:path.join(process.env.AGH_SCREENSHOT_DIR,'real-argon-settings.png'),fullPage:true});}
+ if(process.env.AGH_SCREENSHOT_DIR){fs.mkdirSync(process.env.AGH_SCREENSHOT_DIR,{recursive:true});await page.screenshot({path:path.join(process.env.AGH_SCREENSHOT_DIR,'real-argon-overview.png'),fullPage:true});await open('settings');await page.evaluate(()=>document.body.classList.add('dark'));await page.waitForTimeout(150);await page.getByRole('link',{name:'常规设置',exact:true}).click();await page.screenshot({path:path.join(process.env.AGH_SCREENSHOT_DIR,'real-argon-settings.png'),fullPage:true});}
  for(const name of ['overview','settings','log','yaml']){await open(name);await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,name+' mobile overflow');checks++;}
- await open('settings');await page.getByRole('link',{name:'基础设置',exact:true}).click();assert.equal(await page.locator('div[data-tab=service]').evaluate(e=>getComputedStyle(e).backgroundColor),'rgba(0, 0, 0, 0)');assert.equal(await page.locator('[data-name=username] .cbi-value-title').evaluate(e=>getComputedStyle(e).textAlign),'left');checks+=2;
+ await open('settings');await page.getByRole('link',{name:'常规设置',exact:true}).click();assert.equal(await page.locator('div[data-tab=service]').evaluate(e=>getComputedStyle(e).backgroundColor),'rgba(0, 0, 0, 0)');assert.equal(await page.locator('[data-name=username] .cbi-value-title').evaluate(e=>getComputedStyle(e).textAlign),'left');checks+=2;
  await open('overview');
  for(const [raw,expected] of [['0.034304999999999995','34.305 ms'],['0.0014','1.4 ms'],[0,'0 ms'],['1e-7','<0.001 ms'],[null,'—'],['','—'],['invalid','—'],[-1,'—']]){processingTime=raw;await page.evaluate(()=>testPolls.find(p=>p.interval===10).fn());assert.equal(await page.locator('.agh-stat-latency').textContent(),expected,'Processing time '+raw);checks++;}processingTime='0.034304999999999995';
  await open('overview');coreVersion='v0.107.79';dnsPort=536;httpPort=3002;coreReady=false;
@@ -152,8 +178,9 @@ if(name==='yaml')await page.waitForFunction(()=>currentView._aghCmInstance);if(n
    if(name==='yaml'){assert.equal(await page.locator('.CodeMirror').evaluate(e=>getComputedStyle(e).backgroundColor),dark?'rgb(32, 36, 39)':'rgb(255, 255, 255)');checks++;}
    if(width<720){const targets=await page.locator('.agh-ui a.btn,.agh-ui button').evaluateAll(es=>es.filter(e=>e.getClientRects().length&&getComputedStyle(e).visibility!=='hidden').map(e=>({label:e.textContent,height:e.getBoundingClientRect().height})));assert(targets.every(t=>t.height>=44),JSON.stringify({name,width,targets}));checks++;}
    if(process.env.AGH_SCREENSHOT_DIR)await page.screenshot({path:path.join(process.env.AGH_SCREENSHOT_DIR,`${name}-${width}-${dark?'dark':'light'}.png`),fullPage:true});
-   if(name==='settings')for(const tab of ['基础设置','DNS 接入','高级选项','核心更新','GFW 规则','备份与任务']){
+   if(name==='settings')for(const tab of ['常规设置','核心更新','规则与分流','维护与高级']){
     await page.locator('.cbi-tabmenu').getByRole('link',{name:tab,exact:true}).click();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`${tab} ${width} overflow `+JSON.stringify(await page.evaluate(()=>[...document.querySelectorAll('body *')].map(e=>({tag:e.tagName,cls:e.className,right:e.getBoundingClientRect().right,width:e.getBoundingClientRect().width})).filter(e=>e.right>innerWidth+1).slice(-8))));checks++;
+    await page.locator('.agh-settings-detail').evaluateAll(es=>es.forEach(e=>e.open=true));assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`${tab} expanded ${width} overflow`);checks++;
     if(process.env.AGH_SCREENSHOT_DIR&&width===320)await page.screenshot({path:path.join(process.env.AGH_SCREENSHOT_DIR,`settings-${tab}-${dark?'dark':'light'}.png`),fullPage:true});
    }
 

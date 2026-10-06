@@ -274,6 +274,8 @@ return view.extend({
 		channelSelect.addEventListener('change', function() {
 			if (channelSelect.value !== 'custom')
 				linksBox.value = buildLinks(channelSelect.value);
+			var detail = linksBox.closest('details');
+			if (detail) detail.open = channelSelect.value === 'custom';
 		});
 		linksBox.addEventListener('input', function() { channelSelect.value = 'custom'; });
 
@@ -293,6 +295,7 @@ return view.extend({
 			return Promise.resolve().then(function() {
 				return renderContents.call(map);
 			}).then(function(node) {
+				arrangeSettings(node);
 				map._aghRendering = false;
 				map.checkDepends();
 				return node;
@@ -302,33 +305,31 @@ return view.extend({
 			});
 		};
 		var s = m.section(form.NamedSection, 'AdGuardHome', 'AdGuardHome', t('Configuration', '配置'));
-		if (/^#(?:service|network|files|update|rules|maintenance)$/.test(window.location.hash))s.selected_tab=window.location.hash.slice(1);
+		if (/^#(?:service|update|rules|maintenance)$/.test(window.location.hash))s.selected_tab=window.location.hash.slice(1);
 		s.addremove = false;
 		s.anonymous = true;
-		s.tab('service', t('Basic settings', '基础设置'), t('Enable the daemon and define how it starts.', '启用守护进程并设置启动方式。'));
-		s.tab('network', t('DNS Access', 'DNS 接入'), t('Management port and DNS redirect behaviour.', '网页管理端口与 DNS 重定向行为。'));
-		s.tab('files', t('Advanced options', '高级选项'), t('Binary, YAML, workspace and log paths.', '核心文件、YAML、工作目录和日志路径。'));
-		s.tab('update', t('Core update', '核心更新'), t('Core update source and startup update behaviour.', '核心更新源和启动更新行为。'));
-		s.tab('rules', t('GFW rules', 'GFW 规则'), t('GFW rule export and upstream options.', 'GFW 规则导出与上游 DNS 选项。'));
-		s.tab('maintenance', t('Backup and tasks', '备份与任务'), t('Backup, upgrade retention and scheduled tasks.', '备份、升级保留和计划任务。'));
+		s.tab('service', t('General settings', '常规设置'), t('Service startup, DNS access and API login.', '服务启动、DNS 接入和 API 登录。'));
+		s.tab('update', t('Core update', '核心更新'), t('Update actions, download source and automatic updates.', '手动更新、下载源和自动更新。'));
+		s.tab('rules', t('Rules and routing', '规则与分流'), t('Rule files, ipset and their scheduled tasks.', '规则文件、ipset 和相关计划任务。'));
+		s.tab('maintenance', t('Maintenance and advanced', '维护与高级'), t('Backup, logs, file paths and YAML editing.', '备份、日志、文件路径和 YAML 编辑。'));
 		var o;
 		o = s.taboption('service', form.Flag, 'enabled', t('Enable service', '启用服务'), t('Start AdGuard Home through procd when this option is enabled.', '启用后通过 procd 启动 AdGuard Home。'));
 		o = s.taboption('service', form.Flag, 'waitonboot', t('Wait for network on boot', '开机等待网络'), t('Delay service startup until the network is ready.', '开机时等待网络就绪后再启动服务。'));
 		o = s.taboption('service', form.Value, 'username', t('API login username', 'API 登录用户名'), t('Username LuCI uses for the local AdGuard Home API; keep it in sync with the AdGuard Home admin account.', 'LuCI 访问本地 AdGuard Home API 的用户名，需与管理员账号一致。')); o.placeholder = 'root'; o.rmempty = false;
 		o = s.taboption('service', form.Value, 'password', t('API login password', 'API 登录密码'), t('Password LuCI uses for the local AdGuard Home API; update it after changing the AdGuard Home web password.', 'LuCI 访问本地 AdGuard Home API 的密码，改后台密码后需同步更新。')); o.password = true; o.rmempty = true;
-		o = s.taboption('files', form.Value, 'hashpass', t('Web password bcrypt hash', 'Web 密码 bcrypt 哈希'), t('Use the password helper to generate a hash, then save and apply.', '可使用密码助手生成哈希，然后保存并应用。')); o.password = true; o.rmempty = true;
+		o = s.taboption('service', form.Value, 'hashpass', t('Web password bcrypt hash', 'Web 密码 bcrypt 哈希'), t('Use the password helper to generate a hash, then save and apply.', '可使用密码助手生成哈希，然后保存并应用。')); o.password = true; o.rmempty = true;
 
-		o = s.taboption('network', form.Value, 'httpport', t('Web console port', 'Web 控制台端口'), t('Port used by the AdGuard Home management UI.', 'AdGuard Home 管理界面使用的端口。')); o.datatype = 'port'; o.placeholder = '3000';
-		o = s.taboption('network', form.ListValue, 'redirect', t('DNS redirect mode', 'DNS 重定向模式'), t('Choose how LAN DNS traffic is handed to AdGuard Home.', '选择局域网 DNS 流量交给 AdGuard Home 的方式。')); o.default = 'dnsmasq-upstream'; o.value('none', t('None', '无')); o.value('dnsmasq-upstream', t('Use as dnsmasq upstream', '作为 dnsmasq 上游')); o.value('redirect', t('Redirect port 53', '重定向 53 端口')); o.value('exchange', t('Swap with dnsmasq port', '与 dnsmasq 交换端口'));
-		o = s.taboption('network', form.Flag, 'passwall_upstream_auto', t('Managed PassWall upstream', '托管 PassWall 上游'), passwallUpstreamHelp);
+		o = s.taboption('service', form.Value, 'httpport', t('Web console port', 'Web 控制台端口'), t('Port used by the AdGuard Home management UI.', 'AdGuard Home 管理界面使用的端口。')); o.datatype = 'port'; o.placeholder = '3000';
+		o = s.taboption('service', form.ListValue, 'redirect', t('DNS redirect mode', 'DNS 重定向模式'), t('Choose how LAN DNS traffic is handed to AdGuard Home.', '选择局域网 DNS 流量交给 AdGuard Home 的方式。')); o.default = 'dnsmasq-upstream'; o.value('none', t('None', '无')); o.value('dnsmasq-upstream', t('Use as dnsmasq upstream', '作为 dnsmasq 上游')); o.value('redirect', t('Redirect port 53', '重定向 53 端口')); o.value('exchange', t('Swap with dnsmasq port', '与 dnsmasq 交换端口'));
+		o = s.taboption('service', form.Flag, 'passwall_upstream_auto', t('Managed PassWall upstream', '托管 PassWall 上游'), passwallUpstreamHelp);
 		o.default = '0';
 		o.rmempty = false;
 
-		o = s.taboption('files', form.Value, 'binpath', t('Core binary path', '核心文件路径'), t('Executable path for the AdGuard Home binary.', 'AdGuard Home 核心可执行文件路径。')); o.placeholder = '/etc/config/adGuardConfig/AdGuardHome'; o.rmempty = false;
-		o = s.taboption('files', form.Value, 'configpath', t('YAML config path', 'YAML 配置路径'), t('Main YAML configuration file edited by the YAML editor.', 'YAML 编辑器操作的主配置文件。')); o.placeholder = '/etc/config/adGuardConfig/AdGuardHome.yaml'; o.rmempty = false;
-		o = s.taboption('files', form.Value, 'workdir', t('Work directory', '工作目录'), t('Directory that stores filters, statistics, sessions and query logs.', '用于保存过滤器、统计、会话和查询日志的目录。')); o.placeholder = '/etc/config/adGuardConfig/workspace'; o.rmempty = false;
-		o = s.taboption('files', form.Value, 'logfile', t('Runtime log file', '运行日志文件'), t('Use syslog to follow system logs, or set a dedicated file path.', '可填 syslog 查看系统日志，也可填写独立日志文件路径。')); o.placeholder = '/tmp/AdGuardHome.log'; o.rmempty = true;
-		o = s.taboption('files', form.Flag, 'verbose', t('Verbose runtime log', '详细运行日志'), t('Enable more detailed service output when troubleshooting.', '排查问题时输出更详细的运行日志。'));
+		o = s.taboption('maintenance', form.Value, 'binpath', t('Core binary path', '核心文件路径'), t('Executable path for the AdGuard Home binary.', 'AdGuard Home 核心可执行文件路径。')); o.placeholder = '/etc/config/adGuardConfig/AdGuardHome'; o.rmempty = false;
+		o = s.taboption('maintenance', form.Value, 'configpath', t('YAML config path', 'YAML 配置路径'), t('Main YAML configuration file edited by the YAML editor.', 'YAML 编辑器操作的主配置文件。')); o.placeholder = '/etc/config/adGuardConfig/AdGuardHome.yaml'; o.rmempty = false;
+		o = s.taboption('maintenance', form.Value, 'workdir', t('Work directory', '工作目录'), t('Directory that stores filters, statistics, sessions and query logs.', '用于保存过滤器、统计、会话和查询日志的目录。')); o.placeholder = '/etc/config/adGuardConfig/workspace'; o.rmempty = false;
+		o = s.taboption('maintenance', form.Value, 'logfile', t('Runtime log file', '运行日志文件'), t('Use syslog to follow system logs, or set a dedicated file path.', '可填 syslog 查看系统日志，也可填写独立日志文件路径。')); o.placeholder = '/tmp/AdGuardHome.log'; o.rmempty = true;
+		o = s.taboption('maintenance', form.Flag, 'verbose', t('Verbose runtime log', '详细运行日志'), t('Enable more detailed service output when troubleshooting.', '排查问题时输出更详细的运行日志。'));
 
 		o = s.taboption('update', form.Flag, 'update', t('Check core update on startup', '启动时检查核心更新'), t('Run the updater when the service starts.', '服务启动时自动运行核心更新检查。'));
 		o = s.taboption('update', form.ListValue, 'upxflag', t('UPX compression after download', '下载后 UPX 压缩'), t('Optional compression for the downloaded core binary.', '对下载后的核心文件进行可选压缩。')); o.value('', t('Disabled', '禁用')); o.value('-1', t('Fast', '快速')); o.value('-9', t('Better', '更高压缩')); o.value('--best', t('Best', '最佳')); o.value('--brute', t('Brute force', '强力压缩')); o.rmempty = true;
@@ -339,9 +340,39 @@ return view.extend({
 
 		o = s.taboption('maintenance', form.MultiValue, 'upprotect', t('Keep files on system upgrade', '系统升级保留文件'), t('Files listed here are added to sysupgrade keep rules.', '这里选择的文件会加入系统升级保留列表。')); o.widget = 'checkbox'; o.value('$binpath', t('Core binary', '核心文件')); o.value('$configpath', t('Config file', '配置文件')); o.value('$logfile', t('Log file', '日志文件')); o.value('$workdir/data/sessions.db', 'sessions.db'); o.value('$workdir/data/stats.db', 'stats.db'); o.value('$workdir/data/querylog.json', 'querylog.json'); o.value('$workdir/data/filters', 'filters');
 		o = s.taboption('maintenance', form.Flag, 'backup', t('Backup on shutdown', '停止服务时备份'), t('Copy selected workdir files to the backup path when stopping the service.', '停止服务时将选中的工作目录文件复制到备份路径。'));
-		o = s.taboption('maintenance', form.MultiValue, 'backupfile', t('Backup workdir files', '备份工作目录文件'), t('Choose files under the work directory that should be backed up.', '选择需要备份的工作目录文件。')); o.widget = 'checkbox'; (meta.backup_choices || [ 'filters', 'stats.db', 'querylog.json', 'sessions.db' ]).forEach(function(item) { o.value(item, item); });
-		o = s.taboption('maintenance', form.Value, 'backupwdpath', t('Backup path', '备份路径'), t('Destination directory for shutdown backups.', '停止服务备份的目标目录。')); o.placeholder = '/etc/config/adGuardConfig/workspace';
-		o = s.taboption('maintenance', form.MultiValue, 'crontab', t('Scheduled tasks', '计划任务'), t('Legacy cron jobs managed by the init script.', '由 init 脚本维护的旧版计划任务。')); o.widget = 'checkbox'; o.value('autoupdate', t('Auto update core', '自动更新核心')); o.value('cutquerylog', t('Trim query log', '裁剪查询日志')); o.value('cutruntimelog', t('Trim runtime log', '裁剪运行日志')); o.value('autohost', t('Update IPv6 hosts', '更新 IPv6 hosts')); o.value('autogfw', t('Update GFW rule file', '更新 GFW 规则文件')); o.value('autogfwipset', t('Update GFW ipset', '更新 GFW ipset'));
+		o = s.taboption('maintenance', form.MultiValue, 'backupfile', t('Backup workdir files', '备份工作目录文件'), t('Choose files under the work directory that should be backed up.', '选择需要备份的工作目录文件。')); o.widget = 'checkbox'; o.depends('backup', '1'); o.retain = true; (meta.backup_choices || [ 'filters', 'stats.db', 'querylog.json', 'sessions.db' ]).forEach(function(item) { o.value(item, item); });
+		o = s.taboption('maintenance', form.Value, 'backupwdpath', t('Backup path', '备份路径'), t('Destination directory for shutdown backups.', '停止服务备份的目标目录。')); o.placeholder = '/etc/config/adGuardConfig/workspace'; o.depends('backup', '1'); o.retain = true;
+		// Each group edits only its own cron tokens; other and unknown tasks survive saves.
+		function scheduledTasks(tab, name, title, help, choices) {
+			var single = choices.length === 1;
+			var item = s.taboption(tab, single ? form.Flag : form.MultiValue, name, title, help);
+			var keys = choices.map(function(choice) { return choice[0]; });
+			if (single) item.rmempty = false;
+			else choices.forEach(function(choice) { item.value(choice[0], choice[1]); });
+			item.cfgvalue = function(section_id) {
+				var selected = L.toArray(uci.get('AdGuardHome', section_id, 'crontab')).filter(function(task) { return keys.indexOf(task) >= 0; });
+				return single ? (selected.length ? '1' : '0') : selected;
+			};
+			item.write = function(section_id, value) {
+				var tasks = L.toArray(uci.get('AdGuardHome', section_id, 'crontab')).filter(function(task) { return keys.indexOf(task) < 0; });
+				var selected = single ? (value === '1' ? keys : []) : L.toArray(value);
+				tasks = tasks.concat(selected.filter(function(task) { return keys.indexOf(task) >= 0; }));
+				if (tasks.length)
+					uci.set('AdGuardHome', section_id, 'crontab', tasks);
+				else
+					uci.unset('AdGuardHome', section_id, 'crontab');
+			};
+			item.remove = function(section_id) { this.write(section_id, []); };
+		}
+		scheduledTasks('update', 'scheduled_update', t('Scheduled core update', '定时更新核心'), t('Check for core updates daily at 03:30. Startup checks are controlled separately above.', '每天 03:30 检查核心更新；启动时检查由上方开关单独控制。'), [
+			[ 'autoupdate', t('Daily core update', '每日更新核心') ]
+		]);
+		scheduledTasks('rules', 'scheduled_rules', t('Scheduled rule updates', '定时更新规则'), t('Update the GFW file at 03:30 and ipset at 03:31 daily.', '每天 03:30 更新 GFW 规则文件，03:31 更新 ipset。'), [
+			[ 'autogfw', t('Update GFW rule file', '更新 GFW 规则文件') ], [ 'autogfwipset', t('Update GFW ipset', '更新 GFW ipset') ]
+		]);
+		scheduledTasks('maintenance', 'crontab', t('Maintenance tasks', '维护任务'), t('Trim query logs hourly, runtime logs every 15 minutes, and update IPv6 hosts hourly.', '每小时裁剪查询日志、每 15 分钟裁剪运行日志、每小时更新 IPv6 hosts。'), [
+			[ 'cutquerylog', t('Trim query log', '裁剪查询日志') ], [ 'cutruntimelog', t('Trim runtime log', '裁剪运行日志') ], [ 'autohost', t('Update IPv6 hosts', '更新 IPv6 hosts') ]
+		]);
 
 		// DummyValue tools are rendered in their relevant tabs; they never write UCI.
 		function tools(tab, name, build) {
@@ -355,8 +386,8 @@ return view.extend({
 				]);
 			};
 		}
-		tools('files', '_agh_yaml', function(){return E('div',{'class':'agh-row'},E('a',{'class':'btn',href:L.url('admin','services','adguardhome','settings','yaml')},t('YAML Editor','YAML 编辑器')));});
-		tools('files', '_agh_password', function(){return E('details',{'class':'agh-settings-detail'},[E('summary',{},t('Password Hash Helper','密码哈希助手')),passwordCard()]);});
+		tools('maintenance', '_agh_yaml', function(){return E('div',{'class':'agh-row'},E('a',{'class':'btn',href:L.url('admin','services','adguardhome','settings','yaml')},t('YAML Editor','YAML 编辑器')));});
+		tools('service', '_agh_password', function() { return passwordCard(); });
 		tools('update', '_agh_core', function() { return updateCard(rpcError); });
 		tools('update', '_agh_sources', function() { return linksCard(channelSelect, archSelect, linksBox, rpcError); });
 		tools('rules', '_agh_rules', function() { return gfwCard(rpcError, yes(status.running)); });
@@ -370,6 +401,41 @@ return view.extend({
 		});
 	}
 });
+
+// Presentation only: move existing registered fields, never duplicate their widgets.
+function arrangeSettings(node) {
+	function field(name) { return node.querySelector('.cbi-value[data-name="' + name + '"]'); }
+	var groups = [
+		[ 'enabled', 'waitonboot', 'httpport', 'redirect', 'passwall_upstream_auto', 'username', 'password', 'hashpass', '_agh_password' ],
+		[ '_agh_core', '_agh_sources', 'update', 'scheduled_update', 'upxflag' ],
+		[ 'gfw', 'gfwipset', 'gfwupstream', 'scheduled_rules', '_agh_rules' ],
+		[ 'backup', 'backupfile', 'backupwdpath', 'upprotect', 'crontab', 'logfile', 'verbose', '_agh_yaml', 'binpath', 'configpath', 'workdir' ]
+	];
+	groups.forEach(function(names) {
+		var parent = field(names[0]).parentNode;
+		names.forEach(function(name) { parent.appendChild(field(name)); });
+	});
+	function heading(name, title) {
+		var target = field(name);
+		target.parentNode.insertBefore(E('h3', { 'class': 'agh-settings-heading' }, title), target);
+	}
+	function fold(names, title, className) {
+		var first = field(names[0]);
+		var detail = E('details', { 'class': 'agh-settings-detail ' + className }, E('summary', {}, title));
+		first.parentNode.insertBefore(detail, first);
+		names.forEach(function(name) { detail.appendChild(field(name)); });
+	}
+	heading('enabled', t('Service startup', '服务启动'));
+	heading('httpport', t('DNS Access', 'DNS 接入'));
+	heading('username', t('API account', 'API 账号'));
+	fold([ 'hashpass', '_agh_password' ], t('Change web password', '修改后台密码'), 'agh-password-detail');
+	heading('update', t('Automatic updates', '自动更新'));
+	fold([ 'upxflag' ], t('Compression options', '压缩选项'), 'agh-compression-detail');
+	heading('backup', t('Backup and retention', '备份与保留'));
+	heading('crontab', t('Logs and maintenance', '日志与维护'));
+	heading('_agh_yaml', t('Advanced configuration', '高级配置'));
+	fold([ 'binpath', 'configpath', 'workdir' ], t('File paths', '文件路径'), 'agh-path-detail');
+}
 
 function updateCard(rpcError) {
 	var statusBox = createStatusBox(rpcError ? actionError(rpcError, t('RPC backend unavailable', 'RPC 后端不可用')) : t('Ready.', '就绪。'));
@@ -387,7 +453,7 @@ function updateCard(rpcError) {
 	});
 	return E('div', { 'class': 'agh-action agh-action-update' }, [
 		actionHeader(t('Version Update', '版本更新'), t('Core Version Update', '核心版本更新')),
-		E('p', {}, t('Queue a core upgrade task through rpcd and move to the log page when you need to track output.', '通过 rpcd 调度核心升级任务；需要查看执行输出时，可直接切换到运行日志页面。')),
+		E('p', {}, t('Updates run in the background. Open Diagnostics to view the log.', '更新任务在后台执行，可在诊断页面查看日志。')),
 		E('div', { 'class': 'agh-row' }, [
 			updateButton,
 			forceButton
@@ -405,9 +471,11 @@ function linksCard(channelSelect, archSelect, linksBox, rpcError) {
 	});
 	return E('div', { 'class': 'agh-action agh-action-links' }, [
 		actionHeader(t('Source', '源设置'), t('Download Sources', '下载源与架构')),
-		E('p', {}, t('Choose a release channel, confirm the target architecture, or keep a fully custom source list when needed.', '可选择发布通道、确认目标架构，也可以继续维护完整的自定义下载源列表。')),
+		E('p', {}, t('Select a channel and architecture, then Save source to apply them. Expand custom links when needed.', '选择发布通道和架构，点击保存源后生效；自定义地址按需展开。')),
 		E('div', { 'class': 'agh-row' }, [ channelSelect, archSelect, saveButton ]),
-		linksBox,
+		E('details', { 'class': 'agh-settings-detail agh-custom-source', open: channelSelect.value === 'custom' ? '' : null }, [
+			E('summary', {}, t('Custom download links', '自定义下载地址')), linksBox
+		]),
 		statusBox
 	]);
 }
@@ -442,8 +510,6 @@ function gfwCard(rpcError, running) {
 		E('div', { 'class': 'agh-button-row' }, [
 			button('add', t('Generate rule file', '生成规则文件'), t('GFW rule file generated. Import it manually into YAML if needed.', 'GFW 规则文件已生成；如有需要，请手动导入 YAML。')),
 			button('del', t('Delete rule file', '删除规则文件'), t('GFW rule file deleted and legacy injected YAML rules were cleaned if present.', 'GFW 规则文件已删除；若存在旧版自动注入的 YAML 规则，也已一并清理。')),
-			button('import', t('Manual DNS note', '手动DNS提示'), t('Automatic upstream DNS import is disabled. Copy entries from gfw_upstream.txt in the AdGuard Home console.', '已禁用自动导入上游 DNS，请在 AdGuard Home 控制台复制 gfw_upstream.txt 中的条目。')),
-			button('remove_import', t('Manual cleanup note', '手动清理提示'), t('Automatic upstream DNS removal is disabled. Edit upstream DNS in the AdGuard Home console.', '已禁用自动移除上游 DNS，请在 AdGuard Home 控制台手动编辑。')),
 			button('ipset_add', t('Add ipset', '添加 ipset'), t('GFW ipset task started.', 'GFW ipset 任务已启动。')),
 			button('ipset_del', t('Delete ipset', '删除 ipset'), t('GFW ipset delete task started.', 'GFW ipset 删除任务已启动。'))
 		]),

@@ -606,3 +606,107 @@ msgstr "诊断"
 #: root/usr/share/luci/menu.d/luci-app-adguardhome.json
 msgid "YAML Editor"
 msgstr "YAML 编辑器"
+
+#: htdocs/luci-static/resources/view/adguardhome/settings.js
+msgid "General settings"
+msgstr "常规设置"
+
+#: htdocs/luci-static/resources/view/adguardhome/settings.js
+msgid "Service startup, DNS access and API login."
+msgstr "服务启动、DNS 接入和 API 登录。"
+
+#: htdocs/luci-static/resources/view/adguardhome/settings.js
+msgid "Update actions, download source and automatic updates."
+msgstr "手动更新、下载源和自动更新。"
+
+#: htdocs/luci-static/resources/view/adguardhome/settings.js
+msgid "Rules and routing"
+msgstr "规则与分流"
+
+#: htdocs/luci-static/resources/view/adguardhome/settings.js
+msgid "Rule files, ipset and their scheduled tasks."
+msgstr "规则文件、ipset 和相关计划任务。"
+
+#: htdocs/luci-static/resources/view/adguardhome/settings.js
+msgid "Maintenance and advanced"
+msgstr "维护与高级"
+
+#: htdocs/luci-static/resources/view/adguardhome/settings.js
+msgid "Backup, logs, file paths and YAML editing."
+msgstr "备份、日志、文件路径和 YAML 编辑。"
+
+#: htdocs/luci-static/resources/view/adguardhome/settings.js
+msgid "Scheduled core update"
+msgstr "定时更新核心"
+
+#: htdocs/luci-static/resources/view/adguardhome/settings.js
+msgid "Check for core updates daily at 03:30. Startup checks are controlled separately above."
+msgstr "每天 03:30 检查核心更新；启动时检查由上方开关单独控制。"
+
+#: htdocs/luci-static/resources/view/adguardhome/settings.js
+msgid "Daily core update"
+msgstr "每日更新核心"
+
+#: htdocs/luci-static/resources/view/adguardhome/settings.js
+msgid "Scheduled rule updates"
+msgstr "定时更新规则"
+
+#: htdocs/luci-static/resources/view/adguardhome/settings.js
+msgid "Update the GFW file at 03:30 and ipset at 03:31 daily."
+msgstr "每天 03:30 更新 GFW 规则文件，03:31 更新 ipset。"
+
+#: htdocs/luci-static/resources/view/adguardhome/settings.js
+msgid "Maintenance tasks"
+msgstr "维护任务"
+
+#: htdocs/luci-static/resources/view/adguardhome/settings.js
+msgid "Trim query logs hourly, runtime logs every 15 minutes, and update IPv6 hosts hourly."
+msgstr "每小时裁剪查询日志、每 15 分钟裁剪运行日志、每小时更新 IPv6 hosts。"
+
+#: htdocs/luci-static/resources/view/adguardhome/settings.js
+msgid "Service startup"
+msgstr "服务启动"
+
+#: htdocs/luci-static/resources/view/adguardhome/settings.js
+msgid "API account"
+msgstr "API 账号"
+
+#: htdocs/luci-static/resources/view/adguardhome/settings.js
+msgid "Change web password"
+msgstr "修改后台密码"
+
+#: htdocs/luci-static/resources/view/adguardhome/settings.js
+msgid "Automatic updates"
+msgstr "自动更新"
+
+#: htdocs/luci-static/resources/view/adguardhome/settings.js
+msgid "Compression options"
+msgstr "压缩选项"
+
+#: htdocs/luci-static/resources/view/adguardhome/settings.js
+msgid "Backup and retention"
+msgstr "备份与保留"
+
+#: htdocs/luci-static/resources/view/adguardhome/settings.js
+msgid "Logs and maintenance"
+msgstr "日志与维护"
+
+#: htdocs/luci-static/resources/view/adguardhome/settings.js
+msgid "Advanced configuration"
+msgstr "高级配置"
+
+#: htdocs/luci-static/resources/view/adguardhome/settings.js
+msgid "File paths"
+msgstr "文件路径"
+
+#: htdocs/luci-static/resources/view/adguardhome/settings.js
+msgid "Updates run in the background. Open Diagnostics to view the log."
+msgstr "更新任务在后台执行，可在诊断页面查看日志。"
+
+#: htdocs/luci-static/resources/view/adguardhome/settings.js
+msgid "Select a channel and architecture, then Save source to apply them. Expand custom links when needed."
+msgstr "选择发布通道和架构，点击保存源后生效；自定义地址按需展开。"
+
+#: htdocs/luci-static/resources/view/adguardhome/settings.js
+msgid "Custom download links"
+msgstr "自定义下载地址"
