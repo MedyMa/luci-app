@@ -55,7 +55,7 @@ const server=http.createServer(async(req,res)=>{
      }
    }
  }else{res.statusCode=404;res.end();return;}
- res.setHeader('Content-Type',file.endsWith('.css')?'text/css':'application/javascript');res.end(fs.readFileSync(file));
+ res.setHeader('Content-Type',file.endsWith('.css')?'text/css':file.endsWith('.svg')?'image/svg+xml':'application/javascript');res.end(fs.readFileSync(file));
  }catch(e){console.error(e);res.statusCode=500;res.end(String(e))}
 });
 (async()=>{
@@ -63,7 +63,7 @@ const server=http.createServer(async(req,res)=>{
  const browser=await chromium.launch({executablePath:process.env.AGH_BROWSER_PATH||undefined,headless:true});
  const page=await browser.newPage({viewport:{width:1280,height:1000}});
  const errors=[];page.on('pageerror',e=>errors.push(e.stack));let checks=0;
- async function open(name,hash=""){calls=[];await page.goto(base+'?view='+name+hash);await page.waitForFunction(()=>L.loaded,{timeout:45000});await page.evaluate(async n=>{window._=s=>translations[s]||s;const poll=await L.require('poll');window.testPolls=[];const add=poll.add;poll.add=function(fn,interval){testPolls.push({fn,interval});return add.call(this,fn,interval);};window.currentView=await L.require('view.adguardhome.'+n)},name);await page.locator(name==='settings'?'.agh-settings':'.agh-ui').waitFor();
+ async function open(name,hash=""){calls=[];await page.goto(base+'?view='+name+hash);await page.waitForFunction(()=>L.loaded,{timeout:45000});await page.evaluate(async n=>{window._=s=>translations[s]||s;const poll=await L.require('poll');window.testPolls=[];const add=poll.add;poll.add=function(fn,interval){testPolls.push({fn,interval});return add.call(this,fn,interval);};window.currentView=await L.require('view.adguardhome.'+n)},name);await page.locator(name==='settings'?'.agh-settings':'.agh-ui').waitFor();await page.waitForFunction(()=>[...document.querySelectorAll('.agh-brand-logo')].length===2 && [...document.querySelectorAll('.agh-brand-logo')].every(logo=>logo.complete && logo.naturalWidth>0));
  await page.evaluate(async ({defs,name})=>{
   const tree={children:{}};
   for(const [url,entry] of Object.entries(defs)){let n=tree;for(const part of url.split('/')){n.children??={};n.children[part]??={children:{},satisfied:true};n=n.children[part];}Object.assign(n,entry,{satisfied:true});}
@@ -77,8 +77,8 @@ const server=http.createServer(async(req,res)=>{
   theme.renderMainMenu(tree.children.admin,'admin');
  },{defs:menuConfig,name});
  assert.deepEqual(await page.locator('#tabmenu a').allTextContents(),['概览']);
- assert.equal(await page.locator('.agh-nav a[aria-current=page]').getAttribute('href'),'/cgi-bin/luci/admin/services/adguardhome/'+(name==='yaml'?'settings':name));
- assert.deepEqual(await page.locator('.agh-nav a').allTextContents(),['概览','设置','诊断'],'Internal navigation has all three pages');checks+=3;
+ if(name==='overview')assert.equal(await page.locator('.agh-nav a[aria-current=page]').count(),0);else assert.equal(await page.locator('.agh-nav a[aria-current=page]').getAttribute('href'),'/cgi-bin/luci/admin/services/adguardhome/'+(name==='yaml'?'settings':name));
+ assert.deepEqual(await page.locator('.agh-nav a').allTextContents(),['设置','诊断'],'Internal navigation does not repeat overview');checks+=3;
 if(name==='yaml')await page.waitForFunction(()=>currentView._aghCmInstance);if(name==='log'||name==='yaml'){assert.equal(await page.locator('.cbi-page-actions').count(),0,'No unrelated save controls on '+name);checks++;}}
  async function clickAndWait(button,method){const response=page.waitForResponse(r=>r.request().method()==='POST'&&(method==='readDirect'?new URL(r.url()).pathname.endsWith('/cgi-download'):(r.request().postData()||'').includes('"'+method+'"')));await button.click();await response;}
  await open('settings');
@@ -148,7 +148,7 @@ if(name==='yaml')await page.waitForFunction(()=>currentView._aghCmInstance);if(n
   for(const dark of [false,true]){
    await page.evaluate(v=>document.body.classList.toggle('dark',v),dark);await page.waitForTimeout(80);
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`${name} ${width} ${dark?'dark':'light'} overflow `+JSON.stringify(await page.evaluate(()=>[...document.querySelectorAll('body *')].map(e=>({tag:e.tagName,cls:e.className,right:e.getBoundingClientRect().right,width:e.getBoundingClientRect().width})).filter(e=>e.right>innerWidth+1).slice(-8))));checks++;
-   if(name==='overview'){assert(await page.locator('.agh-stat-latency').evaluate(e=>e.scrollWidth<=e.clientWidth && e.getBoundingClientRect().height<=parseFloat(getComputedStyle(e).lineHeight)+1),'Processing time fits on a single line '+JSON.stringify(await page.locator('.agh-stat-latency').evaluate(e=>({width:e.clientWidth,scroll:e.scrollWidth,height:e.getBoundingClientRect().height,line:getComputedStyle(e).lineHeight,small:getComputedStyle(e.querySelector('small')).display,html:e.outerHTML}))));checks++;const offsets=await page.locator('.agh-access .agh-info-row').evaluateAll(rows=>rows.map(row=>{const a=row.querySelector('span').getBoundingClientRect(),b=row.querySelector('strong').getBoundingClientRect();return Math.abs(a.y+a.height/2-b.y-b.height/2)}));assert(offsets.every(offset=>offset<1),'DNS labels and values are vertically centered: '+JSON.stringify(offsets));checks++;}
+   if(name==='overview'){assert.equal(await page.locator('.agh-brand-logo:visible').count(),1);assert.equal(await page.locator('.agh-brand-logo:visible').getAttribute('src'),'/resources/adguardhome/logo-'+(dark?'dark':'light')+'.svg');checks+=2;assert(await page.locator('.agh-stat-latency').evaluate(e=>e.scrollWidth<=e.clientWidth && e.getBoundingClientRect().height<=parseFloat(getComputedStyle(e).lineHeight)+1),'Processing time fits on a single line '+JSON.stringify(await page.locator('.agh-stat-latency').evaluate(e=>({width:e.clientWidth,scroll:e.scrollWidth,height:e.getBoundingClientRect().height,line:getComputedStyle(e).lineHeight,small:getComputedStyle(e.querySelector('small')).display,html:e.outerHTML}))));checks++;const offsets=await page.locator('.agh-access .agh-info-row').evaluateAll(rows=>rows.map(row=>{const a=row.querySelector('span').getBoundingClientRect(),b=row.querySelector('strong').getBoundingClientRect();return Math.abs(a.y+a.height/2-b.y-b.height/2)}));assert(offsets.every(offset=>offset<1),'DNS labels and values are vertically centered: '+JSON.stringify(offsets));checks++;}
    if(name==='yaml'){assert.equal(await page.locator('.CodeMirror').evaluate(e=>getComputedStyle(e).backgroundColor),dark?'rgb(32, 36, 39)':'rgb(255, 255, 255)');checks++;}
    if(width<720){const targets=await page.locator('.agh-ui a.btn,.agh-ui button').evaluateAll(es=>es.filter(e=>e.getClientRects().length&&getComputedStyle(e).visibility!=='hidden').map(e=>({label:e.textContent,height:e.getBoundingClientRect().height})));assert(targets.every(t=>t.height>=44),JSON.stringify({name,width,targets}));checks++;}
    if(process.env.AGH_SCREENSHOT_DIR)await page.screenshot({path:path.join(process.env.AGH_SCREENSHOT_DIR,`${name}-${width}-${dark?'dark':'light'}.png`),fullPage:true});

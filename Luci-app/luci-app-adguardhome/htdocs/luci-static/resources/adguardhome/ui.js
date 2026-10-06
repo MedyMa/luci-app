@@ -33,7 +33,8 @@ var style = `
 
 .agh-ui{max-width:1120px;width:100%;margin:0 auto;gap:16px;--agh-surface:var(--white,#fff);--agh-soft:#f7f9fb}
 .agh-ui.agh-dark{--agh-surface:#232628;--agh-soft:#282d30;--agh-border:#3a4145;--agh-input:#202427;--agh-console:#161a1d;--agh-muted:#b7c0c8}
-.agh-nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.agh-nav a{display:inline-flex;align-items:center;min-height:44px;padding:8px 16px;border-radius:22px;color:var(--agh-muted)!important;text-decoration:none!important}.agh-nav a[aria-current=page]{background:var(--agh-primary);color:#fff!important;font-weight:600}
+.agh-nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.agh-nav a{background:var(--agh-soft);display:inline-flex;align-items:center;min-height:44px;padding:8px 16px;border-radius:22px;color:var(--agh-muted)!important;text-decoration:none!important}.agh-nav a[aria-current=page]{background:var(--agh-primary);color:#fff!important;font-weight:600}
+.agh-brand-logo{display:block;width:240px;max-width:100%;height:auto}.agh-brand-logo-dark{display:none}.agh-dark .agh-brand-logo-light{display:none}.agh-dark .agh-brand-logo-dark{display:block}
 .agh-heading{padding:8px 0}.agh-ui .agh-card{border-radius:20px;padding:20px}.agh-ui .agh-stats-grid .agh-value{font-size:28px}.agh-ui .agh-statusbar{padding:12px 16px}.agh-ui .agh-core-chip{font-size:12px}
 
 .agh-ui .agh-access .agh-info{background:var(--agh-soft);padding:0 14px;border-radius:8px}.agh-ui .agh-access .agh-info-row:last-child{border:0}.agh-ui .agh-access .agh-info-row>span{display:inline-flex;align-items:center;align-self:center;padding:5px 11px;border:1px solid var(--agh-border);border-radius:999px;background:var(--agh-surface);font-size:12px;line-height:1.5;flex-shrink:0}.agh-ui .agh-bottom-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:16px}.agh-ui .agh-operation{border-radius:12px;padding:8px 10px;display:flex;align-items:center;gap:12px;min-height:48px;border-bottom:1px solid var(--agh-border);color:var(--agh-text)!important;text-decoration:none!important}.agh-operation svg{width:21px;height:21px;flex-shrink:0}.agh-operation .btn{margin-left:auto;font-size:12px;flex-shrink:0;min-height:36px;padding:7px 14px!important}.agh-ui .agh-operation:last-child{border:0}.agh-ui .btn:active{filter:brightness(.94)}.agh-ui .agh-check{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--agh-border)}.agh-check>span:last-child{margin-left:auto;font-size:13px;font-weight:600}.agh-check svg{width:20px;height:20px}.agh-check:last-child{border:0}.agh-ui .agh-stat-note{color:var(--agh-muted);font-size:12px;margin-top:-4px}
@@ -52,11 +53,11 @@ function label(english, chinese) {
 	return (/^zh/i.test(lang) || /\blang_zh/i.test(classes)) ? chinese : value;
 }
 
+// Official assets: AdguardTeam/AdGuardHome v0.107.79 doc/adguard_home_{lightmode,darkmode}.svg
 function header(active) {
 	return E('div', {}, [
-		E('div', { 'class': 'agh-heading' }, [E('div', {}, [E('h2', {}, 'AdGuard Home'), E('p', {}, label('DNS management', 'DNS 管理'))])]),
+		E('div', { 'class': 'agh-heading' }, [E('div', {}, [E('h2', {}, [E('img', { 'class': 'agh-brand-logo agh-brand-logo-light', 'src': L.resource('adguardhome/logo-light.svg'), 'alt': 'AdGuard Home', 'width': '240', 'height': '60' }), E('img', { 'class': 'agh-brand-logo agh-brand-logo-dark', 'src': L.resource('adguardhome/logo-dark.svg'), 'alt': 'AdGuard Home', 'width': '240', 'height': '60' })]), E('p', {}, label('DNS management', 'DNS 管理'))])]),
 		E('nav', { 'class': 'agh-nav', 'aria-label': label('AdGuard Home navigation', 'AdGuard Home 导航') }, [
-			['overview', label('Overview', '概览')],
 			['settings', label('Settings', '设置')],
 			['log', label('AdGuard Home Diagnostics', '诊断')]
 		].map(function(item) {
