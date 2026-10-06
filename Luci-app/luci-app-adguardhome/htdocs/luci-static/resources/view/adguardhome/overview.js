@@ -378,7 +378,7 @@ return view.extend({
 		]));
 
 		function operation(name,title,detail,url){return E('div',{'class':'agh-operation'},[aghui.icon(name),E('span',{},title),E('a',{'class':'btn','href':url},detail)]);}
-		function check(label,ready){return E('div',{'class':'agh-check'},[E('span',{'class':ready?'agh-ok':'agh-warn'},aghui.icon('check')),E('span',{},label),E('span',{'class':ready?'agh-ok':'agh-warn'},ready?t('Ready','可用'):t('Missing','缺失'))]);}
+		function check(label,ready){return E('div',{'class':'agh-check'},[E('span',{'class':ready?'agh-ok':'agh-bad'}),E('span',{},label),E('span',{'class':ready?'agh-ok':'agh-bad'},ready?t('Ready','可用'):t('Missing','缺失'))]);}
 		var updateOperation=operation('update',t('Core update','核心更新'),yes(status.update_running)?t('Task running','任务运行中'):t('Check version','检查版本'),settingsUrl+'#update');
 		var panelOperation=operation('shield',t('Filters and clients','过滤规则与客户端'),t('Control Panel','控制面板'),panelUrl(status));
 		root.appendChild(E('div',{'class':'agh-bottom-grid'},[
@@ -413,7 +413,7 @@ return view.extend({
 			panelOperation.lastElementChild.href=panelUrl(s);
 			var checks=root.querySelectorAll('.agh-check');
 			[s.core_ready,s.config_ready,s.workdir_ready].forEach(function(ready,i){
-				var cls=yes(ready)?'agh-ok':'agh-warn';
+				var cls=yes(ready)?'agh-ok':'agh-bad';
 				checks[i].firstElementChild.className=cls;
 				checks[i].lastElementChild.className=cls;
 				checks[i].lastElementChild.textContent=yes(ready)?t('Ready','可用'):t('Missing','缺失');
