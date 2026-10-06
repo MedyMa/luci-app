@@ -364,7 +364,7 @@ return view.extend({
 		return m.render().then(function(formNode) {
 			return applyThemeClass(E('div', { 'class': 'agh-settings agh-ui' }, [
 				E('style', {}, style),
-				aghui.header(),
+				aghui.header('settings'),
 				formNode
 			]), 'agh-dark');
 		});

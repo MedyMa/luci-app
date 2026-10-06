@@ -288,7 +288,7 @@ return view.extend({
 
 		return applyThemeClass(E('div', { 'class': 'agh-log agh-ui' }, [
 			E('style', {}, style),
-			aghui.header(),
+			aghui.header('log'),
 			E('section', { 'class': 'agh-card' }, [
 				rpcError ? E('div', { 'class': 'agh-alert' }, actionError(rpcError, t('Log backend unavailable', '日志后端不可用'))) : '',
 				E('div', { 'class': 'agh-toolbar' }, [

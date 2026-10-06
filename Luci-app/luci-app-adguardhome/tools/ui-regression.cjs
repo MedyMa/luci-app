@@ -76,9 +76,9 @@ const server=http.createServer(async(req,res)=>{
   tree.children.admin.children.services.title='服务';
   theme.renderMainMenu(tree.children.admin,'admin');
  },{defs:menuConfig,name});
- assert.deepEqual(await page.locator('#tabmenu a').allTextContents(),['概览','设置','诊断']);
- assert.equal(await page.locator('#tabmenu li.active a').getAttribute('href'),'/cgi-bin/luci/admin/services/adguardhome/'+(name==='yaml'?'settings':name));
- assert.equal(await page.locator('.agh-nav,.agh-subnav').count(),0,'Only native Argon navigation');checks+=3;
+ assert.deepEqual(await page.locator('#tabmenu a').allTextContents(),['概览']);
+ assert.equal(await page.locator('.agh-nav a[aria-current=page]').getAttribute('href'),'/cgi-bin/luci/admin/services/adguardhome/'+(name==='yaml'?'settings':name));
+ assert.deepEqual(await page.locator('.agh-nav a').allTextContents(),['概览','设置','诊断'],'Internal navigation has all three pages');checks+=3;
 if(name==='yaml')await page.waitForFunction(()=>currentView._aghCmInstance);if(name==='log'||name==='yaml'){assert.equal(await page.locator('.cbi-page-actions').count(),0,'No unrelated save controls on '+name);checks++;}}
  async function clickAndWait(button,method){const response=page.waitForResponse(r=>r.request().method()==='POST'&&(method==='readDirect'?new URL(r.url()).pathname.endsWith('/cgi-download'):(r.request().postData()||'').includes('"'+method+'"')));await button.click();await response;}
  await open('settings');
@@ -133,7 +133,7 @@ if(name==='yaml')await page.waitForFunction(()=>currentView._aghCmInstance);if(n
 
  running=false;await open('overview');assert.equal(await page.locator('.agh-stats-grid .agh-value').allTextContents().then(x=>x.join('|')),'—|—|—|—');assert(!calls.some(c=>c.method==='getStats'),'Stopped service does not query stats API');checks+=2;
  running=true;failure='getStats';await open('overview');assert.equal(await page.locator('.agh-stats-grid .agh-card').count(),4);assert((await page.locator('.agh-stat-note').textContent()).includes('统计暂不可用'));failure=null;checks+=2;
- await page.setViewportSize({width:2560,height:1440});await open('overview');await page.evaluate(()=>document.body.classList.add('dark'));await page.waitForTimeout(150);const pageBounds=await page.locator('.agh-ui').boundingBox(),viewBounds=await page.locator('#view').boundingBox();assert(Math.abs(pageBounds.x-viewBounds.x)<1 && Math.abs(pageBounds.width-viewBounds.width)<1,'Content fills the native page width without centering');assert.equal(await page.locator('#tabmenu').textContent(),'概览设置诊断');checks+=2;
+ await page.setViewportSize({width:2560,height:1440});await open('overview');await page.evaluate(()=>document.body.classList.add('dark'));await page.waitForTimeout(150);const pageBounds=await page.locator('.agh-ui').boundingBox(),viewBounds=await page.locator('#view').boundingBox();assert(Math.abs(pageBounds.width-1120)<1 && Math.abs(pageBounds.x+pageBounds.width/2-viewBounds.x-viewBounds.width/2)<1,'Content is centered and limited to 1120px');assert.equal(await page.locator('#tabmenu').textContent(),'概览');checks+=2;
  if(process.env.AGH_SCREENSHOT_DIR){fs.mkdirSync(process.env.AGH_SCREENSHOT_DIR,{recursive:true});await page.screenshot({path:path.join(process.env.AGH_SCREENSHOT_DIR,'real-argon-overview.png'),fullPage:true});await open('settings');await page.evaluate(()=>document.body.classList.add('dark'));await page.waitForTimeout(150);await page.getByRole('link',{name:'基础设置',exact:true}).click();await page.screenshot({path:path.join(process.env.AGH_SCREENSHOT_DIR,'real-argon-settings.png'),fullPage:true});}
  for(const name of ['overview','settings','log','yaml']){await open(name);await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,name+' mobile overflow');checks++;}
  await open('settings');await page.getByRole('link',{name:'基础设置',exact:true}).click();assert.equal(await page.locator('div[data-tab=service]').evaluate(e=>getComputedStyle(e).backgroundColor),'rgba(0, 0, 0, 0)');assert.equal(await page.locator('[data-name=username] .cbi-value-title').evaluate(e=>getComputedStyle(e).textAlign),'left');checks+=2;

@@ -14,7 +14,7 @@
 	},
 
 	"admin/services/adguardhome/settings": {
-		"title": "Settings",
+		"hidden": true,
 		"order": 20,
 		"action": { "type": "view", "path": "adguardhome/settings" },
 		"depends": { "acl": [ "luci-app-adguardhome" ] }
@@ -32,7 +32,7 @@
 		"depends": { "acl": [ "luci-app-adguardhome" ] }
 	},
 	"admin/services/adguardhome/log": {
-		"title": "AdGuard Home Diagnostics",
+		"hidden": true,
 		"order": 30,
 		"action": { "type": "view", "path": "adguardhome/log" },
 		"depends": { "acl": [ "luci-app-adguardhome" ] }
