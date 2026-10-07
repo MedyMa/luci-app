@@ -7,12 +7,12 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-fan
 PKG_VERSION:=0.1.0
-PKG_RELEASE:=33
+PKG_RELEASE:=34
 PKG_LICENSE:=Apache-2.0
 
 LUCI_TITLE:=LuCI fan control
 LUCI_DESCRIPTION:=Modern LuCI fan control dashboard for BPI-R4 pwm-fan control and thermal telemetry
-LUCI_DEPENDS:=+luci-base +coreutils-stat
+LUCI_DEPENDS:=+luci-base +coreutils-stat +ubus +jsonfilter
 LUCI_PKGARCH:=all
 PKG_MAINTAINER:=MedyMa
 

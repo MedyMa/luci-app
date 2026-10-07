@@ -5,1486 +5,197 @@
 'require rpc';
 'require uci';
 
-var callGetStatus = rpc.declare({
-	object: 'luci.fan',
-	method: 'getStatus',
-	expect: { '': {} }
-});
-
-function hasChineseLocale() {
-	if (typeof document === 'undefined')
-		return false;
-
-	var bodyClass = document.body ? (document.body.className || '') : '';
-	var htmlLang = document.documentElement ? (document.documentElement.lang || '') : '';
-
-	return /\blang_zh(?:[-_][^\s]+)?\b/i.test(bodyClass) || /^zh(?:-|_|$)/i.test(htmlLang);
+var callGetStatus = rpc.declare({ object: 'luci.fan', method: 'getStatus', expect: { '': {} } });
+function t(message, chinese) {
+ var translated = _(message);
+ return translated === message && (/^zh(?:[-_]|$)/i.test(document.documentElement.lang || '') || /\blang_zh(?:[-_][^\s]+)?\b/i.test(document.body.className || '')) ? chinese : translated;
 }
-
-function t(message, fallback) {
-	var translated = _(message);
-
-	if (translated !== message || !fallback || !hasChineseLocale())
-		return translated;
-
-	return fallback;
+function number(value) { if (value == null || value === '') return null; value = Number(value); return isFinite(value) ? value : null; }
+function yes(value) { return value === true || value === 1 || value === '1'; }
+function modeLabel(mode) { return mode === 'turbo' ? t('Turbo', '狂暴') : mode === 'manual' ? t('Manual', '手动') : t('Smart', '智能'); }
+var style = `
+.lf-page{--surface:#fff;--soft:#f7f9fb;--line:#e3e7ee;--muted:#6c7689;--purple:#4c3e87;--green:#16814b;--blue:#2463c5;--teal:#087d86;--blade-start:#b4bcca;--blade-end:#e8ecf2;color:#283044;max-width:1120px;width:100%;margin:24px auto;display:grid;gap:16px;font-family:inherit;font-size:14px;line-height:1.5}
+.lf-page.lf-dark{color:#e8edf7;--surface:#232628;--soft:#282d30;--line:#3a4145;--muted:#b7c0c8;--purple:#a18be4;--green:#47d68b;--blue:#87b8ff;--teal:#75d5d7;--blade-start:#626b7e;--blade-end:#adb5c3}
+.lf-page *{box-sizing:border-box}.lf-page .lf-heading{display:flex;align-items:center;gap:12px;margin-bottom:4px}.lf-page .lf-heading h2{all:unset;display:block;font-family:inherit;font-size:27px;font-weight:650;line-height:1.3;color:inherit}.lf-page .lf-icon{width:43px;height:43px;display:grid;place-items:center;border-radius:14px;background:var(--soft);color:var(--purple);font-size:28px}
+.lf-page .lf-card{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:22px}.lf-page .lf-status{display:flex;align-items:center;gap:12px;padding:16px 20px;border-radius:13px}.lf-page .lf-chip{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:5px 12px;font-weight:600;color:var(--green);background:color-mix(in srgb,var(--green) 9%,transparent);white-space:nowrap}.lf-page .lf-chip i{height:8px;width:8px;background:currentColor;border-radius:50%}.lf-page .lf-tag{border-radius:999px;padding:4px 10px;border:1px solid var(--line);font-size:12px;background:var(--soft)}.lf-page .lf-muted{font-size:12px;color:var(--muted)}.lf-page .lf-status .lf-muted{margin-left:auto}
+.lf-page .lf-live{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;align-items:stretch}.lf-page .lf-fan-unit,.lf-page .lf-metric{height:208px;background:var(--soft);border-radius:15px;padding:20px;min-width:0;display:flex;flex-direction:column;justify-content:center}.lf-page .lf-fan-unit{text-align:center;align-items:center}.lf-page .lf-fan{width:116px;height:116px;flex-shrink:0;display:block}.lf-page .lf-housing{fill:var(--soft);stroke:var(--line);stroke-width:1.5}.lf-page .lf-rotor{transform-origin:120px 120px}.lf-page .lf-label{font-size:13px;color:var(--muted)}.lf-page .lf-number,.lf-page .lf-fan-value{font-size:28px;line-height:1.4;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;margin:9px 0 3px}.lf-page .lf-fan-value{color:var(--teal);margin:4px 0 0}.lf-page .lf-number small,.lf-page .lf-fan-value small{font-size:14px;font-weight:500}.lf-page .lf-blue{color:var(--blue)}.lf-page .lf-purple{color:var(--purple)}.lf-page .lf-green{color:var(--green)}.lf-page :focus-visible{outline:2px solid var(--purple);outline-offset:3px}
+.lf-page .cbi-value-field{display:block!important}.lf-page .cbi-map-descr{padding:0!important;margin:0 0 18px!important}
+@media(max-width:720px){.lf-page{margin:20px auto}.lf-page .lf-card{padding:16px}.lf-page .lf-live{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.lf-page .lf-fan-unit,.lf-page .lf-metric{height:160px;padding:14px}.lf-page .lf-fan{width:82px;height:82px}.lf-page .lf-fan-value,.lf-page .lf-number{font-size:25px}.lf-page .lf-number small{font-size:12px}.lf-page .lf-label{font-size:12px}.lf-page .lf-status{gap:9px;flex-wrap:wrap}.lf-page .lf-status .lf-muted{font-size:11px}}
+@media(prefers-reduced-motion:reduce){.lf-page *{transition:none!important}}
+.lf-page .cbi-map{border:1px solid var(--line)!important;border-radius:20px!important;background:var(--surface)!important;padding:22px!important;box-shadow:none!important;margin:0!important}
+.lf-page .cbi-map>h2,.lf-page .cbi-section>h3{display:none}.lf-page .cbi-map::before{content:attr(data-heading);display:block;font-size:18px;font-weight:650;margin-bottom:18px}
+.lf-page .cbi-map-descr{font-size:12px;color:var(--muted);margin-bottom:18px}
+.lf-page .cbi-section{margin:0!important;padding:0!important;border:0!important;background:none!important;box-shadow:none!important}
+.lf-page .cbi-section-node{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin:0!important;padding:0!important}
+.lf-page .cbi-value{display:block;margin:0!important;padding:0!important;border:0!important;background:none!important;min-width:0}
+.lf-page .cbi-value-title{float:none!important;width:auto!important;display:block!important;text-align:left!important;padding:0!important;margin:0 0 8px!important;font-size:14px;font-weight:600;color:inherit}
+.lf-page .cbi-value-field{margin:0!important;width:auto!important;padding:0!important}.lf-page .cbi-value-description{font-size:12px;line-height:1.5;color:var(--muted);padding-top:7px}
+.lf-page [data-name=enabled],.lf-page [data-name=mode]{grid-column:1/-1}
+.lf-page [data-name=enabled]{display:flex;align-items:center;justify-content:space-between;gap:16px}.lf-page [data-name=enabled] .cbi-value-title{margin:0!important}
+.lf-page input[type=text],.lf-page input[type=number]{width:100%!important;max-width:none!important;min-height:44px!important;font:inherit!important;font-size:16px!important;color:inherit!important;background:var(--soft)!important;border:1px solid var(--line)!important;border-radius:11px!important;padding:10px 13px!important;box-shadow:none!important}
+.lf-page .cbi-checkbox input[type=checkbox]{appearance:none!important;-webkit-appearance:none!important;position:relative!important;display:block!important;opacity:1!important;width:45px!important;height:26px!important;margin:0!important;background:#8e97a1!important;border:0!important;border-radius:999px!important;cursor:pointer}
+.lf-page .cbi-checkbox input:checked{background:var(--purple)!important}.lf-page .cbi-checkbox input::after{content:'';position:absolute;left:3px;top:3px;width:20px;height:20px;background:#fff;border-radius:50%;transition:transform .2s ease-out}.lf-page .cbi-checkbox input:checked::after{transform:translateX(19px)}.lf-page .cbi-checkbox>label{display:none!important}
+ .lf-page [data-name=mode] .cbi-value-field>div{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;font-size:0}.lf-page [data-name=mode] .cbi-radio{position:relative;display:block!important;border:1px solid var(--line);border-radius:16px;background:var(--soft);padding:13px 15px;min-width:0;font-size:14px}.lf-page [data-name=mode] .cbi-radio:has(input:checked){border-color:var(--purple);color:var(--purple)}.lf-page [data-name=mode] .cbi-radio>input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;margin:0}.lf-page [data-name=mode] .cbi-radio>label{display:none}.lf-page [data-name=mode] .cbi-radio>span{display:block;pointer-events:none}.lf-page [data-name=mode] small{display:block;font-size:12px;color:var(--muted);margin-top:3px}.lf-page [data-name=mode] .cbi-radio:focus-within{outline:2px solid var(--purple);outline-offset:3px}
+.lf-page input[type=radio],.lf-page input[type=range]{accent-color:var(--purple)}.lf-page input[type=range]{width:100%}.lf-page input:disabled{opacity:.65;cursor:default}.lf-page .range-value{font-weight:600;color:var(--purple)}.lf-page .cbi-section-node>.hidden{display:none!important}
+.lf-page .lf-chip[data-state=stopped]{color:var(--muted)}.lf-page .lf-chip[data-state=error],.lf-page .lf-runtime-error{color:#d14462}.lf-page .lf-runtime-error:empty{display:none}
+#maincontent:has(.lf-page) .cbi-page-actions .cbi-button{border-radius:999px;min-height:44px;padding:10px 20px}#maincontent:has(.lf-page) .cbi-page-actions .cbi-button-apply,#maincontent:has(.lf-page) .cbi-page-actions .cbi-button-save{background:#4c3e87!important;border-color:#4c3e87!important;color:#fff!important}
+#maincontent:has(.lf-page) .cbi-page-actions{display:flex!important;flex-wrap:wrap;justify-content:flex-end;gap:10px;box-sizing:border-box;width:100%;max-width:1120px;margin-left:auto;margin-right:auto}#maincontent:has(.lf-page) .cbi-page-actions>.cbi-button{margin:0!important}#maincontent:has(.lf-page) .cbi-page-actions .cbi-button-reset{background:#f7f9fb!important;border:1px solid #e3e7ee!important;color:#283044!important}#maincontent:has(.lf-page.lf-dark) .cbi-page-actions .cbi-button-reset{background:#282d30!important;border-color:#3a4145!important;color:#e8edf7!important}
+@media(max-width:720px){.lf-page{margin:20px auto}.lf-page .cbi-map{padding:16px!important}.lf-page .cbi-section-node{grid-template-columns:1fr;gap:16px}.lf-page [data-name=mode] .cbi-value-field>div{gap:6px}.lf-page [data-name=mode] .cbi-radio{padding:11px 9px}}
+`;
+function fanIcon() {
+ var blades = '';
+ for (var i = 0; i < 7; i++) blades += '<path transform="rotate(' + (i * 360 / 7) + ')" d="M-10-22C-26-70-15-103 24-100C58-95 70-65 52-34C37-12 11-16-10-22Z"/>';
+ var node = E('div');
+ node.innerHTML = '<svg class="lf-fan" viewBox="0 0 240 240" aria-hidden="true"><defs><linearGradient id="lf-fan-blade" x1="0" y1="0" x2="1" y2="1"><stop stop-color="var(--blade-start)"/><stop offset="1" stop-color="var(--blade-end)"/></linearGradient></defs><rect class="lf-housing" x="5" y="5" width="230" height="230" rx="29"/><g class="lf-rotor"><g transform="translate(120 120)" fill="url(#lf-fan-blade)">' + blades + '</g></g><circle cx="120" cy="120" r="29" fill="var(--surface)" stroke="var(--purple)" stroke-width="2"/><circle cx="120" cy="120" r="9" fill="var(--purple)"/></svg>';
+ return node.firstElementChild;
 }
-
-function isDarkTheme() {
-	if (typeof window === 'undefined' || typeof document === 'undefined' || !document.body)
-		return false;
-
-	var html = document.documentElement;
-	var htmlClass = html ? (html.className || '') : '';
-	var bodyClass = document.body.className || '';
-	var htmlTheme = html ? (html.getAttribute('data-theme') || '') : '';
-	var bodyTheme = document.body.getAttribute('data-theme') || '';
-	var background = window.getComputedStyle(document.body).backgroundColor || '';
-	var channels = background.match(/\d+(?:\.\d+)?/g);
-	var luminance;
-
-	if (/\b(?:dark|mode-dark|argon-dark)\b/i.test(htmlClass) || /\b(?:dark|mode-dark|argon-dark)\b/i.test(bodyClass))
-		return true;
-
-	if (/dark/i.test(htmlTheme) || /dark/i.test(bodyTheme))
-		return true;
-
-	if (/light/i.test(htmlTheme) || /light/i.test(bodyTheme))
-		return false;
-
-	if (!channels || channels.length < 3)
-		return false;
-
-	luminance = (Number(channels[0]) * 299 + Number(channels[1]) * 587 + Number(channels[2]) * 114) / 1000;
-	return luminance < 140;
-}
-
-function applyThemeClass(node, darkClass) {
-	function syncThemeClass() {
-		/* The canvas paints in the same two palettes and redraws on every frame,
-		 * so the answer is recorded here instead of being asked for sixty times
-		 * a second: isDarkTheme() reads a computed background colour, which is a
-		 * style resolution per call. */
-		applyThemeClass._dark = isDarkTheme();
-		node.classList.toggle(darkClass, applyThemeClass._dark);
-	}
-	var retries = [ 0, 80, 220, 480, 900 ];
-	var index;
-	var mediaQuery;
-
-	syncThemeClass();
-
-	if (typeof window !== 'undefined') {
-		for (index = 0; index < retries.length; index++)
-			window.setTimeout(syncThemeClass, retries[index]);
-
-		if (window.requestAnimationFrame)
-			window.requestAnimationFrame(syncThemeClass);
-
-		/* Singleton MutationObserver — avoid observer accumulation on re-render */
-		if (typeof MutationObserver !== 'undefined' && document.documentElement) {
-			if (!applyThemeClass._themeObserver) {
-				applyThemeClass._themeObserver = new MutationObserver(function() {
-					isDarkTheme(); /* prime the internal state if needed */
-				});
-				applyThemeClass._themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: [ 'class', 'style', 'data-theme' ] });
-				if (document.body && document.body !== document.documentElement)
-					applyThemeClass._themeObserver.observe(document.body, { attributes: true, attributeFilter: [ 'class', 'style', 'data-theme' ] });
-			}
-			/* Re-run all registered nodes on theme change via a microtask queue */
-			if (!applyThemeClass._themeQueue)
-				applyThemeClass._themeQueue = [];
-			if (applyThemeClass._themeQueue.indexOf(node) === -1)
-				applyThemeClass._themeQueue.push(node);
-
-			if (!applyThemeClass._themeFlusher) {
-				applyThemeClass._themeFlusher = new MutationObserver(function() {
-					var nodes = applyThemeClass._themeQueue;
-					var i;
-
-					for (i = 0; i < nodes.length; i++) {
-						if (nodes[i] && nodes[i].classList)
-							nodes[i].classList.toggle(darkClass, isDarkTheme());
-					}
-				});
-				applyThemeClass._themeFlusher.observe(document.documentElement, { attributes: true, attributeFilter: [ 'class', 'style', 'data-theme' ] });
-			}
-		}
-
-		if (window.matchMedia) {
-			mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-
-			if (mediaQuery) {
-				if (mediaQuery.addEventListener)
-					mediaQuery.addEventListener('change', syncThemeClass);
-				else if (mediaQuery.addListener)
-					mediaQuery.addListener(syncThemeClass);
-			}
-		}
-
-		/* Singleton window listeners — register once, not per applyThemeClass call */
-		if (!applyThemeClass._windowListenersAttached) {
-			applyThemeClass._windowListenersAttached = true;
-			window.addEventListener('pageshow', syncThemeClass);
-			window.addEventListener('focus', syncThemeClass);
-		}
-	}
-
-	return node;
-}
-
-var dashboardStyle = [
-	/* ── Design Tokens ── */
-	/* Easing: Emil Kowalski style — strong custom cubic-beziers, never ease-in */
-	'.lf-page {',
-	'  --lf-ease-out: cubic-bezier(0.23, 1, 0.32, 1);',
-	'  --lf-ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);',
-	'  --lf-ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);',
-	'  --lf-duration-fast: 100ms;',
-	'  --lf-duration-normal: 200ms;',
-	'  --lf-duration-slow: 350ms;',
-	'  display: grid; gap: 18px;',
-
-	/* ── Light Surface ──
-	 * The shell is the material the traffic page's cards are made of, so the
-	 * two pages read as one design: rgba(255,255,255,.8) over a
-	 * blur(14px) saturate(150%) layer, one hairline border, one soft shadow.
-	 * It used to be a saturated blue gradient with two radial glows, which
-	 * left every colour below tuned for a dark surface - a #ffffff headline
-	 * that a light theme cannot read.  Nothing here is a fixed colour any
-	 * more: the dark block below restates only these tokens. */
-	'  --lf-shell-bg: rgba(255, 255, 255, 0.8);',
-	'  --lf-shell-border: rgba(255, 255, 255, 0.75);',
-	'  --lf-shell-shadow: 0 6px 22px rgba(31, 66, 102, 0.10);',
-	'  --lf-fg: var(--font-color, #20303d);',
-	'  --lf-dim: #68727c;',
-	'  --lf-accent: #0a84ff;',
-	'  --lf-frost-bg: rgba(140, 160, 180, 0.16);',
-	'  --lf-frost-border: rgba(128, 150, 175, 0.20);',
-	'  --lf-frost-soft: rgba(255, 255, 255, 0.60);',
-	'  --lf-deep-surface: rgba(140, 160, 180, 0.16);',
-	'  --lf-deep-surface-soft: rgba(140, 160, 180, 0.10);',
-	'  --lf-well: rgba(255, 255, 255, 0.72);',
-	'  --lf-well-hub: rgba(255, 255, 255, 0.92);',
-	'  --lf-track: rgba(128, 150, 175, 0.20);',
-	'  --lf-hairline: inset 0 1px 0 rgba(255, 255, 255, 0.5);',
-	'  --lf-form-bg: rgba(255, 255, 255, 0.8);',
-	'  --lf-form-border: rgba(128, 150, 175, 0.20);',
-	'  --lf-form-title: var(--font-color, #20303d);',
-	'  --lf-field-border: rgba(128, 150, 175, 0.28);',
-	'  --lf-field-bg: var(--background-color-high, #fff);',
-	'  --lf-range-pill-bg: rgba(140, 160, 180, 0.16);',
-	'  --lf-range-pill-text: #20303d;',
-	'  --lf-preset-bg: rgba(140, 160, 180, 0.16);',
-	'  --lf-preset-border: rgba(128, 150, 175, 0.20);',
-	'  --lf-preset-hover: rgba(140, 160, 180, 0.26);',
-	'  --lf-preset-hover-border: rgba(10, 132, 255, 0.45);',
-	'  --lf-preset-active: rgba(10, 132, 255, 0.14);',
-	'  --lf-preset-active-border: rgba(10, 132, 255, 0.55);',
-	'}',
-
-	/* ── Dark Surface (Argon / theme-agnostic) ── */
-	'.lf-page.lf-dark,',
-	'body.dark .lf-page, html.dark .lf-page,',
-	'body.mode-dark .lf-page, body.argon-dark .lf-page,',
-	'html[data-theme="dark"] .lf-page, body[data-theme="dark"] .lf-page,',
-	'html[data-theme="dark"] body .lf-page,',
-	'body[data-theme="dark"] .lf-page {',
-	'  --lf-shell-bg: rgba(44, 44, 46, 0.8);',
-	'  --lf-shell-border: var(--border-color-low, rgba(255, 255, 255, 0.08));',
-	'  --lf-shell-shadow: 0 6px 22px rgba(0, 0, 0, 0.35);',
-	'  --lf-fg: #e6edf3;',
-	'  --lf-dim: #aeb5bc;',
-	'  --lf-frost-bg: rgba(255, 255, 255, 0.08);',
-	'  --lf-frost-border: var(--border-color-low, rgba(255, 255, 255, 0.12));',
-	'  --lf-frost-soft: rgba(255, 255, 255, 0.06);',
-	'  --lf-deep-surface: rgba(255, 255, 255, 0.08);',
-	'  --lf-deep-surface-soft: rgba(255, 255, 255, 0.06);',
-	'  --lf-well: rgba(7, 20, 26, 0.38);',
-	'  --lf-well-hub: rgba(10, 27, 33, 0.92);',
-	'  --lf-track: rgba(255, 255, 255, 0.12);',
-	'  --lf-hairline: inset 0 1px 0 rgba(255, 255, 255, 0.05);',
-	'  --lf-form-bg: rgba(44, 44, 46, 0.8);',
-	'  --lf-form-border: var(--border-color-low, rgba(255, 255, 255, 0.12));',
-	'  --lf-form-title: #e6edf3;',
-	'  --lf-field-border: rgba(255, 255, 255, 0.14);',
-	'  --lf-field-bg: rgba(30, 30, 32, 0.94);',
-	'  --lf-range-pill-bg: rgba(255, 255, 255, 0.08);',
-	'  --lf-range-pill-text: #dce7f3;',
-	'  --lf-preset-bg: rgba(255, 255, 255, 0.08);',
-	'  --lf-preset-border: rgba(255, 255, 255, 0.12);',
-	'  --lf-preset-hover: rgba(255, 255, 255, 0.14);',
-	'  --lf-preset-hover-border: rgba(10, 132, 255, 0.50);',
-	'  --lf-preset-active: rgba(10, 132, 255, 0.22);',
-	'  --lf-preset-active-border: rgba(10, 132, 255, 0.60);',
-	'}',
-
-	/* ── Shell & Entrance ── */
-	'.lf-dashboard-shell { position: relative; overflow: hidden; border: 1px solid var(--lf-shell-border); border-radius: 24px; box-shadow: var(--lf-hairline), var(--lf-shell-shadow); background: var(--lf-shell-bg); backdrop-filter: blur(14px) saturate(150%); -webkit-backdrop-filter: blur(14px) saturate(150%); }',
-	'.lf-dashboard-shell.lf-entering { animation: lf-shell-enter 500ms var(--lf-ease-out) both; }',
-	'@keyframes lf-shell-enter { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }',
-
-	/* No ambient glows.  The two radial gradients that used to sit here were
-	 * part of the blue-gradient shell, and the traffic page this now matches
-	 * has none: a light material with a coloured blob behind it reads as a
-	 * leftover, not as depth. */
-
-	'.lf-dashboard { position: relative; z-index: 1; padding: 18px 20px; color: var(--lf-fg); }',
-	'.lf-hero { display: grid; grid-template-columns: minmax(0, 1.85fr) minmax(280px, 1fr); gap: 18px; align-items: stretch; }',
-	'.lf-copy { min-width: 0; display: flex; flex-direction: column; }',
-
-	/* Eyebrow badge — align-self keeps it as wide as its text: the copy column
-	 * is a flex column now, and a stretched inline-flex child fills the row. */
-	'.lf-eyebrow { display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; padding: 4px 10px; border-radius: 999px; background: var(--lf-frost-bg); border: 1px solid var(--lf-frost-border); backdrop-filter: blur(16px) saturate(140%); font-size: 11px; letter-spacing: 0.10em; text-transform: uppercase; }',
-
-	/* Headline — reset all LuCI overrides */
-	'.lf-headline { all: unset; display: block !important; width: auto !important; margin: 12px 0 8px !important; padding: 0 !important; min-height: 0 !important; background: transparent !important; background-color: transparent !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; font-size: 25px !important; font-weight: 700 !important; line-height: 1.15 !important; letter-spacing: -0.02em !important; color: var(--lf-fg) !important; text-shadow: none !important; }',
-	'.lf-headline:before, .lf-headline:after { display: none; content: none; }',
-	'.lf-copy p { max-width: 46rem; margin: 0; font-size: 13px; line-height: 1.6; color: var(--lf-dim); }',
-
-	'.lf-chip-row, .lf-metrics, .lf-grid, .lf-config-grid, .lf-ladder-scale { display: grid; gap: 10px; }',
-	'.lf-chip-row { grid-template-columns: repeat(auto-fit, minmax(120px, max-content)); margin-top: 12px; }',
-	'.lf-chip { display: inline-flex; align-items: center; justify-content: center; padding: 4px 10px; border-radius: 999px; background: var(--lf-frost-bg); border: 1px solid var(--lf-frost-border); backdrop-filter: blur(12px); font-size: 11.5px; line-height: 1.4; color: var(--lf-fg); }',
-	'.lf-chip-muted { background: var(--lf-deep-surface); color: var(--lf-dim); }',
-	'.lf-chip-alert { background: rgba(246, 135, 83, 0.2); border-color: rgba(246, 135, 83, 0.35); }',
-
-	/* Runtime state badge colors */
-	'.lf-runtime-badge[data-state="active"] { background: #ffcb72; border-color: #ffcb72; color: #2d1f04; }',
-	'.lf-runtime-badge[data-state="transition"] { background: #9adfb9; border-color: #9adfb9; color: #143325; }',
-	'.lf-runtime-badge[data-state="standby"] { background: #cbe7f0; border-color: #cbe7f0; color: #173843; }',
-	'.lf-runtime-badge[data-state="disabled"], .lf-runtime-badge[data-state="unsupported"] { background: var(--lf-frost-bg); color: var(--lf-fg); }',
-
-	'.lf-visual { min-width: 0; display: grid; gap: 10px; align-content: start; justify-items: stretch; }',
-
-	/* Fan orb — Apple-style glass surface with top-edge light catch */
-	'.lf-orb { position: relative; display: flex; align-items: center; justify-content: center; width: 100%; min-height: 268px; padding: 4px; overflow: hidden; border-radius: 18px; background: var(--lf-well) !important; border: 1px solid var(--lf-frost-border) !important; backdrop-filter: blur(18px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 8px 24px rgba(0,0,0,0.08) !important; }',
-	'.lf-orb canvas, #lf-fan-canvas { display: block !important; width: 260px !important; height: 260px !important; max-width: 100% !important; max-height: 260px !important; margin: 0 auto !important; background: transparent !important; background-color: transparent !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; outline: 0 !important; }',
-
-	'.lf-temp-readout { position: absolute; top: 50%; left: 50%; z-index: 1; transform: translate(-50%, -50%); text-align: center; pointer-events: none; }',
-	'.lf-temp-number { font-size: 32px; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums; }',
-	'.lf-temp-unit { margin-top: 2px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--lf-dim); }',
-	'.lf-temp-caption { margin-top: 3px; font-size: 11px; color: var(--lf-dim); }',
-
-	/* Demand bar — smooth width transition with strong ease-in-out */
-	'.lf-demand { width: 100%; box-sizing: border-box; padding: 10px 12px 12px; border-radius: 14px; background: var(--lf-frost-soft); border: 1px solid var(--lf-frost-border); backdrop-filter: blur(10px); }',
-	'.lf-demand-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 12px; }',
-	'.lf-demand-row strong { font-size: 15px; font-variant-numeric: tabular-nums; }',
-	'.lf-demand-bar { margin-top: 7px; height: 8px; border-radius: 999px; background: var(--lf-track); overflow: hidden; }',
-	'#lf-demand-fill { height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, #7de2b8 0%, #f3d07b 55%, #f68753 100%);',
-	'  transition: width 350ms var(--lf-ease-in-out), background 350ms var(--lf-ease-in-out); }',
-
-	/* Metrics grid — translucency + blur.  It fills whatever height the orb
-	 * column has left over: the KPI tiles grow into the space instead of
-	 * leaving a hole between themselves and the chips above. */
-	'.lf-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 14px; flex: 1 1 auto; align-content: stretch; }',
-	'.lf-metric, .lf-card, .lf-ladder-card { padding: 12px 14px; border-radius: 16px; background: var(--lf-frost-bg); border: 1px solid var(--lf-frost-border); backdrop-filter: blur(12px) saturate(140%); }',
-	/* The KPI tiles stretch to the orb column's height, so the label goes to the
-	 * top and the number to the bottom of the tile rather than both sitting in
-	 * the upper half of a tall box. */
-	'.lf-metric { display: flex; flex-direction: column; justify-content: space-between; }',
-	'.lf-metric-label { font-size: 11px; line-height: 1.4; color: var(--lf-dim); }',
-	'.lf-metric-value { margin-top: 4px; font-size: 22px; line-height: 1.1; font-weight: 700; color: var(--lf-fg); font-variant-numeric: tabular-nums;',
-	'  transition: color 200ms var(--lf-ease-out); }',
-
-	/* Ladder (smart curve visualisation) */
-	'.lf-ladder-card { margin-top: 16px; }',
-	'.lf-ladder-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }',
-	'.lf-ladder-head h4, .lf-card h4 { margin: 0; font-size: 15px; color: var(--lf-fg); }',
-	'.lf-source-pill { padding: 3px 8px; border-radius: 999px; background: var(--lf-deep-surface); font-size: 11px; color: var(--lf-dim); }',
-	'.lf-ladder-track { position: relative; height: 14px; margin-top: 12px; border-radius: 999px; background: linear-gradient(90deg, rgba(125, 226, 184, 0.45) 0%, rgba(250, 206, 118, 0.72) 55%, rgba(246, 135, 83, 0.95) 100%); overflow: hidden; }',
-	'.lf-ladder-track:before { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(6, 18, 22, 0.25), rgba(255, 255, 255, 0.04)); }',
-	'.lf-marker { position: absolute; top: -4px; width: 2px; height: 22px; background: #ffffff; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.16); transform: translateX(-50%);',
-	'  transition: left 400ms var(--lf-ease-out), opacity 200ms var(--lf-ease-out); }',
-	'.lf-marker-current { height: 28px; top: -7px; background: #ffd17c; box-shadow: 0 0 0 4px rgba(255, 209, 124, 0.18); }',
-	'.lf-ladder-scale { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 10px; }',
-	'.lf-scale-item { padding: 7px 10px; border-radius: 12px; background: var(--lf-deep-surface-soft); }',
-	'.lf-scale-item span { display: block; font-size: 10.5px; line-height: 1.4; color: var(--lf-dim); }',
-	'.lf-scale-item strong { display: block; margin-top: 2px; font-size: 16px; line-height: 1.2; color: var(--lf-fg); font-variant-numeric: tabular-nums;',
-	'  transition: color 200ms var(--lf-ease-out); }',
-
-	'.lf-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 16px; }',
-	'.lf-card p { margin: 8px 0 0; font-size: 12.5px; line-height: 1.6; color: var(--lf-dim); }',
-
-	/* ── Preset Buttons (Emil-style: :active scale feedback, strong easing) ── */
-	'.lf-preset-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }',
-	'.lf-preset {',
-	'  min-height: 40px; padding: 0 12px; border-radius: 12px;',
-	'  border: 1px solid var(--lf-preset-border);',
-	'  background: var(--lf-preset-bg);',
-	'  color: var(--lf-fg); box-shadow: none; cursor: pointer;',
-	'  outline: none;',
-	'  -webkit-tap-highlight-color: transparent;',
-	'  transition: transform 160ms var(--lf-ease-out),',
-	'              background-color 200ms var(--lf-ease-out),',
-	'              border-color 200ms var(--lf-ease-out),',
-	'              box-shadow 200ms var(--lf-ease-out);',
-	'}',
-	'.lf-preset:active { transform: scale(0.97); transition: transform 100ms var(--lf-ease-out); }',
-	'.lf-preset:hover, .lf-preset:focus-visible { transform: translateY(-1px); background: var(--lf-preset-hover); border-color: var(--lf-preset-hover-border); }',
-	'.lf-preset:focus-visible { box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.4); }',
-	'.lf-preset.is-active { background: var(--lf-preset-active); border-color: var(--lf-preset-active-border); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); }',
-
-	'.lf-note, .lf-insights, .lf-config-grid { margin-top: 10px; }',
-	/* The hints are six sentences.  As one column this card was the tallest
-	 * thing on the page and stretched the two cards beside it, so the row is
-	 * now two columns of hints and the three cards come out even. */
-	'.lf-insights { display: grid; gap: 4px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--lf-frost-border); }',
-	'.lf-insight { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--lf-fg); }',
-	'.lf-config-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }',
-	'.lf-config-item { padding: 7px 10px; border-radius: 12px; background: var(--lf-deep-surface-soft); }',
-	'.lf-config-item span { display: block; font-size: 10.5px; line-height: 1.4; color: var(--lf-dim); }',
-	'.lf-config-item strong { display: block; margin-top: 2px; font-size: 16px; line-height: 1.3; color: var(--lf-fg); font-variant-numeric: tabular-nums;',
-	'  transition: color 200ms var(--lf-ease-out); }',
-
-	/* ── LuCI Form Integration ── */
-	'.lf-settings { margin: 0; border-radius: 16px; border: 1px solid var(--lf-form-border); background: var(--lf-form-bg); box-shadow: 0 12px 30px rgba(17, 48, 54, 0.08); overflow: hidden; }',
-	'.lf-settings > .lf-settings-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px; font-size: 14px; font-weight: 600; color: var(--lf-form-title); cursor: pointer; list-style: none; -webkit-tap-highlight-color: transparent; }',
-	'.lf-settings > .lf-settings-head::-webkit-details-marker { display: none; }',
-	'.lf-settings > .lf-settings-head:after { content: ""; margin-left: auto; width: 7px; height: 7px; border: solid currentColor; border-width: 0 2px 2px 0; transform: rotate(45deg); transition: transform 200ms var(--lf-ease-out); }',
-	'.lf-settings[open] > .lf-settings-head { border-bottom: 1px solid var(--lf-form-border); }',
-	'.lf-settings[open] > .lf-settings-head:after { transform: rotate(-135deg); }',
-	'.lf-settings > .lf-settings-head:hover { color: var(--lf-accent); }',
-	'.lf-settings > .lf-settings-head:focus-visible { outline: 2px solid var(--lf-accent); outline-offset: 2px; }',
-	'.lf-settings .cbi-map { margin: 0; border: 0; border-radius: 0; box-shadow: none; background: transparent; }',
-	/* the summary carries the section's own heading, so the one the form renders
-	 * would print "基本设置" twice.  luci-base's form.js appends that heading as
-	 * a direct child of .cbi-section - `sectionEl.appendChild(E('h3', {}, this.title))`
-	 * - which is a sibling of .cbi-section-node, not inside it, so the selector
-	 * has to say so: matching .cbi-section-node h3 hid nothing at all. */
-	'.lf-settings .cbi-map .cbi-section > h3 { display: none; }',
-	'.lf-settings .cbi-map .cbi-section-node h3 { display: none; }',
-	'.lf-settings .cbi-map .cbi-value:first-child { border-top: 0; }',
-	'.lf-settings .cbi-map > h2, .lf-settings .cbi-map > .cbi-map-descr { display: none; }',
-	'.lf-settings .cbi-map .cbi-section { margin: 0; border: 0; box-shadow: none; background: transparent; }',
-	'.lf-settings .cbi-map .cbi-section-node { padding-top: 6px; background: transparent; }',
-	'.lf-settings .cbi-map .cbi-value { padding: 11px 14px; border-top: 1px solid var(--lf-form-border); }',
-	'.lf-settings .cbi-map .cbi-value-title { font-weight: 600; color: var(--lf-form-title); }',
-	'.lf-settings .cbi-map input[type="text"],',
-	'.lf-settings .cbi-map input[type="password"],',
-	'.lf-settings .cbi-map input[type="number"],',
-	'.lf-settings .cbi-map select {',
-	'  border-radius: 12px; border-color: var(--lf-field-border);',
-	'  background: var(--lf-field-bg); color: var(--lf-form-title);',
-	'  box-shadow: none;',
-	'  transition: border-color 200ms var(--lf-ease-out);',
-	'}',
-	'.lf-settings .cbi-map input[type="text"]:focus,',
-	'.lf-settings .cbi-map input[type="number"]:focus,',
-	'.lf-settings .cbi-map select:focus {',
-	'  border-color: rgba(10, 132, 255, 0.5);',
-	'  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.15);',
-	'}',
-	'.lf-settings .cbi-map input[type="range"] { width: 100%; accent-color: var(--lf-accent); }',
-	'.lf-range-output { display: inline-flex; align-items: center; justify-content: center; min-width: 72px; margin-top: 10px; padding: 6px 12px; border-radius: 999px; background: var(--lf-range-pill-bg); color: var(--lf-range-pill-text); font-size: 12px; font-weight: 600;',
-	'  transition: background-color 200ms var(--lf-ease-out), color 200ms var(--lf-ease-out); }',
-
-	/* ── Reduced Motion ── */
-	'@media (prefers-reduced-motion: reduce) {',
-	'  .lf-dashboard-shell.lf-entering { animation: none; }',
-	'  .lf-preset, .lf-preset:active, .lf-preset:hover, .lf-preset:focus-visible { transition: none; transform: none; }',
-	'  #lf-demand-fill { transition: none; }',
-	'  .lf-marker { transition: none; }',
-	'  .lf-metric-value, .lf-scale-item strong, .lf-config-item strong { transition: none; }',
-	'  .lf-settings .cbi-map input[type="text"],',
-	'  .lf-settings .cbi-map input[type="number"],',
-	'  .lf-settings .cbi-map select { transition: none; }',
-	'  .lf-settings > .lf-settings-head:after { transition: none; }',
-	'  .lf-range-output { transition: none; }',
-	'}',
-
-	/* ── Responsive ── */
-	'@media screen and (max-width: 1180px) { .lf-hero, .lf-grid { grid-template-columns: 1fr; } .lf-metrics, .lf-preset-list, .lf-ladder-scale { grid-template-columns: repeat(2, minmax(0, 1fr)); } }',
-	'@media screen and (max-width: 760px) { .lf-dashboard { padding: 20px; } .lf-headline { font-size: 21px !important; } .lf-metrics, .lf-preset-list, .lf-grid, .lf-config-grid, .lf-ladder-scale { grid-template-columns: 1fr; } .lf-orb { min-height: 240px; } }'
-].join('\n');
-
-var texts = {
-	enabled: t('Enabled', '已启用'),
-	disabled: t('Disabled', '未启用'),
-	active: t('Cooling active', '正在散热'),
-	transition: t('Modulating', '调速中'),
-	standby: t('Standby', '待机'),
-	unsupported: t('Unavailable', '不可用'),
-	unavailable: t('Sensor unavailable', '传感器不可用'),
-	toStart: t('to start', '后启动'),
-	thresholdReached: t('Full-speed ceiling reached', '已达到满速温度上限'),
-	saveApply: t('Save & Apply below to persist changes.', '需要点击下方的“保存并应用”后，修改才会真正生效。'),
-	enableAndSave: t('Enable the service and Save & Apply to start the fan daemon.', '启用服务后，再点击“保存并应用”即可启动风扇守护进程。'),
-	loadedToForm: t('Loaded into the form', '已写入表单'),
-	notAvailable: t('Not available', '不可用'),
-	unsupportedHint: t('This device needs a readable CPU thermal zone and a writable pwm-fan hwmon interface for the full temperature-driven control loop.', '当前设备需要可读的 CPU 温区和可写的 PWM 风扇 hwmon 接口，才能使用完整的温度驱动控速。'),
-	modeUnsupportedHint: t('Turbo and Manual modes require a writable pwm-fan hwmon interface on the target board.', '狂暴模式和手动模式需要目标设备提供可写的 pwm-fan hwmon 接口。'),
-	telemetryWaiting: t('Waiting for telemetry...', '正在等待遥测数据...'),
-	monitoringState: t('Monitoring state', '监控状态'),
-	currentDevice: t('Current device', '当前设备'),
-	bpiHero: t('BPI-R4 tuned layout with live CPU temperature, PWM duty, and fan speed feedback across smart, manual and turbo modes.', '已针对 BPI-R4 优化，实时展示 CPU 温度、PWM 占空比，以及智能、手动、狂暴三种模式下的风扇转速反馈。'),
-	genericHero: t('Live OpenWrt cooling dashboard with a configurable smart temperature window, plus manual and turbo profiles on pwm-fan capable hardware.', '当目标硬件提供 pwm-fan 能力时，可在这里实时查看 OpenWrt 散热状态，并使用可配置智能温区、手动和狂暴三种模式。'),
-	turbo: t('Turbo', '狂暴'),
-	smart: t('Smart', '智能'),
-	manual: t('Manual', '手动'),
-	turboHint: t('Turbo mode locks the fan at the configured full-speed RPM ceiling after Save & Apply.', '狂暴模式在“保存并应用”后会把风扇锁定在已配置的满速转速上限。'),
-	manualHint: t('Manual mode applies the selected duty target after Save & Apply and reports the available fan speed feedback.', '手动模式会在“保存并应用”后采用所选占空比，并显示当前可用的风扇转速反馈。'),
-	modePending: t('Mode target', '目标模式'),
-	currentDuty: t('Current fan duty', '当前风扇占空比'),
-	estimatedTag: t('(estimated)', '（估算）'),
-	actualTag: t('(actual)', '（真实）'),
-	speedSourceEstimated: t('PWM speed feedback', 'PWM 转速反馈'),
-	speedSourceActual: t('Hardware speed feedback', '硬件转速反馈'),
-	speedSourceUnavailable: t('Speed feedback unavailable', '转速反馈不可用'),
-	speedFeedback: t('Speed feedback', '转速反馈'),
-	smartFloor: t('Fan stop below', '低于此温度停转'),
-	smartCeiling: t('Full speed above', '高于此温度满速'),
-	curveModulating: t('The fan is linearly modulating between the stop floor and the full-speed ceiling.', '当前风扇正在停转温度和满速温度之间线性调速。')
-};
-
-function toNumber(value) {
-	var parsed = parseFloat(value);
-	return isNaN(parsed) ? null : parsed;
-}
-
-function toBool(value) {
-	return value === true || value === 1 || value === '1';
-}
-
-function roundTemp(value) {
-	if (value === null || typeof value === 'undefined' || isNaN(value))
-		return null;
-
-	return Math.round(value * 10) / 10;
-}
-
-function clamp(value, minimum, maximum) {
-	if (value < minimum)
-		return minimum;
-	if (value > maximum)
-		return maximum;
-	return value;
-}
-
-function escapeHtml(value) {
-	return String(value == null ? '' : value)
-		.replace(/&/g, '&amp;')
-		.replace(/</g, '&lt;')
-		.replace(/>/g, '&gt;')
-		.replace(/"/g, '&quot;')
-		.replace(/'/g, '&#39;');
-}
-
-function normalizeStatus(data) {
-	data = data || {};
-	var supported = data.supported;
-
-	if (supported == null)
-		supported = !!(data.zone || data.fan_on_temp || data.pwm_percent);
-
-	return {
-		supported: toBool(supported),
-		thermal_supported: toBool(data.thermal_supported),
-		pwm_supported: toBool(data.pwm_supported),
-		mode_supported: toBool(data.mode_supported),
-		error: data.error || '',
-		zone: data.zone || '',
-		trip_point: data.trip_point,
-		thermal_type: data.thermal_type || '',
-		zone_temp: toNumber(data.zone_temp),
-		fan_on_temp: toNumber(data.fan_on_temp),
-		fan_off_temp: toNumber(data.fan_off_temp),
-		configured_on_temp: toNumber(data.configured_on_temp),
-		configured_off_temp: toNumber(data.configured_off_temp),
-		hysteresis: toNumber(data.hysteresis),
-		next_trip_temp: toNumber(data.next_trip_temp),
-		headroom: toNumber(data.headroom),
-		start_delta: toNumber(data.start_delta),
-		load_ratio: toNumber(data.load_ratio) || 0,
-		enabled: toBool(data.enabled),
-		state: data.state || 'disabled',
-		board_name: data.board_name || '',
-		model_name: data.model_name || '',
-		is_bpi_r4: toBool(data.is_bpi_r4),
-		profile: data.profile || 'generic',
-		mode: data.mode || 'smart',
-		manual_pwm: toNumber(data.manual_pwm),
-		poll_interval: toNumber(data.poll_interval),
-		hwmon_name: data.hwmon_name || '',
-		hwmon_path: data.hwmon_path || '',
-		pwm_raw: toNumber(data.pwm_raw),
-		pwm_percent: toNumber(data.pwm_percent),
-		pwm_enable_mode: data.pwm_enable_mode || '',
-		fan_rpm: toNumber(data.fan_rpm),
-		actual_fan_rpm: toNumber(data.actual_fan_rpm),
-		estimated_fan_rpm: toNumber(data.estimated_fan_rpm),
-		rpm_source: data.rpm_source || 'unavailable',
-		fan_max_rpm: toNumber(data.fan_max_rpm),
-		smart_min_temp: toNumber(data.smart_min_temp),
-		smart_max_temp: toNumber(data.smart_max_temp)
-	};
-}
-
-function recommendedSmartWindow(status) {
-	var off = status.smart_min_temp != null ? status.smart_min_temp : (status.configured_off_temp != null ? status.configured_off_temp : 30);
-	var on = status.smart_max_temp != null ? status.smart_max_temp : (status.configured_on_temp != null ? status.configured_on_temp : 60);
-
-	if (on <= off)
-		on = off + 0.1;
-
-	return {
-		on: on,
-		off: off
-	};
-}
-
 return view.extend({
-	requestFrame: function(callback) {
-		var id;
-
-		if (window.requestAnimationFrame) {
-			id = window.requestAnimationFrame.call(window, callback);
-			this._animFrameId = id;
-			return id;
-		}
-
-		id = window.setTimeout(function() { callback(Date.now()); }, 33);
-		this._cleanupTimers.push(id);
-		return id;
-	},
-
-	statusPollInterval: function() {
-		var backendInterval = this.runtime && this.runtime.poll_interval != null ? Math.round(this.runtime.poll_interval) : 5;
-		return clamp(Math.max(2, backendInterval - 2), 2, 8);
-	},
-
-	_stopPoll: function() {
-		if (this._pollHandle !== null && typeof poll !== 'undefined' && poll.remove) {
-			poll.remove(this._pollHandle);
-			this._pollHandle = null;
-		}
-	},
-
-	_stopAnimation: function() {
-		if (this._animFrameId !== null && window.cancelAnimationFrame) {
-			window.cancelAnimationFrame(this._animFrameId);
-			this._animFrameId = null;
-		}
-	},
-
-	_clearTimers: function() {
-		var id;
-		while (this._cleanupTimers.length) {
-			id = this._cleanupTimers.pop();
-			window.clearTimeout(id);
-		}
-	},
-
-	degreeUnit: ' ' + String.fromCharCode(176) + 'C',
-	lastTick: 0,
-	rotorAngle: 0,
-	targetRotorSpeed: 0,
-	currentRotorSpeed: 0,
-	animationStarted: false,
-	runtimeSignature: null,
-	pendingSyncFrame: null,
-	reducedMotion: false,
-
-	load: function() {
-		return Promise.all([
-			uci.load('luci-fan'),
-			L.resolveDefault(callGetStatus(), {})
-		]);
-	},
-
-	formatTemp: function(value) {
-		var rounded = roundTemp(value);
-		if (rounded === null)
-			return '--';
-
-		return (rounded % 1 === 0 ? rounded.toFixed(0) : rounded.toFixed(1)) + this.degreeUnit;
-	},
-
-	formatReadout: function(value) {
-		var rounded = roundTemp(value);
-		if (rounded === null)
-			return '--';
-
-		return rounded % 1 === 0 ? rounded.toFixed(0) : rounded.toFixed(1);
-	},
-
-	formatPercent: function(value) {
-		if (value === null || typeof value === 'undefined' || isNaN(value))
-			return '--';
-
-		return Math.round(value) + '%';
-	},
-
-	resolveMaxRpm: function(value) {
-		var resolved = toNumber(value);
-
-		if (resolved === null && this.runtime && this.runtime.fan_max_rpm != null)
-			resolved = this.runtime.fan_max_rpm;
-		if (resolved === null)
-			resolved = 3000;
-
-		return clamp(Math.round(resolved), 500, 10000);
-	},
-
-	clampRpm: function(value, maxRpm) {
-		if (value === null || typeof value === 'undefined' || isNaN(value))
-			return null;
-
-		return clamp(Math.round(value), 0, this.resolveMaxRpm(maxRpm));
-	},
-
-	estimateRpmFromPercent: function(value, maxRpm) {
-		var percent = clamp(toNumber(value) || 0, 0, 100);
-		var resolvedMaxRpm = this.resolveMaxRpm(maxRpm);
-
-		return Math.round((percent * resolvedMaxRpm) / 100);
-	},
-
-	formatRpm: function(value, source) {
-		if (value === null || typeof value === 'undefined' || isNaN(value))
-			return texts.notAvailable;
-
-		return this.clampRpm(value) + ' RPM';
-	},
-
-	formatSpeedFeedback: function() {
-		if (!this.runtime)
-			return texts.speedSourceUnavailable;
-
-		if (this.runtime.rpm_source === 'actual')
-			return texts.speedSourceActual;
-		if (this.runtime.rpm_source === 'estimated')
-			return texts.speedSourceEstimated;
-
-		return texts.speedSourceUnavailable;
-	},
-
-	modeLabel: function(mode) {
-		switch (mode) {
-		case 'turbo':
-			return texts.turbo;
-		case 'manual':
-			return texts.manual;
-		default:
-			return texts.smart;
-		}
-	},
-
-	setText: function(node, value) {
-		if (node)
-			node.textContent = value;
-	},
-
-	readPreviewNumber: function(field, fallback) {
-		if (!field)
-			return fallback;
-
-		var value = toNumber(field.value);
-		return value === null ? fallback : value;
-	},
-
-	getPreview: function() {
-		var smartWindow = recommendedSmartWindow(this.runtime || {});
-
-		return {
-			enabled: this.fields.enabled ? !!this.fields.enabled.checked : !!(this.runtime && this.runtime.enabled),
-			mode: this.fields.mode ? this.fields.mode.value : (this.runtime ? this.runtime.mode : 'smart'),
-			manual_pwm: this.readPreviewNumber(this.fields.manual, this.runtime ? this.runtime.manual_pwm : 70),
-			max_rpm: this.readPreviewNumber(this.fields.maxRpm, this.runtime ? this.runtime.fan_max_rpm : 3000),
-			on: this.readPreviewNumber(this.fields.on, smartWindow.on),
-			off: this.readPreviewNumber(this.fields.off, smartWindow.off)
-		};
-	},
-
-	isPreviewDirty: function(preview) {
-		var runtimeManual;
-		var smartWindow;
-
-		if (!this.runtime)
-			return false;
-
-		if (preview.enabled !== !!this.runtime.enabled)
-			return true;
-
-		if (preview.mode !== this.runtime.mode)
-			return true;
-
-		if (this.resolveMaxRpm(preview.max_rpm) !== this.resolveMaxRpm())
-			return true;
-
-		if (preview.mode === 'smart') {
-			smartWindow = recommendedSmartWindow(this.runtime);
-			if (Math.abs((preview.off || 0) - smartWindow.off) >= 0.05)
-				return true;
-			if (Math.abs((preview.on || 0) - smartWindow.on) >= 0.05)
-				return true;
-		}
-
-		if (preview.mode !== 'manual')
-			return false;
-
-		runtimeManual = this.runtime.manual_pwm != null ? Math.round(this.runtime.manual_pwm) : 70;
-		return Math.round(preview.manual_pwm || 0) !== runtimeManual;
-	},
-
-	buildDisplayState: function(preview) {
-		var dirty = this.isPreviewDirty(preview);
-		var demand = this.deriveDemand(preview);
-		var plannedPercent;
-		var runtimePercent = this.runtime && this.runtime.pwm_percent != null ? Math.round(this.runtime.pwm_percent) : null;
-		var runtimeRpm = this.runtime && this.runtime.fan_rpm != null ? this.runtime.fan_rpm : null;
-		var thermalType = this.runtime && this.runtime.thermal_type ? this.runtime.thermal_type : '--';
-		var maxRpm = this.resolveMaxRpm(preview.max_rpm);
-
-		if (!preview.enabled)
-			plannedPercent = 0;
-		else if (preview.mode === 'turbo')
-			plannedPercent = 100;
-		else if (preview.mode === 'manual' && preview.manual_pwm !== null)
-			plannedPercent = clamp(Math.round(preview.manual_pwm), 0, 100);
-		else
-			plannedPercent = clamp(Math.round(demand * 100), 0, 100);
-
-		return {
-			dirty: dirty,
-			demand: demand,
-			maxRpm: maxRpm,
-			dutyPercent: dirty ? plannedPercent : (runtimePercent !== null ? runtimePercent : plannedPercent),
-			fanRpm: this.clampRpm(dirty ? this.estimateRpmFromPercent(plannedPercent, maxRpm) : (runtimeRpm !== null ? runtimeRpm : this.estimateRpmFromPercent(plannedPercent, maxRpm)), maxRpm),
-			rpmSource: dirty ? 'estimated' : (this.runtime ? this.runtime.rpm_source : 'estimated'),
-			caption: this.runtime && this.runtime.zone_temp !== null
-				? (this.modeLabel(preview.mode) + ' / ' + thermalType + (dirty ? ' / ' + texts.modePending : ''))
-				: ((this.runtime && this.runtime.error) || texts.unavailable)
-		};
-	},
-
-	deriveDemand: function(preview) {
-		if (!preview.enabled)
-			return 0;
-
-		if (preview.mode === 'turbo')
-			return 1;
-
-		if (preview.mode === 'manual' && preview.manual_pwm !== null)
-			return clamp(preview.manual_pwm / 100, 0, 1);
-
-		if (!this.runtime || this.runtime.zone_temp === null)
-			return this.runtime && this.runtime.pwm_percent !== null ? clamp(this.runtime.pwm_percent / 100, 0, 1) : 0;
-
-		if (preview.off !== null && preview.on !== null && preview.on > preview.off)
-			return clamp((this.runtime.zone_temp - preview.off) / (preview.on - preview.off), 0, 1);
-
-		if (preview.on !== null && preview.on > 0)
-			return clamp(this.runtime.zone_temp / preview.on, 0, 1);
-
-		return clamp(this.runtime.load_ratio || 0, 0, 1);
-	},
-
-	deriveDemandDisplayRatio: function(demand) {
-		return clamp(demand || 0, 0, 1);
-	},
-
-	updateMetricCards: function(preview) {
-		var display = this.buildDisplayState(preview);
-
-		this.setText(this.nodes.metricCpu, this.formatTemp(this.runtime && this.runtime.zone_temp));
-		this.setText(this.nodes.metricFan, this.formatRpm(display.fanRpm, display.rpmSource));
-		this.setText(this.nodes.metricPwm, this.formatPercent(display.dutyPercent));
-		this.setText(this.nodes.metricMode, this.modeLabel(preview.mode));
-		this.setText(this.nodes.configEnabled, preview.enabled ? texts.enabled : texts.disabled);
-		this.setText(this.nodes.configMode, this.modeLabel(preview.mode));
-		this.setText(this.nodes.configManual, this.formatPercent(preview.manual_pwm));
-		this.setText(this.nodes.configOn, this.formatTemp(preview.on));
-		this.setText(this.nodes.configOff, this.formatTemp(preview.off));
-		this.setText(this.nodes.configRpm, this.formatRpm(display.fanRpm, display.rpmSource));
-	},
-
-	setMarker: function(node, value, minimum, maximum) {
-		if (!node)
-			return;
-
-		if (value === null || maximum <= minimum) {
-			node.style.display = 'none';
-			return;
-		}
-
-		node.style.display = 'block';
-		node.style.left = (((value - minimum) / (maximum - minimum)) * 100) + '%';
-	},
-
-	updateLadder: function(preview) {
-		var values = [];
-
-		if (preview.off !== null)
-			values.push(preview.off);
-		if (this.runtime && this.runtime.zone_temp !== null)
-			values.push(this.runtime.zone_temp);
-		if (preview.on !== null)
-			values.push(preview.on);
-
-		if (!values.length)
-			return;
-
-		var minimum = Math.max(0, Math.floor(Math.min.apply(Math, values) - 4));
-		var maximum = Math.ceil(Math.max.apply(Math, values) + 4);
-		if (maximum <= minimum)
-			maximum = minimum + 10;
-
-		this.setMarker(this.nodes.markerOff, preview.off, minimum, maximum);
-		this.setMarker(this.nodes.markerCurrent, this.runtime ? this.runtime.zone_temp : null, minimum, maximum);
-		this.setMarker(this.nodes.markerOn, preview.on, minimum, maximum);
-		this.setMarker(this.nodes.markerNext, null, minimum, maximum);
-
-		this.setText(this.nodes.scaleOff, this.formatTemp(preview.off));
-		this.setText(this.nodes.scaleCurrent, this.formatTemp(this.runtime && this.runtime.zone_temp));
-		this.setText(this.nodes.scaleOn, this.formatTemp(preview.on));
-		this.setText(this.nodes.scaleNext, this.formatSpeedFeedback());
-	},
-
-	updateDemand: function(preview) {
-		var demand = this.deriveDemand(preview);
-		var displayRatio = this.deriveDemandDisplayRatio(demand);
-		var hue = Math.round(150 - (demand * 120));
-
-		this.nodes.demandFill.style.width = Math.round(displayRatio * 100) + '%';
-		this.nodes.demandFill.style.background = 'linear-gradient(90deg, hsl(148, 60%, 64%) 0%, hsl(42, 88%, 72%) 58%, hsl(' + Math.max(12, hue) + ', 88%, 62%) 100%)';
-		this.setText(this.nodes.demandValue, Math.round(demand * 100) + '%');
-		return demand;
-	},
-
-	updateManualOutput: function(preview) {
-		if (this.manualOutput)
-			this.manualOutput.textContent = this.formatPercent(preview.manual_pwm);
-	},
-
-	renderInsights: function(preview) {
-		/* One line where the mode can be described in one, two where smart mode
-		 * has a state worth naming.  It used to be six: the paragraph about
-		 * linear modulation and the "modulating now" line said the same thing in
-		 * two sentences, the speed-feedback line repeated the ladder's own
-		 * feedback cell, the 0.1 C granularity line was implementation detail,
-		 * and the closing "Save & Apply" line repeated the note already printed
-		 * under the presets. */
-		var hints = [];
-		var startDelta = (this.runtime && this.runtime.zone_temp !== null && preview.off !== null) ? (preview.off - this.runtime.zone_temp) : null;
-		var ceilingDelta = (this.runtime && this.runtime.zone_temp !== null && preview.on !== null) ? (preview.on - this.runtime.zone_temp) : null;
-		var maxRpm = this.resolveMaxRpm(preview.max_rpm);
-
-		if (!this.runtime || !this.runtime.supported) {
-			hints.push((this.runtime && this.runtime.error) || texts.unsupportedHint);
-		} else if (!preview.enabled) {
-			hints.push(texts.enableAndSave);
-		} else if (preview.mode === 'turbo') {
-			hints.push(texts.turboHint + ' ' + maxRpm + ' RPM.');
-		} else if (preview.mode === 'manual') {
-			hints.push(texts.manualHint + ' ' + this.formatPercent(preview.manual_pwm) + ' / ' + maxRpm + ' RPM.');
-		} else {
-			hints.push(texts.smartFloor + ' ' + this.formatTemp(preview.off) + ' · ' +
-				texts.smartCeiling + ' ' + this.formatTemp(preview.on) + ' · ' + maxRpm + ' RPM');
-
-			if (startDelta !== null && startDelta > 0)
-				hints.push(this.formatTemp(startDelta) + ' ' + texts.toStart);
-			else if (ceilingDelta !== null && ceilingDelta <= 0)
-				hints.push(texts.thresholdReached);
-			else if (ceilingDelta !== null)
-				hints.push(texts.curveModulating);
-		}
-
-		if (this.runtime && !this.runtime.mode_supported)
-			hints.push(texts.modeUnsupportedHint);
-
-		this.nodes.insights.innerHTML = '';
-		hints.forEach(function(hint) {
-			this.nodes.insights.appendChild(E('p', { 'class': 'lf-insight' }, [ hint ]));
-		}, this);
-	},
-
-	syncFormState: function() {
-		if (!this.runtime)
-			return;
-
-		var preview = this.getPreview();
-		this.updateRuntimeBadge(preview);
-		this.updateOptionVisibility(preview.mode);
-		this.updatePresetStates(preview.mode);
-		this.updateMetricCards(preview);
-		this.updateLadder(preview);
-		this.updateDemand(preview);
-		this.updateManualOutput(preview);
-		this.renderInsights(preview);
-	},
-
-	scheduleSyncFormState: function() {
-		if (this.pendingSyncFrame !== null)
-			return;
-
-		this.pendingSyncFrame = this.requestFrame(function() {
-			this.pendingSyncFrame = null;
-			this.syncFormState();
-		}.bind(this));
-	},
-
-	pickProfile: function(name) {
-		var defaults = recommendedSmartWindow(this.runtime || {});
-
-		if (this.fields.mode)
-			this.fields.mode.value = name;
-
-		switch (name) {
-		case 'turbo':
-			if (this.fields.manual)
-				this.fields.manual.value = '100';
-			this.setText(this.nodes.presetNote, texts.loadedToForm + ': ' + texts.turbo + '. ' + texts.saveApply);
-			break;
-		case 'manual':
-			if (this.fields.manual)
-				this.fields.manual.value = String(Math.round((this.runtime && this.runtime.manual_pwm != null) ? this.runtime.manual_pwm : 70));
-			this.setText(this.nodes.presetNote, texts.loadedToForm + ': ' + texts.manual + ' / ' + this.formatPercent(this.readPreviewNumber(this.fields.manual, 70)) + '. ' + texts.saveApply);
-			break;
-		default:
-			this.setText(this.nodes.presetNote, texts.loadedToForm + ': ' + texts.smart + ' / ' + defaults.off.toFixed(1) + this.degreeUnit + ' - ' + defaults.on.toFixed(1) + this.degreeUnit + '. ' + texts.saveApply);
-			break;
-		}
-
-		this.scheduleSyncFormState();
-	},
-
-	setFieldVisible: function(node, visible) {
-		if (!node)
-			return;
-
-		node.classList.toggle('hidden', !visible);
-		node.style.display = visible ? '' : 'none';
-	},
-
-	updateOptionVisibility: function(mode) {
-		var isManual = mode === 'manual';
-		var isSmart = mode === 'smart';
-
-		this.setFieldVisible(this.fieldRows.manual, isManual);
-		this.setFieldVisible(this.fieldRows.smartOff, isSmart);
-		this.setFieldVisible(this.fieldRows.smartOn, isSmart);
-	},
-
-	updatePresetStates: function(mode) {
-		Array.prototype.forEach.call(this.root.querySelectorAll('.lf-preset'), function(node) {
-			node.classList.toggle('is-active', node.getAttribute('data-preset') === mode);
-		});
-	},
-
-	bindFields: function() {
-		var manualField;
-
-		this.fields = {
-			enabled: this.mapNode.querySelector('[data-name="enabled"] input[type="checkbox"]'),
-			mode: this.mapNode.querySelector('[data-name="mode"] select'),
-			manual: this.mapNode.querySelector('[data-name="manual_pwm"] input'),
-			maxRpm: this.mapNode.querySelector('[data-name="max_rpm"] input'),
-			off: this.mapNode.querySelector('[data-name="off_temp"] input'),
-			on: this.mapNode.querySelector('[data-name="on_temp"] input')
-		};
-		this.fieldRows = {
-			manual: this.mapNode.querySelector('[data-name="manual_pwm"]'),
-			smartOff: this.mapNode.querySelector('[data-name="off_temp"]'),
-			smartOn: this.mapNode.querySelector('[data-name="on_temp"]')
-		};
-
-		if (this.fields.manual) {
-			this.fields.manual.type = 'range';
-			this.fields.manual.min = '0';
-			this.fields.manual.max = '100';
-			this.fields.manual.step = '1';
-			manualField = this.mapNode.querySelector('[data-name="manual_pwm"] .cbi-value-field');
-			if (manualField && !manualField.querySelector('.lf-range-output')) {
-				this.manualOutput = E('span', { 'class': 'lf-range-output' }, [ this.formatPercent(toNumber(this.fields.manual.value)) ]);
-				manualField.appendChild(this.manualOutput);
-			} else if (manualField) {
-				this.manualOutput = manualField.querySelector('.lf-range-output');
-			}
-		}
-
-		if (this.fields.off) {
-			this.fields.off.type = 'number';
-			this.fields.off.min = '0';
-			this.fields.off.max = '149.9';
-			this.fields.off.step = '0.1';
-		}
-
-		if (this.fields.on) {
-			this.fields.on.type = 'number';
-			this.fields.on.min = '0.1';
-			this.fields.on.max = '150';
-			this.fields.on.step = '0.1';
-		}
-
-		if (this.fields.maxRpm) {
-			this.fields.maxRpm.type = 'number';
-			this.fields.maxRpm.min = '500';
-			this.fields.maxRpm.max = '10000';
-			this.fields.maxRpm.step = '100';
-		}
-
-		if (this.fields.enabled)
-			this.fields.enabled.addEventListener('change', this.scheduleSyncFormState.bind(this));
-		if (this.fields.mode)
-			this.fields.mode.addEventListener('change', this.scheduleSyncFormState.bind(this));
-		if (this.fields.manual)
-			this.fields.manual.addEventListener('input', this.scheduleSyncFormState.bind(this));
-		if (this.fields.maxRpm)
-			this.fields.maxRpm.addEventListener('input', this.scheduleSyncFormState.bind(this));
-		if (this.fields.off)
-			this.fields.off.addEventListener('input', this.scheduleSyncFormState.bind(this));
-		if (this.fields.on)
-			this.fields.on.addEventListener('input', this.scheduleSyncFormState.bind(this));
-
-		Array.prototype.forEach.call(this.root.querySelectorAll('.lf-preset'), function(node) {
-			node.addEventListener('click', function(event) {
-				this.pickProfile(event.currentTarget.getAttribute('data-preset'));
-			}.bind(this));
-		}, this);
-
-		this.updateOptionVisibility(this.fields.mode ? this.fields.mode.value : 'smart');
-		this.updatePresetStates(this.fields.mode ? this.fields.mode.value : 'smart');
-	},
-
-	drawFan: function(demand) {
-		var canvas = this.nodes.canvas;
-		if (!canvas || !canvas.getContext)
-			return;
-
-		var context = canvas.getContext('2d');
-		var centerX = canvas.width / 2;
-		var centerY = canvas.height / 2;
-		var outerRadius = 94;
-		var innerRadius = 58;
-		/* The well, the track and the demand colours have to follow the surface
-		 * the orb now sits on.  They were picked against the blue gradient: a
-		 * near-black well with pale pastels on it.  On the light material the
-		 * shell is made of, the well reads as a hole and the pastels wash out,
-		 * so the light theme gets the same three hues taken down to a legible
-		 * depth.  These values mirror --lf-well, --lf-well-hub, --lf-track and
-		 * the --lf-down / --lf-up family in the stylesheet above. */
-		var orbDark = (typeof applyThemeClass._dark === 'boolean') ? applyThemeClass._dark : isDarkTheme();
-		var bladeColor = orbDark
-			? (demand > 0.72 ? '#f79259' : (demand > 0.42 ? '#f3cf7c' : '#7de2b8'))
-			: (demand > 0.72 ? '#d9662f' : (demand > 0.42 ? '#c98a12' : '#1f9d63'));
-		var glowColor = orbDark
-			? (demand > 0.72 ? 'rgba(247, 146, 89, 0.22)' : (demand > 0.42 ? 'rgba(243, 207, 124, 0.22)' : 'rgba(125, 226, 184, 0.20)'))
-			: (demand > 0.72 ? 'rgba(217, 102, 47, 0.20)' : (demand > 0.42 ? 'rgba(201, 138, 18, 0.20)' : 'rgba(31, 157, 99, 0.20)'));
-
-		context.clearRect(0, 0, canvas.width, canvas.height);
-		context.save();
-		context.translate(centerX, centerY);
-
-		context.beginPath();
-		context.arc(0, 0, outerRadius + 18, 0, Math.PI * 2, false);
-		context.fillStyle = glowColor;
-		context.fill();
-
-		context.beginPath();
-		context.arc(0, 0, outerRadius, 0, Math.PI * 2, false);
-		context.fillStyle = orbDark ? 'rgba(7, 20, 26, 0.38)' : 'rgba(255, 255, 255, 0.72)';
-		context.fill();
-
-		context.lineWidth = 12;
-		context.strokeStyle = orbDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(128, 150, 175, 0.20)';
-		context.beginPath();
-		context.arc(0, 0, outerRadius, 0, Math.PI * 2, false);
-		context.stroke();
-
-		context.lineCap = 'round';
-		context.strokeStyle = bladeColor;
-		context.beginPath();
-		context.arc(0, 0, outerRadius, -Math.PI / 2, (-Math.PI / 2) + (Math.PI * 2 * demand), false);
-		context.stroke();
-
-		for (var blade = 0; blade < 4; blade++) {
-			context.save();
-			context.rotate(this.rotorAngle + (blade * Math.PI / 2));
-			context.beginPath();
-			context.moveTo(0, -12);
-			context.bezierCurveTo(58, -42, 48, -108, 0, -84);
-			context.bezierCurveTo(-18, -74, -18, -24, 0, -12);
-			context.closePath();
-			context.fillStyle = bladeColor;
-			context.fill();
-			context.restore();
-		}
-
-		context.beginPath();
-		context.arc(0, 0, innerRadius, 0, Math.PI * 2, false);
-		context.fillStyle = orbDark ? 'rgba(10, 27, 33, 0.92)' : 'rgba(255, 255, 255, 0.92)';
-		context.fill();
-
-		context.beginPath();
-		context.arc(0, 0, 18, 0, Math.PI * 2, false);
-		context.fillStyle = bladeColor;
-		context.fill();
-
-		context.restore();
-	},
-
-	deriveAnimationSpeed: function(preview, demand) {
-		var display = this.runtime ? this.buildDisplayState(preview) : null;
-		var rpm = display ? display.fanRpm : null;
-		var maxRpm = display ? display.maxRpm : this.resolveMaxRpm();
-
-		if (rpm !== null) {
-			if (rpm <= 0)
-				return 0;
-
-			return 0.12 + (clamp(rpm, 0, maxRpm) / maxRpm) * 1.33;
-		}
-
-		if (!preview.enabled)
-			return 0.08;
-
-		if (preview.mode === 'turbo')
-			return 1.25;
-		if (preview.mode === 'manual')
-			return 0.22 + (demand * 0.95);
-		if (this.runtime && this.runtime.state === 'active')
-			return 0.55 + (demand * 0.8);
-		if (this.runtime && this.runtime.state === 'transition')
-			return 0.3 + (demand * 0.5);
-
-		return 0.15 + (demand * 0.3);
-	},
-
-	animationLoop: function(timestamp) {
-		if (!this.root || !document.body || !document.body.contains(this.root)) {
-			this.lastTick = 0;
-			this._stopAnimation();
-			return;
-		}
-
-		this.animationStarted = true;
-
-		var preview = this.runtime ? this.getPreview() : { enabled: false, mode: 'smart', manual_pwm: 70, on: null, off: null };
-		var demand = this.runtime ? this.deriveDemand(preview) : 0;
-		var targetSpeed = this.deriveAnimationSpeed(preview, demand);
-		var dt;
-		var smoothing;
-
-		if (!this.lastTick)
-			this.lastTick = timestamp;
-
-		dt = Math.min((timestamp - this.lastTick) / 1000, 0.1);
-
-		/* Smooth rotor speed transitions — spring-like interpolation toward target */
-		if (this.reducedMotion) {
-			this.currentRotorSpeed = 0;
-		} else {
-			smoothing = dt * 4.5;
-			if (smoothing > 1)
-				smoothing = 1;
-			this.targetRotorSpeed = targetSpeed;
-			this.currentRotorSpeed += (this.targetRotorSpeed - this.currentRotorSpeed) * smoothing;
-		}
-
-		this.rotorAngle += dt * this.currentRotorSpeed * Math.PI;
-		this.lastTick = timestamp;
-		this.drawFan(demand);
-		this.requestFrame(this.animationLoop.bind(this));
-	},
-
-	pollStatus: function() {
-		return L.resolveDefault(callGetStatus(), null).then(function(status) {
-			if (status)
-				this.updateRuntime(status);
-		}.bind(this));
-	},
-
-	renderDashboardShell: function(status) {
-		var shell = E('div', { 'class': 'lf-dashboard-shell' }, [
-			E('style', {}, dashboardStyle)
-		]);
-		var dashboard = E('div', {
-			'class': 'cbi-section-node lf-dashboard',
-			'id': 'lf-dashboard',
-			'data-zone': status.zone || '--',
-			'data-type': status.thermal_type || '--',
-			'data-is-bpi-r4': status.is_bpi_r4 ? '1' : '0'
-		});
-		var heroText = status.is_bpi_r4 ? texts.bpiHero : texts.genericHero;
-		var primaryChip = escapeHtml(status.model_name || texts.currentDevice);
-		var sourceText = escapeHtml((status.hwmon_name || '--') + ' / ' + (status.zone || '--'));
-
-		dashboard.innerHTML = '' +
-			'<div class="lf-hero">' +
-				'<div class="lf-copy">' +
-					'<div class="lf-eyebrow">' + escapeHtml(t('Adaptive Fan Profile', '自适应风扇控制')) + '</div>' +
-					'<div class="lf-headline" style="all:unset;display:block;margin:12px 0 8px;padding:0;background:transparent;color:var(--lf-fg);font-size:25px;font-weight:700;line-height:1.15;">' + escapeHtml(t('Live Cooling Dashboard', '实时散热面板')) + '</div>' +
-					'<p>' + escapeHtml(heroText) + '</p>' +
-					'<div class="lf-chip-row">' +
-						'<span class="lf-chip">' + primaryChip + '</span>' +
-						'<span class="lf-chip lf-chip-alert" id="lf-support-chip" style="display:none"></span>' +
-						'<span class="lf-chip lf-runtime-badge" id="lf-runtime-badge" data-state="disabled">' + escapeHtml(texts.monitoringState) + '</span>' +
-					'</div>' +
-					'<div class="lf-metrics">' +
-						'<div class="lf-metric"><div class="lf-metric-label">' + escapeHtml(t('CPU temperature', 'CPU 温度')) + '</div><div class="lf-metric-value" id="lf-metric-cpu">--</div></div>' +
-						'<div class="lf-metric"><div class="lf-metric-label">' + escapeHtml(t('Fan speed', '风扇转速')) + '</div><div class="lf-metric-value" id="lf-metric-fan">--</div></div>' +
-						'<div class="lf-metric"><div class="lf-metric-label">' + escapeHtml(t('Current PWM duty', '当前 PWM 占空比')) + '</div><div class="lf-metric-value" id="lf-metric-pwm">--</div></div>' +
-						'<div class="lf-metric"><div class="lf-metric-label">' + escapeHtml(t('Control mode', '控制模式')) + '</div><div class="lf-metric-value" id="lf-metric-mode">--</div></div>' +
-					'</div>' +
-				'</div>' +
-				'<div class="lf-visual">' +
-					'<div class="lf-orb">' +
-						'<canvas id="lf-fan-canvas" width="260" height="260" style="display:block;width:260px;height:260px;max-width:100%;background:transparent;border:0;border-radius:0;box-shadow:none;"></canvas>' +
-						'<div class="lf-temp-readout">' +
-							'<div class="lf-temp-number" id="lf-temp-number">--</div>' +
-							'<div class="lf-temp-unit">' + escapeHtml(String.fromCharCode(176) + 'C') + '</div>' +
-							'<div class="lf-temp-caption" id="lf-temp-caption">' + escapeHtml(texts.unavailable) + '</div>' +
-						'</div>' +
-					'</div>' +
-					'<div class="lf-demand">' +
-						'<div class="lf-demand-row">' +
-							'<span>' + escapeHtml(texts.currentDuty) + '</span>' +
-							'<strong id="lf-demand-value">--%</strong>' +
-						'</div>' +
-						'<div class="lf-demand-bar"><div id="lf-demand-fill"></div></div>' +
-					'</div>' +
-				'</div>' +
-			'</div>' +
-			'<div class="lf-ladder-card">' +
-				'<div class="lf-ladder-head">' +
-					'<h4>' + escapeHtml(t('Smart curve', '智能曲线')) + '</h4>' +
-					'<span class="lf-source-pill" id="lf-source-label">' + sourceText + '</span>' +
-				'</div>' +
-				'<div class="lf-ladder-track">' +
-					'<div class="lf-marker" id="lf-marker-off"></div>' +
-					'<div class="lf-marker lf-marker-current" id="lf-marker-current"></div>' +
-					'<div class="lf-marker" id="lf-marker-on"></div>' +
-					'<div class="lf-marker" id="lf-marker-next"></div>' +
-				'</div>' +
-				'<div class="lf-ladder-scale">' +
-					'<div class="lf-scale-item"><span>' + escapeHtml(texts.smartFloor) + '</span><strong id="lf-scale-off">--</strong></div>' +
-					'<div class="lf-scale-item"><span>' + escapeHtml(t('Current temperature', '当前温度')) + '</span><strong id="lf-scale-current">--</strong></div>' +
-					'<div class="lf-scale-item"><span>' + escapeHtml(texts.smartCeiling) + '</span><strong id="lf-scale-on">--</strong></div>' +
-					'<div class="lf-scale-item"><span>' + escapeHtml(texts.speedFeedback) + '</span><strong id="lf-scale-next">--</strong></div>' +
-				'</div>' +
-			'</div>' +
-			'<div class="lf-grid">' +
-				'<div class="lf-card">' +
-					'<h4>' + escapeHtml(t('Operating profiles', '运行模式')) + '</h4>' +
-					'<p>' + escapeHtml(t('Use these shortcuts to load Turbo, Smart or Manual targets into the form below before Save & Apply.', '可用这些快捷按钮把狂暴、智能或手动目标写入下方表单，然后再执行“保存并应用”。')) + '</p>' +
-					'<div class="lf-preset-list">' +
-						'<button type="button" class="lf-preset" data-preset="turbo">' + escapeHtml(t('Turbo mode', '狂暴模式')) + '</button>' +
-						'<button type="button" class="lf-preset" data-preset="smart">' + escapeHtml(t('Smart mode', '智能模式')) + '</button>' +
-						'<button type="button" class="lf-preset" data-preset="manual">' + escapeHtml(t('Manual mode', '手动模式')) + '</button>' +
-					'</div>' +
-					'<div class="lf-insights" id="lf-insights"><p class="lf-insight">' + escapeHtml(texts.telemetryWaiting) + '</p></div>' +
-					'<p class="lf-note" id="lf-preset-note">' + escapeHtml(texts.saveApply) + '</p>' +
-				'</div>' +
-				'<div class="lf-card">' +
-					'<h4>' + escapeHtml(t('Current config', '当前设置')) + '</h4>' +
-					'<div class="lf-config-grid">' +
-						'<div class="lf-config-item"><span>' + escapeHtml(t('Enabled in UCI', 'UCI 启用状态')) + '</span><strong id="lf-config-enabled">--</strong></div>' +
-						'<div class="lf-config-item"><span>' + escapeHtml(t('Control mode', '控制模式')) + '</span><strong id="lf-config-mode">--</strong></div>' +
-						'<div class="lf-config-item"><span>' + escapeHtml(t('Manual target', '手动目标')) + '</span><strong id="lf-config-manual">--</strong></div>' +
-						'<div class="lf-config-item"><span>' + escapeHtml(t('Runtime fan speed', '当前风扇转速')) + '</span><strong id="lf-config-rpm">--</strong></div>' +
-						'<div class="lf-config-item"><span>' + escapeHtml(texts.smartFloor) + '</span><strong id="lf-config-off">--</strong></div>' +
-						'<div class="lf-config-item"><span>' + escapeHtml(texts.smartCeiling) + '</span><strong id="lf-config-on">--</strong></div>' +
-					'</div>' +
-				'</div>' +
-			'</div>';
-
-		shell.appendChild(dashboard);
-		return shell;
-	},
-
-	collectNodes: function() {
-		this.nodes = {
-			runtimeBadge: this.root.querySelector('#lf-runtime-badge'),
-			supportChip: this.root.querySelector('#lf-support-chip'),
-			tempNumber: this.root.querySelector('#lf-temp-number'),
-			tempCaption: this.root.querySelector('#lf-temp-caption'),
-			demandValue: this.root.querySelector('#lf-demand-value'),
-			demandFill: this.root.querySelector('#lf-demand-fill'),
-			metricCpu: this.root.querySelector('#lf-metric-cpu'),
-			metricFan: this.root.querySelector('#lf-metric-fan'),
-			metricPwm: this.root.querySelector('#lf-metric-pwm'),
-			metricMode: this.root.querySelector('#lf-metric-mode'),
-			markerOff: this.root.querySelector('#lf-marker-off'),
-			markerCurrent: this.root.querySelector('#lf-marker-current'),
-			markerOn: this.root.querySelector('#lf-marker-on'),
-			markerNext: this.root.querySelector('#lf-marker-next'),
-			scaleOff: this.root.querySelector('#lf-scale-off'),
-			scaleCurrent: this.root.querySelector('#lf-scale-current'),
-			scaleOn: this.root.querySelector('#lf-scale-on'),
-			scaleNext: this.root.querySelector('#lf-scale-next'),
-			insights: this.root.querySelector('#lf-insights'),
-			presetNote: this.root.querySelector('#lf-preset-note'),
-			configEnabled: this.root.querySelector('#lf-config-enabled'),
-			configMode: this.root.querySelector('#lf-config-mode'),
-			configManual: this.root.querySelector('#lf-config-manual'),
-			configRpm: this.root.querySelector('#lf-config-rpm'),
-			configOn: this.root.querySelector('#lf-config-on'),
-			configOff: this.root.querySelector('#lf-config-off'),
-			sourceLabel: this.root.querySelector('#lf-source-label'),
-			canvas: this.root.querySelector('#lf-fan-canvas')
-		};
-	},
-
-	updateRuntimeBadge: function(preview) {
-		if (!this.runtime)
-			return;
-
-		var display = preview ? this.buildDisplayState(preview) : null;
-		var state = this.runtime.supported ? (this.runtime.state || 'disabled') : 'unsupported';
-		var label = texts.disabled;
-		var zoneName = this.runtime.zone || '--';
-		var thermalType = this.runtime.thermal_type || '--';
-		var sourceText = (this.runtime.hwmon_name || '--') + ' / ' + zoneName;
-
-		if (!this.runtime.supported)
-			label = texts.unsupported;
-		else if (state === 'active')
-			label = texts.active;
-		else if (state === 'transition')
-			label = texts.transition;
-		else if (state === 'standby')
-			label = texts.standby;
-
-		this.root.setAttribute('data-zone', zoneName);
-		this.root.setAttribute('data-type', thermalType);
-		this.root.setAttribute('data-is-bpi-r4', this.runtime.is_bpi_r4 ? '1' : '0');
-
-		this.nodes.runtimeBadge.setAttribute('data-state', state);
-		this.setText(this.nodes.runtimeBadge, label);
-		this.setText(this.nodes.tempNumber, this.formatReadout(this.runtime.zone_temp));
-		this.setText(this.nodes.tempCaption, display ? display.caption : (this.runtime.zone_temp !== null ? (this.modeLabel(this.runtime.mode) + ' / ' + thermalType) : (this.runtime.error || texts.unavailable)));
-		this.setText(this.nodes.sourceLabel, sourceText);
-
-		if (!this.runtime.mode_supported && this.runtime.supported)
-			this.nodes.supportChip.style.display = 'inline-flex';
-		else if (!this.runtime.supported)
-			this.nodes.supportChip.style.display = 'inline-flex';
-		else
-			this.nodes.supportChip.style.display = 'none';
-
-		this.setText(this.nodes.supportChip, this.runtime.supported ? texts.modeUnsupportedHint : (this.runtime.error || texts.unsupportedHint));
-	},
-
-	updateRuntime: function(data) {
-		var nextRuntime = normalizeStatus(data);
-		var nextSignature = JSON.stringify(nextRuntime);
-
-		if (this.runtimeSignature === nextSignature)
-			return;
-
-		this.runtimeSignature = nextSignature;
-		this.runtime = nextRuntime;
-		this.updateRuntimeBadge();
-		this.syncFormState();
-	},
-
-	render: function(data) {
-		/* Initialize per-instance mutable state (avoid prototype sharing) */
-		this._pollHandle = null;
-		this._animFrameId = null;
-		this._cleanupTimers = [];
-		this.animationStarted = false;
-		this.runtimeSignature = null;
-		this.pendingSyncFrame = null;
-		this.lastTick = 0;
-		this.rotorAngle = 0;
-		this.targetRotorSpeed = 0;
-		this.currentRotorSpeed = 0;
-
-		var initialStatus = normalizeStatus(data[1]);
-		var m = new form.Map('luci-fan', t('Fan Control', '风扇控制'), t('Configure Smart, Turbo and Manual fan profiles for pwm-fan capable boards such as the BPI-R4. The live panel reads CPU temperature, PWM duty, and fan speed feedback over ubus.', '为 BPI-R4 等支持 pwm-fan 的设备配置智能、狂暴和手动风扇模式。实时面板会通过 ubus 读取 CPU 温度、PWM 占空比，以及风扇转速反馈。'));
-		var s = m.section(form.TypedSection, 'luci-fan', t('Profile Settings', '基本设置'));
-		var o;
-		var dashboard = this.renderDashboardShell(initialStatus);
-
-		s.anonymous = true;
-		s.addremove = false;
-
-		o = s.option(form.Flag, 'enabled', t('Enable fan service', '启用风扇服务'));
-		o.rmempty = false;
-		o.default = '0';
-		o.description = t('Start the fan daemon on Save & Apply. Smart mode uses the configured temperature window, Turbo holds the configured RPM ceiling, and Manual applies the slider target on pwm-fan capable boards.', '点击“保存并应用”后会启动风扇守护进程。智能模式会按已配置的温度区间调速，狂暴模式固定在已配置的满速转速上限，手动模式会在支持 pwm-fan 的设备上应用滑条目标。');
-
-		o = s.option(form.ListValue, 'mode', t('Control mode', '控制模式'));
-		o.rmempty = false;
-		o.default = initialStatus.mode || 'smart';
-		o.value('smart', t('Smart', '智能'));
-		o.value('turbo', t('Turbo', '狂暴'));
-		o.value('manual', t('Manual', '手动'));
-		o.description = t('Smart mode follows the configured stop and full-speed temperatures. Turbo and Manual require pwm-fan hwmon support on the target board.', '智能模式会按已配置的停转温度和满速温度调速。狂暴模式和手动模式需要目标设备提供 pwm-fan hwmon 支持。');
-
-		o = s.option(form.Value, 'off_temp', texts.smartFloor);
-		o.datatype = 'ufloat';
-		o.placeholder = String(initialStatus.smart_min_temp != null ? roundTemp(initialStatus.smart_min_temp) : 30);
-		o.default = String(initialStatus.smart_min_temp != null ? roundTemp(initialStatus.smart_min_temp) : 30);
-		o.description = t('Temperature in C below which the smart profile stops the fan. You can customize when the fan starts to stay off.', '智能模式下低于该温度时风扇停转，可自定义风扇开始保持关闭的温度。');
-		o.depends('mode', 'smart');
-
-		o = s.option(form.Value, 'on_temp', texts.smartCeiling);
-		o.datatype = 'ufloat';
-		o.placeholder = String(initialStatus.smart_max_temp != null ? roundTemp(initialStatus.smart_max_temp) : 60);
-		o.default = String(initialStatus.smart_max_temp != null ? roundTemp(initialStatus.smart_max_temp) : 60);
-		o.description = t('Temperature in C at which smart mode reaches the configured RPM ceiling.', '智能模式下达到该温度时会拉到已配置的满速转速上限。');
-		o.depends('mode', 'smart');
-
-		o = s.option(form.Value, 'max_rpm', t('Maximum fan RPM', '风扇最大转速'));
-		o.datatype = 'and(uinteger,min(500),max(10000))';
-		o.placeholder = String(initialStatus.fan_max_rpm != null ? Math.round(initialStatus.fan_max_rpm) : 3000);
-		o.default = String(initialStatus.fan_max_rpm != null ? Math.round(initialStatus.fan_max_rpm) : 3000);
-		o.description = t('Display and estimation ceiling for fan speed. Set values such as 2500, 3000 or 3500 to match your hardware.', '风扇转速的显示和估算上限。可设置为 2500、3000 或 3500 等数值，以匹配你的风扇。');
-
-		o = s.option(form.Value, 'manual_pwm', t('Manual PWM target', '手动 PWM 目标'));
-		o.datatype = 'and(uinteger,min(0),max(100))';
-		o.placeholder = String(initialStatus.manual_pwm != null ? Math.round(initialStatus.manual_pwm) : 70);
-		o.default = String(initialStatus.manual_pwm != null ? Math.round(initialStatus.manual_pwm) : 70);
-		o.description = t('Duty target in percent for Manual mode. 0 turns the fan off, 100 drives the maximum PWM value, which maps to the configured RPM ceiling in the display.', '手动模式下的目标占空比，单位为百分比。0 表示关闭风扇，100 表示输出最大 PWM，对应页面显示中已配置的转速上限。');
-		o.depends('mode', 'manual');
-
-		o = s.option(form.Value, 'poll_interval', t('Polling interval', '轮询间隔'));
-		o.datatype = 'and(uinteger,min(1),max(30))';
-		o.placeholder = String(initialStatus.poll_interval != null ? Math.round(initialStatus.poll_interval) : 5);
-		o.default = String(initialStatus.poll_interval != null ? Math.round(initialStatus.poll_interval) : 5);
-		o.description = t('Fan daemon loop interval in seconds. The default 5-second cadence is usually enough for the configurable smart curve and reduces unnecessary PWM writes.', '风扇守护进程的轮询间隔，单位为秒。默认 5 秒通常已足够匹配可配置智能曲线，并可减少无意义的 PWM 写入。');
-
-		return m.render().then(function(mapNode) {
-
-			this.mapNode = mapNode;
-			this.root = dashboard.querySelector('#lf-dashboard');
-
-			/* Detect reduced-motion preference */
-			if (typeof window !== 'undefined' && window.matchMedia)
-				this.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-			/* Entrance animation — scale+fade the shell in, remove class after animation completes */
-			if (dashboard && !this.reducedMotion) {
-				dashboard.classList.add('lf-entering');
-				this._cleanupTimers.push(window.setTimeout(function() {
-					dashboard.classList.remove('lf-entering');
-				}, 550));
-			}
-
-			this.collectNodes();
-			this.bindFields();
-			this.updateRuntime(initialStatus);
-
-			/* Stop previous poll before adding a new one (prevents accumulation on re-render) */
-			this._stopPoll();
-
-			this._animFrameId = null; /* allow new animation loop */
-			this.requestFrame(this.animationLoop.bind(this));
-			this._pollHandle = poll.add(this.pollStatus.bind(this), this.statusPollInterval());
-			/* The profile form is folded away by default: everything it configures
-			 * is already reported above it, so it is only opened to change
-			 * something.  A <details> does that in the markup - no state to keep
-			 * in sync, no click handler, and a browser without details support
-			 * simply shows the form open, which is where it was. */
-			var settings = E('details', { 'class': 'lf-settings' }, [
-				E('summary', { 'class': 'lf-settings-head' }, [
-					escapeHtml(t('Profile settings', '基本设置'))
-				]),
-				mapNode
-			]);
-			return applyThemeClass(E('div', { 'class': 'lf-page' }, [ dashboard, settings ]), 'lf-dark');
-		}.bind(this));
-	}
+ load: function() { return Promise.all([uci.load('luci-fan'), L.resolveDefault(callGetStatus(), {})]); },
+ cleanup: function() {
+  if (this.poller) poll.remove(this.poller);
+  if (this.frame) cancelAnimationFrame(this.frame);
+  if (this.animation) this.animation.cancel();
+  if (this.observer) this.observer.disconnect();
+  if (this.visibility) document.removeEventListener('visibilitychange', this.visibility);
+  if (this.leave) window.removeEventListener('pagehide', this.leave);
+  if (this.visibility) window.removeEventListener('pageshow', this.visibility);
+  if (this.motion && this.visibility) this.motion.removeEventListener('change', this.visibility);
+  this.poller = this.frame = this.animation = this.observer = null;
+  this.disposed = true;
+ },
+ syncAnimation: function() {
+  if (!this.animation || this.disposed) return;
+  var s = this.status || {}, rpm = number(s.fan_rpm), pwm = number(s.pwm_percent);
+  var output = s.rpm_source === 'actual' && rpm === 0 ? 0 : pwm != null ? pwm : rpm != null && rpm > 0 ? 50 : 0;
+  var compatible = s.mode_supported == null || yes(s.mode_supported) || s.mode === 'smart';
+  this.target = yes(s.supported) && yes(s.running) && yes(s.enabled) && compatible && output > 0 ? Math.max(.2, Math.min(2.2, output / 62)) : 0;
+  if (this.frame) cancelAnimationFrame(this.frame);
+  this.frame = null;
+  if (document.hidden || !this.root.isConnected || this.motion.matches || this.target === 0) { this.animation.pause(); return; }
+  this.animation.play();
+  var last = 0, owner = this;
+  function ease(timestamp) {
+   var dt = last ? Math.min(timestamp - last, 100) : 16; last = timestamp;
+   owner.rate += (owner.target - owner.rate) * (1 - Math.exp(-dt / 180));
+   owner.animation.updatePlaybackRate(owner.rate);
+   if (Math.abs(owner.rate - owner.target) > .003) owner.frame = requestAnimationFrame(ease);
+   else { owner.rate = owner.target; owner.animation.updatePlaybackRate(owner.rate); owner.frame = null; }
+  }
+  if (Math.abs(this.rate - this.target) > .003) this.frame = requestAnimationFrame(ease);
+ },
+ updateStatus: function(status, failed) {
+  if (this.disposed) return;
+  this.status = failed ? {} : status || {};
+  var s = this.status, supported = yes(s.supported), running = yes(s.running) && yes(s.enabled);
+  var unsupportedMode = supported && s.mode_supported != null && !yes(s.mode_supported) && s.mode !== 'smart';
+  this.badge.dataset.state = failed || !supported || unsupportedMode ? 'error' : running ? 'running' : 'stopped';
+  this.badge.lastChild.textContent = failed ? t('Status unavailable', '状态获取失败') : !supported ? t('Unsupported device', '设备不支持') : unsupportedMode ? t('Mode unavailable', '模式不可用') : running ? t('Running', '运行中') : !yes(s.enabled) ? t('Disabled', '已停用') : t('Stopped', '已停止');
+  this.device.textContent = s.model_name || s.board_name || t('Device unavailable', '设备信息未获取');
+  this.note.textContent = failed ? t('Unable to read fan status. Retrying automatically.', '无法读取风扇状态，正在自动重试。') : !supported ? t('No compatible fan control was detected.', '未检测到兼容的温度传感器或风扇控制接口。') : unsupportedMode ? t('Manual and Turbo modes require a writable PWM fan interface.', '此设备不支持手动和狂暴模式，请使用智能模式。') : yes(s.enabled) && !running ? t('Service is enabled but not running.', '服务已启用，但尚未运行。') : s.error ? t('Fan control unavailable.', '风扇控制不可用。') : '';
+  var temp = number(s.zone_temp), pwm = number(s.pwm_percent), rpm = number(s.fan_rpm);
+  this.cpu.textContent = temp == null ? '—' : temp.toFixed(1);
+  this.pwm.textContent = pwm == null ? '—' : String(Math.round(pwm));
+  this.rpm.textContent = rpm == null ? '—' : Math.round(rpm).toLocaleString();
+  this.speedSource.textContent = s.rpm_source === 'actual' ? t('Measured speed · illustrative rotation', '实测转速 · 动画仅示意') : s.rpm_source === 'estimated' ? t('Estimated from PWM · illustrative rotation', '按 PWM 估算 · 动画仅示意') : t('Speed unavailable', '转速未获取');
+  this.mode.textContent = unsupportedMode ? t('Unavailable', '不可用') : supported && running ? modeLabel(s.mode) : '—';
+  this.syncAnimation();
+ },
+ pollStatus: function() {
+  if (this.disposed || document.hidden) return Promise.resolve();
+  return callGetStatus().then(function(s) { this.updateStatus(s); }.bind(this), function() { this.updateStatus({}, true); }.bind(this));
+ },
+ render: function(data) {
+  this.cleanup(); this.disposed = false; this.rate = 1;
+  var owner = this, initial = data[1] || {};
+  var m = new form.Map('luci-fan', null, t('Changes take effect after Save & Apply.', '修改后，点击“保存并应用”生效。'));
+  // LuCI removes old widgets during save/reset before inserting the new form.
+  var checkDepends = m.checkDepends, renderContents = m.renderContents;
+  m.checkDepends = function() { if (!this._fanRendering) return checkDepends.apply(this, arguments); };
+  m.renderContents = function() {
+   var map = this; map._fanRendering = true;
+   return Promise.resolve().then(function() { return renderContents.call(map); }).then(function(node) {
+    map._fanRendering = false; map.checkDepends(); return node;
+   }, function(error) { map._fanRendering = false; throw error; });
+  };
+  var s = m.section(form.TypedSection, 'luci-fan'); s.anonymous = true; s.addremove = false;
+  var o = s.option(form.Flag, 'enabled', t('Enable service', '启用服务')); o.rmempty = false; o.default = '0';
+  var renderEnabled = o.renderWidget;
+  o.renderWidget = function(id, index, value) {
+   var widget = renderEnabled.call(this, id, index, value);
+   widget.querySelector('input[type=checkbox]').setAttribute('aria-label', t('Enable service', '启用服务'));
+   return widget;
+  };
+  o = s.option(form.ListValue, 'mode', t('Control mode', '控制模式')); o.widget = 'radio'; o.rmempty = false; o.default = 'smart';
+  o.value('smart', E('span', {}, [ E('strong', {}, modeLabel('smart')), E('small', {}, t('Follow temperature', '随温度自动调速')) ]));
+  o.value('turbo', E('span', {}, [ E('strong', {}, modeLabel('turbo')), E('small', {}, t('Maximum PWM output', '持续满速散热')) ]));
+  o.value('manual', E('span', {}, [ E('strong', {}, modeLabel('manual')), E('small', {}, t('Fixed PWM output', '固定 PWM 输出')) ]));
+  var renderMode = o.renderWidget;
+  o.renderWidget = function(id, index, value) {
+   var widget = renderMode.call(this, id, index, value);
+   Array.from(widget.childNodes).forEach(function(node) { if (node.nodeType === 3) node.remove(); });
+   widget.querySelectorAll('input').forEach(function(input) { input.setAttribute('aria-label', modeLabel(input.value)); });
+   return widget;
+  };
+  function temperature(key, title, description, fallback) {
+   var option = s.option(form.Value, key, title); option.rmempty = false; option.default = String(fallback); option.datatype = 'ufloat'; option.description = description; option.depends('mode', 'smart');
+   option.validate = function(id, value) {
+    var other = this.map.lookupOption(key === 'off_temp' ? 'on_temp' : 'off_temp', id)[0];
+    var peer = other.formvalue(id); if (peer == null) peer = other.cfgvalue(id) || other.default;
+    return number(value) != null && Number(value) >= 0 && (key === 'off_temp' ? Number(value) < Number(peer) : Number(value) > Number(peer)) ? true : t('Stop temperature must be lower than full-speed temperature.', '停转温度必须低于满速温度。');
+   };
+  }
+  temperature('off_temp', t('Stop temperature (°C)', '停转温度（°C）'), t('Stop the fan below this temperature.', '低于此温度时停止风扇。'), 30);
+  temperature('on_temp', t('Full-speed temperature (°C)', '满速温度（°C）'), t('Use maximum PWM at this temperature.', '达到此温度时输出最高 PWM。'), 60);
+  o = s.option(form.Value, 'manual_pwm', t('Manual PWM (%)', '手动 PWM（%）')); o.rmempty = false; o.default = '70'; o.datatype = 'and(uinteger,min(0),max(100))'; o.depends('mode', 'manual'); o.description = t('0 stops the fan; 100 uses maximum PWM.', '0 停转，100 输出最高 PWM。');
+  var renderManual = o.renderWidget;
+  o.renderWidget = function(id, index, value) {
+   var widget = renderManual.call(this, id, index, value), input = widget.querySelector('input');
+   if (input) { input.type = 'range'; input.min = '0'; input.max = '100'; input.step = '1'; }
+   var output = E('output', { 'class': 'range-value' }, (value == null ? this.default : value) + '%'); widget.appendChild(output);
+   if (input) input.addEventListener('input', function() { output.textContent = input.value + '%'; });
+   return widget;
+  };
+  o = s.option(form.Value, 'max_rpm', t('Maximum speed (RPM)', '最大转速（RPM）')); o.rmempty = false; o.default = '3000'; o.datatype = 'and(uinteger,min(500),max(10000))'; o.description = t('Speed display and estimation ceiling.', '用于匹配风扇的显示与估算上限。');
+  o = s.option(form.Value, 'poll_interval', t('Control interval (seconds)', '控制间隔（秒）')); o.rmempty = false; o.default = '5'; o.datatype = 'and(uinteger,min(1),max(30))'; o.description = t('Five seconds is recommended.', '建议保持 5 秒。');
+  this.map = m;
+  return m.render().then(function(mapNode) {
+   mapNode.dataset.heading = t('Basic settings', '基本设置');
+   owner.badge = E('span', { 'class': 'lf-chip' }, [ E('i'), E('span') ]); owner.device = E('span', { 'class': 'lf-tag' }); owner.note = E('p', { 'class': 'lf-runtime-error lf-muted', role: 'status' });
+   var interval = Math.max(2, Math.min(30, number(initial.poll_interval) || 5));
+   function metric(title, key, unit, color, caption) {
+    owner[key] = E('span');
+    return E('div', { 'class': 'lf-metric' }, [ E('span', { 'class': 'lf-label' }, title), E('div', { 'class': 'lf-number lf-' + color }, [ owner[key], E('small', {}, unit) ]), E('span', { 'class': 'lf-muted' }, caption) ]);
+   }
+   owner.rpm = E('span'); owner.speedSource = E('span', { 'class': 'lf-muted' }); var svg = fanIcon();
+   owner.root = E('div', { 'class': 'lf-page' }, [ E('style', {}, style), E('div', { 'class': 'lf-heading' }, [ E('span', { 'class': 'lf-icon', 'aria-hidden': 'true' }, '✾'), E('h2', {}, t('Fan Control', '风扇控制')) ]),
+    E('div', { 'class': 'lf-card lf-status' }, [ owner.badge, owner.device, E('span', { 'class': 'lf-muted' }, t('Refresh every %s seconds', '每 %s 秒刷新').format(interval)) ]), owner.note,
+    E('div', { 'class': 'lf-card lf-live' }, [ E('div', { 'class': 'lf-fan-unit' }, [ svg, E('div', { 'class': 'lf-fan-value' }, [owner.rpm, E('small', {}, ' RPM')]), owner.speedSource ]), metric(t('CPU temperature', 'CPU 温度'), 'cpu', ' °C', 'blue', t('Live temperature', '实时温度')), metric(t('PWM duty', 'PWM 占空比'), 'pwm', ' %', 'purple', t('Current output', '当前输出')), metric(t('Running mode', '运行模式'), 'mode', '', 'green', t('Actual service state', '实际运行状态')) ]), mapNode ]);
+   owner.motion = matchMedia('(prefers-reduced-motion: reduce)'); var rotor = svg.querySelector('.lf-rotor');
+   if (rotor.animate) { owner.animation = rotor.animate([{ transform: 'rotate(0deg)' }, { transform: 'rotate(360deg)' }], { duration: 2400, iterations: Infinity }); owner.animation.pause(); }
+   owner.visibility = function() { owner.syncAnimation(); if (!document.hidden) owner.pollStatus(); };
+   document.addEventListener('visibilitychange', owner.visibility); owner.motion.addEventListener('change', owner.visibility);
+   owner.leave = function(event) {
+    if (!event.persisted) { owner.cleanup(); return; }
+    if (owner.frame) cancelAnimationFrame(owner.frame);
+    owner.frame = null;
+    if (owner.animation) owner.animation.pause();
+   };
+   window.addEventListener('pagehide', owner.leave); window.addEventListener('pageshow', owner.visibility);
+   var attached = false;
+   owner.observer = new MutationObserver(function() {
+    if (owner.root.isConnected) {
+     if (!attached) { attached = true; owner.syncAnimation(); }
+     var html = document.documentElement, body = document.body;
+     var theme = html.className + ' ' + body.className + ' ' + html.getAttribute('data-theme') + ' ' + body.getAttribute('data-theme');
+     var background = getComputedStyle(body).backgroundColor.match(/\d+/g);
+     owner.root.classList.toggle('lf-dark', /\b(?:dark|mode-dark|argon-dark)\b/i.test(theme) || !!(background && Number(background[0]) < 100));
+    } else if (attached) owner.cleanup();
+   });
+   owner.observer.observe(document.body, { childList: true, attributes: true, attributeFilter: ['class', 'style', 'data-theme'] });
+   owner.observer.observe(document.getElementById('view') || document.getElementById('maincontent') || document.body, { childList: true });
+   owner.observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'style', 'data-theme'] });
+   owner.updateStatus(initial); owner.poller = owner.pollStatus.bind(owner); poll.add(owner.poller, interval);
+   return owner.root;
+  });
+ }
 });

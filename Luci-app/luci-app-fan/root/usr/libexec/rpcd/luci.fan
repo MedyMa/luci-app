@@ -457,6 +457,7 @@ get_status() {
 
 	json_init
 	json_add_common
+	json_add_boolean running "$(ubus -t 2 call service list '{"name":"luci-fan"}' 2>/dev/null | jsonfilter -e '@["luci-fan"].instances.*.running' 2>/dev/null | grep -q true && echo 1 || echo 0)"
 
 	if resolve_primary_thermal_zone; then
 		thermal_supported=1

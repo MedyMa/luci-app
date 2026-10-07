@@ -64,6 +64,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6.0.2
 
+      - name: Check fan runtime behavior
+        run: node Luci-app/luci-app-fan/tools/ui-selftest.cjs
+
       - name: Install build dependencies
         run: |
           sudo apt-get update
