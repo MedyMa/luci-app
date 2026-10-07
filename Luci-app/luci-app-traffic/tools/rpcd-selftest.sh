@@ -81,7 +81,7 @@ chk "3 list 声明 getSummary"              "1"     "$(grep -c 'json_add_object 
 chk "3a list 声明 getSeries"              "1"     "$(grep -c 'json_add_object "getSeries"' "$RPCD")"
 chk "3b list 声明 resetStats"             "1"     "$(grep -c 'json_add_object "resetStats"' "$RPCD")"
 chk "3c list 声明 resolveNow"             "1"     "$(grep -c 'json_add_object "resolveNow"' "$RPCD")"
-chk "3d 参数类型已声明（hours/range/what）" "3"    "$(printf '%s\n' "$listing" | grep -c '^OUT:')"
+chk "3d 参数类型已声明（含分块游标和偏移）" "6"    "$(printf '%s\n' "$listing" | grep -c '^OUT:')"
 
 # Every method the page calls must be both advertised and dispatched, otherwise
 # the page gets "unknown method" or a silent default.

@@ -5,10 +5,38 @@
 'require poll';
 
 var callSummary = rpc.declare({ object: 'luci.traffic', method: 'getSummary' });
-var callHourly  = rpc.declare({ object: 'luci.traffic', method: 'getHourly', params: [ 'hours' ] });
+var callHourlyChunk = rpc.declare({ object: 'luci.traffic', method: 'getHourlyChunk', params: [ 'hours', 'cursor', 'offset' ] });
 var callSeries  = rpc.declare({ object: 'luci.traffic', method: 'getSeries', params: [ 'range' ] });
 var callResolveNow = rpc.declare({ object: 'luci.traffic', method: 'resolveNow' });
 var callLive    = rpc.declare({ object: 'luci.traffic', method: 'getLive' });
+
+/* Reassemble the complete snapshot before exposing any totals to the view. */
+function callHourly(hours) {
+	var chunks = [], cursor = '', offset = 0, total = null;
+	function next() {
+		return callHourlyChunk(hours, cursor, offset).then(function(p) {
+			if (p && p.error) throw new Error(p.error);
+			if (!p || typeof p.cursor !== 'string' || !p.cursor ||
+				(cursor && p.cursor !== cursor) || p.offset !== offset ||
+				!Number.isInteger(p.total) || p.total < 1 || p.total > 67108864 ||
+				(total !== null && p.total !== total) || typeof p.data !== 'string' || p.data.length > 43692 ||
+				typeof p.done !== 'boolean') throw new Error('Invalid history chunk');
+			var raw = atob(p.data), bytes = new Uint8Array(raw.length);
+			if (!raw.length || raw.length > 32768 || p.next !== offset + raw.length ||
+				p.next > p.total || p.done !== (p.next === p.total) ||
+				(!p.done && raw.length !== 32768)) throw new Error('Incomplete history chunk');
+			for (var i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+			chunks.push(bytes); cursor = p.cursor; total = p.total; offset = p.next;
+			if (!p.done) return next();
+			var all = new Uint8Array(total), at = 0;
+			chunks.forEach(function(b) { all.set(b, at); at += b.length; });
+			var result = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(all));
+			if (!result || !Array.isArray(result.hours)) throw new Error('Invalid history snapshot');
+			return result;
+		});
+	}
+	return next();
+}
 
 /* Vivid, evenly spaced hues: bright enough to read on a light card and to keep
  * their identity on a dark one. */
@@ -1128,17 +1156,20 @@ return view.extend({
 	},
 
 	refresh: function() {
-		var self = this;
+		var self = this, range = this.range;
+		var generation = this.refreshGeneration = (this.refreshGeneration || 0) + 1;
 		/* The collector state is fetched in every mode, not only in the session
 		 * view: the strip describes the running collector rather than a window,
 		 * so it is drawn whichever window the data cards are showing.  This is
 		 * also what makes choosing a range a whole-page refresh, instead of a
 		 * curve that moves while the readings around it stay as they were. */
 		return callSummary().then(function(s) {
+			if (generation !== self.refreshGeneration || range !== self.range) return;
 			self.summary = s || {};
 			rememberNames(self.summary);
-			if (self.range === 'session') { self.renderLive(self.summary); return; }
-			return callHourly(Number(self.range)).then(function(h) {
+			if (range === 'session') { self.renderLive(self.summary); return; }
+			return callHourly(Number(range)).then(function(h) {
+				if (generation !== self.refreshGeneration || range !== self.range) return;
 				/* remembered so the strip can still answer "how many hours does
 				 * the archive hold" after the reader switches to the session
 				 * view, which does not fetch the history at all */

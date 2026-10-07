@@ -108,6 +108,8 @@ jobs:
           lua5.1 tools/website-icons-formats-selftest.lua root/usr/share/traffic/website-icons-core.lua
           lua5.1 tools/website-icons-fetch-selftest.lua root/usr/share/traffic/website-icons-core.lua root/usr/share/traffic/website-icons-fetch.lua
           lua5.1 tools/website-icons-runner-selftest.lua root/usr/share/traffic/website-icons-core.lua root/usr/share/traffic/website-icons.lua
+          node tools/history-transfer-selftest.js
+          node tools/rpcd-chunk-selftest.js
           node tools/page-render-selftest.js
           node tools/catalog-selftest.js
           node tools/icon-resolution-selftest.js

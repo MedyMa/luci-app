@@ -78,6 +78,7 @@ get_hourly() {
 	local hours="$1" f list sel
 	case "$hours" in ''|*[!0-9]*) hours=24 ;; esac
 	[ "$hours" -gt 0 ] || hours=24
+	[ "$hours" -le 168 ] || hours=168
 	f="$(datadir)/hourly.tsv"
 	if [ ! -s "$f" ]; then
 		# No archive yet: a fresh install, or the first hour after a reflash.
@@ -318,6 +319,57 @@ get_series() {
 	printf ']}\n'
 }
 
+# Keep each rpcd reply small. The cursor refers to an immutable local snapshot,
+# so collection or an hour rollover cannot change bytes between chunk reads.
+hourly_snapshot() {
+	mkdir -p "$STATE_DIR" || return 1
+	find "$STATE_DIR" -maxdepth 1 -type f -name 'hourly-reply.??????' -mmin +2 -exec rm -f {} \; 2>/dev/null
+	HOURLY_FILE=$(mktemp "$STATE_DIR/hourly-reply.XXXXXX") || return 1
+	get_hourly "$1" > "$HOURLY_FILE" || { rm -f "$HOURLY_FILE"; return 1; }
+}
+
+get_hourly_safe() {
+	hourly_snapshot "$1" || { printf '{"error":"History snapshot failed"}\n'; return; }
+	if [ "$(wc -c < "$HOURLY_FILE")" -le 32768 ]; then
+		cat "$HOURLY_FILE"
+	else
+		printf '{"error":"History requires getHourlyChunk; update the client"}\n'
+	fi
+	rm -f "$HOURLY_FILE"
+}
+
+get_hourly_chunk() {
+	local cursor="$2" offset="${3:-0}" total data next done=false
+	case "$offset" in ''|0[0-9]*|*[!0-9]*) printf '{"error":"Invalid history offset"}\n'; return ;; esac
+	# Bound arithmetic as well as the response; never accept a path from a caller.
+	[ "${#offset}" -le 8 ] && [ "$offset" -le 67108864 ] || { printf '{"error":"Invalid history offset"}\n'; return; }
+	[ "$((offset % 32768))" -eq 0 ] || { printf '{"error":"Invalid history offset"}\n'; return; }
+	if [ -z "$cursor" ]; then
+		[ "$offset" -eq 0 ] || { printf '{"error":"Invalid initial offset"}\n'; return; }
+		hourly_snapshot "$1" || { printf '{"error":"History snapshot failed"}\n'; return; }
+		cursor=${HOURLY_FILE##*/}
+	else
+		case "$cursor" in
+			hourly-reply.[a-zA-Z0-9][a-zA-Z0-9][a-zA-Z0-9][a-zA-Z0-9][a-zA-Z0-9][a-zA-Z0-9]) ;;
+			*) printf '{"error":"Invalid history cursor"}\n'; return ;;
+		esac
+		HOURLY_FILE="$STATE_DIR/$cursor"
+		[ -f "$HOURLY_FILE" ] && [ ! -L "$HOURLY_FILE" ] || { printf '{"error":"History snapshot expired"}\n'; return; }
+	fi
+	total=$(wc -c < "$HOURLY_FILE")
+	[ "$total" -le 67108864 ] && [ "$offset" -lt "$total" ] || {
+		rm -f "$HOURLY_FILE"; printf '{"error":"Invalid history size or offset"}\n'; return;
+	}
+	# Keep active snapshots alive; base64 preserves UTF-8 across chunk boundaries.
+	touch "$HOURLY_FILE"
+	data=$(dd if="$HOURLY_FILE" bs=32768 skip="$((offset / 32768))" count=1 2>/dev/null | base64 | tr -d '\n\r')
+	next=$((offset + 32768)); [ "$next" -le "$total" ] || next=$total
+	[ "$next" -lt "$total" ] || done=true
+	printf '{"cursor":"%s","offset":%s,"next":%s,"total":%s,"done":%s,"data":"%s"}\n' \
+		"$cursor" "$offset" "$next" "$total" "$done" "$data"
+	[ "$done" != true ] || rm -f "$HOURLY_FILE"
+}
+
 reset_stats() {
 	local what="$1"
 	rm -f "$STATE_DIR/totals.tsv" "$STATE_DIR/clients.tsv" "$STATE_DIR/router.tsv" "$STATE_DIR/stat.tsv" \
@@ -375,6 +427,11 @@ case "$1" in
 		json_add_object "getHourly"
 		json_add_string "hours" "integer"
 		json_close_object
+		json_add_object "getHourlyChunk"
+		json_add_string "hours" "integer"
+		json_add_string "cursor" "string"
+		json_add_string "offset" "integer"
+		json_close_object
 		json_add_object "getConfig"; json_close_object
 		json_add_object "getSeries"
 		json_add_string "range" "string"
@@ -391,6 +448,8 @@ case "$1" in
 		json_get_var arg_hours hours
 		json_get_var arg_what what
 		json_get_var arg_range range
+		json_get_var arg_cursor cursor
+		json_get_var arg_offset offset
 		# rpcd invokes a plugin as "<script> call <method>" and passes the
 		# arguments as a JSON object on stdin, so the method is $2 - it is not
 		# part of that object.  Reading it out of the stdin JSON instead (which
@@ -400,7 +459,8 @@ case "$1" in
 		case "$2" in
 			getSummary) get_summary ;;
 			getLive)    get_live ;;
-			getHourly)  get_hourly "$arg_hours" ;;
+			getHourly)  get_hourly_safe "$arg_hours" ;;
+			getHourlyChunk) get_hourly_chunk "$arg_hours" "$arg_cursor" "$arg_offset" ;;
 			getConfig)  get_config ;;
 			getSeries)  get_series "$arg_range" ;;
 			resolveNow) resolve_now ;;
