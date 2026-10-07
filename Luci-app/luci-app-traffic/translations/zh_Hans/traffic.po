@@ -374,5 +374,5 @@ msgstr "展开域名"
 msgid "of all traffic"
 msgstr "占全部流量"
 
-msgid "Every %s seconds"
-msgstr "每 %s 秒刷新"
+msgid "Updates every %s seconds"
+msgstr "%s 秒更新"

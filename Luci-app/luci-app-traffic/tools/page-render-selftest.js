@@ -266,7 +266,7 @@ const core=boxes(v5.stripMetrics);
 chk(core.map(x=>x.cap).join('|')==='Flows|DNS mappings|Devices|Apps and sites','原版四个核心指标顺序正确');
 chk(core.map(x=>x.val).join('|')==='1234|5678|12|7','核心数值沿用真实数据');
 chk(boxes(v5.stripMeta).map(x=>x.cap).join('|')==='Bucket|Browser clients|Collector version|Router and tunnel|Client totals','原版辅助信息全部直接展示');
-chk(txt(v5.stripState).includes('Every 10 seconds'),'显示实际页面刷新间隔');
+chk(txt(v5.stripState).includes('Updates every 10 seconds'),'更新提示沿用采集间隔');
 const meta=v5.stripMeta, firstCore=v5.stripMetrics.children[0];
 view.drawStatus.call(v5,{collected_at:Math.floor(Date.now()/1000),interval:10,flows:2345,dnsmap_lines:6789,pending:3,acct:1},items);
 chk(v5.stripMeta===meta && count(v5.statusEl,'details')===0,'刷新保留辅助区域，不使用折叠详情');
@@ -285,6 +285,8 @@ chk(!summaryFirst.stripMeta.children.some(n=>n.className.includes('tf-stat-versi
 view.drawStatus.call(summaryFirst,{collected_at:Math.floor(Date.now()/1000),interval:10,flows:1,dnsmap_lines:2,acct:1},items);
 chk(boxes(summaryFirst.stripMetrics).length===4 && boxes(summaryFirst.statusEl).length===10,'状态后到时正确合并十项读数');
 chk(summaryFirst.stripMeta.children.filter(n=>n.className.includes('tf-stat-version')).length===1,'版本样式只标记版本读数');
+view.drawStatus.call(summaryFirst,{collected_at:Math.floor(Date.now()/1000),interval:20,flows:1,dnsmap_lines:2,acct:1},items);
+chk(txt(summaryFirst.stripRefresh)==='Updates every 20 seconds ','更新提示随实际采集间隔变化');
 console.log('=== 注释行：条件性读数不进条 ===');
 chk(txt(v5.diagEl).indexOf('Waiting to resolve')>=0, `待解析在注释行（${txt(v5.diagEl).trim()}）`);
 chk(txt(v5.diagEl).indexOf('3')>=0, '待解析数量可见');

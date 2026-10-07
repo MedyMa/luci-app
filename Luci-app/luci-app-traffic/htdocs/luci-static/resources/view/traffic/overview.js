@@ -1376,7 +1376,7 @@ return view.extend({
 		this.statBits = bits;
 		this.statDiag = diag;
 		this.renderStrip();
-		setText(this.stripRefresh, iv ? _('Every %s seconds').replace('%s', String(iv)) : '—');
+		setText(this.stripRefresh, iv ? _('Updates every %s seconds').replace('%s', String(iv)) : '—');
 		this.renderDiag();
 	},
 
@@ -2307,28 +2307,31 @@ function injectCss() {
 		'text-align:center;color:var(--tf-dim);font-size:.85rem;pointer-events:none;}',
 
 		/* Status, four core readings, and two rows of auxiliary information. */
-		'.tf-page .tf-stat-card{padding:1.2rem 1.4rem;}',
-		'.tf-page .tf-stat-strip{display:grid;grid-template-columns:9rem minmax(0,1fr) 33rem;align-items:center;gap:1.5rem;}',
+		'.tf-page .tf-stat-card{padding:.95rem 1.2rem;}',
+		'.tf-page .tf-stat-strip{display:grid;grid-template-columns:9rem minmax(0,1fr) 27rem;align-items:center;gap:1.15rem;}',
 		'.tf-page .tf-stat-state{border-right:1px solid var(--tf-line);padding-right:1.2rem;}',
 		'.tf-page .tf-stat{display:flex;flex-direction:column;min-width:0;gap:.25rem;}',
 		'.tf-page .tf-stat-cap{font-size:.75rem;color:var(--tf-dim);}',
 		'.tf-page .tf-stat-val{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;}',
 		'.tf-page .tf-stat-state .tf-stat-cap{display:none;}',
-		'.tf-page .tf-stat-state .tf-stat-val{font-size:1.05rem;white-space:normal;}',
-		'.tf-page .tf-stat-state .tf-stat-val:before{content:"";display:inline-block;width:.6rem;height:.6rem;',
-		'background:var(--tf-up);border-radius:50%;margin-right:.65rem;}',
+		'.tf-page .tf-stat-state .tf-stat-val{display:inline-flex;align-items:center;align-self:flex-start;gap:.45rem;',
+		'background:rgba(38,194,129,.11);border-radius:999px;padding:.3rem .7rem;font-size:1rem;white-space:normal;}',
+		'.tf-page .tf-stat-state .tf-stat-val:before{content:"";display:inline-block;width:.5rem;height:.5rem;flex:none;',
+		'background:var(--tf-up);border-radius:50%;}',
+		'.tf-page .tf-stat-state .tf-warn{background:rgba(255,143,31,.12);}',
 		'.tf-page .tf-stat-state .tf-warn:before{background:currentColor;}',
-		'.tf-page .tf-stat-refresh{display:block;font-size:.7rem;color:var(--tf-dim);margin:.3rem 0 0 1.25rem;}',
+		'.tf-page .tf-stat-refresh{display:block;font-size:.7rem;color:var(--tf-dim);margin:.25rem 0 0 1.65rem;}',
 		'.tf-page .tf-stat-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem;text-align:center;}',
 		'.tf-page .tf-stat-metrics .tf-stat-val{font-size:1.55rem;font-weight:700;}',
-		'.tf-page .tf-stat-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.5rem 1rem;',
-		'border-left:1px solid var(--tf-line);padding-left:1.5rem;}',
-		'.tf-page .tf-stat-meta .tf-stat{flex-direction:row;align-items:baseline;justify-content:space-between;gap:.5rem;}',
+		'.tf-page .tf-stat-meta{display:grid;grid-template-columns:max-content max-content 1fr;gap:.35rem 1.2rem;',
+		'border-left:1px solid var(--tf-line);padding-left:1.15rem;align-items:center;}',
+		'.tf-page .tf-stat-meta .tf-stat{flex-direction:row;align-items:baseline;justify-content:flex-start;gap:.65rem;}',
+		'.tf-page .tf-stat-meta .tf-stat:nth-child(1) .tf-stat-cap,.tf-page .tf-stat-meta .tf-stat:nth-child(4) .tf-stat-cap{min-width:2em;}',
 		'.tf-page .tf-stat-meta .tf-stat-cap,.tf-page .tf-stat-meta .tf-stat-val{font-size:.7rem;}',
 		'.tf-page .tf-stat-meta .tf-stat-version{grid-column:3;justify-content:flex-end;}',
 		'.tf-page .tf-stat-meta .tf-stat-version .tf-stat-val{font-size:.7rem;color:var(--tf-fg);',
 		'background:var(--tf-chip);border:1px solid var(--tf-line);border-radius:999px;padding:.2rem .6rem;}',
-		'.tf-page .tf-stat-meta .tf-stat-source{grid-column:2/4;justify-content:flex-start;}',
+		'.tf-page .tf-stat-meta .tf-stat-source{grid-column:2;gap:.45rem;}',
 		'.tf-page .tf-stat-meta .tf-stat-version .tf-stat-cap{display:none;}',
 		'@media(max-width:85rem){.tf-page .tf-stat-strip{grid-template-columns:9rem minmax(0,1fr);}',
 		'.tf-page .tf-stat-meta{grid-column:1/-1;border-left:0;border-top:1px solid var(--tf-line);padding:1rem 0 0;}}',
