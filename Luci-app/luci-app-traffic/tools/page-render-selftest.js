@@ -98,7 +98,7 @@ const texts=(root)=>{ const a=[]; (root.children||[]).forEach(c=>walk(c,n=>{ if(
 const count=(root,tag)=>{ let k=0; (root.children||[]).forEach(c=>walk(c,n=>{ if(n.tag===tag)k++; })); return k; };
 // the strip's boxes, in order: one caption/value pair each
 const boxes=root=>{ const a=[]; walk(root,c=>{
-  if((c.attrs||{}).class==='tf-stat'){
+  if(String((c.attrs||{}).class||'').split(' ').includes('tf-stat')){
     const spans=c.children.filter(x=>x.tag==='span');
     a.push({cap:spans[0]&&spans[0]._text,val:spans[1]&&spans[1]._text});
   }
@@ -260,29 +260,31 @@ view.drawStatus.call(v5,{collected_at:Math.floor(Date.now()/1000),interval:10,fl
 view.drawSummary.call(v5,[{cap:'Bucket',val:'24'},{cap:'Browser clients',val:'1.2 MiB'},
   {cap:'Router and tunnel',val:'0 B'},{cap:'Devices',val:'12'},{cap:'Apps and sites',val:'7'}]);
 const b5=boxes(v5.statusEl);
-chk(b5.length===11, '所有原始读数直接展示');
+chk(b5.length===10, '所有原始读数直接展示');
 chk(v5.statusEl.children.length===3,'状态条分为三个区域');
 const core=boxes(v5.stripMetrics);
-chk(core.map(x=>x.cap).join('|')==='Flows|Devices|Apps and sites|Browser clients','四个核心指标顺序正确');
-chk(core.map(x=>x.val).join('|')==='1234|12|7|1.2 MiB','核心数值沿用真实数据');
-chk(boxes(v5.stripMeta).map(x=>x.cap).join('|')==='Collected hours|DNS mappings|Collector version|Router and tunnel|Client totals|Interval','辅助信息全部直接展示');
-chk(txt(v5.stripState).includes('Every 5 seconds'),'显示实际页面刷新间隔');
+chk(core.map(x=>x.cap).join('|')==='Flows|DNS mappings|Devices|Apps and sites','原版四个核心指标顺序正确');
+chk(core.map(x=>x.val).join('|')==='1234|5678|12|7','核心数值沿用真实数据');
+chk(boxes(v5.stripMeta).map(x=>x.cap).join('|')==='Bucket|Browser clients|Collector version|Router and tunnel|Client totals','原版辅助信息全部直接展示');
+chk(txt(v5.stripState).includes('Every 10 seconds'),'显示实际页面刷新间隔');
 const meta=v5.stripMeta, firstCore=v5.stripMetrics.children[0];
 view.drawStatus.call(v5,{collected_at:Math.floor(Date.now()/1000),interval:10,flows:2345,dnsmap_lines:6789,pending:3,acct:1},items);
 chk(v5.stripMeta===meta && count(v5.statusEl,'details')===0,'刷新保留辅助区域，不使用折叠详情');
 chk(v5.stripMetrics.children[0]===firstCore && boxes(v5.stripMetrics)[0].val==='2345','原位更新核心数字');
 const vOnly=freshView();
 view.drawStatus.call(vOnly,{collected_at:Math.floor(Date.now()/1000),interval:10,flows:1,dnsmap_lines:1,acct:1},items);
-chk(boxes(vOnly.statusEl).length===6,'窗口合计加载前不伪造设备或流量数据');
+chk(boxes(vOnly.statusEl).length===5,'窗口合计加载前不伪造设备或流量数据');
 chk(b5.some(b=>b.val==='5678'),'域名映射记录数直接展示');
 chk(b5.some(b=>b.val==='nft counters'),'计数器来源保留');
 const summaryFirst=freshView();
 const summary=[{cap:'Bucket',val:'24'},{cap:'Browser clients',val:'1.2 MiB'},
   {cap:'Router and tunnel',val:'0 B'},{cap:'Devices',val:'12'},{cap:'Apps and sites',val:'7'}];
 view.drawSummary.call(summaryFirst,summary);
-chk(boxes(summaryFirst.stripMetrics).map(x=>x.cap).join('|')==='Devices|Apps and sites|Browser clients','合计先到时核心数字不被移到辅助区域');
+chk(boxes(summaryFirst.stripMetrics).map(x=>x.cap).join('|')==='Devices|Apps and sites','合计先到时核心数字不被移到辅助区域');
+chk(!summaryFirst.stripMeta.children.some(n=>n.className.includes('tf-stat-version')),'状态未到时隧道读数不会误用版本样式');
 view.drawStatus.call(summaryFirst,{collected_at:Math.floor(Date.now()/1000),interval:10,flows:1,dnsmap_lines:2,acct:1},items);
-chk(boxes(summaryFirst.stripMetrics).length===4 && boxes(summaryFirst.statusEl).length===11,'状态后到时正确合并十一项读数');
+chk(boxes(summaryFirst.stripMetrics).length===4 && boxes(summaryFirst.statusEl).length===10,'状态后到时正确合并十项读数');
+chk(summaryFirst.stripMeta.children.filter(n=>n.className.includes('tf-stat-version')).length===1,'版本样式只标记版本读数');
 console.log('=== 注释行：条件性读数不进条 ===');
 chk(txt(v5.diagEl).indexOf('Waiting to resolve')>=0, `待解析在注释行（${txt(v5.diagEl).trim()}）`);
 chk(txt(v5.diagEl).indexOf('3')>=0, '待解析数量可见');
@@ -303,10 +305,10 @@ view.drawSummary.call(v10,[{cap:'Bucket',val:'24'},{cap:'Browser clients',val:'1
   {cap:'Router and tunnel',val:'0 B'},{cap:'Devices',val:'1'}]);
 chk(txt(v10.diagEl).trim()==='', '当前小时不再占用注释行');
 chk(v10.diagCardEl.style.display==='none', '普通场景下注释卡整张不显示');
-const bucketRow=v10.statRows.find(r=>r.k._text==='Collected hours').row;
+const bucketRow=v10.statRows.find(r=>r.k._text==='Bucket').row;
 chk(bucketRow && String((bucketRow.attrs||{}).title||'').indexOf('2026-09-17T10')>=0,
     `当前小时挂在周期的提示里（${bucketRow&&bucketRow.attrs.title}）`);
-chk(boxes(v10.statusEl).filter(b=>b.cap==='Collected hours').length===1, '只有一个周期框');
+chk(boxes(v10.statusEl).filter(b=>b.cap==='Bucket').length===1, '只有一个周期框');
 const v8=freshView();
 view.drawStatus.call(v8,{collected_at:Math.floor(Date.now()/1000),interval:10,flows:1,
   dnsmap_lines:1,pending:0,acct:0,acct_error:'nft is not installed'},items);
@@ -321,7 +323,7 @@ const v6=freshView();
 view.drawStatus.call(v6,{collected_at:0,interval:0,flows:0,dnsmap_lines:0,pending:0},[]);
 chk(txt(v6.statusEl).indexOf('Collector has not produced a snapshot yet')>=0,
     `无快照时明确提示（${txt(v6.statusEl).slice(0,40)}）`);
-chk(boxes(v6.statusEl).length===6, `无快照时六个框仍在（${boxes(v6.statusEl).length}）`);
+chk(boxes(v6.statusEl).length===5, `无快照时五项状态读数仍在（${boxes(v6.statusEl).length}）`);
 
 console.log('=== 速率：两种档位都是相邻快照的实时增量 ===');
 // The two figures under 下载/上传 are the difference between two consecutive

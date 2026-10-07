@@ -894,9 +894,7 @@ return view.extend({
 			el('span', { 'class': 'tf-lg-up' }, [ el('i'), _('Sent') ])
 		]);
 		this.statusEl = el('div', { 'class': 'tf-stat-strip' });
-		/* the card around it, held here so renderStrip can mark it when a reading
-		 * is a warning - the stylesheet keeps this card off a phone except then */
-		this.statCardEl = el('div', { 'class': 'tf-card tf-stat-card' }, [ this.statusEl ]);
+		var statCard = el('div', { 'class': 'tf-card tf-stat-card' }, [ this.statusEl ]);
 		/* the readings that do not belong in the strip, under the table they
 		 * comment on.  Hidden until there is something to say. */
 		this.diagCardEl = el('div', { 'class': 'tf-card tf-diag-card' }, [ this.diagEl ]);
@@ -948,7 +946,7 @@ return view.extend({
 				this.chartEl
 			]),
 
-			this.statCardEl,
+			statCard,
 
 			/* The composition sits above the table rather than beside it: the two
 			 * were a flexible two-column row, and below the tablet breakpoint that
@@ -1184,7 +1182,6 @@ return view.extend({
 		if (!this.stripState) {
 			this.stripState = el('div', { 'class': 'tf-stat-state' });
 			this.stripRefresh = el('span', { 'class': 'tf-stat-refresh' });
-			setText(this.stripRefresh, _('Every 5 seconds'));
 			this.stripMetrics = el('div', { 'class': 'tf-stat-metrics' });
 			this.stripMeta = el('div', { 'class': 'tf-stat-meta' });
 			this.statusEl.appendChild(this.stripState);
@@ -1202,8 +1199,11 @@ return view.extend({
 				r.k = r.row.firstChild;
 				self.statRows[i] = r;
 			}
-			setText(r.k, x.k === _('Bucket') ? _('Collected hours') : x.k);
+			setText(r.k, x.k);
 			setText(r.v, x.v);
+			var rowClass = 'tf-stat' + (x.k === _('Collector version') ? ' tf-stat-version' :
+				x.k === _('Client totals') ? ' tf-stat-source' : '');
+			if (r.row.className !== rowClass) r.row.className = rowClass;
 			/* a shortened value keeps its exact form in the tooltip, so nothing
 			 * is lost by showing it short */
 			var tip = x.title || '';
@@ -1226,17 +1226,13 @@ return view.extend({
 					parent.insertBefore(row, parent.children[i] || null);
 			});
 		}
-		var offset = a.length, i;
+		var offset = a.length;
 		place(this.stripState, a.length ? [0] : [], this.stripRefresh);
-		place(this.stripMetrics, (a.length ? [2] : []).concat(b.length ? [offset + 3, offset + 4, offset + 1] : []));
+		place(this.stripMetrics, (a.length ? [1, 2] : []).concat(b.length ? [offset + 3, offset + 4] : []));
 		place(this.stripMeta, b.length
-			? (a.length ? [offset, 3, 5, offset + 2, 4, 1] : [offset, offset + 2])
-			: (a.length ? [3, 4, 5, 1] : []));
-		var warn = false;
-		for (i = 0; i < bits.length; i++) if (bits[i].warn) warn = true;
-		var cls = 'tf-card tf-stat-card' + (warn ? ' tf-stat-warn' : '');
-		if (this.statCardEl && this.statCardEl.className !== cls)
-			this.statCardEl.className = cls;
+			? (a.length ? [offset, offset + 1, 4, offset + 2, 3] : [offset, offset + 1, offset + 2])
+			: (a.length ? [4, 3] : []));
+
 	},
 
 	/* The window's own totals: the four readings that describe whatever range is
@@ -1327,11 +1323,10 @@ return view.extend({
 			state = _('Running');
 		}
 
-		/* The six that are always there, in this order, so the strip does not
+		/* The five that are always there, in this order, so the strip does not
 		 * reshuffle itself as the collector's state changes. */
 		var bits = [
 			{ k: _('State'), v: state, warn: warn },
-			{ k: _('Interval'), v: iv ? iv + 's' : '—' },
 			{ k: _('Flows'), v: String(Number(s.flows) || 0) },
 			{ k: _('DNS mappings'), v: String(Number(s.dnsmap_lines) || 0) },
 			/* which layer is producing the client totals: the nft counters see
@@ -1381,6 +1376,7 @@ return view.extend({
 		this.statBits = bits;
 		this.statDiag = diag;
 		this.renderStrip();
+		setText(this.stripRefresh, iv ? _('Every %s seconds').replace('%s', String(iv)) : '—');
 		this.renderDiag();
 	},
 
@@ -2329,8 +2325,11 @@ function injectCss() {
 		'border-left:1px solid var(--tf-line);padding-left:1.5rem;}',
 		'.tf-page .tf-stat-meta .tf-stat{flex-direction:row;align-items:baseline;justify-content:space-between;gap:.5rem;}',
 		'.tf-page .tf-stat-meta .tf-stat-cap,.tf-page .tf-stat-meta .tf-stat-val{font-size:.7rem;}',
-		'.tf-page .tf-stat-meta .tf-stat:nth-child(3){color:var(--tf-dim);justify-content:flex-end;}',
-		'.tf-page .tf-stat-meta .tf-stat:nth-child(3) .tf-stat-cap{display:none;}',
+		'.tf-page .tf-stat-meta .tf-stat-version{grid-column:3;justify-content:flex-end;}',
+		'.tf-page .tf-stat-meta .tf-stat-version .tf-stat-val{font-size:.7rem;color:var(--tf-fg);',
+		'background:var(--tf-chip);border:1px solid var(--tf-line);border-radius:999px;padding:.2rem .6rem;}',
+		'.tf-page .tf-stat-meta .tf-stat-source{grid-column:2/4;justify-content:flex-start;}',
+		'.tf-page .tf-stat-meta .tf-stat-version .tf-stat-cap{display:none;}',
 		'@media(max-width:85rem){.tf-page .tf-stat-strip{grid-template-columns:9rem minmax(0,1fr);}',
 		'.tf-page .tf-stat-meta{grid-column:1/-1;border-left:0;border-top:1px solid var(--tf-line);padding:1rem 0 0;}}',
 		'@media(max-width:52rem){.tf-page .tf-stat-card{display:none;}}',
