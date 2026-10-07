@@ -15,6 +15,7 @@ var style = `
 .agh-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}.agh-heading h2{font-size:26px!important}
 
 .agh-ui .btn,.agh-ui .cbi-button,.agh-ui .agh-soft-btn{display:inline-flex!important;align-items:center;justify-content:center;min-height:42px;padding:9px 16px!important;border:1px solid var(--agh-primary)!important;border-radius:22px!important;background:var(--agh-primary)!important;color:#fff!important;-webkit-text-fill-color:#fff!important;text-decoration:none!important;line-height:1.4;box-shadow:none!important;font-weight:600;white-space:normal;cursor:pointer}
+.agh-ui .agh-warning{background:#ff9500!important;border-color:#ff9500!important;color:#161d29!important;-webkit-text-fill-color:#161d29!important}
 .agh-ui .cbi-button-reset{background:#f5355c!important;border-color:#f5355c!important;color:#fff!important;-webkit-text-fill-color:#fff!important}
 .agh-ui .btn:hover:not([disabled]),.agh-ui .cbi-button:hover:not([disabled]){filter:brightness(1.08)}.agh-ui [disabled]{opacity:.5;cursor:not-allowed}.agh-ui a:focus-visible,.agh-ui button:focus-visible,.agh-ui summary:focus-visible{outline:2px solid var(--agh-primary);outline-offset:3px}
 .agh-ui .agh-ok{color:var(--agh-good)!important}.agh-ui .agh-bad{color:var(--agh-bad)!important}.agh-ui .agh-warn{color:var(--agh-warn)!important}.agh-ui .agh-state{font-weight:750!important;border-radius:8px;padding:5px 9px;background:var(--agh-soft)}
