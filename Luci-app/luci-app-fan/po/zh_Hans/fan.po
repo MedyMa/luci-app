@@ -8,26 +8,17 @@ msgstr ""
 msgid "0 stops the fan; 100 uses maximum PWM."
 msgstr "0 停转，100 输出最高 PWM。"
 
-msgid "Actual service state"
-msgstr "实际运行状态"
-
 msgid "Basic settings"
 msgstr "基本设置"
 
 msgid "CPU temperature"
 msgstr "CPU 温度"
 
-msgid "Changes take effect after Save & Apply."
-msgstr "修改后，点击“保存并应用”生效。"
-
 msgid "Control interval (seconds)"
 msgstr "控制间隔（秒）"
 
 msgid "Control mode"
 msgstr "控制模式"
-
-msgid "Current output"
-msgstr "当前输出"
 
 msgid "Device unavailable"
 msgstr "设备信息未获取"
@@ -58,9 +49,6 @@ msgstr "随温度自动调速"
 
 msgid "Full-speed temperature (°C)"
 msgstr "满速温度（°C）"
-
-msgid "Live temperature"
-msgstr "实时温度"
 
 msgid "Manual"
 msgstr "手动"

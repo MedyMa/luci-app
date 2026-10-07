@@ -5,25 +5,16 @@ msgstr ""
 msgid "0 stops the fan; 100 uses maximum PWM."
 msgstr ""
 
-msgid "Actual service state"
-msgstr ""
-
 msgid "Basic settings"
 msgstr ""
 
 msgid "CPU temperature"
 msgstr ""
 
-msgid "Changes take effect after Save & Apply."
-msgstr ""
-
 msgid "Control interval (seconds)"
 msgstr ""
 
 msgid "Control mode"
-msgstr ""
-
-msgid "Current output"
 msgstr ""
 
 msgid "Device unavailable"
@@ -54,9 +45,6 @@ msgid "Follow temperature"
 msgstr ""
 
 msgid "Full-speed temperature (°C)"
-msgstr ""
-
-msgid "Live temperature"
 msgstr ""
 
 msgid "Manual"
