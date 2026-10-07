@@ -34,6 +34,7 @@ assert.equal(view.badge.lastChild.textContent, '运行中');
 assert.equal(view.animation.state, 'running');
 assert.equal(frames.size, 0, 'Stable rotation should not run a JS frame loop');
 assert.equal(view.cpu.textContent, '48.6');
+assert.equal(view.rpm.textContent, '1860', 'RPM must not use thousands separators');
 assert.equal(view.progress.rpm.firstChild.style.width, '62%'); assert.equal(view.progress.cpu.firstChild.style.width, '81%'); assert.equal(view.progress.cpu.dataset.warning, 'true');
 view.updateProgress('pwm', 200, 100); assert.equal(view.progress.pwm.firstChild.style.width,'100%'); view.updateProgress('rpm', 20, 0); assert.equal(view.progress.rpm.firstChild.style.width,'0%'); assert.equal(view.progress.rpm['aria-valuenow'],undefined);
 assert.match(view.speedSource.textContent, /估算/);

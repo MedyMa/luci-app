@@ -95,7 +95,7 @@ return view.extend({
   var temp = number(s.zone_temp), pwm = number(s.pwm_percent), rpm = number(s.fan_rpm);
   this.cpu.textContent = temp == null ? '—' : temp.toFixed(1);
   this.pwm.textContent = pwm == null ? '—' : String(Math.round(pwm));
-  this.rpm.textContent = rpm == null ? '—' : Math.round(rpm).toLocaleString();
+  this.rpm.textContent = rpm == null ? '—' : String(Math.round(rpm));
   this.speedSource.textContent = s.rpm_source === 'actual' ? t('Measured speed · illustrative rotation', '实测转速 · 动画仅示意') : s.rpm_source === 'estimated' ? t('Estimated from PWM · illustrative rotation', '按 PWM 估算 · 动画仅示意') : t('Speed unavailable', '转速未获取');
   this.mode.textContent = unsupportedMode ? t('Unavailable', '不可用') : supported && running ? modeLabel(s.mode) : '—';
   this.updateProgress('rpm', rpm, number(s.fan_max_rpm));
