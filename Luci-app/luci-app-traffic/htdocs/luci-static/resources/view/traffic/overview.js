@@ -1085,7 +1085,8 @@ return view.extend({
 	},
 
 	loadSeries: function() {
-		var self = this;
+		var self = this, range = this.seriesRange;
+		var generation = this.seriesGeneration = (this.seriesGeneration || 0) + 1;
 		/* a hidden tab has nobody looking at it: skip the RPC and the redraw
 		 * until it comes back, then draw immediately (the poll below keeps
 		 * running, so the first visible tick refreshes it) */
@@ -1094,10 +1095,12 @@ return view.extend({
 			return Promise.resolve();
 		}
 		this.seriesStale = false;
-		return callSeries(this.seriesRange).then(function(s) {
+		return callSeries(range).then(function(s) {
+			if (generation !== self.seriesGeneration || range !== self.seriesRange) return;
 			self.series = s || null;
 			self.drawSeries();
 		}).catch(function() {
+			if (generation !== self.seriesGeneration || range !== self.seriesRange) return;
 			self.series = null;
 			self.drawSeries();
 		});
