@@ -77,7 +77,7 @@ msgstr ""
 msgid "Refresh every %s seconds"
 msgstr ""
 
-msgid "Running"
+msgid "Cooling"
 msgstr ""
 
 msgid "Running mode"

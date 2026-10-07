@@ -28,9 +28,11 @@ view.animation = {
 for (const key of ['device', 'note', 'cpu', 'pwm', 'rpm', 'speedSource', 'mode']) view[key] = { textContent: '' };
 view.badge = { dataset: {}, lastChild: { textContent: '' } };
 view.progress = Object.fromEntries(['rpm','cpu','pwm'].map(key => [key, {dataset:{}, firstChild:{style:{}}, setAttribute(key,value){this[key]=value;}, removeAttribute(key){delete this[key];}}]));
-const status = { supported: true, running: true, enabled: true, pwm_percent: 62, fan_rpm: 1860, rpm_source: 'estimated', zone_temp: 48.6, fan_max_rpm: 3000, configured_on_temp: 60, mode: 'smart' };
+const status = { supported: true, running: true, enabled: true, pwm_percent: 62, fan_rpm: 1860, rpm_source: 'estimated', zone_temp: 48.6, fan_max_rpm: 3000, configured_on_temp: 60, configured_off_temp: 30, mode: 'smart' };
 view.updateStatus(status);
-assert.equal(view.badge.lastChild.textContent, '运行中');
+assert.equal(view.badge.lastChild.textContent, '正在散热');
+assert.equal(view.badge.dataset.heat,'warm');
+view.updateStatus({...status,zone_temp:29.9}); assert.equal(view.badge.dataset.heat,'cool'); view.updateStatus({...status,zone_temp:30}); assert.equal(view.badge.dataset.heat,'warm'); view.updateStatus({...status,zone_temp:60}); assert.equal(view.badge.dataset.heat,'hot'); view.updateStatus({...status,zone_temp:null}); assert.equal(view.badge.dataset.heat,'unknown'); view.updateStatus(status);
 assert.equal(view.animation.state, 'running');
 assert.equal(frames.size, 0, 'Stable rotation should not run a JS frame loop');
 assert.equal(view.cpu.textContent, '48.6');

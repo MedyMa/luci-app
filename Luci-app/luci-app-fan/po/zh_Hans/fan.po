@@ -80,8 +80,8 @@ msgstr "PWM 占空比"
 msgid "Refresh every %s seconds"
 msgstr "每 %s 秒刷新"
 
-msgid "Running"
-msgstr "运行中"
+msgid "Cooling"
+msgstr "正在散热"
 
 msgid "Running mode"
 msgstr "运行模式"
