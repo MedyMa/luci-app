@@ -18,9 +18,9 @@ var style = `
 .lf-page.lf-dark{color:#e8edf7;--surface:#232628;--soft:#282d30;--line:#3a4145;--muted:#b7c0c8;--purple:#a18be4;--green:#47d68b;--blue:#87b8ff;--teal:#75d5d7;--blade-start:#626b7e;--blade-end:#adb5c3}
 .lf-page *{box-sizing:border-box}.lf-page .lf-heading{display:flex;align-items:center;gap:12px;margin-bottom:4px}.lf-page .lf-heading h2{all:unset;display:block;font-family:inherit;font-size:27px;font-weight:650;line-height:1.3;color:inherit}.lf-page .lf-icon{width:43px;height:43px;display:grid;place-items:center;border-radius:14px;background:var(--soft);color:var(--purple);font-size:28px}
 .lf-page .lf-card{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:22px}.lf-page .lf-status{display:flex;align-items:center;gap:12px;padding:16px 20px;border-radius:13px}.lf-page .lf-chip{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:5px 12px;font-weight:600;color:var(--green);background:color-mix(in srgb,var(--green) 9%,transparent);white-space:nowrap}.lf-page .lf-chip i{height:8px;width:8px;background:currentColor;border-radius:50%}.lf-page .lf-tag{border-radius:999px;padding:4px 10px;border:1px solid var(--line);font-size:12px;background:var(--soft)}.lf-page .lf-muted{font-size:12px;color:var(--muted)}.lf-page .lf-status .lf-muted{margin-left:auto}
-.lf-page .lf-live{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;align-items:stretch}.lf-page .lf-fan-unit,.lf-page .lf-metric{height:208px;background:var(--soft);border-radius:15px;padding:20px;min-width:0;display:flex;flex-direction:column;justify-content:center}.lf-page .lf-fan-unit{text-align:center;align-items:center}.lf-page .lf-fan{width:116px;height:116px;flex-shrink:0;display:block}.lf-page .lf-housing{fill:var(--soft);stroke:var(--line);stroke-width:1.5}.lf-page .lf-rotor{transform-origin:120px 120px}.lf-page .lf-label{font-size:13px;color:var(--muted)}.lf-page .lf-number,.lf-page .lf-fan-value{font-size:28px;line-height:1.4;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;margin:9px 0 3px}.lf-page .lf-fan-value{color:var(--teal);margin:4px 0 0}.lf-page .lf-number small,.lf-page .lf-fan-value small{font-size:14px;font-weight:500}.lf-page .lf-blue{color:var(--blue)}.lf-page .lf-purple{color:var(--purple)}.lf-page .lf-green{color:var(--green)}.lf-page :focus-visible{outline:2px solid var(--purple);outline-offset:3px}
+.lf-page .lf-live{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;align-items:stretch}.lf-page .lf-fan-unit,.lf-page .lf-metric{position:relative;height:208px;background:var(--soft);border-radius:15px;padding:20px;min-width:0;display:flex;flex-direction:column;justify-content:center}.lf-page .lf-fan-unit{text-align:center;align-items:center}.lf-page .lf-fan-stage{position:relative;width:150px;height:150px;flex-shrink:0;display:block}.lf-page .lf-fan{width:100%;height:100%;display:block}.lf-page .lf-housing{fill:var(--soft);stroke:var(--line);stroke-width:1.5}.lf-page .lf-rotor{transform-origin:120px 120px}.lf-page .lf-label{font-size:13px;color:var(--muted)}.lf-page .lf-number,.lf-page .lf-fan-value{font-size:28px;line-height:1.4;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;margin:9px 0 3px}.lf-page .lf-fan-value{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);margin:0;width:68px;height:68px;border-radius:50%;background:var(--surface);border:1px solid var(--line);display:flex;flex-direction:column;justify-content:center;align-items:center;color:var(--teal);font-size:19px;line-height:1.2;letter-spacing:-.5px}.lf-page .lf-fan-value small{font-size:10px;letter-spacing:.5px;margin-top:3px;color:var(--muted)}.lf-page .lf-progress{position:absolute;bottom:12px;left:20px;right:20px;height:4px;border-radius:999px;background:var(--line);overflow:hidden}.lf-page .lf-progress-fill{display:block;height:100%;border-radius:inherit;background:var(--teal)}.lf-page .lf-progress-cpu .lf-progress-fill{background:var(--blue)}.lf-page .lf-progress-pwm .lf-progress-fill{background:var(--purple)}.lf-page .lf-progress[data-warning=true] .lf-progress-fill{background:#dc9132}.lf-page .lf-number small,.lf-page .lf-fan-value small{font-size:14px;font-weight:500}.lf-page .lf-blue{color:var(--blue)}.lf-page .lf-purple{color:var(--purple)}.lf-page .lf-green{color:var(--green)}.lf-page :focus-visible{outline:2px solid var(--purple);outline-offset:3px}
 .lf-page .cbi-value-field{display:block!important}.lf-page .cbi-map-descr{padding:0!important;margin:0 0 18px!important}
-@media(max-width:720px){.lf-page{margin:20px auto}.lf-page .lf-card{padding:16px}.lf-page .lf-live{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.lf-page .lf-fan-unit,.lf-page .lf-metric{height:160px;padding:14px}.lf-page .lf-fan{width:82px;height:82px}.lf-page .lf-fan-value,.lf-page .lf-number{font-size:25px}.lf-page .lf-number small{font-size:12px}.lf-page .lf-label{font-size:12px}.lf-page .lf-status{gap:9px;flex-wrap:wrap}.lf-page .lf-status .lf-muted{font-size:11px}}
+@media(max-width:720px){.lf-page{margin:20px auto}.lf-page .lf-card{padding:16px}.lf-page .lf-live{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.lf-page .lf-fan-unit,.lf-page .lf-metric{height:160px;padding:14px}.lf-page .lf-fan-stage{width:106px;height:106px}.lf-page .lf-fan-value{width:52px;height:52px;font-size:15px}.lf-page .lf-fan-value small{font-size:8px;margin-top:2px}.lf-page .lf-fan-unit>.lf-muted{font-size:10px;line-height:1.4}.lf-page .lf-progress{left:14px;right:14px}.lf-page .lf-number{font-size:25px}.lf-page .lf-number small{font-size:12px}.lf-page .lf-label{font-size:12px}.lf-page .lf-status{gap:9px;flex-wrap:wrap}.lf-page .lf-status .lf-muted{font-size:11px}}
 @media(prefers-reduced-motion:reduce){.lf-page *{transition:none!important}}
 .lf-page .cbi-map{border:1px solid var(--line)!important;border-radius:20px!important;background:var(--surface)!important;padding:22px!important;box-shadow:none!important;margin:0!important}
 .lf-page .cbi-map>h2,.lf-page .cbi-section>h3{display:none}.lf-page .cbi-map::before{content:attr(data-heading);display:block;font-size:18px;font-weight:650;margin-bottom:18px}
@@ -44,9 +44,9 @@ var style = `
 `;
 function fanIcon() {
  var blades = '';
- for (var i = 0; i < 7; i++) blades += '<path transform="rotate(' + (i * 360 / 7) + ')" d="M-10-22C-26-70-15-103 24-100C58-95 70-65 52-34C37-12 11-16-10-22Z"/>';
+ for (var i = 0; i < 7; i++) blades += '<path transform="rotate(' + (i * 360 / 7) + ')" d="M-9-19C-21-37-31-67-15-89C-4-104 22-103 39-91C58-77 64-53 47-34C33-19 9-13-9-19Z"/>';
  var node = E('div');
- node.innerHTML = '<svg class="lf-fan" viewBox="0 0 240 240" aria-hidden="true"><defs><linearGradient id="lf-fan-blade" x1="0" y1="0" x2="1" y2="1"><stop stop-color="var(--blade-start)"/><stop offset="1" stop-color="var(--blade-end)"/></linearGradient></defs><rect class="lf-housing" x="5" y="5" width="230" height="230" rx="29"/><g class="lf-rotor"><g transform="translate(120 120)" fill="url(#lf-fan-blade)">' + blades + '</g></g><circle cx="120" cy="120" r="29" fill="var(--surface)" stroke="var(--purple)" stroke-width="2"/><circle cx="120" cy="120" r="9" fill="var(--purple)"/></svg>';
+ node.innerHTML = '<svg class="lf-fan" viewBox="0 0 240 240" aria-hidden="true"><defs><linearGradient id="lf-fan-blade" x1="0" y1="0" x2="1" y2="1"><stop stop-color="var(--blade-start)"/><stop offset="1" stop-color="var(--blade-end)"/></linearGradient></defs><rect class="lf-housing" x="5" y="5" width="230" height="230" rx="29"/><circle cx="120" cy="120" r="104" fill="none" stroke="var(--line)" stroke-width="1"/><g fill="var(--muted)" opacity=".35"><circle cx="24" cy="24" r="2.5"/><circle cx="216" cy="24" r="2.5"/><circle cx="24" cy="216" r="2.5"/><circle cx="216" cy="216" r="2.5"/></g><g class="lf-rotor"><g transform="translate(120 120)" fill="url(#lf-fan-blade)" stroke="var(--blade-start)" stroke-width=".8">' + blades + '</g></g><circle cx="120" cy="120" r="29" fill="var(--surface)" stroke="var(--purple)" stroke-width="2"/><circle cx="120" cy="120" r="9" fill="var(--purple)"/></svg>';
  return node.firstElementChild;
 }
 return view.extend({
@@ -98,7 +98,18 @@ return view.extend({
   this.rpm.textContent = rpm == null ? '—' : Math.round(rpm).toLocaleString();
   this.speedSource.textContent = s.rpm_source === 'actual' ? t('Measured speed · illustrative rotation', '实测转速 · 动画仅示意') : s.rpm_source === 'estimated' ? t('Estimated from PWM · illustrative rotation', '按 PWM 估算 · 动画仅示意') : t('Speed unavailable', '转速未获取');
   this.mode.textContent = unsupportedMode ? t('Unavailable', '不可用') : supported && running ? modeLabel(s.mode) : '—';
+  this.updateProgress('rpm', rpm, number(s.fan_max_rpm));
+  this.updateProgress('cpu', temp, number(s.configured_on_temp));
+  this.updateProgress('pwm', pwm, 100);
   this.syncAnimation();
+ },
+ updateProgress: function(key, value, maximum) {
+  var bar = this.progress[key], valid = value != null && maximum != null && maximum > 0;
+  var ratio = valid ? Math.max(0, Math.min(100, value / maximum * 100)) : 0;
+  bar.firstChild.style.width = ratio + '%';
+  bar.dataset.warning = String(key === 'cpu' && valid && ratio >= 80);
+  if (valid) { bar.setAttribute('aria-valuenow', ratio.toFixed(1)); bar.setAttribute('aria-valuetext', value + ' / ' + maximum); }
+  else { bar.removeAttribute('aria-valuenow'); bar.setAttribute('aria-valuetext', '—'); }
  },
  pollStatus: function() {
   if (this.disposed || document.hidden) return Promise.resolve();
@@ -162,14 +173,18 @@ return view.extend({
    mapNode.dataset.heading = t('Basic settings', '基本设置');
    owner.badge = E('span', { 'class': 'lf-chip' }, [ E('i'), E('span') ]); owner.device = E('span', { 'class': 'lf-tag' }); owner.note = E('p', { 'class': 'lf-runtime-error lf-muted', role: 'status' });
    var interval = Math.max(2, Math.min(30, number(initial.poll_interval) || 5));
+   owner.progress = {};
+   function progress(key, label) {
+    return owner.progress[key] = E('div', { 'class': 'lf-progress lf-progress-' + key, role: 'progressbar', 'aria-label': label, 'aria-valuemin': '0', 'aria-valuemax': '100' }, [E('span', { 'class': 'lf-progress-fill' })]);
+   }
    function metric(title, key, unit, color, caption) {
     owner[key] = E('span');
-    return E('div', { 'class': 'lf-metric' }, [ E('span', { 'class': 'lf-label' }, title), E('div', { 'class': 'lf-number lf-' + color }, [ owner[key], E('small', {}, unit) ]), E('span', { 'class': 'lf-muted' }, caption) ]);
+    return E('div', { 'class': 'lf-metric' }, [ E('span', { 'class': 'lf-label' }, title), E('div', { 'class': 'lf-number lf-' + color }, [ owner[key], E('small', {}, unit) ]), E('span', { 'class': 'lf-muted' }, caption) ].concat(key === 'mode' ? [] : [progress(key, title)]));
    }
    owner.rpm = E('span'); owner.speedSource = E('span', { 'class': 'lf-muted' }); var svg = fanIcon();
    owner.root = E('div', { 'class': 'lf-page' }, [ E('style', {}, style), E('div', { 'class': 'lf-heading' }, [ E('span', { 'class': 'lf-icon', 'aria-hidden': 'true' }, '✾'), E('h2', {}, t('Fan Control', '风扇控制')) ]),
     E('div', { 'class': 'lf-card lf-status' }, [ owner.badge, owner.device, E('span', { 'class': 'lf-muted' }, t('Refresh every %s seconds', '每 %s 秒刷新').format(interval)) ]), owner.note,
-    E('div', { 'class': 'lf-card lf-live' }, [ E('div', { 'class': 'lf-fan-unit' }, [ svg, E('div', { 'class': 'lf-fan-value' }, [owner.rpm, E('small', {}, ' RPM')]), owner.speedSource ]), metric(t('CPU temperature', 'CPU 温度'), 'cpu', ' °C', 'blue', t('Live temperature', '实时温度')), metric(t('PWM duty', 'PWM 占空比'), 'pwm', ' %', 'purple', t('Current output', '当前输出')), metric(t('Running mode', '运行模式'), 'mode', '', 'green', t('Actual service state', '实际运行状态')) ]), mapNode ]);
+    E('div', { 'class': 'lf-card lf-live' }, [ E('div', { 'class': 'lf-fan-unit' }, [ E('div', { 'class': 'lf-fan-stage' }, [svg, E('div', { 'class': 'lf-fan-value' }, [owner.rpm, E('small', {}, 'RPM')])]), owner.speedSource, progress('rpm', t('Maximum speed (RPM)', '最大转速（RPM）')) ]), metric(t('CPU temperature', 'CPU 温度'), 'cpu', ' °C', 'blue', t('Live temperature', '实时温度')), metric(t('PWM duty', 'PWM 占空比'), 'pwm', ' %', 'purple', t('Current output', '当前输出')), metric(t('Running mode', '运行模式'), 'mode', '', 'green', t('Actual service state', '实际运行状态')) ]), mapNode ]);
    owner.motion = matchMedia('(prefers-reduced-motion: reduce)'); var rotor = svg.querySelector('.lf-rotor');
    if (rotor.animate) { owner.animation = rotor.animate([{ transform: 'rotate(0deg)' }, { transform: 'rotate(360deg)' }], { duration: 2400, iterations: Infinity }); owner.animation.pause(); }
    owner.visibility = function() { owner.syncAnimation(); if (!document.hidden) owner.pollStatus(); };
