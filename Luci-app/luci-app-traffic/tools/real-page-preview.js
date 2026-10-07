@@ -15,7 +15,7 @@
  */
 const fs = require('fs');
 const path = require('path');
-const OUT = process.argv[2] || path.join(__dirname, '..', '..', 'design');
+const OUT = process.argv[2] || path.join(__dirname, '..', '..', 'Test', 'luci-app-traffic', 'preview');
 const VIEW = path.join(__dirname, '..', 'htdocs', 'luci-static', 'resources', 'view', 'traffic', 'overview.js');
 const src = fs.readFileSync(VIEW, 'utf8')
   .replace(/^'use strict';\s*$/m, '').replace(/^'require [^']+';\s*$/gm, '');
@@ -58,7 +58,8 @@ const factory=new Function('view','rpc','dom','poll','_','E','L','document','Ima
   src.replace(/return view\.extend\(/, 'global.__injectCss = injectCss;\nreturn view.extend('));
 const viewStub={extend(o){ viewStub.__obj=o; return o; }};
 const domStub={content(node,ch){ node.children=[]; (Array.isArray(ch)?ch:[ch]).forEach(x=>{ if(x) node.appendChild(x); }); }};
-const rpcStub={declare(){ return ()=>Promise.resolve({}); }};
+const rpcStub={declare(spec){ return ()=>Promise.resolve(spec.method === 'getHourlyChunk'
+  ? {cursor:'preview',offset:0,next:12,total:12,done:true,data:Buffer.from('{\"hours\":[]}').toString('base64')} : {}); }};
 const PO = loadPo(path.join(__dirname, '..', 'translations', 'zh_Hans', 'traffic.po'));
 // an untranslated string falls through to its msgid, which is what LuCI does
 const translate = s => (PO[s] !== undefined ? PO[s] : s);
@@ -101,7 +102,7 @@ const HOURS=Array.from({length:24},(_,h)=>{
     router:Math.round(90e3*f) };
 });
 const SUMMARY={ collected_at:Math.floor(Date.now()/1000), interval:10, flows:371,
-  dnsmap_lines:9305, pending:0, acct:1, version:'0.1.27-r1', hour:'2026-09-17T10',
+  dnsmap_lines:9305, pending:0, acct:1, version:'1.2.3-r5', hour:'2026-09-17T10',
   totals:{down:2.84e9,up:3.76e9,router:1.07e9,client_count:9,exact:120,bucket:60,residual:20},
   clients:[{name:'Mac',ip:'192.168.2.21',bytes:8.09e9}], apps:[] };
 /* bursty rather than a clean sine: real traffic is long quiet stretches with

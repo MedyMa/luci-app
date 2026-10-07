@@ -1234,7 +1234,9 @@ return view.extend({
 				self.statRows[i] = r;
 			}
 			setText(r.k, x.k);
-			setText(r.v, x.v);
+			var coreNumber = [ _('Flows'), _('DNS mappings'), _('Devices'), _('Apps and sites') ].indexOf(x.k) !== -1;
+			setText(r.v, coreNumber && /^\d+$/.test(String(x.v))
+				? Number(x.v).toLocaleString('en-US') : x.v);
 			var rowClass = 'tf-stat' + (x.k === _('Collector version') ? ' tf-stat-version' :
 				x.k === _('Counting method') ? ' tf-stat-source' :
 				x.k === _('Bucket') ? ' tf-stat-period' :
@@ -2363,12 +2365,14 @@ function injectCss() {
 		'.tf-page .tf-stat-state .tf-warn{background:rgba(255,143,31,.12);}',
 		'.tf-page .tf-stat-state .tf-warn:before{background:currentColor;}',
 		'.tf-page .tf-stat-refresh{display:block;font-size:.7rem;color:var(--tf-dim);margin:.25rem 0 0 1.65rem;}',
-		'.tf-page .tf-stat-metrics{display:grid;grid-template-columns:repeat(4,120px);gap:28px;text-align:left;flex:1 0 564px;}',
-		'.tf-page .tf-stat-metrics .tf-stat-val{font-size:1.55rem;font-weight:700;}',
-		'.tf-page .tf-stat-meta{position:relative;display:grid;grid-template-columns:minmax(0,max-content) max-content minmax(0,max-content) max-content minmax(max-content,1fr);gap:.35rem .65rem;',
-		'padding-left:1.15rem;align-items:baseline;flex:0 0 432px;margin-left:auto;}',
+		'.tf-page .tf-stat-metrics{display:grid;grid-template-columns:repeat(4,120px);gap:28px;text-align:center;flex:1 0 564px;}',
+		'.tf-page .tf-stat-metrics .tf-stat{align-items:center;}',
+		'.tf-page .tf-stat-metrics .tf-stat-val{font-size:1.55rem;font-weight:700;line-height:1.2;}',
+		'.tf-page .tf-stat-meta{position:relative;display:grid;grid-template-columns:32px 70px 78px 92px minmax(max-content,1fr);gap:.35rem 10px;',
+		'padding-left:1.15rem;align-items:baseline;flex:0 0 456px;margin-left:auto;}',
 		'.tf-page .tf-stat-meta .tf-stat{display:contents;}',
-		'.tf-page .tf-stat-meta .tf-stat-cap,.tf-page .tf-stat-meta .tf-stat-val{font-size:.7rem;}',
+		'.tf-page .tf-stat-meta .tf-stat-cap{font-size:.75rem;white-space:nowrap;}',
+		'.tf-page .tf-stat-meta .tf-stat-val{font-size:.7rem;}',
 		'.tf-page .tf-stat-meta .tf-stat-period .tf-stat-cap{grid-area:1/1;}',
 		'.tf-page .tf-stat-meta .tf-stat-period .tf-stat-val{grid-area:1/2;}',
 		'.tf-page .tf-stat-meta .tf-stat-clients .tf-stat-cap{grid-area:2/3;}',

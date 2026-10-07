@@ -264,17 +264,17 @@ chk(b5.length===10, '所有原始读数直接展示');
 chk(v5.statusEl.children.length===3,'状态条分为三个区域');
 const core=boxes(v5.stripMetrics);
 chk(core.map(x=>x.cap).join('|')==='Flows|DNS mappings|Devices|Apps and sites','原版四个核心指标顺序正确');
-chk(core.map(x=>x.val).join('|')==='1234|5678|12|7','核心数值沿用真实数据');
+chk(core.map(x=>x.val).join('|')==='1,234|5,678|12|7','核心数值沿用真实数据');
 chk(boxes(v5.stripMeta).map(x=>x.cap).join('|')==='Bucket|Browser clients|Collector version|Router and tunnel|Counting method','原版辅助信息全部直接展示');
 chk(txt(v5.stripState).includes('Updates every 10 seconds'),'更新提示沿用采集间隔');
 const meta=v5.stripMeta, firstCore=v5.stripMetrics.children[0];
 view.drawStatus.call(v5,{collected_at:Math.floor(Date.now()/1000),interval:10,flows:2345,dnsmap_lines:6789,pending:3,acct:1},items);
 chk(v5.stripMeta===meta && count(v5.statusEl,'details')===0,'刷新保留辅助区域，不使用折叠详情');
-chk(v5.stripMetrics.children[0]===firstCore && boxes(v5.stripMetrics)[0].val==='2345','原位更新核心数字');
+chk(v5.stripMetrics.children[0]===firstCore && boxes(v5.stripMetrics)[0].val==='2,345','原位更新核心数字');
 const vOnly=freshView();
 view.drawStatus.call(vOnly,{collected_at:Math.floor(Date.now()/1000),interval:10,flows:1,dnsmap_lines:1,acct:1},items);
 chk(boxes(vOnly.statusEl).length===5,'窗口合计加载前不伪造设备或流量数据');
-chk(b5.some(b=>b.val==='5678'),'域名映射记录数直接展示');
+chk(b5.some(b=>b.val==='5,678'),'域名映射记录数直接展示');
 chk(b5.some(b=>b.val==='nft counters'),'计数器来源保留');
 const summaryFirst=freshView();
 const summary=[{cap:'Bucket',val:'24'},{cap:'Browser clients',val:'1.2 MiB'},
@@ -471,7 +471,7 @@ const varUp=(css.match(/--tf-up:#26c281;/g)||[]).length;
 chk(hardUp===varUp, `写死的上行色只出现在变量定义里（共 ${hardUp} 处，其中 ${varUp} 处是定义）`);
 // the strip has to reach both edges without leaving a ragged gap, and the boxes
 // have to stay the same size
-chk(/\.tf-page \.tf-stat-metrics\{[^}]*grid-template-columns:repeat\(4,120px\)[^}]*gap:28px[^}]*text-align:left/.test(css), '核心指标固定120px列宽、28px间距并左对齐');
+chk(/\.tf-page \.tf-stat-metrics\{[^}]*grid-template-columns:repeat\(4,120px\)[^}]*gap:28px[^}]*text-align:center/.test(css), '核心指标固定120px列宽、28px间距并各自居中');
 chk(!/tf-stat-card\.tf-stat-warn\{display:block/.test(css),'手机不恢复显示警告状态条');
 // The page must style its own controls and nothing else: a rule against a LuCI
 // core class would restyle the core view action buttons on every other page.

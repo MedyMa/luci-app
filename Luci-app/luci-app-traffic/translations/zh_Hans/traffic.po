@@ -248,7 +248,7 @@ msgstr "在 LAN 接口处逐包计数，包含被代理的流量"
 
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "Counting method"
-msgstr "计数方式："
+msgstr "计数方式"
 
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "nft counters"
