@@ -25,7 +25,7 @@ view.animation = {
  play() { this.state = 'running'; }, pause() { this.state = 'paused'; },
  updatePlaybackRate(rate) { this.rate = rate; this.updates++; }, cancel() { this.state = 'cancelled'; }
 };
-for (const key of ['device', 'note', 'cpu', 'pwm', 'rpm', 'speedSource', 'mode']) view[key] = { textContent: '' };
+for (const key of ['device', 'note', 'cpu', 'pwm', 'rpm', 'mode']) view[key] = { textContent: '', setAttribute(key,value){this[key]=value;} };
 view.badge = { dataset: {}, lastChild: { textContent: '' } };
 view.curve = {}; view.curveMarker = {style:{}}; for(const key of ['curveOff','curveCurrent','curveOn'])view[key]={textContent:''};
 view.progress = Object.fromEntries(['rpm','cpu','pwm'].map(key => [key, {dataset:{}, firstChild:{style:{}}, setAttribute(key,value){this[key]=value;}, removeAttribute(key){delete this[key];}}]));
@@ -42,7 +42,7 @@ assert.equal(view.cpu.textContent, '48.6');
 assert.equal(view.rpm.textContent, '1860', 'RPM must not use thousands separators');
 assert.equal(view.progress.rpm.firstChild.style.width, '62%'); assert.equal(view.progress.cpu.firstChild.style.width, '81%'); assert.equal(view.progress.cpu.dataset.warning, 'true');
 view.updateProgress('pwm', 200, 100); assert.equal(view.progress.pwm.firstChild.style.width,'100%'); view.updateProgress('rpm', 20, 0); assert.equal(view.progress.rpm.firstChild.style.width,'0%'); assert.equal(view.progress.rpm['aria-valuenow'],undefined);
-assert.match(view.speedSource.textContent, /估算/);
+assert.match(view.rpm['aria-label'], /估算/);
 view.updateStatus({ ...status, running: false });
 assert.equal(view.badge.lastChild.textContent, '已停止', 'Configured enabled must not imply running');
 assert.equal(view.animation.state, 'paused');
@@ -53,7 +53,7 @@ assert.equal(view.animation.state, 'paused');
 view.updateStatus({ ...status, rpm_source: 'actual', fan_rpm: 0 });
 assert.equal(view.animation.state, 'paused', 'Measured zero RPM takes precedence over PWM');
 view.updateStatus({ ...status, pwm_percent: 100, fan_rpm: 3000, rpm_source: 'actual' });
-assert.match(view.speedSource.textContent, /实测/);
+assert.match(view.rpm['aria-label'], /实测/);
 let ticks = 0;
 while (frames.size) {
  const [key, callback] = frames.entries().next().value;

@@ -26,7 +26,7 @@ msgstr ""
 msgid "Enable service"
 msgstr ""
 
-msgid "Estimated from PWM · illustrative rotation"
+msgid "Estimated speed"
 msgstr ""
 
 msgid "Fan Control"
@@ -62,7 +62,7 @@ msgstr ""
 msgid "Maximum speed (RPM)"
 msgstr ""
 
-msgid "Measured speed · illustrative rotation"
+msgid "Measured speed"
 msgstr ""
 
 msgid "Mode unavailable"

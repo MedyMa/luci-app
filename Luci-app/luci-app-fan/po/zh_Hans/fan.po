@@ -29,8 +29,8 @@ msgstr "已停用"
 msgid "Enable service"
 msgstr "启用服务"
 
-msgid "Estimated from PWM · illustrative rotation"
-msgstr "按 PWM 估算 · 动画仅示意"
+msgid "Estimated speed"
+msgstr "估算转速"
 
 msgid "Fan Control"
 msgstr "风扇控制"
@@ -65,8 +65,8 @@ msgstr "持续满速散热"
 msgid "Maximum speed (RPM)"
 msgstr "最大转速（RPM）"
 
-msgid "Measured speed · illustrative rotation"
-msgstr "实测转速 · 动画仅示意"
+msgid "Measured speed"
+msgstr "实测转速"
 
 msgid "Mode unavailable"
 msgstr "模式不可用"
