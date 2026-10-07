@@ -519,6 +519,20 @@ const sumOf=(o)=>Object.assign({collected_at:1700000000,interval:10,flows:10,dns
   clients:[{name:'Mac',ip:'192.168.2.21',bytes:1.5e8}],apps:[]},o||{});
 
 const vIf=mkView({});
+const clientReading=v=>(boxes(v.statusEl).find(b=>b.cap==='Browser clients')||{}).val;
+const vClientSession=mkView({});
+view.renderLive.call(vClientSession,sumOf({totals:Object.assign({},TOT,{client_bytes:4096}),
+  clients:[{ip:'192.168.2.1',bytes:1024}]}));
+chk(clientReading(vClientSession)==='4.00 KiB','本次运行客户端合计取完整client_bytes，不取分类合计或截断的热门客户端列表');
+const vClientRange=mkView({});
+view.renderHourly.call(vClientRange,{hours:[
+  {hour:'h0',apps:[{name:'YouTube',down:100,up:0}],clients:[{ip:'192.168.2.1',bytes:1024}]},
+  {hour:'h1',apps:[{name:'YouTube',down:200,up:0}],clients:[{ip:'192.168.2.1',bytes:2048},{ip:'192.168.2.2',bytes:1024}]}
+]});
+chk(clientReading(vClientRange)==='4.00 KiB','时间范围客户端合计累加该范围客户端字节，不取应用归属合计');
+const vClientZero=mkView({});
+view.renderLive.call(vClientZero,sumOf({totals:Object.assign({},TOT,{client_bytes:0})}));
+chk(clientReading(vClientZero)==='0 B','客户端零流量不回退到应用流量');
 view.renderLive.call(vIf, sumOf({iface:IFACE,offload:1}));
 chk(flat(vIf.totalEl)==='3.73 GiB', `总计取接口计数而不是归属值（${flat(vIf.totalEl)}）`);
 chk(flat(vIf.grandRow.cells.down)==='2.79 GiB' && flat(vIf.grandRow.cells.up)==='954 MiB',

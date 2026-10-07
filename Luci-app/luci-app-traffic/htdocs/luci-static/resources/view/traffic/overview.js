@@ -1565,7 +1565,7 @@ return view.extend({
 		this.drawSummary([
 			{ cap: _('Bucket'), val: this.archiveEmpty ? '0'
 				: (this.archHours === undefined ? '—' : String(this.archHours)) },
-			{ cap: _('Browser clients'), val: fmtBytes(all) },
+			{ cap: _('Browser clients'), val: fmtBytes(clientTotal) },
 			{ cap: _('Router and tunnel'), val: fmtBytes(t.router) },
 			{ cap: _('Devices'), val: String(Number(t.client_count) || 0) },
 			/* Count product and site rows; protocol buckets are visible in the
@@ -1743,7 +1743,7 @@ return view.extend({
 		hours.forEach(function(b) { rt += Number(b.router) || 0; });
 		this.drawSummary([
 			{ cap: _('Bucket'), val: String(hours.length) },
-			{ cap: _('Browser clients'), val: fmtBytes(total) },
+			{ cap: _('Browser clients'), val: fmtBytes(clTotal) },
 			{ cap: _('Router and tunnel'), val: fmtBytes(rt) },
 			{ cap: _('Devices'), val: String(cl.length) },
 			{ cap: _('Apps and sites'), val: String(groupServices(items).filter(function(a) { return !isBucket(a.name); }).length) }
@@ -2337,12 +2337,12 @@ function injectCss() {
 		'.tf-page .tf-stat-meta .tf-stat-cap,.tf-page .tf-stat-meta .tf-stat-val{font-size:.7rem;}',
 		'.tf-page .tf-stat-meta .tf-stat-period .tf-stat-cap{grid-area:1/1;}',
 		'.tf-page .tf-stat-meta .tf-stat-period .tf-stat-val{grid-area:1/2;}',
-		'.tf-page .tf-stat-meta .tf-stat-clients .tf-stat-cap{grid-area:1/3;}',
-		'.tf-page .tf-stat-meta .tf-stat-clients .tf-stat-val{grid-area:1/4;}',
+		'.tf-page .tf-stat-meta .tf-stat-clients .tf-stat-cap{grid-area:2/3;}',
+		'.tf-page .tf-stat-meta .tf-stat-clients .tf-stat-val{grid-area:2/4;}',
 		'.tf-page .tf-stat-meta .tf-stat-tunnel .tf-stat-cap{grid-area:2/1;}',
 		'.tf-page .tf-stat-meta .tf-stat-tunnel .tf-stat-val{grid-area:2/2;}',
-		'.tf-page .tf-stat-meta .tf-stat-source .tf-stat-cap{grid-area:2/3;}',
-		'.tf-page .tf-stat-meta .tf-stat-source .tf-stat-val{grid-area:2/4;}',
+		'.tf-page .tf-stat-meta .tf-stat-source .tf-stat-cap{grid-area:1/3;}',
+		'.tf-page .tf-stat-meta .tf-stat-source .tf-stat-val{grid-area:1/4;}',
 		'.tf-page .tf-stat-meta .tf-stat-version{display:flex;flex-direction:row;grid-area:1/5/3/6;align-self:center;justify-content:flex-end;}',
 		'.tf-page .tf-stat-meta .tf-stat-version .tf-stat-val{font-size:.7rem;color:var(--tf-fg);',
 		'background:var(--tf-chip);border:1px solid var(--tf-line);border-radius:999px;padding:.2rem .6rem;}',
