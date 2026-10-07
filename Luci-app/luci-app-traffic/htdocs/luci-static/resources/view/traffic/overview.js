@@ -1181,7 +1181,16 @@ return view.extend({
 		var a = this.statBits || [], b = this.sumBits || [], bits = a.concat(b);
 		var self = this;
 		if (!this.statRows) this.statRows = [];
-		if (!this.statSep) this.statSep = el('div', { 'class': 'tf-stat-sep' });
+		if (!this.stripState) {
+			this.stripState = el('div', { 'class': 'tf-stat-state' });
+			this.stripRefresh = el('span', { 'class': 'tf-stat-refresh' });
+			setText(this.stripRefresh, _('Every 5 seconds'));
+			this.stripMetrics = el('div', { 'class': 'tf-stat-metrics' });
+			this.stripMeta = el('div', { 'class': 'tf-stat-meta' });
+			this.statusEl.appendChild(this.stripState);
+			this.statusEl.appendChild(this.stripMetrics);
+			this.statusEl.appendChild(this.stripMeta);
+		}
 		bits.forEach(function(x, i) {
 			var r = self.statRows[i];
 			if (!r) {
@@ -1193,7 +1202,7 @@ return view.extend({
 				r.k = r.row.firstChild;
 				self.statRows[i] = r;
 			}
-			setText(r.k, x.k);
+			setText(r.k, x.k === _('Bucket') ? _('Collected hours') : x.k);
 			setText(r.v, x.v);
 			/* a shortened value keeps its exact form in the tooltip, so nothing
 			 * is lost by showing it short */
@@ -1206,24 +1215,23 @@ return view.extend({
 			var extra = this.statRows.pop();
 			if (extra.row.parentNode) extra.row.parentNode.removeChild(extra.row);
 		}
-		/* The two sets are drawn by different callers, so one that grows after
-		 * the other is already in the DOM would otherwise append its new boxes
-		 * past the separator instead of before it.  Re-appending only what is
-		 * out of place costs one comparison per box. */
-		var want = [], i;
-		for (i = 0; i < a.length; i++) want.push(this.statRows[i].row);
-		if (a.length && b.length) want.push(this.statSep);
-		for (i = a.length; i < bits.length; i++) want.push(this.statRows[i].row);
-		for (i = 0; i < want.length; i++) {
-			if (this.statusEl.children[i] !== want[i])
-				this.statusEl.insertBefore(want[i], this.statusEl.children[i] || null);
+		/* Keep the cached readings in their visual groups. Updates only move
+		* nodes when a newly loaded summary changes the membership. */
+		function place(parent, indexes, tail) {
+			var want = indexes.filter(function(i) { return i < bits.length; })
+				.map(function(i) { return self.statRows[i].row; });
+			if (tail) want.push(tail);
+			want.forEach(function(row, i) {
+				if (parent.children[i] !== row)
+					parent.insertBefore(row, parent.children[i] || null);
+			});
 		}
-		/* The stylesheet hides this card on a phone, where ten boxes cannot fit -
-		 * but a stale or dead collector has to stay visible, and the state box is
-		 * the only thing that says so.  The class is what lets the stylesheet bring
-		 * back just that one box.  A selector like :has() would say it in CSS alone
-		 * and is exactly the kind of thing this page avoids, since the reason it
-		 * uses no flex gap is a Safari that lacks it. */
+		var offset = a.length, i;
+		place(this.stripState, a.length ? [0] : [], this.stripRefresh);
+		place(this.stripMetrics, (a.length ? [2] : []).concat(b.length ? [offset + 3, offset + 4, offset + 1] : []));
+		place(this.stripMeta, b.length
+			? (a.length ? [offset, 3, 5, offset + 2, 4, 1] : [offset, offset + 2])
+			: (a.length ? [3, 4, 5, 1] : []));
 		var warn = false;
 		for (i = 0; i < bits.length; i++) if (bits[i].warn) warn = true;
 		var cls = 'tf-card tf-stat-card' + (warn ? ' tf-stat-warn' : '');
@@ -1325,7 +1333,7 @@ return view.extend({
 			{ k: _('State'), v: state, warn: warn },
 			{ k: _('Interval'), v: iv ? iv + 's' : '—' },
 			{ k: _('Flows'), v: String(Number(s.flows) || 0) },
-			{ k: _('Host names'), v: String(Number(s.dnsmap_lines) || 0) },
+			{ k: _('DNS mappings'), v: String(Number(s.dnsmap_lines) || 0) },
 			/* which layer is producing the client totals: the nft counters see
 			   every packet, the conntrack fallback only what the connection table
 			   knows.  A fallback is not an error, but it must not look like one
@@ -2210,14 +2218,7 @@ function injectCss() {
 		 * They are a row rather than three blocks because the two halves have to
 		 * sit side by side and be the same height. */
 		'.tf-page .tf-mid{display:flex;flex-wrap:wrap;align-items:stretch;}',
-		/* The whole layout is sized in percentages and in flex-basis, and both are
-		 * only arithmetic that adds up under border-box: with the content box,
-		 * flex-basis:6.25rem means 100px of text plus the padding, so ten boxes
-		 * needed 1244px inside a 1152px card and the tenth wrapped onto a row of
-		 * its own - and the two 50% cards, each 36.8px wider than half, stopped
-		 * fitting beside each other.  The theme sets this globally and every other
-		 * page leans on that; this page states it for its own subtree so it does
-		 * not depend on which theme happens to be installed. */
+		/* Keep card widths independent of the theme's box-sizing defaults. */
 		'.tf-page,.tf-page *,.tf-page *:before,.tf-page *:after{box-sizing:border-box;}',
 		'.tf-page .tf-stat-card{order:1;flex:0 0 100%;}',
 		'.tf-page .tf-chart-card{order:2;flex:0 0 calc(50% - .5rem);max-width:calc(50% - .5rem);',
@@ -2309,52 +2310,30 @@ function injectCss() {
 		'.tf-page .tf-chart-empty{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);',
 		'text-align:center;color:var(--tf-dim);font-size:.85rem;pointer-events:none;}',
 
-		/* One strip of identical boxes: the collector's own state and the totals
-		 * of the selected window, in a single row.  They used to be two cards
-		 * with two rows of chips of different widths, which read as two unrelated
-		 * things rather than as one band of readings.  One flex line is also what
-		 * keeps the boxes the same size: two rows would each share out their own
-		 * width, and six boxes in one against four in the other cannot come out
-		 * equally wide.
-		 *
-		 * flex-basis with grow rather than a fixed width, so the row ends flush
-		 * with the card instead of leaving a ragged gap on a wide screen, and
-		 * min-width keeps a box from ever being squeezed under its own label. */
-		'.tf-page .tf-stat-card{padding:.85rem 1.15rem;}',
-		'.tf-page .tf-stat-strip{display:flex;flex-wrap:wrap;align-items:stretch;gap:.5rem;}',
-		/* .35rem of side padding rather than .5: at the 6.25rem minimum width the
-		 * longest English caption ("Router and tunnel") measures 87px against the
-		 * 84px that .5rem leaves, so it ellipsised.  The Chinese labels are two to
-		 * six characters and were never near the edge. */
-		/* max-width is what keeps the boxes the same size.  With grow alone they
-		 * are equal only while the row is full: as soon as the last row has fewer
-		 * boxes they share that whole row between them, and a 10-box strip on a
-		 * 1024px screen ended with two boxes 449px wide against the first row's
-		 * 105.  Capping the growth means every box is between 6.25 and 6.75rem at
-		 * every width - 103px on a 1200px screen, 108 on a phone, where the rows
-		 * come out equal instead of merely full. */
-		'.tf-page .tf-stat{flex:1 1 6.25rem;min-width:6.25rem;max-width:6.75rem;',
-		'display:flex;flex-direction:column;',
-		'align-items:center;justify-content:center;text-align:center;gap:.05rem;',
-		'padding:.4rem .35rem;background:var(--tf-chip);border-radius:12px;}',
-		/* the two sets are not the same kind of reading, so a hairline divides them */
-		'.tf-page .tf-stat-sep{flex:0 0 1px;align-self:stretch;margin:.2rem .1rem;background:var(--tf-line);}',
-		/* No text-transform: the labels are mostly Chinese, which it cannot touch
-		 * anyway, so forcing upper case only made the few English ones (the
-		 * collector version among them) look like a different kind of label.
-		 *
-		 * The caption is allowed to wrap rather than being cut with an ellipsis.
-		 * The boxes are sized for the Chinese labels, which are two to six
-		 * characters; the longest English ones ("Router and tunnel", "Collector
-		 * version") are wider than a box, and "Collector versi…" is a label the
-		 * reader has to guess at.  Wrapping costs one line of height in English
-		 * and nothing in Chinese, and the boxes stay equal because they stretch.
-		 * The value below never wraps: a number split across two lines is worse
-		 * than one that is cut. */
-		'.tf-page .tf-stat-cap{font-size:.7rem;color:var(--tf-dim);letter-spacing:.03em;',
-		'max-width:100%;overflow-wrap:break-word;}',
-		'.tf-page .tf-stat-val{font-size:.86rem;font-weight:600;font-variant-numeric:tabular-nums;',
-		'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}',
+		/* Status, four core readings, and two rows of auxiliary information. */
+		'.tf-page .tf-stat-card{padding:1.2rem 1.4rem;}',
+		'.tf-page .tf-stat-strip{display:grid;grid-template-columns:9rem minmax(0,1fr) 33rem;align-items:center;gap:1.5rem;}',
+		'.tf-page .tf-stat-state{border-right:1px solid var(--tf-line);padding-right:1.2rem;}',
+		'.tf-page .tf-stat{display:flex;flex-direction:column;min-width:0;gap:.25rem;}',
+		'.tf-page .tf-stat-cap{font-size:.75rem;color:var(--tf-dim);}',
+		'.tf-page .tf-stat-val{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;}',
+		'.tf-page .tf-stat-state .tf-stat-cap{display:none;}',
+		'.tf-page .tf-stat-state .tf-stat-val{font-size:1.05rem;white-space:normal;}',
+		'.tf-page .tf-stat-state .tf-stat-val:before{content:"";display:inline-block;width:.6rem;height:.6rem;',
+		'background:var(--tf-up);border-radius:50%;margin-right:.65rem;}',
+		'.tf-page .tf-stat-state .tf-warn:before{background:currentColor;}',
+		'.tf-page .tf-stat-refresh{display:block;font-size:.7rem;color:var(--tf-dim);margin:.3rem 0 0 1.25rem;}',
+		'.tf-page .tf-stat-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem;text-align:center;}',
+		'.tf-page .tf-stat-metrics .tf-stat-val{font-size:1.55rem;font-weight:700;}',
+		'.tf-page .tf-stat-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.5rem 1rem;',
+		'border-left:1px solid var(--tf-line);padding-left:1.5rem;}',
+		'.tf-page .tf-stat-meta .tf-stat{flex-direction:row;align-items:baseline;justify-content:space-between;gap:.5rem;}',
+		'.tf-page .tf-stat-meta .tf-stat-cap,.tf-page .tf-stat-meta .tf-stat-val{font-size:.7rem;}',
+		'.tf-page .tf-stat-meta .tf-stat:nth-child(3){color:var(--tf-dim);justify-content:flex-end;}',
+		'.tf-page .tf-stat-meta .tf-stat:nth-child(3) .tf-stat-cap{display:none;}',
+		'@media(max-width:85rem){.tf-page .tf-stat-strip{grid-template-columns:9rem minmax(0,1fr);}',
+		'.tf-page .tf-stat-meta{grid-column:1/-1;border-left:0;border-top:1px solid var(--tf-line);padding:1rem 0 0;}}',
+		'@media(max-width:52rem){.tf-page .tf-stat-card{display:none;}}',
 		/* Long values (a query log path, the box own addresses) are normal text,
 		 * not code: monospace here made two entries of one row look like they
 		 * came from a different font, and read worse at this size. */
@@ -2618,17 +2597,6 @@ function injectCss() {
 		'.tf-page .tf-hero{flex-wrap:wrap;gap:.6rem;}',
 		'.tf-page .tf-hero-ctl{margin-left:0;width:100%;justify-content:flex-start;}',
 		'.tf-page .tf-donut-wrap{justify-content:center;}',
-		'.tf-page .tf-stat-strip{gap:.35rem;}',
-		/* Three boxes to a row instead of two, which is the difference between a
-		 * five-row strip and a four-row one on a 360px phone.  A 5.3rem box leaves
-		 * 73.6px of text once the .35rem side padding is off, and a Chinese caption
-		 * costs 11.2px a character plus .03em of tracking, so five characters
-		 * (58px: 客户端合计, 客户端计数) fit and a sixth does not.  The caption
-		 * wraps rather than overflowing, so breaking this is silent - which is why
-		 * the budget is written here: "客户端计数来源" was seven characters and put
-		 * this box on two lines on every phone.  Widen the box only with the row
-		 * count in mind, since three 5.3rem boxes are what fit a 360px screen. */
-		'.tf-page .tf-stat{flex:0 0 5.3rem;min-width:5.3rem;max-width:5.3rem;}',
 		/* the list scrolls sideways here instead of squeezing the name column:
 		 * every column stays readable and nothing wraps into a second line */
 		'.tf-page .tf-table{min-width:34rem;}}',
@@ -2695,16 +2663,7 @@ function injectCss() {
 		'.tf-page .tf-table colgroup col:nth-child(4),',
 		'.tf-page .tf-table colgroup col:nth-child(5),',
 		'.tf-page .tf-table colgroup col:nth-child(6){width:0;}',
-		/* The ten-box strip does not fit a phone - measured, it needed four rows at
-		 * 390px and five at 320px, which is a third of the screen spent on readings
-		 * that are reference rather than the answer.  It goes.  What stays is the
-		 * state box, and only when it has something to warn about, so "the snapshot
-		 * stopped arriving" is still said out loud on a phone. */
-		'.tf-page .tf-stat-card{display:none;}',
-		'.tf-page .tf-stat-card.tf-stat-warn{display:block;}',
-		'.tf-page .tf-stat-card.tf-stat-warn .tf-stat{display:none;}',
-		'.tf-page .tf-stat-card.tf-stat-warn .tf-stat:first-child{display:flex;}',
-		'.tf-page .tf-stat-card.tf-stat-warn .tf-stat-sep{display:none;}}'
+		'}'
 	].join('');
 
 	var st = document.createElement('style');

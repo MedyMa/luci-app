@@ -42,7 +42,7 @@ msgstr "确定清空已统计的流量数据？"
 
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "Router and tunnel"
-msgstr "隧道"
+msgstr "路由器与隧道"
 
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "Browser clients"
@@ -216,15 +216,15 @@ msgstr "快照已过期"
 
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "Interval"
-msgstr "间隔"
+msgstr "采集间隔"
 
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "Flows"
 msgstr "连接跟踪"
 
 #: htdocs/luci-static/resources/view/traffic/overview.js
-msgid "Host names"
-msgstr "主机名"
+msgid "DNS mappings"
+msgstr "域名映射"
 
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "Waiting to resolve"
@@ -252,7 +252,7 @@ msgstr "在 LAN 接口处逐包计数，包含被代理的流量"
 
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "Client totals"
-msgstr "客户端计数"
+msgstr "计数来源"
 
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "nft counters"
@@ -377,3 +377,9 @@ msgstr "展开域名"
 
 msgid "of all traffic"
 msgstr "占全部流量"
+
+msgid "Collected hours"
+msgstr "已统计小时"
+
+msgid "Every 5 seconds"
+msgstr "每 5 秒刷新"

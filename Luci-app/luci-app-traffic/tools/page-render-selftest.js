@@ -97,8 +97,12 @@ const walk=(n,fn)=>{ fn(n); (n.children||[]).forEach(c=>walk(c,fn)); };
 const texts=(root)=>{ const a=[]; (root.children||[]).forEach(c=>walk(c,n=>{ if(n.tag==='span'&&n._text)a.push(n._text); })); return a; };
 const count=(root,tag)=>{ let k=0; (root.children||[]).forEach(c=>walk(c,n=>{ if(n.tag===tag)k++; })); return k; };
 // the strip's boxes, in order: one caption/value pair each
-const boxes=root=>(root.children||[]).filter(c=>(c.attrs||{}).class==='tf-stat')
-  .map(c=>{ const s=c.children.filter(x=>x.tag==='span'); return {cap:s[0]&&s[0]._text, val:s[1]&&s[1]._text}; });
+const boxes=root=>{ const a=[]; walk(root,c=>{
+  if((c.attrs||{}).class==='tf-stat'){
+    const spans=c.children.filter(x=>x.tag==='span');
+    a.push({cap:spans[0]&&spans[0]._text,val:spans[1]&&spans[1]._text});
+  }
+}); return a; };
 const txt=n=>{ let s=''; (function go(x){ if(!x||typeof x!=='object')return;
   if(x._text)s+=x._text+' '; ((x.children)||[]).forEach(go); })(n); return s; };
 
@@ -249,41 +253,36 @@ view.drawSeries.call(v4);
 chk(count(v4.chartEl,'svg')===1 && count(v4.chartEl,'line')===3, `空数据仍有轴：svg=${count(v4.chartEl,'svg')}, line=${count(v4.chartEl,'line')}`);
 chk(count(v4.chartEl,'div')>=1, `并有"暂无采样"提示（${count(v4.chartEl,'div')}）`);
 
-console.log('=== 状态条：一行十一个等宽框 ===');
+console.log('=== 状态条：状态、四个核心数字、辅助信息 ===');
 const v5=freshView();
 view.drawStatus.call(v5,{collected_at:Math.floor(Date.now()/1000),interval:10,flows:1234,
   dnsmap_lines:5678,pending:3,acct:1,version:'0.1.23-r1'},items);
 view.drawSummary.call(v5,[{cap:'Bucket',val:'24'},{cap:'Browser clients',val:'1.2 MiB'},
-  {cap:'Router and tunnel',val:'0 B'},{cap:'Client count',val:'12'},{cap:'Apps and sites',val:'7'}]);
+  {cap:'Router and tunnel',val:'0 B'},{cap:'Devices',val:'12'},{cap:'Apps and sites',val:'7'}]);
 const b5=boxes(v5.statusEl);
-chk(b5.length===11, `收集器状态 + 窗口合计共 11 个框（${b5.length}）`);
-chk(b5[0] && b5[0].cap==='State' && b5[0].val==='Running', `第一格是运行状态（${b5[0]&&b5[0].val}）`);
-chk(b5[5] && b5[5].cap==='Collector version', `第六格是采集器版本（${b5[5]&&b5[5].cap}）`);
-chk(b5[6] && b5[6].cap==='Bucket',
-    `分隔线后第一格是周期（${b5[6]&&b5[6].cap}）｜全表 ${b5.map(b=>b.cap).join('|')}`);
-// The two sets have to come out the same width, which is the whole reason they
-// are laid out as one flex line: two rows would each share out their own width,
-// and six boxes in one against five in the other cannot match.
-const kids=v5.statusEl.children;
-chk(kids.filter(c=>(c.attrs||{}).class==='tf-stat').length===11 &&
-    kids.filter(c=>(c.attrs||{}).class==='tf-stat-sep').length===1,
-    '十一个框加一条分隔线，按 6|5 排列');
-chk(kids[6] && kids[6].attrs.class==='tf-stat-sep', `分隔线在第 7 个位置（${kids[6]&&kids[6].attrs.class}）`);
-// the last box counts the applications the table below is listing, so it has to
-// stay last: it is the one reading that describes the rows rather than the bytes
-chk(b5[10] && b5[10].cap==='Apps and sites' && b5[10].val==='7',
-    `最后一格是应用数（${b5[10]&&b5[10].cap}=${b5[10]&&b5[10].val}）`);
-// the strip keeps its shape when only one of the two callers has run
+chk(b5.length===11, '所有原始读数直接展示');
+chk(v5.statusEl.children.length===3,'状态条分为三个区域');
+const core=boxes(v5.stripMetrics);
+chk(core.map(x=>x.cap).join('|')==='Flows|Devices|Apps and sites|Browser clients','四个核心指标顺序正确');
+chk(core.map(x=>x.val).join('|')==='1234|12|7|1.2 MiB','核心数值沿用真实数据');
+chk(boxes(v5.stripMeta).map(x=>x.cap).join('|')==='Collected hours|DNS mappings|Collector version|Router and tunnel|Client totals|Interval','辅助信息全部直接展示');
+chk(txt(v5.stripState).includes('Every 5 seconds'),'显示实际页面刷新间隔');
+const meta=v5.stripMeta, firstCore=v5.stripMetrics.children[0];
+view.drawStatus.call(v5,{collected_at:Math.floor(Date.now()/1000),interval:10,flows:2345,dnsmap_lines:6789,pending:3,acct:1},items);
+chk(v5.stripMeta===meta && count(v5.statusEl,'details')===0,'刷新保留辅助区域，不使用折叠详情');
+chk(v5.stripMetrics.children[0]===firstCore && boxes(v5.stripMetrics)[0].val==='2345','原位更新核心数字');
 const vOnly=freshView();
-view.drawStatus.call(vOnly,{collected_at:Math.floor(Date.now()/1000),interval:10,flows:1,
-  dnsmap_lines:1,pending:0,acct:1},items);
-chk(boxes(vOnly.statusEl).length===6, `只有收集器状态时 6 个框、无分隔线（${boxes(vOnly.statusEl).length}）`);
-chk(!vOnly.statusEl.children.some(c=>(c.attrs||{}).class==='tf-stat-sep'), '缺一组时不画分隔线');
-chk(b5.some(b=>b.val==='1234'), '含 conntrack 条目数');
-chk(b5.some(b=>b.val==='5678'), '含已解析主机名数');
-chk(b5.some(b=>b.cap==='Client totals') && b5.some(b=>b.val==='nft counters'),
-    '计数层启用时标明来源为 nft 计数器');
-
+view.drawStatus.call(vOnly,{collected_at:Math.floor(Date.now()/1000),interval:10,flows:1,dnsmap_lines:1,acct:1},items);
+chk(boxes(vOnly.statusEl).length===6,'窗口合计加载前不伪造设备或流量数据');
+chk(b5.some(b=>b.val==='5678'),'域名映射记录数直接展示');
+chk(b5.some(b=>b.val==='nft counters'),'计数器来源保留');
+const summaryFirst=freshView();
+const summary=[{cap:'Bucket',val:'24'},{cap:'Browser clients',val:'1.2 MiB'},
+  {cap:'Router and tunnel',val:'0 B'},{cap:'Devices',val:'12'},{cap:'Apps and sites',val:'7'}];
+view.drawSummary.call(summaryFirst,summary);
+chk(boxes(summaryFirst.stripMetrics).map(x=>x.cap).join('|')==='Devices|Apps and sites|Browser clients','合计先到时核心数字不被移到辅助区域');
+view.drawStatus.call(summaryFirst,{collected_at:Math.floor(Date.now()/1000),interval:10,flows:1,dnsmap_lines:2,acct:1},items);
+chk(boxes(summaryFirst.stripMetrics).length===4 && boxes(summaryFirst.statusEl).length===11,'状态后到时正确合并十一项读数');
 console.log('=== 注释行：条件性读数不进条 ===');
 chk(txt(v5.diagEl).indexOf('Waiting to resolve')>=0, `待解析在注释行（${txt(v5.diagEl).trim()}）`);
 chk(txt(v5.diagEl).indexOf('3')>=0, '待解析数量可见');
@@ -304,11 +303,10 @@ view.drawSummary.call(v10,[{cap:'Bucket',val:'24'},{cap:'Browser clients',val:'1
   {cap:'Router and tunnel',val:'0 B'},{cap:'Devices',val:'1'}]);
 chk(txt(v10.diagEl).trim()==='', '当前小时不再占用注释行');
 chk(v10.diagCardEl.style.display==='none', '普通场景下注释卡整张不显示');
-const bucketRow=(v10.statusEl.children||[]).filter(c=>(c.attrs||{}).class==='tf-stat')
-  .filter(c=>(c.children[0]||{})._text==='Bucket')[0];
+const bucketRow=v10.statRows.find(r=>r.k._text==='Collected hours').row;
 chk(bucketRow && String((bucketRow.attrs||{}).title||'').indexOf('2026-09-17T10')>=0,
     `当前小时挂在周期的提示里（${bucketRow&&bucketRow.attrs.title}）`);
-chk(boxes(v10.statusEl).filter(b=>b.cap==='Bucket').length===1, '只有一个周期框');
+chk(boxes(v10.statusEl).filter(b=>b.cap==='Collected hours').length===1, '只有一个周期框');
 const v8=freshView();
 view.drawStatus.call(v8,{collected_at:Math.floor(Date.now()/1000),interval:10,flows:1,
   dnsmap_lines:1,pending:0,acct:0,acct_error:'nft is not installed'},items);
@@ -444,7 +442,7 @@ chk(heroLine.length===2 && /grid-area:1\/2\/3\/3/.test(heroLine[0]) &&
 // The page carries one range control, not two: the chart tier is derived from
 // the range, so the only dropdown on the page is the picker in the hero.
 for(const sel of ['.tf-page .tf-range','.tf-page .tf-dd-menu','.tf-page .tf-col-app',
-                  '.tf-page .tf-stat-strip','.tf-page .tf-stat-sep','.tf-page .tf-diag',
+                  '.tf-page .tf-stat-strip','.tf-page .tf-stat-metrics','.tf-page .tf-diag',
                   '.tf-page .tf-hero-stats','.tf-page .tf-donut-center',
                   '.tf-page .tf-curve-down','.tf-page .tf-curve-up',
                   '.tf-page .tf-area-down','.tf-page .tf-area-up']){
@@ -469,9 +467,8 @@ const varUp=(css.match(/--tf-up:#26c281;/g)||[]).length;
 chk(hardUp===varUp, `写死的上行色只出现在变量定义里（共 ${hardUp} 处，其中 ${varUp} 处是定义）`);
 // the strip has to reach both edges without leaving a ragged gap, and the boxes
 // have to stay the same size
-const statRule=css.match(/\.tf-page \.tf-stat\{([^}]*)\}/);
-chk(!!statRule && /flex:1 1/.test(statRule[1]) && /min-width/.test(statRule[1]),
-    '数据框按 flex-basis 分配、有最小宽度');
+chk(/\.tf-page \.tf-stat-metrics\{[^}]*grid-template-columns:repeat\(4,/.test(css), '四个核心数字等宽排列');
+chk(!/tf-stat-card\.tf-stat-warn\{display:block/.test(css),'手机不恢复显示警告状态条');
 // The page must style its own controls and nothing else: a rule against a LuCI
 // core class would restyle the core view action buttons on every other page.
 // The buttons here therefore carry app classes (tf-*) rather than core ones.
