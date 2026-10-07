@@ -265,7 +265,7 @@ chk(v5.statusEl.children.length===3,'状态条分为三个区域');
 const core=boxes(v5.stripMetrics);
 chk(core.map(x=>x.cap).join('|')==='Flows|DNS mappings|Devices|Apps and sites','原版四个核心指标顺序正确');
 chk(core.map(x=>x.val).join('|')==='1234|5678|12|7','核心数值沿用真实数据');
-chk(boxes(v5.stripMeta).map(x=>x.cap).join('|')==='Bucket|Browser clients|Collector version|Router and tunnel|Client totals','原版辅助信息全部直接展示');
+chk(boxes(v5.stripMeta).map(x=>x.cap).join('|')==='Bucket|Browser clients|Collector version|Router and tunnel|Counting method','原版辅助信息全部直接展示');
 chk(txt(v5.stripState).includes('Updates every 10 seconds'),'更新提示沿用采集间隔');
 const meta=v5.stripMeta, firstCore=v5.stripMetrics.children[0];
 view.drawStatus.call(v5,{collected_at:Math.floor(Date.now()/1000),interval:10,flows:2345,dnsmap_lines:6789,pending:3,acct:1},items);
@@ -471,7 +471,7 @@ const varUp=(css.match(/--tf-up:#26c281;/g)||[]).length;
 chk(hardUp===varUp, `写死的上行色只出现在变量定义里（共 ${hardUp} 处，其中 ${varUp} 处是定义）`);
 // the strip has to reach both edges without leaving a ragged gap, and the boxes
 // have to stay the same size
-chk(/\.tf-page \.tf-stat-metrics\{[^}]*grid-template-columns:repeat\(4,/.test(css), '四个核心数字等宽排列');
+chk(/\.tf-page \.tf-stat-metrics\{[^}]*grid-template-columns:repeat\(4,120px\)[^}]*gap:28px[^}]*text-align:left/.test(css), '核心指标固定120px列宽、28px间距并左对齐');
 chk(!/tf-stat-card\.tf-stat-warn\{display:block/.test(css),'手机不恢复显示警告状态条');
 // The page must style its own controls and nothing else: a rule against a LuCI
 // core class would restyle the core view action buttons on every other page.

@@ -1202,7 +1202,10 @@ return view.extend({
 			setText(r.k, x.k);
 			setText(r.v, x.v);
 			var rowClass = 'tf-stat' + (x.k === _('Collector version') ? ' tf-stat-version' :
-				x.k === _('Client totals') ? ' tf-stat-source' : '');
+				x.k === _('Counting method') ? ' tf-stat-source' :
+				x.k === _('Bucket') ? ' tf-stat-period' :
+				x.k === _('Browser clients') ? ' tf-stat-clients' :
+				x.k === _('Router and tunnel') ? ' tf-stat-tunnel' : '');
 			if (r.row.className !== rowClass) r.row.className = rowClass;
 			/* a shortened value keeps its exact form in the tooltip, so nothing
 			 * is lost by showing it short */
@@ -1334,7 +1337,7 @@ return view.extend({
 			   knows.  A fallback is not an error, but it must not look like one
 			   and the same page, or a silent degradation reads as "the network
 			   got quiet". */
-			{ k: _('Client totals'), v: s.acct ? _('nft counters') : _('conntrack'),
+			{ k: _('Counting method'), v: s.acct ? _('nft counters') : _('conntrack'),
 			  warn: !s.acct && !!s.acct_error },
 			/* which collector build is running: the first thing to check when a
 			   fix does not seem to be in effect after installing the package */
@@ -2308,12 +2311,17 @@ function injectCss() {
 
 		/* Status, four core readings, and two rows of auxiliary information. */
 		'.tf-page .tf-stat-card{padding:.95rem 1.2rem;}',
-		'.tf-page .tf-stat-strip{display:grid;grid-template-columns:9rem minmax(0,1fr) 27rem;align-items:center;gap:1.15rem;}',
-		'.tf-page .tf-stat-state{border-right:1px solid var(--tf-line);padding-right:1.2rem;}',
+		'.tf-page .tf-stat-strip{display:flex;flex-wrap:wrap;align-items:center;gap:32px;}',
+		'.tf-page .tf-stat-state{position:relative;flex:0 0 144px;padding-right:1.2rem;}',
+		'.tf-page .tf-stat-state:after,.tf-page .tf-stat-meta:before{content:"";position:absolute;top:0;bottom:0;width:1px;',
+		'background:var(--tf-line);opacity:.45;pointer-events:none;}',
+		'.tf-page .tf-stat-state:after{right:0;}',
+		'.tf-page .tf-stat-meta:before{left:0;}',
 		'.tf-page .tf-stat{display:flex;flex-direction:column;min-width:0;gap:.25rem;}',
 		'.tf-page .tf-stat-cap{font-size:.75rem;color:var(--tf-dim);}',
 		'.tf-page .tf-stat-val{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;}',
 		'.tf-page .tf-stat-state .tf-stat-cap{display:none;}',
+		'.tf-page .tf-stat-state .tf-stat,.tf-page .tf-stat-refresh{position:relative;top:-.5rem;}',
 		'.tf-page .tf-stat-state .tf-stat-val{display:inline-flex;align-items:center;align-self:flex-start;gap:.45rem;',
 		'background:rgba(38,194,129,.11);border-radius:999px;padding:.3rem .7rem;font-size:1rem;white-space:normal;}',
 		'.tf-page .tf-stat-state .tf-stat-val:before{content:"";display:inline-block;width:.5rem;height:.5rem;flex:none;',
@@ -2321,20 +2329,24 @@ function injectCss() {
 		'.tf-page .tf-stat-state .tf-warn{background:rgba(255,143,31,.12);}',
 		'.tf-page .tf-stat-state .tf-warn:before{background:currentColor;}',
 		'.tf-page .tf-stat-refresh{display:block;font-size:.7rem;color:var(--tf-dim);margin:.25rem 0 0 1.65rem;}',
-		'.tf-page .tf-stat-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem;text-align:center;}',
+		'.tf-page .tf-stat-metrics{display:grid;grid-template-columns:repeat(4,120px);gap:28px;text-align:left;flex:1 0 564px;}',
 		'.tf-page .tf-stat-metrics .tf-stat-val{font-size:1.55rem;font-weight:700;}',
-		'.tf-page .tf-stat-meta{display:grid;grid-template-columns:max-content max-content 1fr;gap:.35rem 1.2rem;',
-		'border-left:1px solid var(--tf-line);padding-left:1.15rem;align-items:center;}',
-		'.tf-page .tf-stat-meta .tf-stat{flex-direction:row;align-items:baseline;justify-content:flex-start;gap:.65rem;}',
-		'.tf-page .tf-stat-meta .tf-stat:nth-child(1) .tf-stat-cap,.tf-page .tf-stat-meta .tf-stat:nth-child(4) .tf-stat-cap{min-width:2em;}',
+		'.tf-page .tf-stat-meta{position:relative;display:grid;grid-template-columns:minmax(0,max-content) max-content minmax(0,max-content) max-content minmax(max-content,1fr);gap:.35rem .65rem;',
+		'padding-left:1.15rem;align-items:baseline;flex:0 0 432px;margin-left:auto;}',
+		'.tf-page .tf-stat-meta .tf-stat{display:contents;}',
 		'.tf-page .tf-stat-meta .tf-stat-cap,.tf-page .tf-stat-meta .tf-stat-val{font-size:.7rem;}',
-		'.tf-page .tf-stat-meta .tf-stat-version{grid-column:3;justify-content:flex-end;}',
+		'.tf-page .tf-stat-meta .tf-stat-period .tf-stat-cap{grid-area:1/1;}',
+		'.tf-page .tf-stat-meta .tf-stat-period .tf-stat-val{grid-area:1/2;}',
+		'.tf-page .tf-stat-meta .tf-stat-clients .tf-stat-cap{grid-area:1/3;}',
+		'.tf-page .tf-stat-meta .tf-stat-clients .tf-stat-val{grid-area:1/4;}',
+		'.tf-page .tf-stat-meta .tf-stat-tunnel .tf-stat-cap{grid-area:2/1;}',
+		'.tf-page .tf-stat-meta .tf-stat-tunnel .tf-stat-val{grid-area:2/2;}',
+		'.tf-page .tf-stat-meta .tf-stat-source .tf-stat-cap{grid-area:2/3;}',
+		'.tf-page .tf-stat-meta .tf-stat-source .tf-stat-val{grid-area:2/4;}',
+		'.tf-page .tf-stat-meta .tf-stat-version{display:flex;flex-direction:row;grid-area:1/5/3/6;align-self:center;justify-content:flex-end;}',
 		'.tf-page .tf-stat-meta .tf-stat-version .tf-stat-val{font-size:.7rem;color:var(--tf-fg);',
 		'background:var(--tf-chip);border:1px solid var(--tf-line);border-radius:999px;padding:.2rem .6rem;}',
-		'.tf-page .tf-stat-meta .tf-stat-source{grid-column:2;gap:.45rem;}',
 		'.tf-page .tf-stat-meta .tf-stat-version .tf-stat-cap{display:none;}',
-		'@media(max-width:85rem){.tf-page .tf-stat-strip{grid-template-columns:9rem minmax(0,1fr);}',
-		'.tf-page .tf-stat-meta{grid-column:1/-1;border-left:0;border-top:1px solid var(--tf-line);padding:1rem 0 0;}}',
 		'@media(max-width:52rem){.tf-page .tf-stat-card{display:none;}}',
 		/* Long values (a query log path, the box own addresses) are normal text,
 		 * not code: monospace here made two entries of one row look like they

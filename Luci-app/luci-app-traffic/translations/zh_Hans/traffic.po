@@ -247,8 +247,8 @@ msgid "every packet counted at the LAN interface, proxied traffic included"
 msgstr "在 LAN 接口处逐包计数，包含被代理的流量"
 
 #: htdocs/luci-static/resources/view/traffic/overview.js
-msgid "Client totals"
-msgstr "客户端计数"
+msgid "Counting method"
+msgstr "计数方式："
 
 #: htdocs/luci-static/resources/view/traffic/overview.js
 msgid "nft counters"
