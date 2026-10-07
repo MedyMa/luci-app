@@ -405,37 +405,6 @@ json_add_common() {
 	json_add_int poll_interval "$POLL_INTERVAL"
 }
 
-json_add_empty_runtime() {
-	json_add_string zone ""
-	json_add_string thermal_type ""
-	json_add_string zone_temp ""
-	json_add_string fan_on_temp ""
-	json_add_string fan_off_temp ""
-	json_add_string configured_on_temp ""
-	json_add_string configured_off_temp ""
-	json_add_string hysteresis ""
-	json_add_string next_trip_temp ""
-	json_add_string headroom ""
-	json_add_string start_delta ""
-	json_add_string load_ratio "0"
-	json_add_string state "disabled"
-	json_add_boolean thermal_supported 0
-	json_add_boolean pwm_supported 0
-	json_add_boolean mode_supported 0
-	json_add_string hwmon_name ""
-	json_add_string hwmon_path ""
-	json_add_string pwm_raw ""
-	json_add_string pwm_percent ""
-	json_add_string pwm_enable_mode ""
-	json_add_string fan_rpm ""
-	json_add_string actual_fan_rpm ""
-	json_add_string estimated_fan_rpm ""
-	json_add_string rpm_source "unavailable"
-	json_add_int fan_max_rpm "$SMART_MAX_RPM"
-	json_add_string smart_min_temp ""
-	json_add_string smart_max_temp ""
-}
-
 get_status() {
 	local zone_path primary_zone_path
 	local fan_on_temp zone_temp fan_off_temp next_trip_temp thermal_type headroom start_delta load_ratio

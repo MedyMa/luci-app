@@ -467,24 +467,6 @@ get_pwm_status() {
     printf '%s %s %s %s %s %s\n' "$PWM_HWMON" "$PWM_NAME" "$pwm_raw" "$pwm_percent" "$pwm_enable" "$pwm_rpm"
 }
 
-load_trip_defaults() {
-    DEFAULT_ON_MILLI=''
-    DEFAULT_OFF_MILLI=''
-    DEFAULT_NEXT_MILLI=''
-
-    set -- $(get_fan_tp_user 2>/dev/null)
-    [ -n "$1" ] && [ -n "$2" ] || return 0
-
-    DEFAULT_ON_MILLI=$3
-    DEFAULT_NEXT_MILLI=$4
-    hyst=$(read_trimmed "/sys/class/thermal/$1/trip_point_${2}_hyst") || hyst=''
-    is_uint "$hyst" || hyst=''
-
-    if [ -n "$DEFAULT_ON_MILLI" ] && [ -n "$hyst" ]; then
-        DEFAULT_OFF_MILLI=$((DEFAULT_ON_MILLI - hyst))
-    fi
-}
-
 # param: ON_TEMP [OFF_TEMP]
 # OFF_TEMP = ON_TEMP - 5000 if not set
 # ex. 60000 55000
