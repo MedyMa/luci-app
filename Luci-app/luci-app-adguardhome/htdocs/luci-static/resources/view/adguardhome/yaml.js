@@ -204,9 +204,9 @@ return view.extend({
 		var textarea = E('textarea', {}, yamlData.content || '');
 		var statusBox = E('div', { 'class': 'agh-status' }, rpcError ? actionError(rpcError, t('YAML backend unavailable', 'YAML 后端不可用')) : (yamlData.test_log || (useTemplateDefault ? t('Template loaded by default.', '已默认载入模板。') : t('Ready.', '就绪。'))));
 		var editor = null;
-		var saveButton = E('button', { 'class': 'btn cbi-button cbi-button-action', 'disabled': (rpcError || editingLocked) ? 'disabled' : null }, t('Save & Apply', '保存并应用'));
+		var saveButton = E('button', { 'class': 'btn cbi-button cbi-button-action cbi-button-save', 'disabled': (rpcError || editingLocked) ? 'disabled' : null }, t('Save & Apply', '保存并应用'));
 		var templateButton = E('button', { 'class': 'btn cbi-button', 'disabled': (rpcError || editingLocked) ? 'disabled' : null }, t('Use template', '使用模板'));
-		var discardButton = E('button', { 'class': 'btn cbi-button', 'disabled': rpcError ? 'disabled' : null }, '');
+		var discardButton = E('button', { 'class': 'btn cbi-button cbi-button-reset', 'disabled': rpcError ? 'disabled' : null }, '');
 		var lockNote = !rpcError ? E('div', { 'class': 'agh-alert', 'style': editingLocked ? '' : 'display:none' }, editingLocked ? lockMessage : '') : null;
 
 		function value() { return editor ? editor.getValue() : textarea.value; }
