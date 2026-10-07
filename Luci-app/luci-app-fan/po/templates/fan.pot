@@ -124,3 +124,15 @@ msgstr ""
 
 msgid "Use maximum PWM at this temperature."
 msgstr ""
+
+msgid "Smart curve"
+msgstr ""
+
+msgid "Stop"
+msgstr ""
+
+msgid "Current"
+msgstr ""
+
+msgid "Full speed"
+msgstr ""

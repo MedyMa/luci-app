@@ -27,11 +27,14 @@ view.animation = {
 };
 for (const key of ['device', 'note', 'cpu', 'pwm', 'rpm', 'speedSource', 'mode']) view[key] = { textContent: '' };
 view.badge = { dataset: {}, lastChild: { textContent: '' } };
+view.curve = {}; view.curveMarker = {style:{}}; for(const key of ['curveOff','curveCurrent','curveOn'])view[key]={textContent:''};
 view.progress = Object.fromEntries(['rpm','cpu','pwm'].map(key => [key, {dataset:{}, firstChild:{style:{}}, setAttribute(key,value){this[key]=value;}, removeAttribute(key){delete this[key];}}]));
 const status = { supported: true, running: true, enabled: true, pwm_percent: 62, fan_rpm: 1860, rpm_source: 'estimated', zone_temp: 48.6, fan_max_rpm: 3000, configured_on_temp: 60, configured_off_temp: 30, mode: 'smart' };
 view.updateStatus(status);
 assert.equal(view.badge.lastChild.textContent, '正在散热');
 assert.equal(view.badge.dataset.heat,'warm');
+assert.equal(view.curve.hidden,false); assert.equal(view.curveOff.textContent,'30 °C'); assert.equal(view.curveOn.textContent,'60 °C'); assert.equal(view.curveCurrent.textContent,'48.6 °C'); assert(Math.abs(parseFloat(view.curveMarker.style.left)-62)<.01);
+view.updateStatus({...status,zone_temp:20}); assert.equal(view.curveMarker.style.left,'0%'); view.updateStatus({...status,zone_temp:80}); assert.equal(view.curveMarker.style.left,'100%'); view.updateStatus({...status,configured_on_temp:30}); assert.equal(view.curveMarker.hidden,true); view.updateStatus({...status,mode:'manual'}); assert.equal(view.curve.hidden,true); view.updateStatus(status);
 view.updateStatus({...status,zone_temp:29.9}); assert.equal(view.badge.dataset.heat,'cool'); view.updateStatus({...status,zone_temp:30}); assert.equal(view.badge.dataset.heat,'warm'); view.updateStatus({...status,zone_temp:60}); assert.equal(view.badge.dataset.heat,'hot'); view.updateStatus({...status,zone_temp:null}); assert.equal(view.badge.dataset.heat,'unknown'); view.updateStatus(status);
 assert.equal(view.animation.state, 'running');
 assert.equal(frames.size, 0, 'Stable rotation should not run a JS frame loop');
@@ -65,7 +68,7 @@ view.updateStatus({ ...status, supported: false }); assert.equal(view.animation.
 view.updateStatus({ ...status, mode: 'manual', mode_supported: false });
 assert.equal(view.badge.lastChild.textContent, '模式不可用'); assert.match(view.note.textContent, /智能模式/); assert.equal(view.mode.textContent, '不可用'); assert.equal(view.animation.state, 'paused');
 view.syncAnimation(); assert.equal(view.animation.state, 'paused', 'Unsupported mode must stay paused on visibility resume');
-view.updateStatus({}, true); assert.equal(view.badge.lastChild.textContent, '状态获取失败');
+view.updateStatus({}, true); assert.equal(view.curve.hidden,true); assert.equal(view.curveMarker.hidden,true); assert.equal(view.badge.lastChild.textContent, '状态获取失败');
 assert.equal(view.progress.cpu.firstChild.style.width,'0%'); assert.equal(view.progress.cpu['aria-valuenow'],undefined); assert.equal(view.cpu.textContent, '—'); assert.match(view.note.textContent, /自动重试/);
 view.updateStatus(status); assert.equal(view.note.textContent, '');
 view.poller = () => {}; const animation = view.animation; view.cleanup();

@@ -37,10 +37,13 @@ var style = `
 .lf-page .cbi-checkbox input:checked{background:var(--purple)!important}.lf-page .cbi-checkbox input::after{content:'';position:absolute;left:3px;top:3px;width:20px;height:20px;background:#fff;border-radius:50%;transition:transform .2s ease-out}.lf-page .cbi-checkbox input:checked::after{transform:translateX(19px)}.lf-page .cbi-checkbox>label{display:none!important}
  .lf-page [data-name=mode] .cbi-value-field>div{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;font-size:0}.lf-page [data-name=mode] .cbi-radio{position:relative;display:block!important;border:1px solid var(--line);border-radius:16px;background:var(--soft);padding:13px 15px;min-width:0;font-size:14px}.lf-page [data-name=mode] .cbi-radio:has(input:checked){border-color:var(--purple);color:var(--purple)}.lf-page [data-name=mode] .cbi-radio>input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;margin:0}.lf-page [data-name=mode] .cbi-radio>label{display:none}.lf-page [data-name=mode] .cbi-radio>span{display:block;pointer-events:none}.lf-page [data-name=mode] small{display:block;font-size:12px;color:var(--muted);margin-top:3px}.lf-page [data-name=mode] .cbi-radio:focus-within{outline:2px solid var(--purple);outline-offset:3px}
 .lf-page input[type=radio],.lf-page input[type=range]{accent-color:var(--purple)}.lf-page input[type=range]{width:100%}.lf-page input:disabled{opacity:.65;cursor:default}.lf-page .range-value{font-weight:600;color:var(--purple)}.lf-page .cbi-section-node>.hidden{display:none!important}
-.lf-page .lf-chip[data-state=running]{min-width:120px;justify-content:center;padding:6px 20px;color:#283044;background:var(--line)}.lf-page .lf-chip[data-state=running] i{display:none}.lf-page .lf-chip[data-state=running][data-heat=cool]{background:#a5e1b8;color:#173b24}.lf-page .lf-chip[data-state=running][data-heat=warm]{background:#ffcd75;color:#493000}.lf-page .lf-chip[data-state=running][data-heat=hot]{background:#f59ca7;color:#541b27}.lf-page .lf-chip[data-state=stopped]{color:var(--muted)}.lf-page .lf-chip[data-state=error],.lf-page .lf-runtime-error{color:#d14462}.lf-page .lf-runtime-error:empty{display:none}
+.lf-page .lf-chip[data-state=running]{min-width:120px;justify-content:center;padding:6px 20px;color:inherit;background:var(--line)}.lf-page .lf-chip[data-state=running] i{display:none}.lf-page .lf-chip[data-state=running][data-heat=cool]{background:#a5e1b8;color:#173b24}.lf-page .lf-chip[data-state=running][data-heat=warm]{background:#ffcd75;color:#493000}.lf-page .lf-chip[data-state=running][data-heat=hot]{background:#f59ca7;color:#541b27}.lf-page .lf-chip[data-state=stopped]{color:var(--muted)}.lf-page .lf-chip[data-state=error],.lf-page .lf-runtime-error{color:#d14462}.lf-page .lf-runtime-error:empty{display:none}
 #maincontent:has(.lf-page) .cbi-page-actions .cbi-button{border-radius:999px;min-height:44px;padding:10px 20px}#maincontent:has(.lf-page) .cbi-page-actions .cbi-button-apply,#maincontent:has(.lf-page) .cbi-page-actions .cbi-button-save{background:#4c3e87!important;border-color:#4c3e87!important;color:#fff!important}
 #maincontent:has(.lf-page) .cbi-page-actions{display:flex!important;flex-wrap:wrap;justify-content:flex-end;gap:10px;box-sizing:border-box;width:100%;max-width:1120px;margin-left:auto;margin-right:auto}#maincontent:has(.lf-page) .cbi-page-actions>.cbi-button{margin:0!important}#maincontent:has(.lf-page) .cbi-page-actions .cbi-button-reset{background:#f7f9fb!important;border:1px solid #e3e7ee!important;color:#283044!important}#maincontent:has(.lf-page.lf-dark) .cbi-page-actions .cbi-button-reset{background:#282d30!important;border-color:#3a4145!important;color:#e8edf7!important}
 @media(max-width:720px){.lf-page{margin:20px auto}.lf-page .cbi-map{padding:16px!important}.lf-page .cbi-section-node{grid-template-columns:1fr;gap:16px}.lf-page [data-name=mode] .cbi-value-field>div{gap:6px}.lf-page [data-name=mode] .cbi-radio{padding:11px 9px}}
+
+.lf-page .lf-curve{width:100%;margin-top:14px;font-size:11px;color:var(--muted)}.lf-page .lf-curve[hidden],.lf-page .lf-curve-marker[hidden]{display:none!important}.lf-page .lf-curve-track{height:5px;border-radius:999px;background:linear-gradient(90deg,#80bd9b,#efbc76,#f59168);position:relative;margin:8px 0 10px}.lf-page .lf-curve-marker{position:absolute;top:-3px;width:3px;height:11px;transform:translateX(-50%);background:var(--surface);border:1px solid var(--purple);border-radius:2px}.lf-page .lf-curve-values{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}.lf-page .lf-curve-values b{display:block;font-weight:600;font-size:12px;white-space:nowrap}
+@media(max-width:720px){.lf-page .lf-curve{font-size:9px;margin-top:7px}.lf-page .lf-curve-track{margin:6px 0 7px}.lf-page .lf-curve-values{gap:2px}.lf-page .lf-curve-values b{font-size:10px}}
 `;
 function fanIcon() {
  var blades = '';
@@ -100,6 +103,12 @@ return view.extend({
   this.rpm.textContent = rpm == null ? '—' : String(Math.round(rpm));
   this.speedSource.textContent = s.rpm_source === 'actual' ? t('Measured speed · illustrative rotation', '实测转速 · 动画仅示意') : s.rpm_source === 'estimated' ? t('Estimated from PWM · illustrative rotation', '按 PWM 估算 · 动画仅示意') : t('Speed unavailable', '转速未获取');
   this.mode.textContent = unsupportedMode ? t('Unavailable', '不可用') : supported && running ? modeLabel(s.mode) : '—';
+  this.curve.hidden = !(supported && running && !unsupportedMode && s.mode === 'smart');
+  this.curveOff.textContent = off == null ? '—' : off + ' °C';
+  this.curveCurrent.textContent = temp == null ? '—' : temp.toFixed(1) + ' °C';
+  this.curveOn.textContent = on == null ? '—' : on + ' °C';
+  this.curveMarker.hidden = temp == null || off == null || on == null || on <= off;
+  this.curveMarker.style.left = this.curveMarker.hidden ? '0%' : Math.max(0, Math.min(100, (temp - off) / (on - off) * 100)) + '%';
   this.updateProgress('rpm', rpm, number(s.fan_max_rpm));
   this.updateProgress('cpu', temp, number(s.configured_on_temp));
   this.updateProgress('pwm', pwm, 100);
@@ -179,9 +188,13 @@ return view.extend({
    function progress(key, label) {
     return owner.progress[key] = E('div', { 'class': 'lf-progress lf-progress-' + key, role: 'progressbar', 'aria-label': label, 'aria-valuemin': '0', 'aria-valuemax': '100' }, [E('span', { 'class': 'lf-progress-fill' })]);
    }
+   owner.curveMarker = E('i', { 'class': 'lf-curve-marker', 'aria-hidden': 'true' });
+   owner.curveOff = E('b'); owner.curveCurrent = E('b'); owner.curveOn = E('b');
+   owner.curve = E('div', { 'class': 'lf-curve' }, [ E('div', {}, t('Smart curve', '智能曲线')), E('div', { 'class': 'lf-curve-track', 'aria-hidden': 'true' }, [owner.curveMarker]),
+    E('div', { 'class': 'lf-curve-values' }, [ E('span', {}, [t('Stop', '停转'), owner.curveOff]), E('span', {}, [t('Current', '当前'), owner.curveCurrent]), E('span', {}, [t('Full speed', '满速'), owner.curveOn]) ]) ]);
    function metric(title, key, unit, color) {
     owner[key] = E('span');
-    return E('div', { 'class': 'lf-metric' }, [ E('span', { 'class': 'lf-label' }, title), E('div', { 'class': 'lf-number lf-' + color }, [ owner[key], E('small', {}, unit) ]) ].concat(key === 'mode' ? [] : [progress(key, title)]));
+    return E('div', { 'class': 'lf-metric' }, [ E('span', { 'class': 'lf-label' }, title), E('div', { 'class': 'lf-number lf-' + color }, [ owner[key], E('small', {}, unit) ]) ].concat(key === 'mode' ? [owner.curve] : [progress(key, title)]));
    }
    owner.rpm = E('span'); owner.speedSource = E('span', { 'class': 'lf-muted' }); var svg = fanIcon();
    owner.root = E('div', { 'class': 'lf-page' }, [ E('style', {}, style), E('div', { 'class': 'lf-heading' }, [ E('span', { 'class': 'lf-icon', 'aria-hidden': 'true' }, '✾'), E('h2', {}, t('Fan Control', '风扇控制')) ]),

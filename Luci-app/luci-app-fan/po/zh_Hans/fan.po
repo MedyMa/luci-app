@@ -127,3 +127,15 @@ msgstr "设备不支持"
 
 msgid "Use maximum PWM at this temperature."
 msgstr "达到此温度时输出最高 PWM。"
+
+msgid "Smart curve"
+msgstr "智能曲线"
+
+msgid "Stop"
+msgstr "停转"
+
+msgid "Current"
+msgstr "当前"
+
+msgid "Full speed"
+msgstr "满速"
