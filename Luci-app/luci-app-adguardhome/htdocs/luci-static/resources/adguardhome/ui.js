@@ -50,6 +50,21 @@ var style = `
 @media(max-width:720px){#maincontent:has(.agh-ui) #tabmenu .tabs>li,#maincontent:has(.agh-ui) #tabmenu .tabs>li:hover,#maincontent:has(.agh-ui) #tabmenu .tabs>li>a{font-size:18px!important}.agh-ui textarea{min-width:0!important}#maincontent:has(.agh-ui) .cbi-page-actions{display:flex;flex-wrap:wrap;justify-content:flex-end!important;gap:8px;max-width:100%}#maincontent:has(.agh-ui) .cbi-page-actions .cbi-button{margin:0!important;min-height:44px;white-space:normal}.agh-ui .btn,.agh-ui .cbi-button,.agh-ui .agh-tab{min-height:44px!important}.agh-ui .agh-operation{gap:8px;padding:8px 0}.agh-ui .agh-bottom-grid{grid-template-columns:1fr}.agh-settings .cbi-section{display:block}.agh-settings .cbi-tabmenu{flex-direction:row;flex-wrap:wrap;border-right:0;border-bottom:1px solid var(--agh-border);padding:0 0 12px;margin-bottom:16px}.agh-settings .cbi-tabmenu>li{width:auto}.agh-ui .agh-stats-grid .agh-value{font-size:25px}.agh-ui .agh-stats-grid .agh-stat-latency{font-size:23px}.agh-ui .agh-access .agh-info{grid-template-columns:1fr}.agh-ui .agh-card{padding:16px}}
 `;
 
+/* LuCI renders #tabmenu before the app view root exists; style its route title independently. */
+var menuTitleStyleId = 'agh-luci-menu-title-style';
+if (typeof document !== 'undefined' && document.head && !document.getElementById(menuTitleStyleId)) {
+	var menuTitleStyle = document.createElement('style');
+	menuTitleStyle.id = menuTitleStyleId;
+	menuTitleStyle.textContent = `
+#maincontent:has(#tabmenu a[href*="adguardhome"]) #tabmenu .tabs>li,#maincontent:has(#tabmenu a[href*="adguardhome"]) #tabmenu .tabs>li:hover{background:transparent!important;border:0!important;border-bottom:0!important;box-shadow:none!important;padding:0!important;color:var(--text-color-high,#283044)!important;font-size:20px!important;font-weight:700!important;line-height:1.4!important}
+#maincontent:has(#tabmenu a[href*="adguardhome"]) #tabmenu .tabs>li::before,#maincontent:has(#tabmenu a[href*="adguardhome"]) #tabmenu .tabs>li::after{display:none!important;content:none!important}
+#maincontent:has(#tabmenu a[href*="adguardhome"]) #tabmenu .tabs>li>a,#maincontent:has(#tabmenu a[href*="adguardhome"]) #tabmenu .tabs>li:hover>a{display:inline!important;background:transparent!important;border:0!important;border-bottom:0!important;border-radius:0!important;box-shadow:none!important;color:var(--text-color-high,#283044)!important;font-size:20px!important;font-weight:700!important;line-height:1.4!important;min-height:0!important;padding:0!important;text-decoration:none!important}
+#maincontent:has(#tabmenu a[href*="adguardhome"]) #tabmenu .tabs>li>a::before,#maincontent:has(#tabmenu a[href*="adguardhome"]) #tabmenu .tabs>li>a::after{display:none!important;content:none!important}
+@media(max-width:720px){#maincontent:has(#tabmenu a[href*="adguardhome"]) #tabmenu .tabs>li,#maincontent:has(#tabmenu a[href*="adguardhome"]) #tabmenu .tabs>li>a{font-size:18px!important}}
+`;
+	document.head.appendChild(menuTitleStyle);
+}
+
 function label(english, chinese) {
 	var value = _(english);
 	var lang = document.documentElement && document.documentElement.lang || '';
