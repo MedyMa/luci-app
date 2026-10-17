@@ -3,9 +3,7 @@
 
 /* One scoped visual system. Argon owns the surrounding page and theme switch. */
 var style = `
-#maincontent:has(.agh-ui) .cbi-page-actions .cbi-button,.agh-ui .cbi-button.cbi-button-apply,.agh-ui .cbi-button.cbi-button-save,.agh-ui .cbi-button.cbi-button-reset{border-radius:8px!important;min-height:44px;padding:10px 20px!important}
-#maincontent:has(.agh-ui) .cbi-page-actions .cbi-button-apply,#maincontent:has(.agh-ui) .cbi-page-actions .cbi-button-save{background:#5e72e4!important;border-color:#5e72e4!important;color:#fff!important;-webkit-text-fill-color:#fff!important}
-#maincontent:has(.agh-ui) .cbi-page-actions .cbi-button-reset{background:#f5355c!important;border:1px solid #f5355c!important;color:#fff!important;-webkit-text-fill-color:#fff!important}
+.agh-ui .cbi-button.cbi-button-apply,.agh-ui .cbi-button.cbi-button-save,.agh-ui .cbi-button.cbi-button-reset{border-radius:8px!important;min-height:44px;padding:10px 20px!important}
 .agh-ui h2::before,.agh-ui h2::after,.agh-ui h3::before,.agh-ui h3::after{display:none!important;content:none!important}
 .agh-ui p{text-indent:0;line-height:1.7}.agh-ui .cbi-value-description{opacity:1!important}
 .agh-ui .cbi-tab>a{color:var(--agh-text)!important;background:var(--agh-soft)!important;border-bottom:2px solid var(--agh-primary)}
@@ -35,8 +33,6 @@ var style = `
 
 .agh-ui{max-width:1120px;width:100%;margin:0 auto;gap:16px;--agh-surface:var(--white,#fff);--agh-soft:#f7f9fb}
 .agh-ui.agh-dark{--agh-surface:#232628;--agh-soft:#282d30;--agh-border:#3a4145;--agh-input:#202427;--agh-console:#161a1d;--agh-muted:#b7c0c8}
-#maincontent:has(.agh-ui) #tabmenu .tabs>li,#maincontent:has(.agh-ui) #tabmenu .tabs>li:hover{font-size:20px!important;font-weight:700!important;letter-spacing:0;line-height:1.1!important;background:transparent!important;border-bottom:0!important;color:var(--text-color-high,#283044)!important}
-#maincontent:has(.agh-ui) #tabmenu .tabs>li>a,#maincontent:has(.agh-ui) #tabmenu .tabs>li:hover>a{font-size:20px!important;font-weight:700!important;color:var(--text-color-high,#283044)!important;background:transparent!important}
 .agh-nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.agh-nav a{background:var(--agh-soft);display:inline-flex;align-items:center;min-height:44px;padding:8px 16px;border-radius:22px;color:var(--agh-muted)!important;text-decoration:none!important;font-size:16px;line-height:1.4;font-weight:600}.agh-nav a[aria-current=page]{background:var(--agh-primary);color:#fff!important}
 .agh-brand-logo{display:block;width:240px;max-width:100%;height:auto}.agh-brand-logo-dark{display:none}.agh-dark .agh-brand-logo-light{display:none}.agh-dark .agh-brand-logo-dark{display:block}
 .agh-heading{padding:8px 0}.agh-ui .agh-card{border-radius:20px;padding:20px}.agh-ui .agh-stats-grid .agh-value{font-size:28px}.agh-ui .agh-statusbar{padding:12px 16px}.agh-ui .agh-core-chip{font-size:12px}
@@ -45,25 +41,31 @@ var style = `
 .agh-ui{--agh-query:#2463c5;--agh-blocked:#bb3155;--agh-ratio:#7650b9;--agh-latency:#087d86}.agh-ui.agh-dark{--agh-query:#87b8ff;--agh-blocked:#ff94ab;--agh-ratio:#c5a5ff;--agh-latency:#75d5d7}.agh-ui .agh-stat-queries{color:var(--agh-query)}.agh-ui .agh-stat-blocked{color:var(--agh-blocked)}.agh-ui .agh-stat-ratio{color:var(--agh-ratio)}.agh-ui .agh-stat-latency{color:var(--agh-latency);white-space:nowrap;overflow-wrap:normal}.agh-ui .agh-stat-latency small{white-space:nowrap;font-size:.65em;font-weight:500}
 .agh-settings .cbi-value.hidden{display:none!important}.agh-settings .cbi-section{display:grid;grid-template-columns:170px minmax(0,1fr);gap:24px}.agh-settings .cbi-tabmenu{display:flex;flex-direction:column;gap:6px;border:0;border-right:1px solid var(--agh-border);margin:0;padding-right:12px;white-space:normal;overflow:visible}.agh-settings .cbi-tabmenu>li{width:100%;min-height:42px;float:none}.agh-settings .cbi-tabmenu>li>a{display:block;border-radius:8px!important;padding:12px!important;border-bottom:0!important}.agh-settings .cbi-section-node{min-width:0}.agh-settings .cbi-tab-descr{padding:0 0 14px;border-bottom:1px solid var(--agh-border)}.agh-settings .cbi-value{max-width:none;border-top:0;border-bottom:1px solid var(--agh-border);padding:16px 0}.agh-settings .cbi-value:last-child{border-bottom:0}.agh-settings .cbi-map-descr{display:none}
 .agh-settings .cbi-checkbox{display:inline-flex;align-items:center;gap:8px}.agh-settings .cbi-checkbox input[type=checkbox]{display:inline-block!important;position:relative!important;opacity:1!important;appearance:none!important;width:42px!important;height:24px!important;min-height:24px!important;padding:0!important;border:0!important;border-radius:20px!important;background:#8d979f!important;cursor:pointer}.agh-settings .cbi-checkbox input[type=checkbox]::before{content:'';position:absolute;width:18px;height:18px;top:3px;left:3px;border-radius:50%;background:#fff;transition:transform .15s}.agh-settings .cbi-checkbox input[type=checkbox]:checked{background:var(--agh-primary)!important}.agh-settings .cbi-checkbox input[type=checkbox]:checked::before{transform:translateX(18px)}.agh-settings .cbi-checkbox input[type=checkbox]+label{display:none!important}
-#maincontent:has(.agh-ui) .cbi-page-actions{display:flex!important;flex-wrap:wrap;justify-content:flex-end!important;gap:10px;box-sizing:border-box;width:100%;max-width:1120px;margin:16px auto!important;text-align:right!important}#maincontent:has(.agh-ui) .cbi-page-actions>.cbi-button{margin:0!important}.agh-ui .agh-settings-heading{margin:22px 0 4px;font-size:16px}.agh-ui .agh-settings-detail>summary{cursor:pointer;padding:12px 0;font-size:14px}.agh-ui .agh-settings-detail .agh-action{margin-top:12px}
+#maincontent:has(.agh-ui) .cbi-page-actions{flex-wrap:wrap;box-sizing:border-box;width:100%;max-width:1120px;margin:16px auto!important}.agh-ui .agh-settings-heading{margin:22px 0 4px;font-size:16px}.agh-ui .agh-settings-detail>summary{cursor:pointer;padding:12px 0;font-size:14px}.agh-ui .agh-settings-detail .agh-action{margin-top:12px}
 .agh-settings [data-tab-title]{background:transparent!important;box-shadow:none!important;border:0!important;padding:0!important;border-radius:0!important}.agh-settings .cbi-value-title{float:none!important;display:block!important;text-align:left!important;width:auto!important;padding:0!important;line-height:1.5!important}.agh-settings .cbi-value-field{display:block!important;line-height:1.5!important}.agh-settings .cbi-value-description{display:block!important;padding:0!important;margin:7px 0 0!important}.agh-settings .cbi-tab-descr{margin:0 0 8px!important;padding:0 0 14px!important}.agh-settings .cbi-value{line-height:1.5!important}.agh-settings input:focus-visible{outline:2px solid var(--agh-primary)!important;outline-offset:3px}
-@media(max-width:720px){#maincontent:has(.agh-ui) #tabmenu .tabs>li,#maincontent:has(.agh-ui) #tabmenu .tabs>li:hover,#maincontent:has(.agh-ui) #tabmenu .tabs>li>a{font-size:18px!important}.agh-ui textarea{min-width:0!important}#maincontent:has(.agh-ui) .cbi-page-actions{display:flex;flex-wrap:wrap;justify-content:flex-end!important;gap:8px;max-width:100%}#maincontent:has(.agh-ui) .cbi-page-actions .cbi-button{margin:0!important;min-height:44px;white-space:normal}.agh-ui .btn,.agh-ui .cbi-button,.agh-ui .agh-tab{min-height:44px!important}.agh-ui .agh-operation{gap:8px;padding:8px 0}.agh-ui .agh-bottom-grid{grid-template-columns:1fr}.agh-settings .cbi-section{display:block}.agh-settings .cbi-tabmenu{flex-direction:row;flex-wrap:wrap;border-right:0;border-bottom:1px solid var(--agh-border);padding:0 0 12px;margin-bottom:16px}.agh-settings .cbi-tabmenu>li{width:auto}.agh-ui .agh-stats-grid .agh-value{font-size:25px}.agh-ui .agh-stats-grid .agh-stat-latency{font-size:23px}.agh-ui .agh-access .agh-info{grid-template-columns:1fr}.agh-ui .agh-card{padding:16px}}
+@media(max-width:720px){.agh-ui textarea{min-width:0!important}#maincontent:has(.agh-ui) .cbi-page-actions{max-width:100%}.agh-ui .btn,.agh-ui .cbi-button,.agh-ui .agh-tab{min-height:44px!important}.agh-ui .agh-operation{gap:8px;padding:8px 0}.agh-ui .agh-bottom-grid{grid-template-columns:1fr}.agh-settings .cbi-section{display:block}.agh-settings .cbi-tabmenu{flex-direction:row;flex-wrap:wrap;border-right:0;border-bottom:1px solid var(--agh-border);padding:0 0 12px;margin-bottom:16px}.agh-settings .cbi-tabmenu>li{width:auto}.agh-ui .agh-stats-grid .agh-value{font-size:25px}.agh-ui .agh-stats-grid .agh-stat-latency{font-size:23px}.agh-ui .agh-access .agh-info{grid-template-columns:1fr}.agh-ui .agh-card{padding:16px}}
 `;
 
-/* Keep Argon's title surface and match its native h2 spacing before the view mounts. */
-var menuTitleStyleId = 'agh-luci-menu-title-style';
-if (typeof document !== 'undefined' && document.head && !document.getElementById(menuTitleStyleId)) {
-	var menuTitleStyle = document.createElement('style');
-	menuTitleStyle.id = menuTitleStyleId;
-	menuTitleStyle.textContent = `
-#maincontent:has(#tabmenu a[href*="adguardhome"]) #tabmenu .tabs{padding:1rem 1.25rem!important}
-#maincontent:has(#tabmenu a[href*="adguardhome"]) #tabmenu .tabs>li,#maincontent:has(#tabmenu a[href*="adguardhome"]) #tabmenu .tabs>li:hover{display:block!important;background:transparent!important;border:0!important;border-bottom:0!important;box-shadow:none!important;padding:0!important;color:var(--text-color-high,#283044)!important;font-size:20px!important;font-weight:700!important;line-height:1.1!important}
-#maincontent:has(#tabmenu a[href*="adguardhome"]) #tabmenu .tabs>li::before,#maincontent:has(#tabmenu a[href*="adguardhome"]) #tabmenu .tabs>li::after{display:none!important;content:none!important}
-#maincontent:has(#tabmenu a[href*="adguardhome"]) #tabmenu .tabs>li>a,#maincontent:has(#tabmenu a[href*="adguardhome"]) #tabmenu .tabs>li:hover>a{display:inline!important;background:transparent!important;border:0!important;border-bottom:0!important;border-radius:0!important;box-shadow:none!important;color:var(--text-color-high,#283044)!important;font-size:20px!important;font-weight:700!important;line-height:1.1!important;min-height:0!important;padding:0!important;text-decoration:none!important}
-#maincontent:has(#tabmenu a[href*="adguardhome"]) #tabmenu .tabs>li>a::before,#maincontent:has(#tabmenu a[href*="adguardhome"]) #tabmenu .tabs>li>a::after{display:none!important;content:none!important}
-@media(max-width:720px){#maincontent:has(#tabmenu a[href*="adguardhome"]) #tabmenu .tabs>li,#maincontent:has(#tabmenu a[href*="adguardhome"]) #tabmenu .tabs>li>a{font-size:18px!important}}
-`;
-	document.head.appendChild(menuTitleStyle);
+/* Argon can render its menu after the view module loads. Replace only this
+ * app's single route tab with a native, non-interactive theme heading. */
+if (typeof document !== 'undefined') {
+	var titleContainer = document.getElementById('tabmenu');
+	if (titleContainer) {
+		var renderPageTitle = function() {
+			titleContainer.querySelectorAll('.tabs').forEach(function(tabs) {
+				var link = tabs.querySelector('a[href]');
+				if (tabs.children.length !== 1 || !link ||
+				    !/\/admin\/services\/adguardhome(?:\/|$)/.test(link.getAttribute('href')))
+					return;
+				var heading = document.createElement('h2');
+				heading.className = 'agh-page-title';
+				heading.textContent = link.textContent;
+				tabs.replaceWith(heading);
+			});
+		};
+		new MutationObserver(renderPageTitle).observe(titleContainer, { childList: true, subtree: true });
+		renderPageTitle();
+	}
 }
 
 function label(english, chinese) {

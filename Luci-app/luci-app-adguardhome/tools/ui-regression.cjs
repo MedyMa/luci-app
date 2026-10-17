@@ -76,32 +76,26 @@ const server=http.createServer(async(req,res)=>{
   tree.children.admin.children.services.title='服务';
   theme.renderMainMenu(tree.children.admin,'admin');
  },{defs:menuConfig,name});
- assert.deepEqual(await page.locator('#tabmenu a').allTextContents(),['AdGuardHome']);
- const tabTitle=await page.locator('#tabmenu a').evaluate(e=>({fontSize:getComputedStyle(e).fontSize,viewportWidth:window.innerWidth}));
- const expectedTabTitleFontSize=tabTitle.viewportWidth<=720?'18px':'20px';
- assert.equal(tabTitle.fontSize,expectedTabTitleFontSize,`Top-level AdGuardHome label uses the responsive title size at ${tabTitle.viewportWidth}px`);
- const tabStyleWithoutView=await page.evaluate(()=>{
+ await page.locator('#tabmenu > h2.agh-page-title').waitFor();
+ assert.equal(await page.locator('#tabmenu > h2').textContent(),'AdGuardHome');
+ assert.equal(await page.locator('#tabmenu a,#tabmenu button,#tabmenu [tabindex]').count(),0,'The page title is not a navigation control');
+ const titleStyleWithoutView=await page.evaluate(()=>{
   const root=document.querySelector('#view .agh-ui');
   const parent=root&&root.parentNode;
   const next=root&&root.nextSibling;
   if(root)root.remove();
-  const item=document.querySelector('#tabmenu .tabs>li');
-  const link=document.querySelector('#tabmenu .tabs>li>a');
-  const result={
-   itemBackground:getComputedStyle(item).backgroundColor,
-   itemBorderBottom:getComputedStyle(item).borderBottomWidth,
-   linkBackground:getComputedStyle(link).backgroundColor,
-   linkBorder:getComputedStyle(link).borderTopWidth,
-   linkPadding:getComputedStyle(link).paddingTop
-  };
+  const title=document.querySelector('#tabmenu > h2');
+  const reference=document.createElement('h2');
+  reference.textContent='动态 DNS';
+  title.parentNode.appendChild(reference);
+  const properties=['font-size','font-weight','line-height','padding-top','padding-right','padding-bottom','padding-left','border-radius','box-shadow','background-color','color'];
+  const styles=e=>Object.fromEntries(properties.map(p=>[p,getComputedStyle(e).getPropertyValue(p)]));
+  const result={actual:styles(title),native:styles(reference)};
+  reference.remove();
   if(root)parent.insertBefore(root,next);
   return result;
  });
- assert.equal(tabStyleWithoutView.itemBackground,'rgba(0, 0, 0, 0)','AdGuardHome menu title remains plain text before the view mounts');
- assert.equal(tabStyleWithoutView.itemBorderBottom,'0px','AdGuardHome menu title has no tab underline before the view mounts');
- assert.equal(tabStyleWithoutView.linkBackground,'rgba(0, 0, 0, 0)','AdGuardHome menu link has no button background before the view mounts');
- assert.equal(tabStyleWithoutView.linkBorder,'0px','AdGuardHome menu link has no button border before the view mounts');
- assert.equal(tabStyleWithoutView.linkPadding,'0px','AdGuardHome menu link has no button padding before the view mounts');
+ assert.deepEqual(titleStyleWithoutView.actual,titleStyleWithoutView.native,'The page title uses the native theme heading even without the app view');checks+=3;
  const homeLink=page.locator('.agh-nav a').first();
  assert.equal(await homeLink.getAttribute('href'),'/cgi-bin/luci/admin/services/adguardhome/overview','Home navigation returns to the overview route');
  assert.equal(await homeLink.locator('*').count(),0,'Home button contains text only');
@@ -205,9 +199,21 @@ if(name==='yaml')await page.waitForFunction(()=>currentView._aghCmInstance);if(n
   for(const dark of [false,true]){
    await page.evaluate(v=>document.body.classList.toggle('dark',v),dark);await page.waitForTimeout(350);
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`${name} ${width} ${dark?'dark':'light'} overflow `+JSON.stringify(await page.evaluate(()=>[...document.querySelectorAll('body *')].map(e=>({tag:e.tagName,cls:e.className,right:e.getBoundingClientRect().right,width:e.getBoundingClientRect().width})).filter(e=>e.right>innerWidth+1).slice(-8))));checks++;
-   if(name==='overview'){assert.equal(await page.locator('#tabmenu a').evaluate(e=>getComputedStyle(e).fontSize),width<=720?'18px':'20px','Top-level AdGuardHome label uses responsive typography');checks++;assert.equal(await page.locator('.agh-brand-logo:visible').count(),1);assert.equal(await page.locator('.agh-brand-logo:visible').getAttribute('src'),'/resources/adguardhome/logo-'+(dark?'dark':'light')+'.svg');checks+=2;assert(await page.locator('.agh-stat-latency').evaluate(e=>e.scrollWidth<=e.clientWidth && e.getBoundingClientRect().height<=parseFloat(getComputedStyle(e).lineHeight)+1),'Processing time fits on a single line '+JSON.stringify(await page.locator('.agh-stat-latency').evaluate(e=>({width:e.clientWidth,scroll:e.scrollWidth,height:e.getBoundingClientRect().height,line:getComputedStyle(e).lineHeight,small:getComputedStyle(e.querySelector('small')).display,html:e.outerHTML}))));checks++;const offsets=await page.locator('.agh-access .agh-info-row').evaluateAll(rows=>rows.map(row=>{const a=row.querySelector('span').getBoundingClientRect(),b=row.querySelector('strong').getBoundingClientRect();return Math.abs(a.y+a.height/2-b.y-b.height/2)}));assert(offsets.every(offset=>offset<1),'DNS labels and values are vertically centered: '+JSON.stringify(offsets));checks++;}
-   const buttonStyles=await page.locator('.agh-ui .btn,.agh-ui .cbi-button,.cbi-page-actions .cbi-button').evaluateAll(es=>es.filter(e=>e.getClientRects().length).map(e=>({label:e.textContent,reset:e.classList.contains('cbi-button-reset'),warning:e.classList.contains('agh-warning'),negative:e.classList.contains('cbi-button-negative'),primary:e.classList.contains('cbi-button-action')||e.classList.contains('cbi-button-save')||e.classList.contains('cbi-button-apply')||e.classList.contains('agh-primary'),square:e.closest('.cbi-page-actions')!=null||e.classList.contains('cbi-button-save')||e.classList.contains('cbi-button-reset'),bg:getComputedStyle(e).backgroundColor,radius:getComputedStyle(e).borderRadius})));
+   if(name==='overview'){assert.equal(await page.locator('#tabmenu a,#tabmenu button,#tabmenu [tabindex]').count(),0,'Top-level AdGuardHome title remains non-interactive');checks++;assert.equal(await page.locator('.agh-brand-logo:visible').count(),1);assert.equal(await page.locator('.agh-brand-logo:visible').getAttribute('src'),'/resources/adguardhome/logo-'+(dark?'dark':'light')+'.svg');checks+=2;assert(await page.locator('.agh-stat-latency').evaluate(e=>e.scrollWidth<=e.clientWidth && e.getBoundingClientRect().height<=parseFloat(getComputedStyle(e).lineHeight)+1),'Processing time fits on a single line '+JSON.stringify(await page.locator('.agh-stat-latency').evaluate(e=>({width:e.clientWidth,scroll:e.scrollWidth,height:e.getBoundingClientRect().height,line:getComputedStyle(e).lineHeight,small:getComputedStyle(e.querySelector('small')).display,html:e.outerHTML}))));checks++;const offsets=await page.locator('.agh-access .agh-info-row').evaluateAll(rows=>rows.map(row=>{const a=row.querySelector('span').getBoundingClientRect(),b=row.querySelector('strong').getBoundingClientRect();return Math.abs(a.y+a.height/2-b.y-b.height/2)}));assert(offsets.every(offset=>offset<1),'DNS labels and values are vertically centered: '+JSON.stringify(offsets));checks++;}
+   const buttonStyles=await page.locator('.agh-ui .btn,.agh-ui .cbi-button').evaluateAll(es=>es.filter(e=>e.getClientRects().length).map(e=>({label:e.textContent,reset:e.classList.contains('cbi-button-reset'),warning:e.classList.contains('agh-warning'),negative:e.classList.contains('cbi-button-negative'),primary:e.classList.contains('cbi-button-action')||e.classList.contains('cbi-button-save')||e.classList.contains('cbi-button-apply')||e.classList.contains('agh-primary'),square:e.classList.contains('cbi-button-save')||e.classList.contains('cbi-button-reset'),bg:getComputedStyle(e).backgroundColor,radius:getComputedStyle(e).borderRadius})));
    for(const b of buttonStyles){assert.equal(b.bg,b.reset?'rgb(245, 53, 92)':b.warning?'rgb(255, 149, 0)':b.negative?'rgb(245, 53, 92)':b.primary?'rgb(94, 114, 228)':dark?'rgb(40, 45, 48)':'rgb(247, 249, 251)',JSON.stringify({name,width,dark,b}));if(b.square)assert.equal(b.radius,'8px');checks++;}
+   if(name==='settings'){
+    const footerStyles=await page.evaluate(()=>{
+     const buttons=[...document.querySelectorAll('.cbi-page-actions .cbi-button,.cbi-page-actions .cbi-dropdown,.cbi-page-actions .cbi-dropdown > .open')];
+     const properties=['padding-top','padding-right','padding-bottom','padding-left','min-height','border-radius','border-width','font-size','line-height','background-color','color'];
+     const read=()=>buttons.map(e=>Object.fromEntries(properties.map(p=>[p,getComputedStyle(e).getPropertyValue(p)])));
+     const actual=read(),roots=[...document.querySelectorAll('.agh-ui')];
+     roots.forEach(e=>e.classList.remove('agh-ui'));
+     try{return {actual,native:read()};}finally{roots.forEach(e=>e.classList.add('agh-ui'));}
+    });
+    assert(footerStyles.actual.length>0,'Native footer controls are present');
+    assert.deepEqual(footerStyles.actual,footerStyles.native,'Footer buttons and dropdown use native Argon styling');checks+=2;
+   }
    if(name==='yaml'){assert.equal(await page.locator('.CodeMirror').evaluate(e=>getComputedStyle(e).backgroundColor),dark?'rgb(32, 36, 39)':'rgb(255, 255, 255)');checks++;}
    if(width<720){const targets=await page.locator('.agh-ui a.btn,.agh-ui button').evaluateAll(es=>es.filter(e=>e.getClientRects().length&&getComputedStyle(e).visibility!=='hidden').map(e=>({label:e.textContent,height:e.getBoundingClientRect().height})));assert(targets.every(t=>t.height>=44),JSON.stringify({name,width,targets}));checks++;}
    if(process.env.AGH_SCREENSHOT_DIR)await page.screenshot({path:path.join(process.env.AGH_SCREENSHOT_DIR,`${name}-${width}-${dark?'dark':'light'}.png`),fullPage:true});
