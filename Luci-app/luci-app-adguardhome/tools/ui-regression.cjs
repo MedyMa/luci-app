@@ -80,6 +80,28 @@ const server=http.createServer(async(req,res)=>{
  const tabTitle=await page.locator('#tabmenu a').evaluate(e=>({fontSize:getComputedStyle(e).fontSize,viewportWidth:window.innerWidth}));
  const expectedTabTitleFontSize=tabTitle.viewportWidth<=720?'18px':'20px';
  assert.equal(tabTitle.fontSize,expectedTabTitleFontSize,`Top-level AdGuardHome label uses the responsive title size at ${tabTitle.viewportWidth}px`);
+ const tabStyleWithoutView=await page.evaluate(()=>{
+  const root=document.querySelector('#view .agh-ui');
+  const parent=root&&root.parentNode;
+  const next=root&&root.nextSibling;
+  if(root)root.remove();
+  const item=document.querySelector('#tabmenu .tabs>li');
+  const link=document.querySelector('#tabmenu .tabs>li>a');
+  const result={
+   itemBackground:getComputedStyle(item).backgroundColor,
+   itemBorderBottom:getComputedStyle(item).borderBottomWidth,
+   linkBackground:getComputedStyle(link).backgroundColor,
+   linkBorder:getComputedStyle(link).borderTopWidth,
+   linkPadding:getComputedStyle(link).paddingTop
+  };
+  if(root)parent.insertBefore(root,next);
+  return result;
+ });
+ assert.equal(tabStyleWithoutView.itemBackground,'rgba(0, 0, 0, 0)','AdGuardHome menu title remains plain text before the view mounts');
+ assert.equal(tabStyleWithoutView.itemBorderBottom,'0px','AdGuardHome menu title has no tab underline before the view mounts');
+ assert.equal(tabStyleWithoutView.linkBackground,'rgba(0, 0, 0, 0)','AdGuardHome menu link has no button background before the view mounts');
+ assert.equal(tabStyleWithoutView.linkBorder,'0px','AdGuardHome menu link has no button border before the view mounts');
+ assert.equal(tabStyleWithoutView.linkPadding,'0px','AdGuardHome menu link has no button padding before the view mounts');
  const homeLink=page.locator('.agh-nav a').first();
  assert.equal(await homeLink.getAttribute('href'),'/cgi-bin/luci/admin/services/adguardhome/overview','Home navigation returns to the overview route');
  assert.equal(await homeLink.locator('*').count(),0,'Home button contains text only');
