@@ -77,7 +77,9 @@ const server=http.createServer(async(req,res)=>{
   theme.renderMainMenu(tree.children.admin,'admin');
  },{defs:menuConfig,name});
  assert.deepEqual(await page.locator('#tabmenu a').allTextContents(),['AdGuardHome']);
- assert.equal(await page.locator('#tabmenu a').evaluate(e=>getComputedStyle(e).fontSize),'20px','Top-level AdGuardHome label uses the desktop title size');
+ const tabTitle=await page.locator('#tabmenu a').evaluate(e=>({fontSize:getComputedStyle(e).fontSize,viewportWidth:window.innerWidth}));
+ const expectedTabTitleFontSize=tabTitle.viewportWidth<=720?'18px':'20px';
+ assert.equal(tabTitle.fontSize,expectedTabTitleFontSize,`Top-level AdGuardHome label uses the responsive title size at ${tabTitle.viewportWidth}px`);
  const homeLink=page.locator('.agh-nav a').first();
  assert.equal(await homeLink.getAttribute('href'),'/cgi-bin/luci/admin/services/adguardhome/overview','Home navigation returns to the overview route');
  assert.equal(await homeLink.locator('*').count(),0,'Home button contains text only');
