@@ -419,11 +419,32 @@ get_live() {
 	fi
 }
 
+# Optional TOPS provider: bounded software metadata, never summed with bytes.
+get_npu_status() {
+	local status rc
+	if [ ! -x /usr/bin/mtk-tops-status ]; then
+		printf '{"available":false,"coverage":"provider_missing"}\n'
+		return
+	fi
+	if ! command -v timeout >/dev/null 2>&1; then
+		printf '{"available":false,"coverage":"no_timeout_tool"}\n'
+		return
+	fi
+	status=$(timeout 12 /usr/bin/mtk-tops-status 2>/dev/null)
+	rc=$?
+	if [ "$rc" -eq 0 ] && [ "${#status}" -le 32768 ] && json_load "$status" 2>/dev/null; then
+		printf '%s\n' "$status"
+	else
+		printf '{"available":false,"coverage":"provider_failed","exit":%s}\n' "$rc"
+	fi
+}
+
 case "$1" in
 	list)
 		json_init
 		json_add_object "getSummary"; json_close_object
 		json_add_object "getLive"; json_close_object
+		json_add_object "getNpuStatus"; json_close_object
 		json_add_object "getHourly"
 		json_add_string "hours" "integer"
 		json_close_object
@@ -459,6 +480,7 @@ case "$1" in
 		case "$2" in
 			getSummary) get_summary ;;
 			getLive)    get_live ;;
+			getNpuStatus) get_npu_status ;;
 			getHourly)  get_hourly_safe "$arg_hours" ;;
 			getHourlyChunk) get_hourly_chunk "$arg_hours" "$arg_cursor" "$arg_offset" ;;
 			getConfig)  get_config ;;

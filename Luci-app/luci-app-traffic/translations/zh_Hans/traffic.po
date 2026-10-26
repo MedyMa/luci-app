@@ -376,3 +376,39 @@ msgstr "占全部流量"
 
 msgid "Updates every %s seconds"
 msgstr "%s 秒更新"
+
+msgid "TOPS tunnels"
+msgstr "TOPS 隧道"
+
+msgid "Firmware ready"
+msgstr "固件已就绪"
+
+msgid "Firmware not ready"
+msgstr "固件未就绪"
+
+msgid "Tunnel states are software snapshots. WAN and conntrack remain the byte sources; TOPS events are not added to traffic totals."
+msgstr "隧道状态来自软件快照。流量字节仍取自 WAN 与 conntrack，TOPS 事件计数不计入流量总量。"
+
+msgid "Synchronized"
+msgstr "已同步"
+
+msgid "Pending"
+msgstr "待同步"
+
+msgid "No synchronized tunnel entries yet"
+msgstr "暂未记录隧道表项"
+
+msgid "Tunnel state unavailable"
+msgstr "无法读取隧道状态"
+
+msgid "Local endpoint"
+msgstr "本地端点"
+
+msgid "Remote endpoint"
+msgstr "远端端点"
+
+msgid "Index"
+msgstr "索引"
+
+msgid "Protocol"
+msgstr "协议"

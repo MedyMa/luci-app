@@ -4,6 +4,7 @@
 'require dom';
 'require poll';
 
+var callNpuStatus = rpc.declare({ object: 'luci.traffic', method: 'getNpuStatus' });
 var callSummary = rpc.declare({ object: 'luci.traffic', method: 'getSummary' });
 var callHourlyChunk = rpc.declare({ object: 'luci.traffic', method: 'getHourlyChunk', params: [ 'hours', 'cursor', 'offset' ] });
 var callSeries  = rpc.declare({ object: 'luci.traffic', method: 'getSeries', params: [ 'range' ] });
@@ -927,6 +928,7 @@ return view.extend({
 		 * comment on.  Hidden until there is something to say. */
 		this.diagCardEl = el('div', { 'class': 'tf-card tf-diag-card' }, [ this.diagEl ]);
 		this.diagCardEl.style.display = 'none';
+		this.topsCardEl = el('div', { 'class': 'tf-card', 'style': 'display:none;overflow-x:auto' });
 		/* One day by default: it is the window that answers "what has been
 		 * happening", where the hour view is mostly the last few minutes. */
 		/* the chart tier is derived from the range, never chosen separately */
@@ -975,6 +977,7 @@ return view.extend({
 			]),
 
 			statCard,
+			this.topsCardEl,
 
 			/* The composition sits above the table rather than beside it: the two
 			 * were a flexible two-column row, and below the tablet breakpoint that
@@ -1045,6 +1048,8 @@ return view.extend({
 		watchTheme(node);
 		this.refresh(false);
 		this.loadSeries();
+		this.pollTops();
+		poll.add(L.bind(this.pollTops, this), 30);
 		poll.add(L.bind(function() {
 			this.ticks = (this.ticks || 0) + 1;
 			if (this.ticks % 12 === 0 && !document.hidden) refreshWebsiteIcons();
@@ -1067,6 +1072,39 @@ return view.extend({
 		 * goes stale. */
 		poll.add(L.bind(this.pollLive, this), 1);
 		return node;
+	},
+
+	/* Optional provider, metadata only. Never contributes to totals/rates. */
+	pollTops: function() {
+		return callNpuStatus().then(L.bind(function(r) {
+			if (!r || !r.npu || !r.npu.status_node_present) {
+				this.topsCardEl.style.display = 'none';
+				return;
+			}
+			var tunnels = r.tunnels || {}, rows = [];
+			(tunnels.entries || []).slice(0, 32).forEach(function(t) {
+				rows.push(el('tr', {}, [
+					el('td', {}, [ String(t.index) ]),
+					el('td', {}, [ String(t.protocol || '') ]),
+					el('td', {}, [ String(t.local_address || '') + ':' + String(t.local_port || 0) ]),
+					el('td', {}, [ String(t.remote_address || '') + ':' + String(t.remote_port || 0) ]),
+					el('td', {}, [ t.synchronized ? _('Synchronized') : _('Pending') ])
+				]));
+			});
+			dom.content(this.topsCardEl, [
+				el('h3', {}, [ _('TOPS tunnels') ]),
+				el('p', {}, [ r.npu.firmware_ready && r.npu.mcu_alive ? _('Firmware ready') : _('Firmware not ready') ]),
+				el('p', {}, [ _('Tunnel states are software snapshots. WAN and conntrack remain the byte sources; TOPS events are not added to traffic totals.') ]),
+				tunnels.coverage === 'complete' ? el('table', { 'class': 'table' }, [
+					el('thead', {}, [ el('tr', {}, [ _('Index'), _('Protocol'), _('Local endpoint'), _('Remote endpoint'), _('State') ].map(function(x) { return el('th', {}, [x]); })) ]),
+					el('tbody', {}, rows.length ? rows : [el('tr', {}, [el('td', {colspan:5}, [_('No synchronized tunnel entries yet')])])])
+				]) : el('p', {}, [_('Tunnel state unavailable')])
+			]);
+			this.topsCardEl.style.display = '';
+		}, this)).catch(L.bind(function() {
+			/* Old backends without the optional RPC keep the existing page. */
+			this.topsCardEl.style.display = 'none';
+		}, this));
 	},
 
 	/* The picker calls this.  It is a method rather than a closure so that the
