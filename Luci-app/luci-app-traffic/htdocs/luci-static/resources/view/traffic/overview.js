@@ -511,6 +511,55 @@ function makeDonut(items, total) {
 
 function el(tag, attrs, children) { return E(tag, attrs || {}, children || []); }
 
+/* Optional metadata only. Keep malformed or incomplete observations distinct
+ * from a genuine empty table, and never feed these fields into byte totals.
+ */
+function topsStatusModel(r) {
+	if (!r || (r.schema !== 2 && r.schema !== 3) || !r.npu) return null;
+	var n = r.npu, t = r.tunnels || {}, seen = {}, entries = [], invalid = false;
+	var uint = function(x, max) { return Number.isInteger(x) && x >= 0 && x <= max; };
+	if (typeof n.status_node_present !== 'boolean' || typeof n.firmware_ready !== 'boolean' ||
+		typeof n.mcu_alive !== 'boolean' || !uint(n.registered_tunnel_types, 32)) return null;
+	var ipv4 = function(x) {
+		if (typeof x !== 'string') return false;
+		var parts = x.split('.');
+		return parts.length === 4 && parts.every(function(p) {
+			return /^(0|[1-9][0-9]{0,2})$/.test(p) && Number(p) <= 255;
+		});
+	};
+	if (!Array.isArray(t.entries)) invalid = true;
+	(Array.isArray(t.entries) ? t.entries : []).slice(0, 32).forEach(function(e) {
+		if (!e || !uint(e.index, 31) || seen[e.index] ||
+			['gretap', 'vxlan', 'l2tpv2'].indexOf(e.protocol) < 0 ||
+			!ipv4(e.local_address) || !ipv4(e.remote_address) ||
+			!uint(e.local_port, 65535) || !uint(e.remote_port, 65535) ||
+			typeof e.encapsulation !== 'boolean' || typeof e.decapsulation !== 'boolean' ||
+			typeof e.synchronized !== 'boolean') { invalid = true; return; }
+		seen[e.index] = true;
+		entries.push(e);
+	});
+	if (Array.isArray(t.entries) && t.entries.length > 32) invalid = true;
+	if (t.count != null && t.count !== entries.length) invalid = true;
+	var ready = n.status_node_present === true && n.coverage === 'complete' &&
+		n.firmware_ready === true && n.mcu_alive === true;
+	return {
+		present: n.status_node_present === true,
+		ready: ready,
+		readable: n.coverage === 'complete',
+		types: uint(n.registered_tunnel_types, 32) ? n.registered_tunnel_types : 0,
+		verified: ready && n.packet_offload_verified === true,
+		capacity: uint(t.capacity, 32) && t.capacity > 0 ? t.capacity : 32,
+		complete: t.coverage === 'complete' && !invalid,
+		entries: entries,
+		synced: entries.filter(function(e) { return e.synchronized; }).length,
+		accounting: r.accounting || {}
+	};
+}
+
+function topsEndpoint(address, port) {
+	return address + (port ? ':' + port : '');
+}
+
 /* SVG needs its own namespace.
  *
  * LuCI's E() ends up in dom.create(), which calls document.createElement() -
@@ -928,7 +977,9 @@ return view.extend({
 		 * comment on.  Hidden until there is something to say. */
 		this.diagCardEl = el('div', { 'class': 'tf-card tf-diag-card' }, [ this.diagEl ]);
 		this.diagCardEl.style.display = 'none';
-		this.topsCardEl = el('div', { 'class': 'tf-card', 'style': 'display:none;overflow-x:auto' });
+		this.topsCardEl = el('div', { 'class': 'tf-card tf-tops-card',
+			'role': 'region', 'aria-label': _('NPU / TOPS') });
+		this.topsCardEl.style.display = 'none';
 		/* One day by default: it is the window that answers "what has been
 		 * happening", where the hour view is mostly the last few minutes. */
 		/* the chart tier is derived from the range, never chosen separately */
@@ -1077,34 +1128,87 @@ return view.extend({
 	/* Optional provider, metadata only. Never contributes to totals/rates. */
 	pollTops: function() {
 		return callNpuStatus().then(L.bind(function(r) {
-			if (!r || !r.npu || !r.npu.status_node_present) {
-				this.topsCardEl.style.display = 'none';
+			var model = topsStatusModel(r);
+			if (!model) {
+				if (this.lastTops) this.renderTops(this.lastTops, true);
+				else this.topsCardEl.style.display = 'none';
 				return;
 			}
-			var tunnels = r.tunnels || {}, rows = [];
-			(tunnels.entries || []).slice(0, 32).forEach(function(t) {
-				rows.push(el('tr', {}, [
-					el('td', {}, [ String(t.index) ]),
-					el('td', {}, [ String(t.protocol || '') ]),
-					el('td', {}, [ String(t.local_address || '') + ':' + String(t.local_port || 0) ]),
-					el('td', {}, [ String(t.remote_address || '') + ':' + String(t.remote_port || 0) ]),
-					el('td', {}, [ t.synchronized ? _('Synchronized') : _('Pending') ])
-				]));
-			});
-			dom.content(this.topsCardEl, [
-				el('h3', {}, [ _('TOPS tunnels') ]),
-				el('p', {}, [ r.npu.firmware_ready && r.npu.mcu_alive ? _('Firmware ready') : _('Firmware not ready') ]),
-				el('p', {}, [ _('Tunnel states are software snapshots. WAN and conntrack remain the byte sources; TOPS events are not added to traffic totals.') ]),
-				tunnels.coverage === 'complete' ? el('table', { 'class': 'table' }, [
-					el('thead', {}, [ el('tr', {}, [ _('Index'), _('Protocol'), _('Local endpoint'), _('Remote endpoint'), _('State') ].map(function(x) { return el('th', {}, [x]); })) ]),
-					el('tbody', {}, rows.length ? rows : [el('tr', {}, [el('td', {colspan:5}, [_('No synchronized tunnel entries yet')])])])
-				]) : el('p', {}, [_('Tunnel state unavailable')])
-			]);
-			this.topsCardEl.style.display = '';
+			this.lastTops = model;
+			this.renderTops(model, false);
 		}, this)).catch(L.bind(function() {
-			/* Old backends without the optional RPC keep the existing page. */
-			this.topsCardEl.style.display = 'none';
+			if (this.lastTops) this.renderTops(this.lastTops, true);
+			else this.topsCardEl.style.display = 'none';
 		}, this));
+	},
+
+	renderTops: function(m, stale) {
+		var metric = function(label, value, note) {
+			return el('div', { 'class': 'tf-tops-metric' }, [
+				el('span', { 'class': 'tf-tops-label' }, [ label ]),
+				el('b', { 'class': 'tf-tops-value' }, [ value ]),
+				el('span', { 'class': 'tf-tops-note' }, [ note ])
+			]);
+		};
+		var firmware = !m.present ? _('Not loaded') : !m.readable ? _('Status unavailable') :
+			m.ready ? _('Ready') : _('Not ready');
+		var header = el('div', { 'class': 'tf-tops-head' }, [
+			el('div', {}, [
+				el('div', { 'class': 'tf-tops-title', 'role': 'heading', 'aria-level': '3' }, [ _('NPU / TOPS') ]),
+				el('span', { 'class': 'tf-tops-subtitle' }, [ _('Tunnel acceleration') ])
+			]),
+			el('span', { 'class': 'tf-tops-badge ' + (stale ? 'tf-tops-warning' : m.ready ? 'tf-tops-ready' : '') },
+				[ stale ? _('Snapshot out of date') : firmware ])
+		]);
+		var content = [ header, el('div', { 'class': 'tf-tops-metrics' }, [
+			metric(_('Firmware'), firmware, _('Registered tunnel types') + ': ' + m.types),
+			metric(_('Synchronized tunnels'), m.complete ? String(m.synced) : '—',
+				_('Recorded') + ': ' + m.entries.length + ' / ' + m.capacity),
+			metric(_('Hardware forwarding'), m.verified ? _('Verified') : _('Not verified'),
+				_('Parameter synchronization is not packet verification'))
+		]) ];
+		if (stale) content.push(el('div', { 'class': 'tf-tops-alert', 'role': 'status' },
+			[ _('Unable to refresh; showing the last snapshot.') ]));
+		if (!m.complete) content.push(el('div', { 'class': 'tf-tops-alert', 'role': 'status' },
+			[ _('Tunnel state is incomplete or unavailable.') ]));
+		if (m.entries.length) {
+			var labels = [ _('Protocol'), _('Local endpoint'), _('Remote endpoint'), _('Direction'), _('State') ];
+			var protocols = { gretap: 'GRETAP', vxlan: 'VXLAN', l2tpv2: 'L2TPv2' };
+			var rows = m.entries.map(function(t) {
+				var direction = t.encapsulation && t.decapsulation ? _('Bidirectional') :
+					t.encapsulation ? _('Encapsulation') : t.decapsulation ? _('Decapsulation') : '—';
+				var cells = [
+					el('span', {}, [ protocols[t.protocol], el('small', { 'class': 'tf-tops-index' }, [ '#' + t.index ]) ]),
+					el('span', { 'class': 'tf-tops-endpoint' }, [ topsEndpoint(t.local_address, t.local_port) ]),
+					el('span', { 'class': 'tf-tops-endpoint' }, [ topsEndpoint(t.remote_address, t.remote_port) ]),
+					direction,
+					el('span', { 'class': 'tf-tops-badge ' + (t.synchronized ? 'tf-tops-ready' : '') },
+						[ t.synchronized ? _('Parameters synchronized') : _('Pending') ])
+				];
+				return el('tr', {}, cells.map(function(c, i) { return el('td', { 'data-label': labels[i] }, [ c ]); }));
+			});
+			content.push(el('table', { 'class': 'tf-tops-table', 'aria-label': _('TOPS tunnels') }, [
+				el('thead', {}, [ el('tr', {}, labels.map(function(x) { return el('th', { 'scope': 'col' }, [ x ]); })) ]),
+				el('tbody', {}, rows)
+			]));
+		} else if (m.complete) {
+			content.push(el('div', { 'class': 'tf-tops-empty' }, [
+				el('b', {}, [ _('No tunnel entries') ]),
+				el('span', {}, [ m.ready ? _('Waiting for supported tunnel traffic.') : _('Tunnel learning starts when the firmware is ready.') ])
+			]));
+		}
+		var a = m.accounting;
+		var accountingUnknown = a.conntrack_setting_coverage !== 'complete';
+		var accountingNote = accountingUnknown ? _('Conntrack accounting status is unavailable.') :
+			a.conntrack_accounting_enabled !== true ? _('Conntrack accounting is disabled; application attribution may be incomplete.') : '';
+		content.push(el('details', { 'class': 'tf-tops-details' }, [
+			el('summary', {}, [ _('How this status is counted') ]),
+			el('p', {}, [ _('WAN counters provide total traffic; conntrack provides application attribution. TOPS setup events are not traffic bytes.') ]),
+			accountingNote ? el('p', { 'class': 'tf-tops-account-note' }, [ accountingNote ]) : '',
+			el('p', {}, [ _('Synchronized parameters alone do not confirm hardware packet forwarding.') ])
+		]));
+		dom.content(this.topsCardEl, content);
+		this.topsCardEl.style.display = '';
 	},
 
 	/* The picker calls this.  It is a method rather than a closure so that the
@@ -2253,7 +2357,7 @@ function injectCss() {
 		'--tf-icon-shadow:0 2px 6px rgba(31,66,102,.18);',
 		'--tf-fg:var(--font-color,#20303d);--tf-dim:#68727c;',
 		'--tf-shadow:0 6px 22px rgba(31,66,102,.10);',
-		'--tf-down:#0a84ff;--tf-up:#30d158;',
+		'--tf-down:#0a84ff;--tf-up:#30d158;--tf-tops-ok:#16734a;',
 		'--tf-area-down:rgba(10,132,255,.13);--tf-area-up:rgba(48,209,88,.11);',
 		/* width, not just flex:1: the page is a flex item in the wrapper LuCI
 		 * puts a view in, and as one it was sized by its own content.  With the
@@ -2302,6 +2406,52 @@ function injectCss() {
 		'.tf-page .tf-card{background:var(--tf-card);border:1px solid var(--tf-card-brd);',
 		'border-radius:16px;box-shadow:var(--tf-shadow);backdrop-filter:blur(14px) saturate(150%);',
 		'-webkit-backdrop-filter:blur(14px) saturate(150%);padding:1rem 1.15rem;margin-bottom:1rem;}',
+		/* TOPS belongs to the same card surface; avoid theme h3/table headers
+		 * which otherwise turn the compact status pane into a second banner. */
+		'.tf-page .tf-tops-card{order:4;flex:0 0 100%;max-width:100%;}',
+		'.tf-page .tf-tops-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:.9rem;}',
+		'.tf-page .tf-tops-title{font-size:1.05rem;font-weight:650;line-height:1.5;}',
+		'.tf-page .tf-tops-subtitle,.tf-page .tf-tops-note{font-size:.78rem;color:var(--tf-dim);}',
+		'.tf-page .tf-tops-badge{display:inline-block;border-radius:999px;background:var(--tf-chip);',
+		'color:var(--tf-dim);font-size:.73rem;font-weight:500;padding:.25rem .65rem;line-height:1.45;}',
+		'.tf-page .tf-tops-ready{color:var(--tf-tops-ok);background:var(--tf-area-up);}',
+		'.tf-page .tf-tops-warning{color:var(--tf-fg);}',
+		'.tf-page .tf-tops-metrics{display:flex;flex-wrap:wrap;margin:0 -.35rem .8rem;}',
+		'.tf-page .tf-tops-metric{flex:1 1 9rem;min-width:0;margin:.25rem .35rem;',
+		'padding:.8rem .9rem;border:1px solid var(--tf-line);border-radius:11px;}',
+		'.tf-page .tf-tops-label{display:block;font-size:.76rem;color:var(--tf-dim);}',
+		'.tf-page .tf-tops-value{display:block;font-size:1.2rem;font-weight:600;line-height:1.6;}',
+		'.tf-page .tf-tops-note{display:block;line-height:1.5;}',
+		'.tf-page .tf-tops-empty{display:flex;flex-direction:column;align-items:center;text-align:center;',
+		'padding:1.35rem .8rem;border:1px dashed var(--tf-line);border-radius:11px;}',
+		'.tf-page .tf-tops-empty b{font-size:.9rem;font-weight:550;margin-bottom:.3rem;}',
+		'.tf-page .tf-tops-empty span{font-size:.8rem;color:var(--tf-dim);}',
+		'.tf-page .tf-tops-alert{border-left:3px solid var(--tf-accent);background:var(--tf-tint);',
+		'padding:.55rem .75rem;margin:.5rem 0;font-size:.82rem;border-radius:0 7px 7px 0;}',
+		'.tf-page .tf-tops-table{border:0;border-collapse:collapse;table-layout:fixed;width:100%;margin:.3rem 0 0;}',
+		'.tf-page .tf-tops-table th,.tf-page .tf-tops-table td{background:none;color:var(--tf-fg);',
+		'border:0;border-bottom:1px solid var(--tf-line);padding:.75rem .4rem;text-align:left;font-size:.8rem;vertical-align:middle;}',
+		'.tf-page .tf-tops-table th{font-size:.73rem;font-weight:500;color:var(--tf-dim);}',
+		'.tf-page .tf-tops-table th:first-child{width:15%;}.tf-page .tf-tops-table th:last-child{width:21%;}',
+		'.tf-page .tf-tops-table tr:last-child td{border-bottom:0;}',
+		'.tf-page .tf-tops-index{display:block;color:var(--tf-dim);font-size:.7rem;margin-top:.15rem;}',
+		'.tf-page .tf-tops-endpoint{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;',
+		'font-size:.76rem;overflow-wrap:anywhere;word-break:break-word;}',
+		'.tf-page .tf-tops-details{border-top:1px solid var(--tf-line);padding-top:.7rem;margin-top:.85rem;',
+		'font-size:.78rem;color:var(--tf-dim);}',
+		'.tf-page .tf-tops-details summary{cursor:pointer;font-weight:500;color:var(--tf-fg);}',
+		'.tf-page .tf-tops-details p{margin:.6rem 0 0;font-size:inherit;line-height:1.6;}',
+		'@media(max-width:39rem){.tf-page .tf-tops-metrics{margin-left:0;margin-right:0;}',
+		'.tf-page .tf-tops-metric{flex-basis:100%;display:flex;align-items:center;flex-wrap:wrap;margin:.2rem 0;',
+		'padding:.65rem .75rem;}.tf-page .tf-tops-label{flex:1 1 55%;}.tf-page .tf-tops-value{font-size:1rem;}',
+		'.tf-page .tf-tops-note{flex-basis:100%;margin-top:.15rem;}',
+		'.tf-page .tf-tops-table,.tf-page .tf-tops-table tbody,.tf-page .tf-tops-table tr{display:block;}',
+		'.tf-page .tf-tops-table thead{display:none;}.tf-page .tf-tops-table tr{padding:.55rem 0;border-bottom:1px solid var(--tf-line);}',
+		'.tf-page .tf-tops-table tr:last-child{border-bottom:0;}.tf-page .tf-tops-table td{display:flex;',
+		'justify-content:space-between;align-items:baseline;border:0;padding:.35rem 0;}',
+		'.tf-page .tf-tops-table td:before{content:attr(data-label);flex:0 0 6rem;color:var(--tf-dim);font-size:.73rem;}',
+		'.tf-page .tf-tops-table td>span{min-width:0;text-align:right;}',
+		'.tf-page .tf-tops-index{display:inline;margin-left:.45rem;}}',
 
 		/* hero.  The big number has its own class: "tf-total" is also the class
 		 * of the table's total cell, and sharing it made every row's total
@@ -2675,7 +2825,7 @@ function injectCss() {
 		'--tf-icon-shadow:0 2px 6px rgba(0,0,0,.45);',
 		'--tf-fg:#e6edf3;--tf-dim:#aeb5bc;',
 		'--tf-shadow:0 6px 22px rgba(0,0,0,.35);',
-		'--tf-down:#55c7ff;--tf-up:#42d993;',
+		'--tf-down:#55c7ff;--tf-up:#42d993;--tf-tops-ok:#66deb0;',
 		'--tf-area-down:rgba(85,199,255,.18);--tf-area-up:rgba(66,217,147,.15);}',
 		darkOf('.tf-range') + '{background-image:url("' + CHEVRON('#a9b6c2') + '");}',
 		/* Layout by width rather than by device: the cards stack as soon as they

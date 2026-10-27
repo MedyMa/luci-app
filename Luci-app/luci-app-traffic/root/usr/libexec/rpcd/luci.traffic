@@ -421,7 +421,7 @@ get_live() {
 
 # Optional TOPS provider: bounded software metadata, never summed with bytes.
 get_npu_status() {
-	local status rc
+	local status rc schema npu_type tunnels_type accounting_type
 	if [ ! -x /usr/bin/mtk-tops-status ]; then
 		printf '{"available":false,"coverage":"provider_missing"}\n'
 		return
@@ -432,11 +432,23 @@ get_npu_status() {
 	fi
 	status=$(timeout 12 /usr/bin/mtk-tops-status 2>/dev/null)
 	rc=$?
-	if [ "$rc" -eq 0 ] && [ "${#status}" -le 32768 ] && json_load "$status" 2>/dev/null; then
-		printf '%s\n' "$status"
-	else
+	if [ "$rc" -ne 0 ] || [ "${#status}" -gt 32768 ]; then
 		printf '{"available":false,"coverage":"provider_failed","exit":%s}\n' "$rc"
+		return
 	fi
+	# json_load() alone may evaluate empty parser output and return success.
+	if jshn -r "$status" >/dev/null 2>&1 && json_load "$status" 2>/dev/null; then
+		json_get_var schema schema
+		json_get_type npu_type npu
+		json_get_type tunnels_type tunnels
+		json_get_type accounting_type accounting
+		case "$schema:$npu_type:$tunnels_type:$accounting_type" in
+			2:object:object:object|3:object:object:object)
+				printf '%s\n' "$status"
+				return ;;
+		esac
+	fi
+	printf '{"available":false,"coverage":"provider_invalid"}\n'
 }
 
 case "$1" in

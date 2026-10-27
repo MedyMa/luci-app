@@ -126,12 +126,45 @@ get_wireless_history() {
 }
 
 
+# Optional bounded NPU metadata. No traffic/LuCI dependency or device writes.
+get_npu_status() {
+	local status rc schema npu_type tunnels_type accounting_type
+	if [ ! -x /usr/bin/mtk-tops-status ]; then
+		printf '{"available":false,"coverage":"provider_missing"}\n'
+		return
+	fi
+	if ! command -v timeout >/dev/null 2>&1; then
+		printf '{"available":false,"coverage":"no_timeout_tool"}\n'
+		return
+	fi
+	status=$(timeout 12 /usr/bin/mtk-tops-status 2>/dev/null)
+	rc=$?
+	if [ "$rc" -ne 0 ] || [ "${#status}" -gt 32768 ]; then
+		printf '{"available":false,"coverage":"provider_failed","exit":%s}\n' "$rc"
+		return
+	fi
+	# json_load() alone may evaluate empty parser output and return success.
+	if jshn -r "$status" >/dev/null 2>&1 && json_load "$status" 2>/dev/null; then
+		json_get_var schema schema
+		json_get_type npu_type npu
+		json_get_type tunnels_type tunnels
+		json_get_type accounting_type accounting
+		case "$schema:$npu_type:$tunnels_type:$accounting_type" in
+			2:object:object:object|3:object:object:object)
+				printf '%s\n' "$status"
+				return ;;
+		esac
+	fi
+	printf '{"available":false,"coverage":"provider_invalid"}\n'
+}
+
 case "${1:-}" in
     list)
         json_init
         json_add_object getSystemMetrics; json_close_object
         json_add_object getWirelessStatus; json_close_object
         json_add_object getWirelessHistory; json_close_object
+        json_add_object getNpuStatus; json_close_object
         json_dump
         ;;
     call)
@@ -139,6 +172,7 @@ case "${1:-}" in
             getSystemMetrics) get_system_metrics ;;
             getWirelessStatus) get_wireless_status ;;
             getWirelessHistory) get_wireless_history ;;
+            getNpuStatus) get_npu_status ;;
             *) json_init; json_add_string error 'unknown method'; json_dump ;;
         esac
         ;;

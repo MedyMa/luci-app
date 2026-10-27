@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=rpcd-mod-router-status
-PKG_VERSION:=0.1.2
+PKG_VERSION:=0.1.3
 PKG_RELEASE:=1
 PKG_LICENSE:=Apache-2.0
 PKGARCH:=all
@@ -12,7 +12,7 @@ define Package/$(PKG_NAME)
   SECTION:=utils
   CATEGORY:=Utilities
   TITLE:=Read-only router system and wireless status
-  DEPENDS:=+rpcd +ubus +jshn
+  DEPENDS:=+rpcd +ubus +jshn +coreutils-timeout
 endef
 
 define Package/$(PKG_NAME)/description

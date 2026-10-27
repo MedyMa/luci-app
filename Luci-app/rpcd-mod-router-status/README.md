@@ -5,12 +5,15 @@ Version 0.1.2 adds `temperatures` to `getSystemMetrics`: sanitized records with 
 Independent, read-only device telemetry for the ImmortalWrt mobile app.
 No dependency on LuCI, traffic statistics, traffic configuration or traffic caches.
 
+Version 0.1.3 adds optional `getNpuStatus`, backed by `mtk-tops-status` 0.1-r3 or newer. It returns bounded software metadata and explicit missing/failed coverage. No NPU driver or firmware is installed by this package, and no hardware forwarding is inferred from firmware readiness or synchronized parameters. The existing read ACL includes this method. TOPS event counts are never converted to traffic bytes.
+
 ## Interfaces
 
 | Object / method | Source | Data |
 |---|---|---|
 | `router.status.getSystemMetrics` | `/proc/stat` | Aggregate CPU counters; usage requires two samples |
 | `router.status.getWirelessStatus` | Local `network.wireless status`, sysfs | Radio name, up state, band, channel, EHT width, AP interface, BSSID |
+| `router.status.getNpuStatus` | Optional `/usr/bin/mtk-tops-status` | Firmware/MCU readiness, bounded tunnel parameter snapshots and accounting coverage |
 | `router.status.getWirelessHistory` | Independent sampler | 24-hour byte rates and interval TX failure / RX CRC percentages |
 
 The raw netifd response may contain configured passwords. The RPC projects only
@@ -53,6 +56,7 @@ clears history; a normal service restart or package upgrade preserves it.
 ubus -v list router.status
 ubus call router.status getWirelessStatus '{}'
 ubus call router.status getSystemMetrics '{}'
+ubus call router.status getNpuStatus '{}'
 ubus call router.status getWirelessHistory '{}'
 /etc/init.d/router-status status
 ubus -v list luci.traffic

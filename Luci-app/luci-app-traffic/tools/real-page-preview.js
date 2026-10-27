@@ -17,6 +17,8 @@ const fs = require('fs');
 const path = require('path');
 const OUT = process.argv[2] || path.join(__dirname, '..', '..', 'Test', 'luci-app-traffic', 'preview');
 const VIEW = path.join(__dirname, '..', 'htdocs', 'luci-static', 'resources', 'view', 'traffic', 'overview.js');
+// Optional fixture for the actual TOPS pane; never queries a router.
+const TOPS = process.env.TRAFFIC_PREVIEW_TOPS ? JSON.parse(fs.readFileSync(process.env.TRAFFIC_PREVIEW_TOPS, 'utf8')) : null;
 const src = fs.readFileSync(VIEW, 'utf8')
   .replace(/^'use strict';\s*$/m, '').replace(/^'require [^']+';\s*$/gm, '');
 
@@ -55,7 +57,7 @@ const documentStub={
   head:{ appendChild(){} }, hidden:false, body:mk(XHTML,'body')
 };
 const factory=new Function('view','rpc','dom','poll','_','E','L','document','Image','confirm',
-  src.replace(/return view\.extend\(/, 'global.__injectCss = injectCss;\nreturn view.extend('));
+  src.replace(/return view\.extend\(/, 'global.__injectCss = injectCss;\nglobal.__topsModel = topsStatusModel;\nreturn view.extend('));
 const viewStub={extend(o){ viewStub.__obj=o; return o; }};
 const domStub={content(node,ch){ node.children=[]; (Array.isArray(ch)?ch:[ch]).forEach(x=>{ if(x) node.appendChild(x); }); }};
 const rpcStub={declare(spec){ return ()=>Promise.resolve(spec.method === 'getHourlyChunk'
@@ -127,6 +129,10 @@ function seedRate(v){
       { down:SUMMARY.totals.down-12700, up:SUMMARY.totals.up-9020 }) });
   view.updateRate.call(v,past);
   view.updateRate.call(v,SUMMARY);
+  if (TOPS) {
+    const model = global.__topsModel(TOPS);
+    if (model) { v.lastTops = model; view.renderTops.call(v,model,false); }
+  }
 }
 /* The chart is built in the browser from a viewBox chosen by window.innerWidth,
  * and this generator serialises the SVG it built - so a phone's chart can only be

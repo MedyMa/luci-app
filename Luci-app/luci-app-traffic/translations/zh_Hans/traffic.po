@@ -412,3 +412,93 @@ msgstr "索引"
 
 msgid "Protocol"
 msgstr "协议"
+
+msgid "NPU / TOPS"
+msgstr "NPU / TOPS"
+
+msgid "Tunnel acceleration"
+msgstr "隧道加速"
+
+msgid "Not loaded"
+msgstr "未加载"
+
+msgid "Status unavailable"
+msgstr "状态不可用"
+
+msgid "Ready"
+msgstr "已就绪"
+
+msgid "Not ready"
+msgstr "未就绪"
+
+msgid "Snapshot out of date"
+msgstr "快照已过期"
+
+msgid "Firmware"
+msgstr "固件状态"
+
+msgid "Registered tunnel types"
+msgstr "已注册协议数"
+
+msgid "Synchronized tunnels"
+msgstr "已同步隧道"
+
+msgid "Recorded"
+msgstr "已记录"
+
+msgid "Hardware forwarding"
+msgstr "硬件收发"
+
+msgid "Verified"
+msgstr "已验证"
+
+msgid "Not verified"
+msgstr "待验证"
+
+msgid "Parameter synchronization is not packet verification"
+msgstr "参数同步不代表收发已验证"
+
+msgid "Unable to refresh; showing the last snapshot."
+msgstr "刷新失败，当前显示上一次快照。"
+
+msgid "Tunnel state is incomplete or unavailable."
+msgstr "隧道状态读取不完整或暂时不可用。"
+
+msgid "Direction"
+msgstr "方向"
+
+msgid "Bidirectional"
+msgstr "双向"
+
+msgid "Encapsulation"
+msgstr "封装"
+
+msgid "Decapsulation"
+msgstr "解封装"
+
+msgid "Parameters synchronized"
+msgstr "参数已同步"
+
+msgid "No tunnel entries"
+msgstr "暂无隧道记录"
+
+msgid "Waiting for supported tunnel traffic."
+msgstr "固件已就绪，等待支持的隧道流量。"
+
+msgid "Tunnel learning starts when the firmware is ready."
+msgstr "固件就绪后开始学习隧道。"
+
+msgid "Conntrack accounting status is unavailable."
+msgstr "暂时无法读取连接流量统计状态。"
+
+msgid "Conntrack accounting is disabled; application attribution may be incomplete."
+msgstr "连接流量统计未开启，应用流量归属可能不完整。"
+
+msgid "How this status is counted"
+msgstr "状态与流量统计说明"
+
+msgid "WAN counters provide total traffic; conntrack provides application attribution. TOPS setup events are not traffic bytes."
+msgstr "总流量取自 WAN 计数，应用归属取自连接统计。TOPS 建立事件不作为流量字节累加。"
+
+msgid "Synchronized parameters alone do not confirm hardware packet forwarding."
+msgstr "仅凭隧道参数已同步，无法确认硬件已完成报文收发。"
