@@ -479,6 +479,27 @@ msgstr "解封装"
 msgid "Parameters synchronized"
 msgstr "参数已同步"
 
+msgid "Synchronization failed"
+msgstr "同步失败"
+
+msgid "Not started"
+msgstr "尚未开始"
+
+msgid "Classifier setup"
+msgstr "分类器配置"
+
+msgid "Pause NPU"
+msgstr "暂停 NPU"
+
+msgid "Management core ACK"
+msgstr "管理核确认"
+
+msgid "Offload core notification"
+msgstr "卸载核通知"
+
+msgid "DIP filter setup"
+msgstr "DIP 过滤器配置"
+
 msgid "No tunnel entries"
 msgstr "暂无隧道记录"
 

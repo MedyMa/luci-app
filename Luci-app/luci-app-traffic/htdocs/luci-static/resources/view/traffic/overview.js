@@ -518,6 +518,8 @@ function topsStatusModel(r) {
 	if (!r || (r.schema !== 2 && r.schema !== 3) || !r.npu) return null;
 	var n = r.npu, t = r.tunnels || {}, seen = {}, entries = [], invalid = false;
 	var uint = function(x, max) { return Number.isInteger(x) && x >= 0 && x <= max; };
+	var u64 = function(x) { return typeof x === 'string' && /^(0|[1-9][0-9]{0,19})$/.test(x) &&
+		(x.length < 20 || x <= '18446744073709551615'); };
 	if (typeof n.status_node_present !== 'boolean' || typeof n.firmware_ready !== 'boolean' ||
 		typeof n.mcu_alive !== 'boolean' || !uint(n.registered_tunnel_types, 32)) return null;
 	var ipv4 = function(x) {
@@ -535,6 +537,16 @@ function topsStatusModel(r) {
 			!uint(e.local_port, 65535) || !uint(e.remote_port, 65535) ||
 			typeof e.encapsulation !== 'boolean' || typeof e.decapsulation !== 'boolean' ||
 			typeof e.synchronized !== 'boolean') { invalid = true; return; }
+		if (e.sync_health != null) {
+			var h = e.sync_health;
+			if (!h || h.unit !== 'parameter_sync_attempts' || !u64(h.attempts) ||
+				!u64(h.failures) || !u64(h.synced_generation) || !uint(h.stage, 6) ||
+				!Number.isInteger(h.last_error) || Math.abs(h.last_error) > 4095) {
+				invalid = true;
+				e = Object.assign({}, e);
+				delete e.sync_health;
+			}
+		}
 		seen[e.index] = true;
 		entries.push(e);
 	});
@@ -1177,13 +1189,21 @@ return view.extend({
 			var rows = m.entries.map(function(t) {
 				var direction = t.encapsulation && t.decapsulation ? _('Bidirectional') :
 					t.encapsulation ? _('Encapsulation') : t.decapsulation ? _('Decapsulation') : '—';
+				var health = t.sync_health, syncFailed = !t.synchronized && health && health.last_error !== 0;
+				var syncLabel = t.synchronized ? _('Parameters synchronized') :
+					syncFailed ? _('Synchronization failed') : _('Pending');
+				var syncContent = [ el('span', { 'class': 'tf-tops-badge ' + (t.synchronized ? 'tf-tops-ready' : '') }, [ syncLabel ]) ];
+				if (syncFailed) {
+					var stages = [ _('Not started'), _('Classifier setup'), _('Pause NPU'), _('Management core ACK'),
+						_('Offload core notification'), _('DIP filter setup'), _('Parameters synchronized') ];
+					syncContent.push(el('small', { 'class': 'tf-tops-index' }, [ stages[health.stage] + ' (' + health.last_error + ')' ]));
+				}
 				var cells = [
 					el('span', {}, [ protocols[t.protocol], el('small', { 'class': 'tf-tops-index' }, [ '#' + t.index ]) ]),
 					el('span', { 'class': 'tf-tops-endpoint' }, [ topsEndpoint(t.local_address, t.local_port) ]),
 					el('span', { 'class': 'tf-tops-endpoint' }, [ topsEndpoint(t.remote_address, t.remote_port) ]),
 					direction,
-					el('span', { 'class': 'tf-tops-badge ' + (t.synchronized ? 'tf-tops-ready' : '') },
-						[ t.synchronized ? _('Parameters synchronized') : _('Pending') ])
+					el('span', {}, syncContent)
 				];
 				return el('tr', {}, cells.map(function(c, i) { return el('td', { 'data-label': labels[i] }, [ c ]); }));
 			});

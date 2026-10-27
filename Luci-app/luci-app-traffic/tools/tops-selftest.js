@@ -38,6 +38,18 @@ async function run() {
   check(v.lastTops.synced === 2, 'synchronized count comes from validated entries');
   check(contains(v.topsCardEl,'Parameters synchronized') && contains(v.topsCardEl,'Pending'), 'pending and synchronized entries are distinct');
   check(contains(v.topsCardEl,'192.0.2.1:4789'), 'UDP port is displayed');
+  response=base(); response.tunnels.entries=[Object.assign(entry(0), {synchronized:false,sync_health:{
+    unit:'parameter_sync_attempts',attempts:'3',failures:'3',stage:3,last_error:-110,synced_generation:'0'}})];
+  response.tunnels.count=1; await v.pollTops();
+  check(contains(v.topsCardEl,'Synchronization failed')&&contains(v.topsCardEl,'Management core ACK (-110)'), 'actual sync stage and errno are visible');
+  response.tunnels.entries[0].sync_health.last_error=0; await v.pollTops();
+  check(contains(v.topsCardEl,'Pending')&&!contains(v.topsCardEl,'Synchronization failed'), 'retry with no current error is pending');
+  for (const change of [h=>h.stage=7,h=>h.last_error=-5000,h=>h.attempts='18446744073709551616',h=>h.unit='packets']) {
+    const d=base(), e=entry(0);e.sync_health={unit:'parameter_sync_attempts',attempts:'1',failures:'0',stage:6,last_error:0,synced_generation:'1'};
+    change(e.sync_health);d.tunnels.entries=[e];d.tunnels.count=1;
+    const m=capture.model(d);check(!m.complete&&m.entries.length===1&&!m.entries[0].sync_health,'invalid sync metadata is not trusted');
+  }
+  response=data; await v.pollTops();
   check(!contains(v.topsCardEl,'198.51.100.1:0'), 'GRE does not display a fabricated port zero');
   check(contains(v.topsCardEl,'GRETAP') && contains(v.topsCardEl,'VXLAN') && contains(v.topsCardEl,'L2TPv2'), 'three protocol names are readable');
   reject = true; await v.pollTops(); reject = false;
