@@ -3,7 +3,7 @@
     "description": "Read router CPU, sanitized wireless and optional NPU status",
     "read": {
       "ubus": {
-        "router.status": ["getSystemMetrics", "getWirelessStatus", "getWirelessHistory", "getNpuStatus"],
+        "router.status": ["getSystemMetrics", "getWirelessStatus", "getWirelessHistory", "getNpuStatus", "getNpuUsage"],
         "system": ["info"]
       }
     }

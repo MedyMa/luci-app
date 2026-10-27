@@ -158,6 +158,48 @@ get_npu_status() {
 	printf '{"available":false,"coverage":"provider_invalid"}\n'
 }
 
+# Optional real utilization; does not fetch tunnel metadata or traffic totals.
+get_npu_usage() {
+	local usage rc schema schema_type available unit percent cores available_type percent_type cores_type coverage
+	if [ ! -x /usr/bin/mtk-npu-usage ]; then
+		printf '{"available":false,"coverage":"provider_missing"}\n'
+		return
+	fi
+	if ! command -v timeout >/dev/null 2>&1; then
+		printf '{"available":false,"coverage":"no_timeout_tool"}\n'
+		return
+	fi
+	usage=$(timeout 3 /usr/bin/mtk-npu-usage 2>/dev/null)
+	rc=$?
+	if [ "$rc" -ne 0 ] || [ "${#usage}" -gt 1024 ]; then
+		printf '{"available":false,"coverage":"provider_failed"}\n'
+		return
+	fi
+	if jshn -r "$usage" >/dev/null 2>&1 && json_load "$usage" 2>/dev/null; then
+		json_get_var schema schema; json_get_type schema_type schema; json_get_var unit unit
+		json_get_var available available; json_get_type available_type available
+		json_get_var percent percent_milli; json_get_type percent_type percent_milli
+		json_get_var cores core_count; json_get_type cores_type core_count
+		json_get_var coverage coverage
+		if [ "$schema:$schema_type:$unit:$available_type" = '1:int:mean_core_busy_percent:boolean' ]; then
+			if [ "$available" = 1 ] && [ "$percent_type:$cores_type:$cores" = 'int:int:5' ]; then
+				case "$percent" in ''|*[!0-9]*) percent=invalid ;; esac
+				if [ "${#percent}" -le 6 ] && [ "$percent" -le 100000 ] 2>/dev/null; then
+					printf '{"schema":1,"available":true,"unit":"mean_core_busy_percent","percent_milli":%s,"core_count":5,"coverage":"complete"}\n' "$percent"
+					return
+				fi
+			elif [ "$available" = 0 ]; then
+				case "$coverage" in
+					missing|no_timeout_tool|read_failed|oversized|invalid|driver_unsupported)
+						printf '{"schema":1,"available":false,"unit":"mean_core_busy_percent","coverage":"%s"}\n' "$coverage"
+						return ;;
+				esac
+			fi
+		fi
+	fi
+	printf '{"available":false,"coverage":"provider_invalid"}\n'
+}
+
 case "${1:-}" in
     list)
         json_init
@@ -165,6 +207,7 @@ case "${1:-}" in
         json_add_object getWirelessStatus; json_close_object
         json_add_object getWirelessHistory; json_close_object
         json_add_object getNpuStatus; json_close_object
+        json_add_object getNpuUsage; json_close_object
         json_dump
         ;;
     call)
@@ -173,6 +216,7 @@ case "${1:-}" in
             getWirelessStatus) get_wireless_status ;;
             getWirelessHistory) get_wireless_history ;;
             getNpuStatus) get_npu_status ;;
+            getNpuUsage) get_npu_usage ;;
             *) json_init; json_add_string error 'unknown method'; json_dump ;;
         esac
         ;;
