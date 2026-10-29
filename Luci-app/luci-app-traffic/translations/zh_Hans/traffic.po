@@ -523,3 +523,15 @@ msgstr "总流量取自 WAN 计数，应用归属取自连接统计。TOPS 建�
 
 msgid "Synchronized parameters alone do not confirm hardware packet forwarding."
 msgstr "仅凭隧道参数已同步，无法确认硬件已完成报文收发。"
+
+msgid "NPU utilization"
+msgstr "NPU 使用率"
+
+msgid "Utilization unavailable"
+msgstr "暂时无法读取使用率"
+
+msgid "Average busy time of five NPU cores"
+msgstr "NPU 五个核心的平均忙碌比例"
+
+msgid "Ordinary Internet traffic is handled by PPE/WED. An empty TOPS table can coexist with active hardware forwarding."
+msgstr "普通上网流量由 PPE／WED 处理；TOPS 表为空时，硬件转发仍可正常工作。"

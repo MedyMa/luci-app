@@ -554,12 +554,17 @@ function topsStatusModel(r) {
 	if (t.count != null && t.count !== entries.length) invalid = true;
 	var ready = n.status_node_present === true && n.coverage === 'complete' &&
 		n.firmware_ready === true && n.mcu_alive === true;
+	var usage = n.utilization;
+	var utilization = ready && usage && usage.available === true &&
+		usage.coverage === 'complete' && usage.unit === 'mean_core_busy_percent' &&
+		usage.core_count === 5 && uint(usage.percent_milli, 100000) ? usage.percent_milli / 1000 : null;
 	return {
 		present: n.status_node_present === true,
 		ready: ready,
 		readable: n.coverage === 'complete',
 		types: uint(n.registered_tunnel_types, 32) ? n.registered_tunnel_types : 0,
 		verified: ready && n.packet_offload_verified === true,
+		utilization: utilization,
 		capacity: uint(t.capacity, 32) && t.capacity > 0 ? t.capacity : 32,
 		complete: t.coverage === 'complete' && !invalid,
 		entries: entries,
@@ -1174,6 +1179,8 @@ return view.extend({
 		]);
 		var content = [ header, el('div', { 'class': 'tf-tops-metrics' }, [
 			metric(_('Firmware'), firmware, _('Registered tunnel types') + ': ' + m.types),
+			metric(_('NPU utilization'), m.utilization == null ? '—' : m.utilization.toFixed(1) + '%',
+				m.utilization == null ? _('Utilization unavailable') : _('Average busy time of five NPU cores')),
 			metric(_('Synchronized tunnels'), m.complete ? String(m.synced) : '—',
 				_('Recorded') + ': ' + m.entries.length + ' / ' + m.capacity),
 			metric(_('Hardware forwarding'), m.verified ? _('Verified') : _('Not verified'),
@@ -1214,7 +1221,8 @@ return view.extend({
 		} else if (m.complete) {
 			content.push(el('div', { 'class': 'tf-tops-empty' }, [
 				el('b', {}, [ _('No tunnel entries') ]),
-				el('span', {}, [ m.ready ? _('Waiting for supported tunnel traffic.') : _('Tunnel learning starts when the firmware is ready.') ])
+				el('span', {}, [ m.ready ? _('Waiting for supported tunnel traffic.') : _('Tunnel learning starts when the firmware is ready.') ]),
+				el('span', {}, [ _('Ordinary Internet traffic is handled by PPE/WED. An empty TOPS table can coexist with active hardware forwarding.') ])
 			]));
 		}
 		var a = m.accounting;
