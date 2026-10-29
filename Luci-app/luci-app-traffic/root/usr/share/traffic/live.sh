@@ -173,14 +173,20 @@ EOF
 # zero; a negative delta means exactly that, and zero is reported rather than
 # negative traffic.
 nft_sum() { # nft_sum <chain>
-	nft list chain $TABLE "$1" 2>/dev/null | awk '
+	local snapshot
+	command -v timeout >/dev/null 2>&1 || return 1
+	# A failed/partial read is unavailable, not a new counter value of zero.
+	# Keep the old baseline so recovery spans the whole missed interval.
+	snapshot=$(timeout 2 nft list chain $TABLE "$1" 2>/dev/null) || return 1
+	printf '%s\n' "$snapshot" | awk '
 		{ for (i = 1; i <= NF; i++) if ($i == "bytes") s += $(i + 1) }
 		END { print s + 0 }'
 }
 
 sample_nft() {
 	local pre post prev pd pu dd du
-	pre=$(nft_sum pre); post=$(nft_sum post)          # pre is upload, post is down
+	pre=$(nft_sum pre) || return 1                  # pre is upload, post is down
+	post=$(nft_sum post) || return 1
 	[ -n "$pre" ] && [ -n "$post" ] || return 1
 	prev=$(cat "$CUR" 2>/dev/null)
 	pd=$(printf '%s\n' "$prev" | awk -F'\t' '{ print $1 + 0 }')
@@ -228,6 +234,7 @@ sample_ct() {
 	}
 	{
 		src = ""; dst = ""; sport = ""; dport = ""; np = 0; b1 = 0; b2 = 0
+		nt = 0; tb1 = 0; tb2 = 0; badtotal = 0
 		for (i = 1; i <= NF; i++) {
 			t = $i
 			if      (t ~ /^src=/)   { if (src   == "") src   = substr(t, 5) }
@@ -236,8 +243,17 @@ sample_ct() {
 			else if (t ~ /^dport=/) { if (dport == "") dport = substr(t, 7) }
 			else if (t ~ /^bytes=/) { np++; if (np == 1) b1 = substr(t, 7) + 0
 			                          else if (np == 2) b2 = substr(t, 7) + 0 }
+			else if (t ~ /^bytes_total=/) {
+				nt++
+				if (t !~ /^bytes_total=[0-9]+$/) badtotal = 1
+				else if (nt == 1) tb1 = substr(t, 13) + 0
+				else if (nt == 2) tb2 = substr(t, 13) + 0
+			}
 		}
 		if (src == "" || dst == "") next
+		# The optional lifetime pair is not cleared by nlbwmon. Kernels
+		# without it continue to supply the original resettable counters.
+		if (nt == 2 && !badtotal) { b1 = tb1; b2 = tb2 }
 		# a flow between two LAN hosts is not internet traffic
 		if (is_lan(src) && is_lan(dst)) next
 		# direction: the bytes a client sent are up, what it received is down.

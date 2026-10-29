@@ -409,14 +409,32 @@ reset_stats() {
 # pays nothing for a one-second meter.  The file is a few dozen bytes, so this
 # stays a cat rather than a re-derivation.
 get_live() {
-	printf '%s\n' "$(date +%s 2>/dev/null || echo 0)" > "$STATE_DIR/live.watch.new" 2>/dev/null &&
+	local now sample at
+	now=$(date +%s 2>/dev/null || echo 0)
+	printf '%s\n' "$now" > "$STATE_DIR/live.watch.new" 2>/dev/null &&
 		mv -f "$STATE_DIR/live.watch.new" "$STATE_DIR/live.watch"
-	if [ -s "$STATE_DIR/live.json" ]; then
-		cat "$STATE_DIR/live.json"
-	else
-		# no sample yet: the page falls back to the interval rate and says so
-		printf '{"ready":0,"bps_down":0,"bps_up":0,"source":""}\n'
+	# live.sh writes one compact JSON line with the timestamp first. Read it
+	# once, so its age check and returned rates belong to the same snapshot.
+	# An unwatched sampler leaves its old file behind; waking it does not make
+	# that old rate a current observation.
+	if [ -r "$STATE_DIR/live.json" ] && IFS= read -r sample < "$STATE_DIR/live.json"; then
+		case "$sample" in
+			\{\"at\":*) at=${sample#\{\"at\":}; at=${at%%,*} ;;
+			*) at= ;;
+		esac
+		case "$at" in
+			''|*[!0-9]*|0[0-9]*) ;;
+			*)
+				if [ "${#at}" -le 12 ] && [ "$at" -gt 0 ] &&
+				   [ "$now" -ge "$at" ] 2>/dev/null && [ "$((now - at))" -le 5 ]; then
+					printf '%s\n' "$sample"
+					return
+				fi
+				;;
+		esac
 	fi
+	# No current sample: the page uses its interval rate until the next tick.
+	printf '{"ready":0,"bps_down":0,"bps_up":0,"source":""}\n'
 }
 
 # Optional TOPS provider: bounded software metadata, never summed with bytes.

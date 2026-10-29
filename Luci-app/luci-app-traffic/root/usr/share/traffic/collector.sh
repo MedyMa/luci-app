@@ -664,6 +664,7 @@ poll_ct() {
     }
     {
         src=""; dst=""; sport=""; dport=""; np=0; b1=0; b2=0
+        nt=0; tb1=0; tb2=0; badtotal=0
         for (i = 1; i <= NF; i++) {
             t = $i
             if      (t ~ /^src=/)   { if (src   == "") src   = substr(t, 5) }
@@ -672,8 +673,17 @@ poll_ct() {
             else if (t ~ /^dport=/) { if (dport == "") dport = substr(t, 7) }
             else if (t ~ /^bytes=/) { np++; if (np == 1) b1 = substr(t, 7) + 0
                                       else if (np == 2) b2 = substr(t, 7) + 0 }
+            else if (t ~ /^bytes_total=/) {
+                nt++
+                if (t !~ /^bytes_total=[0-9]+$/) badtotal=1
+                else if (nt == 1) tb1=substr(t, 13) + 0
+                else if (nt == 2) tb2=substr(t, 13) + 0
+            }
         }
         if (src == "" || dst == "") next
+        # Lifetime totals survive another consumer reading GET_CTRZERO. Use
+        # a complete pair only; older kernels retain their legacy behavior.
+        if (nt == 2 && !badtotal) { b1=tb1; b2=tb2 }
         # $3 is the protocol name; it belongs in the key because the same
         # address/port pair can exist over both tcp and udp at once
         key = $1 "|" $3 "|" src "|" sport "|" dst "|" dport
@@ -854,7 +864,12 @@ acct_sync() {
 # Print "<address> <TAB> <bytes>" for every counting rule in one chain.  The
 # field order is searched rather than assumed, so it survives nft print changes.
 acct_read() {
-    nft_run list chain $ACCT_TABLE "$1" 2>/dev/null | awk '
+    local snapshot
+    # A failed nft call can still print part of a chain. Check its status
+    # before parsing; a pipe to awk would hide the error and lose the baseline
+    # for the missing direction, crediting its whole counter on the next read.
+    snapshot=$(nft_run list chain $ACCT_TABLE "$1" 2>/dev/null) || return 1
+    printf '%s\n' "$snapshot" | awk '
         {
             a = ""; b = ""
             for (i = 1; i <= NF; i++) {
@@ -904,7 +919,7 @@ publish_live_env() {
 # client.  A counter that went backwards means the rules were rebuilt (a
 # firewall reload wipes our table), so the new value is used as the delta.
 account_clients() {
-    local m off offh
+    local m off offh counters
     ACCT_ON=0
     # Which layer produces the client totals is decided here, not only by the
     # config, because the config cannot know what the firewall is doing.  Flow
@@ -928,13 +943,19 @@ account_clients() {
     [ "$CFG_ACCT" = "1" ] || return 0
     acct_available || { acct_off "nft is not installed"; return 0; }
     acct_sync || { acct_off "the counter table could not be set up"; return 0; }
-    ACCT_ON=1
-    rm -f "$STATE_DIR/acct.off"
-
     : > "$STATE_DIR/acct.new"
     for m in pre post; do
-        acct_read "$m" | awk -v m="$m" -F'\t' '{ print m "\t" $1 "\t" $2 }' >> "$STATE_DIR/acct.new"
+        if ! counters=$(acct_read "$m"); then
+            # Both directions form one snapshot. Keep the previous absolute
+            # and cumulative files intact until a complete read succeeds.
+            rm -f "$STATE_DIR/acct.new"
+            acct_off "the counter snapshot could not be read"
+            return 0
+        fi
+        printf '%s\n' "$counters" | awk -v m="$m" -F'\t' 'NF == 2 { print m "\t" $1 "\t" $2 }' >> "$STATE_DIR/acct.new"
     done
+    ACCT_ON=1
+    rm -f "$STATE_DIR/acct.off"
     : > "$STATE_DIR/acct_delta.tsv"
 
     awk -F'\t' -v abs="$STATE_DIR/acct.abs" -v cum="$STATE_DIR/acct.tsv" \
