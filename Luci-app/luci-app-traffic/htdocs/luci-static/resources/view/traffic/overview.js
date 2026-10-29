@@ -532,7 +532,7 @@ function topsStatusModel(r) {
 	if (!Array.isArray(t.entries)) invalid = true;
 	(Array.isArray(t.entries) ? t.entries : []).slice(0, 32).forEach(function(e) {
 		if (!e || !uint(e.index, 31) || seen[e.index] ||
-			['gretap', 'vxlan', 'l2tpv2'].indexOf(e.protocol) < 0 ||
+			['gretap', 'vxlan', 'l2tpv2', 'pptp'].indexOf(e.protocol) < 0 ||
 			!ipv4(e.local_address) || !ipv4(e.remote_address) ||
 			!uint(e.local_port, 65535) || !uint(e.remote_port, 65535) ||
 			typeof e.encapsulation !== 'boolean' || typeof e.decapsulation !== 'boolean' ||
@@ -1185,7 +1185,7 @@ return view.extend({
 			[ _('Tunnel state is incomplete or unavailable.') ]));
 		if (m.entries.length) {
 			var labels = [ _('Protocol'), _('Local endpoint'), _('Remote endpoint'), _('Direction'), _('State') ];
-			var protocols = { gretap: 'GRETAP', vxlan: 'VXLAN', l2tpv2: 'L2TPv2' };
+			var protocols = { gretap: 'GRETAP', vxlan: 'VXLAN', l2tpv2: 'L2TPv2', pptp: 'PPTP' };
 			var rows = m.entries.map(function(t) {
 				var direction = t.encapsulation && t.decapsulation ? _('Bidirectional') :
 					t.encapsulation ? _('Encapsulation') : t.decapsulation ? _('Decapsulation') : '—';

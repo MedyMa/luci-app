@@ -182,7 +182,8 @@ get_npu_usage() {
 		json_get_var cores core_count; json_get_type cores_type core_count
 		json_get_var coverage coverage
 		if [ "$schema:$schema_type:$unit:$available_type" = '1:int:mean_core_busy_percent:boolean' ]; then
-			if [ "$available" = 1 ] && [ "$percent_type:$cores_type:$cores" = 'int:int:5' ]; then
+			if [ "$available" = 1 ] && [ "$coverage" = complete ] &&
+			   [ "$percent_type:$cores_type:$cores" = 'int:int:5' ]; then
 				case "$percent" in ''|*[!0-9]*) percent=invalid ;; esac
 				if [ "${#percent}" -le 6 ] && [ "$percent" -le 100000 ] 2>/dev/null; then
 					printf '{"schema":1,"available":true,"unit":"mean_core_busy_percent","percent_milli":%s,"core_count":5,"coverage":"complete"}\n' "$percent"
