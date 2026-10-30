@@ -208,7 +208,9 @@ collect() {
     # collector had not run - so that run was killed before doing any work.  That
     # is what made phases 15 to 19 fail intermittently for so long.  The bound on
     # the wait below is what timeout used to provide.
-    env "$@" UCI=/bin/true LUA="$T/bin/lua" CT="$ct" TRAFFIC_QUERYLOG="$ql" \
+    # Generic attribution cases have no WAN. Interface cases override these
+    # fixtures explicitly; never accidentally measure the CI host interface.
+    env TRAFFIC_PROC_NET_DEV=/nonexistent TRAFFIC_PROC_NET_ROUTE=/nonexistent TRAFFIC_PROC_NET_ROUTE6=/nonexistent "$@" UCI=/bin/true LUA="$T/bin/lua" CT="$ct" TRAFFIC_QUERYLOG="$ql" \
       TRAFFIC_LAN4=192.168.2. TRAFFIC_INTERVAL=2 TRAFFIC_DATADIR="$da" \
       TRAFFIC_APPMAP="$T/apps.tsv" TRAFFIC_CATEGORIES="$T/categories.tsv" \
       STATE_DIR="$st" SELF_DIR="$(cd "$SELF/../root/usr/share/traffic" && pwd)" \

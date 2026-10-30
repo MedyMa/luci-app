@@ -2,7 +2,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-traffic
 PKG_VERSION:=1.2.3
-PKG_RELEASE:=11
+PKG_RELEASE:=12
 PKG_LICENSE:=Apache-2.0
 LUCI_PKGARCH:=all
 
@@ -19,6 +19,7 @@ define Build/Prepare/$(PKG_NAME)
 	chmod 0755 $(PKG_BUILD_DIR)/root/usr/share/traffic/fetch-icons.sh
 	chmod 0755 $(PKG_BUILD_DIR)/root/usr/share/traffic/website-icons.sh
 	chmod 0755 $(PKG_BUILD_DIR)/root/usr/share/traffic/live.sh
+	chmod 0755 $(PKG_BUILD_DIR)/root/usr/share/traffic/realtime.sh
 	$(SED) 's|^COLLECTOR_VERSION=.*|COLLECTOR_VERSION=$(PKG_VERSION)-r$(PKG_RELEASE)|' \
 		$(PKG_BUILD_DIR)/root/usr/share/traffic/collector.sh
 	$(INSTALL_DIR) $(PKG_BUILD_DIR)/root/usr/lib/lua/luci/i18n

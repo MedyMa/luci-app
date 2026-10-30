@@ -558,7 +558,17 @@ function topsStatusModel(r) {
 	var utilization = ready && usage && usage.available === true &&
 		usage.coverage === 'complete' && usage.unit === 'mean_core_busy_percent' &&
 		usage.core_count === 5 && uint(usage.percent_milli, 100000) ? usage.percent_milli / 1000 : null;
+	var cores = null;
+	if (utilization !== null && usage.cores && typeof usage.cores === 'object') {
+		var ids = ['Core0','Core1','Core2','Core3','CoreM'];
+		if (Object.keys(usage.cores).length === 5 && ids.every(function(id) { return uint(usage.cores[id], 100000); }) &&
+			Math.abs(ids.reduce(function(v, id) { return v + usage.cores[id]; }, 0) / 5 - usage.percent_milli) < 1)
+			cores = ids.map(function(id) { return { id: id, percent: usage.cores[id] / 1000 }; });
+	}
 	return {
+		cores: cores,
+		platform: typeof r.platform === 'string' && r.platform.length <= 256 ? r.platform : '',
+		firmwareInfo: ready && typeof n.firmware_info === 'string' && n.firmware_info.length <= 4096 ? n.firmware_info : '',
 		present: n.status_node_present === true,
 		ready: ready,
 		readable: n.coverage === 'complete',
@@ -938,6 +948,112 @@ function makeChart(series, interval) {
 	return svg;
 }
 
+function fmtMbps(bytes) {
+	return (bytes * 8 / 1000000).toFixed(bytes >= 125000000 ? 1 : 2) + ' Mbps';
+}
+
+function realtimeModel(r) {
+	var finite = function(v) { return typeof v === 'number' && Number.isFinite(v) && v >= 0; };
+	if (!r || r.source !== 'iface' || !Number.isInteger(r.at) || !finite(r.monotonic_ms) ||
+		(r.ready !== 0 && r.ready !== 1) || typeof r.device !== 'string' || r.device.length > 64 ||
+		!finite(r.bps_down) || !finite(r.bps_up) || !Array.isArray(r.series) || r.series.length > 301) return null;
+	var last = -1, points = [];
+	for (var i = 0; i < r.series.length; i++) {
+		var row = r.series[i];
+		if (!Array.isArray(row) || row.length !== 5 || !finite(row[0]) || row[0] <= last ||
+			row[0] > r.monotonic_ms || row[0] < r.monotonic_ms - 300000 ||
+			!row.slice(1).every(function(v) { return v === null || finite(v); })) return null;
+		last = row[0]; points.push(row);
+	}
+	return { raw: r, points: points, fresh: Date.now() / 1000 - r.at >= -2 && Date.now() / 1000 - r.at <= 5 };
+}
+
+/* Straight segments join measured samples only. nulls and missed intervals
+ * each break both curves; the x-axis is a fixed five-minute monotonic window.
+ */
+function makeRealtimeChart(m) {
+	var viewport = typeof window !== 'undefined' && window.innerWidth || 800;
+	var W = Math.max(300, Math.min(720, viewport - 80)), H = 175, left = 8, right = 94, top = 10, bottom = 24;
+	var width = W - left - right, height = H - top - bottom;
+	var points = m.points, end = m.raw.monotonic_ms, maximum = 1;
+	points.forEach(function(p) { maximum = Math.max(maximum, p[1] || 0, p[2] || 0); });
+	maximum = niceTop(maximum);
+	var svg = S('svg', { 'class': 'tf-chart-svg', 'viewBox': '0 0 ' + W + ' ' + H,
+		'role': 'img', 'aria-label': _('WAN throughput over the last five minutes') });
+	for (var g = 0; g <= 2; g++) {
+		var gy = top + height - height * g / 2;
+		svg.appendChild(S('line', { 'x1': left, 'x2': W - right, 'y1': gy, 'y2': gy,
+			'class': 'tf-grid', 'stroke-width': 1 }));
+		svg.appendChild(S('text', { 'x': W - 3, 'y': gy - 3, 'text-anchor': 'end',
+			'class': 'tf-chart-tick', 'text': fmtMbps(maximum * g / 2) }));
+	}
+	[1, 2].forEach(function(direction) {
+		var path = '', connected = false, previous = -1;
+		points.forEach(function(p) {
+			if (p[direction] === null) { connected = false; previous = p[0]; return; }
+			if (previous >= 0 && p[0] - previous > 2500) connected = false;
+			var x = left + (p[0] - end + 300000) * width / 300000;
+			var y = top + height - p[direction] * height / maximum;
+			path += (connected ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1);
+			connected = true; previous = p[0];
+		});
+		svg.appendChild(S('path', { 'd': path, 'class': 'tf-curve tf-curve-' + (direction === 1 ? 'down' : 'up'),
+			'fill': 'none', 'stroke-width': 1.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
+	});
+	svg.appendChild(S('text', { 'x': left, 'y': H - 5, 'class': 'tf-chart-tick', 'text': _('5 minutes ago') }));
+	svg.appendChild(S('text', { 'x': W - right, 'y': H - 5, 'text-anchor': 'end',
+		'class': 'tf-chart-tick', 'text': _('Now') }));
+	return svg;
+}
+
+function makeRealtimePanel() {
+	var meter = el('div', { 'class': 'tf-realtime-meters' });
+	var chart = el('div', { 'class': 'tf-chart tf-realtime-chart' });
+	var note = el('div', { 'class': 'tf-network-note', 'role': 'status' }, [ _('Waiting for a WAN sample…') ]);
+	var stats = el('div', { 'class': 'tf-network-note' }), lastLive = null;
+	function metric(label, value) {
+		return el('div', {}, [ el('small', {}, [ label ]), el('b', {}, [ value ]) ]);
+	}
+	function age(t) { return Math.max(0, Math.floor(Date.now() / 1000 - t)); }
+	return {
+		node: el('div', { 'class': 'tf-network-panels' }, [
+			el('div', { 'class': 'tf-card tf-realtime-card' }, [
+				el('h3', {}, [ _('Realtime network') ]), meter, chart, stats, note
+			])
+		]),
+		live: function(r) {
+			var m = realtimeModel(r), usable = m && m.fresh && r.ready === 1;
+			var pps = function(v) { return typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v.toLocaleString() + ' PPS' : '—'; };
+			dom.content(meter, [ metric(_('Download'), usable ? fmtMbps(r.bps_down) : '—'),
+				metric(_('Upload'), usable ? fmtMbps(r.bps_up) : '—'),
+				metric(_('RX packets'), usable ? pps(r.pps_down) : '—'), metric(_('TX packets'), usable ? pps(r.pps_up) : '—') ]);
+			if (m && lastLive !== r.monotonic_ms) {
+				lastLive = r.monotonic_ms;
+				dom.content(chart, [ makeRealtimeChart(m) ]);
+			}
+			var rate = function(v) { return typeof v === 'number' && Number.isFinite(v) && v >= 0 ? fmtMbps(v) : '—'; };
+			dom.content(stats, m ? [ _('Peak') + ' ↓ ' + rate(r.peak_bps_down) + ' / ↑ ' + rate(r.peak_bps_up) +
+				' · ' + _('Average') + ' ↓ ' + rate(r.average_bps_down) + ' / ↑ ' + rate(r.average_bps_up) ] : []);
+			dom.content(note, m ? [ r.device + ' · ' + _('WAN interface counters') + ' · ' + age(r.at) + ' s · ' +
+				(usable ? _('1-second samples; gaps are left empty.') : _('Sample unavailable or establishing a new baseline.')) ] :
+				[ _('WAN sample unavailable. Interface traffic is separate from application attribution and NPU utilization.') ]);
+		}
+	};
+}
+
+function injectRealtimeCss() {
+	if (document.getElementById('tf-network-css')) return;
+	document.head.appendChild(el('style', { 'id': 'tf-network-css' }, [
+		'.tf-network-panels{display:grid;gap:1rem;margin:1rem 0}.tf-realtime-card{padding:1.1rem;min-width:0}' +
+		'.tf-network-panels h3{font-size:1rem;margin:0 0 .8rem;color:var(--tf-fg)}' +
+		'.tf-realtime-meters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem}.tf-realtime-meters small{display:block;color:var(--tf-dim);font-size:.8rem}' +
+		'.tf-realtime-meters b{display:block;font-variant-numeric:tabular-nums;font-size:1.15rem;margin:.25rem 0}' +
+		'.tf-network-note{color:var(--tf-dim);font-size:.8rem;line-height:1.6;overflow-wrap:anywhere}.tf-realtime-chart{margin-top:.6rem}' +
+		'.tf-tops-details pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.8rem}' +
+		'@media(max-width:600px){.tf-realtime-meters{grid-template-columns:repeat(2,minmax(0,1fr))}.tf-realtime-card{padding:.8rem}}'
+	]));
+}
+
 return view.extend({
 	summary: null,
 	prev: null,
@@ -953,6 +1069,7 @@ return view.extend({
 		this.summary = summary || {};
 		var self = this;
 
+		this.networkPanel = makeRealtimePanel();
 		this.rateDown = el('b', {}, [ '—' ]);
 		this.rateUp   = el('b', {}, [ '—' ]);
 		this.totalEl  = el('div', { 'class': 'tf-grand-total' }, [ '—' ]);
@@ -1032,6 +1149,8 @@ return view.extend({
 				el('div', { 'class': 'tf-hero-ctl' }, [ this.rangePicker.node ])
 			]),
 
+			this.networkPanel.node,
+
 			el('div', { 'class': 'tf-mid' }, [
 			el('div', { 'class': 'tf-card tf-chart-card' }, [
 				el('div', { 'class': 'tf-chart-head' }, [
@@ -1109,6 +1228,7 @@ return view.extend({
 		]);
 
 		injectCss();
+		injectRealtimeCss();
 		/* which icons exist, shipped and fetched: one small request each, so the
 		 * page never asks for an icon that is not there */
 		ensureIconIndexes();
@@ -1117,7 +1237,7 @@ return view.extend({
 		this.refresh(false);
 		this.loadSeries();
 		this.pollTops();
-		poll.add(L.bind(this.pollTops, this), 30);
+		poll.add(L.bind(this.pollTops, this), 5);
 		poll.add(L.bind(function() {
 			this.ticks = (this.ticks || 0) + 1;
 			if (this.ticks % 12 === 0 && !document.hidden) refreshWebsiteIcons();
@@ -1152,7 +1272,7 @@ return view.extend({
 				return;
 			}
 			this.lastTops = model;
-			this.renderTops(model, false);
+			this.renderTops(model, typeof r.sampled_at === 'number' && Date.now() / 1000 - r.sampled_at > 30);
 		}, this)).catch(L.bind(function() {
 			if (this.lastTops) this.renderTops(this.lastTops, true);
 			else this.topsCardEl.style.display = 'none';
@@ -1180,6 +1300,7 @@ return view.extend({
 		var content = [ header, el('div', { 'class': 'tf-tops-metrics' }, [
 			metric(_('Firmware'), firmware, _('Registered tunnel types') + ': ' + m.types),
 			metric(_('NPU utilization'), m.utilization == null ? '—' : m.utilization.toFixed(1) + '%',
+				m.cores ? m.cores.map(function(c) { return c.id + ': ' + c.percent.toFixed(0) + '%'; }).join(' · ') :
 				m.utilization == null ? _('Utilization unavailable') : _('Average busy time of five NPU cores')),
 			metric(_('Synchronized tunnels'), m.complete ? String(m.synced) : '—',
 				_('Recorded') + ': ' + m.entries.length + ' / ' + m.capacity),
@@ -1231,6 +1352,8 @@ return view.extend({
 			a.conntrack_accounting_enabled !== true ? _('Conntrack accounting is disabled; application attribution may be incomplete.') : '';
 		content.push(el('details', { 'class': 'tf-tops-details' }, [
 			el('summary', {}, [ _('How this status is counted') ]),
+			m.platform ? el('p', {}, [ m.platform ]) : '',
+			m.firmwareInfo ? el('pre', {}, [ m.firmwareInfo ]) : '',
 			el('p', {}, [ _('WAN counters provide total traffic; conntrack provides application attribution. TOPS setup events are not traffic bytes.') ]),
 			accountingNote ? el('p', { 'class': 'tf-tops-account-note' }, [ accountingNote ]) : '',
 			el('p', {}, [ _('Synchronized parameters alone do not confirm hardware packet forwarding.') ])
@@ -1650,6 +1773,7 @@ return view.extend({
 	 * averages are still in the chart's own subtitle, where they belong. */
 	pollLive: function() {
 		return callLive().then(L.bind(function(r) {
+			if (this.networkPanel) this.networkPanel.live(r);
 			if (!r || Number(r.ready) !== 1) throw new Error('no live sample yet');
 			this.liveMisses = 0;
 			this.liveOn = true;
@@ -1659,6 +1783,7 @@ return view.extend({
 			/* Three misses in a row is not a hiccup, it is this build running on
 			 * an older backend: hand the two numbers back to the interval rate
 			 * instead of freezing them at the last live value. */
+			if (this.networkPanel) this.networkPanel.live(null);
 			this.liveMisses = (this.liveMisses || 0) + 1;
 			if (this.liveMisses >= 3) this.liveOn = false;
 		}, this));

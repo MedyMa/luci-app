@@ -437,36 +437,24 @@ get_live() {
 	printf '{"ready":0,"bps_down":0,"bps_up":0,"source":""}\n'
 }
 
-# Optional TOPS provider: bounded software metadata, never summed with bytes.
+# The collector owns NPU mailbox reads. Every browser reads the same cache.
 get_npu_status() {
-	local status rc schema npu_type tunnels_type accounting_type
-	if [ ! -x /usr/bin/mtk-tops-status ]; then
-		printf '{"available":false,"coverage":"provider_missing"}\n'
-		return
-	fi
-	if ! command -v timeout >/dev/null 2>&1; then
-		printf '{"available":false,"coverage":"no_timeout_tool"}\n'
-		return
-	fi
-	status=$(timeout 12 /usr/bin/mtk-tops-status 2>/dev/null)
-	rc=$?
-	if [ "$rc" -ne 0 ] || [ "${#status}" -gt 32768 ]; then
-		printf '{"available":false,"coverage":"provider_failed","exit":%s}\n' "$rc"
-		return
-	fi
-	# json_load() alone may evaluate empty parser output and return success.
-	if jshn -r "$status" >/dev/null 2>&1 && json_load "$status" 2>/dev/null; then
-		json_get_var schema schema
-		json_get_type npu_type npu
-		json_get_type tunnels_type tunnels
-		json_get_type accounting_type accounting
-		case "$schema:$npu_type:$tunnels_type:$accounting_type" in
-			2:object:object:object|3:object:object:object)
-				printf '%s\n' "$status"
-				return ;;
-		esac
-	fi
-	printf '{"available":false,"coverage":"provider_invalid"}\n'
+    local status schema npu_type tunnels_type accounting_type
+    if [ ! -r "$STATE_DIR/npu.json" ]; then
+        printf '{"available":false,"coverage":"collector_pending"}\n'
+        return
+    fi
+    status=$(head -c 32769 "$STATE_DIR/npu.json" 2>/dev/null)
+    if [ "${#status}" -le 32768 ] && jshn -r "$status" >/dev/null 2>&1 && json_load "$status" 2>/dev/null; then
+        json_get_var schema schema
+        json_get_type npu_type npu
+        json_get_type tunnels_type tunnels
+        json_get_type accounting_type accounting
+        case "$schema:$npu_type:$tunnels_type:$accounting_type" in
+            2:object:object:object|3:object:object:object) printf '%s\n' "$status"; return ;;
+        esac
+    fi
+    printf '{"available":false,"coverage":"collector_invalid"}\n'
 }
 
 case "$1" in

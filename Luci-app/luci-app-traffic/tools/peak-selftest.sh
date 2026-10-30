@@ -117,6 +117,8 @@ LIVE="$here/../root/usr/share/traffic/live.sh"
 LD="$T/live"
 mkdir -p "$LD"
 export TRAFFIC_PROC_NET_DEV="$T/netdev"
+export TRAFFIC_PROC_UPTIME="$T/uptime"
+printf '100 0\n' > "$TRAFFIC_PROC_UPTIME"
 printf 'Inter-|   Receive                                                |  Transmit\n face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed\n  eth2: 1000000 11 0 0 0 0 0 0 2000000 22 0 0 0 0 0 0\n' > "$T/netdev"
 cat > "$LD/live.env" <<'EOF'
 LAN4=192.168.1.
@@ -128,6 +130,7 @@ WAN_IF=eth2
 EOF
 # conntrack is left unreachable on purpose: the interface path must not need it
 CT="$T/absent-conntrack" STATE_DIR="$LD" sh "$LIVE" --force
+printf '101 0\n' > "$TRAFFIC_PROC_UPTIME"
 printf 'Inter-|   Receive                                                |  Transmit\n face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed\n  eth2: 1300000 11 0 0 0 0 0 0 2720000 22 0 0 0 0 0 0\n' > "$T/netdev"
 CT="$T/absent-conntrack" STATE_DIR="$LD" sh "$LIVE" --force
 

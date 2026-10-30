@@ -535,3 +535,45 @@ msgstr "NPU 五个核心的平均忙碌比例"
 
 msgid "Ordinary Internet traffic is handled by PPE/WED. An empty TOPS table can coexist with active hardware forwarding."
 msgstr "普通上网流量由 PPE／WED 处理；TOPS 表为空时，硬件转发仍可正常工作。"
+
+msgid "1-second samples; gaps are left empty."
+msgstr "每秒采样；采样缺口保留为空。"
+
+msgid "5 minutes ago"
+msgstr "5 分钟前"
+
+msgid "Average"
+msgstr "平均值"
+
+msgid "Download"
+msgstr "下载"
+
+msgid "Now"
+msgstr "现在"
+
+msgid "RX packets"
+msgstr "接收包速率"
+
+msgid "Realtime network"
+msgstr "实时网络"
+
+msgid "Sample unavailable or establishing a new baseline."
+msgstr "采样不可用或正在建立新基线。"
+
+msgid "TX packets"
+msgstr "发送包速率"
+
+msgid "Upload"
+msgstr "上传"
+
+msgid "WAN interface counters"
+msgstr "WAN 接口计数器"
+
+msgid "WAN sample unavailable. Interface traffic is separate from application attribution and NPU utilization."
+msgstr "WAN 采样不可用。接口吞吐、应用归属流量和 NPU 利用率分别统计。"
+
+msgid "WAN throughput over the last five minutes"
+msgstr "最近 5 分钟的 WAN 吞吐"
+
+msgid "Waiting for a WAN sample…"
+msgstr "正在等待 WAN 采样…"

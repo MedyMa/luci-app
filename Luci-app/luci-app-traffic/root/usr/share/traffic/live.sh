@@ -1,52 +1,13 @@
 #!/bin/sh
-# One-second traffic sample for the page's realtime meter.
+# Passive WAN bytes/packets sampled by one procd worker while getLive is watched.
+# Rates use actual monotonic elapsed time. Device changes, counter resets and
+# delayed samples establish a new baseline and leave gaps in a five-minute RAM
+# series. Interface traffic, application attribution and NPU busy time have
+# separate sources; this sampler never updates application totals or MIBs.
 #
-# The page used to work its rate out from two summary snapshots, so the fastest
-# it could ever move was the collector interval - ten seconds.  This is the fast
-# path: it reads the same counters the collector reads and publishes how many
-# bytes moved since the previous second.  It is a read-only observer - it does
-# not touch the collector totals, history or attribution - so the number it
-# reports is the same quantity as the one in the summary, sampled ten times
-# more often.
-#
-# Two things are easy to get wrong here, and both were wrong in the first
-# version of this file:
-#
-#  1. Do not diff two absolute totals on the conntrack path.  The only number
-#     available there is the byte count of each live flow, and that total FALLS
-#     whenever a connection closes, so subtracting two totals both invents
-#     negative traffic and loses the last burst of every flow that ends between
-#     the samples.  Each flow is compared against its own previous value
-#     instead, and only the growth is counted - the same technique the
-#     collector uses, and the reason its totals only ever go up.
-#  2. Do not subtract a running total from an interval delta.  The conntrack
-#     path already produces a delta; diffing it again against the published
-#     total halved the number in a way that still looked plausible.  Both paths
-#     therefore report an interval delta, and the only arithmetic left here is
-#     dividing by the elapsed time.
-#
-# The source of the number is chosen per tick, not per build.  When the
-# collector has identified the WAN device, this reads that device's own counters
-# in /proc/net/dev: they sit in the driver, below the fast path a firewall takes
-# when flow offloading is on, so they count every byte whether or not offloading
-# is enabled.  Measured on a real router with flow_offloading=1, the conntrack
-# layer had seen 147 MiB in the window in which the WAN device carried 2579 MiB
-# (5.7%) - and a peak taken from a layer that blind is a peak of the wrong
-# quantity.  When there is no WAN device to read, the conntrack/nft paths below
-# are unchanged and still in charge.
-#
-# Cost control: the page tells rpcd it is open by polling getLive, and rpcd
-# writes that timestamp here.  Without a fresh timestamp this script exits after
-# two stat() calls, so a router nobody is watching pays nothing.
-#
-# The window is 60 seconds, not the 10 it started with.  A browser throttles the
-# timers of a tab that is not in the foreground - down to about one call a
-# minute - so a 10-second window meant that looking at another window for a
-# moment stopped the sampling, and the meter then looked broken rather than
-# merely idle.
-#
-# Usage: live.sh          -> writes $STATE_DIR/live.json when it can
-#        live.sh --force  -> sample even when nobody is watching (used by tests)
+# The default WAN-only mode performs no full CT/nft scan. An explicit
+# TRAFFIC_LIVE_WAN_ONLY=0 retains the old CLI fallback for compatibility tests.
+# live.sh --force bypasses the watch gate for offline counter fixtures.
 
 STATE_DIR=${STATE_DIR:-/tmp/traffic}
 CT=${CT:-/proc/net/nf_conntrack}
@@ -67,6 +28,8 @@ CUR="$STATE_DIR/live.cur"
 WANABS="$STATE_DIR/live.wan"
 OUT="$STATE_DIR/live.json"
 WATCH_AGE=${LIVE_WATCH_AGE:-60}
+UPTIME=${TRAFFIC_PROC_UPTIME:-/proc/uptime}
+SYSNET=${TRAFFIC_SYS_CLASS_NET:-/sys/class/net}
 
 force=0
 [ "${1:-}" = "--force" ] && force=1
@@ -86,6 +49,9 @@ if [ "$force" != "1" ]; then
 	# nobody is looking, so there is nothing to publish
 	[ "$now" -gt 0 ] && [ $((now - seen)) -le "$WATCH_AGE" ] || exit 0
 fi
+
+mono=$(awk '{ printf "%.0f", $1 * 1000; exit }' "$UPTIME" 2>/dev/null)
+case "$mono" in ''|*[!0-9]*) exit 0 ;; esac
 
 # What the collector detected on its last round: the LAN prefixes, the router
 # addresses, which counter layer is authoritative and which device the WAN
@@ -110,6 +76,7 @@ while IFS='=' read -r key value; do
 	esac
 done < "$ENVF"
 TABLE=${TABLE:-inet traffic_acct}
+case "$WAN_IF" in *[!a-zA-Z0-9_.:@-]*) WAN_IF= ;; esac
 
 # ---------------------------------------------------------- device counters
 # The preferred source: the WAN device's own counters.  They are read in the
@@ -120,51 +87,43 @@ TABLE=${TABLE:-inet traffic_acct}
 # sent (upload), and the caller divides the delta by the real elapsed time
 # exactly as it does for the other two paths.
 sample_iface() {
-	[ -n "$WAN_IF" ] || return 1
-	[ -r "$NETDEV" ] || return 1
-	local cur rx tx prx ptx dd du
-	# Field 1 is the device name with its colon, field 2 is rx_bytes and field
-	# 10 is tx_bytes.  No match means the device is not in the table at all - a
-	# WAN that is down, or a name the collector derived from a route that has
-	# since gone - and the caller falls back to a counter layer instead.
+	[ -n "$WAN_IF" ] && [ -r "$NETDEV" ] || return 1
+	case "$WAN_IF" in *[!a-zA-Z0-9_.:@-]*) return 1 ;; esac
+	local cur rx tx rp tp prx ptx prp ptp dev_before mono_before dt_ms identity ifindex
 	cur=$(awk -v dev="$WAN_IF" '
-		$1 == dev ":" { print $2 "\t" $10; found = 1; exit }
+		$1 == dev ":" { print $2, $10, $3, $11; found = 1; exit }
 		END { if (!found) exit 1 }' "$NETDEV" 2>/dev/null) || return 1
-	rx=; tx=
-	read -r rx tx <<EOF
+	read -r rx tx rp tp <<EOF
 $cur
 EOF
-	# A reading that is not a number is a broken file, not traffic: refuse it
-	# rather than publish something computed from nothing.
-	case "$rx" in ''|*[!0-9]*) return 1 ;; esac
-	case "$tx" in ''|*[!0-9]*) return 1 ;; esac
-	# Two lines, read with two reads rather than with a literal tab in a
-	# pattern - a tab in this file is exactly what an editor turns into spaces
-	# without anyone noticing.
-	prx=; ptx=
-	if [ -s "$WANABS" ]; then
-		{
-			read -r prx
-			read -r ptx
-		} < "$WANABS"
+	for value in "$rx" "$tx" "$rp" "$tp"; do
+		case "$value" in ''|*[!0-9]*) return 1 ;; esac
+	done
+	ifindex=
+	[ -r "$SYSNET/$WAN_IF/ifindex" ] && read -r ifindex < "$SYSNET/$WAN_IF/ifindex"
+	case "$ifindex" in *[!0-9]*) ifindex= ;; esac
+	identity="$WAN_IF:$ifindex"
+	prx=; ptx=; prp=; ptp=; dev_before=; mono_before=
+	if [ -r "$WANABS" ]; then
+		{ read -r prx; read -r ptx; read -r prp; read -r ptp;
+		  read -r dev_before; read -r mono_before; } < "$WANABS"
 	fi
-	# These are absolute counters since the device came up, so the delta is
-	# this interval and the file holds the latest reading rather than a sum.
-	# Atomic, like every other file written here: an interrupted sample must
-	# not leave half a baseline behind.
-	printf '%s\n%s\n' "$rx" "$tx" > "$WANABS.new" && mv -f "$WANABS.new" "$WANABS"
-	case "$prx" in ''|*[!0-9]*) prx= ;; esac
-	case "$ptx" in ''|*[!0-9]*) ptx= ;; esac
-	# No usable previous reading means this sample only establishes the
-	# baseline, the same first-sample rule the other two paths follow.
-	[ -n "$prx" ] && [ -n "$ptx" ] || { printf '0\t0\t0\n'; return 0; }
-	dd=$((rx - prx)); du=$((tx - ptx))
-	# The device was recreated (a pppoe session torn down and rebuilt, a veth
-	# replaced) and its counters restarted at zero.  Negative traffic is not a
-	# reading.
-	[ "$dd" -lt 0 ] && dd=0
-	[ "$du" -lt 0 ] && du=0
-	printf '1\t%s\t%s\n' "$dd" "$du"
+	printf '%s\n' "$rx" "$tx" "$rp" "$tp" "$identity" "$mono" > "$WANABS.new" &&
+		mv -f "$WANABS.new" "$WANABS"
+	for value in "$prx" "$ptx" "$prp" "$ptp" "$mono_before"; do
+		case "$value" in ''|*[!0-9]*) printf '0 0 0 0 0 0\n'; return 0 ;; esac
+	done
+	dt_ms=$((mono - mono_before))
+	# A source change, reset or delayed sampler establishes a new baseline.
+	# Averages across an unobserved gap are not one-second observations.
+	if [ "$identity" != "$dev_before" ] || [ "$dt_ms" -le 0 ] || [ "$dt_ms" -gt 2500 ] ||
+	   [ "$rx" -lt "$prx" ] || [ "$tx" -lt "$ptx" ] ||
+	   [ "$rp" -lt "$prp" ] || [ "$tp" -lt "$ptp" ]; then
+		printf '0 0 0 0 0 0\n'
+	else
+		printf '1 %s %s %s %s %s\n' "$((rx-prx))" "$((tx-ptx))" \
+			"$((rp-prp))" "$((tp-ptp))" "$dt_ms"
+	fi
 }
 
 # ---------------------------------------------------------------- nft counters
@@ -307,66 +266,68 @@ EOF
 	printf '1\t%s\t%s\n' "$td" "$tu"
 }
 
-# The interface counters are the authoritative source whenever the collector has
-# identified a WAN device, so they are tried first and a counter layer is the
-# fallback.  Both counter-layer baselines are dropped while this path is in
-# charge.  Left alone they would age for as long as the interface stays usable,
-# and the first sample after the device goes away would measure the whole gap as
-# one interval: conntrack would find every established flow unknown and credit
-# each one with its whole lifetime, and the absolute nft counters would report
-# everything the table gained meanwhile - the same fictional spike from either
-# side.  Dropping them makes that first fallback sample a baseline instead, the
-# rule the guard in sample_ct above already follows for a first sample.
+# The realtime service measures WAN counters. Legacy CLI fallback remains
+# available for compatibility, but the service never scans conntrack each second.
 if cur=$(sample_iface); then
 	SRC=iface
-	[ -e "$STATE" ] && rm -f "$STATE"
-	[ -e "$CUR" ] && rm -f "$CUR"
-elif [ "$SOURCE" = "nft" ]; then
-	SRC=$SOURCE
-	cur=$(sample_nft) || exit 0
+	[ ! -e "$STATE" ] || rm -f "$STATE"
+	[ ! -e "$CUR" ] || rm -f "$CUR"
+elif [ "${TRAFFIC_LIVE_WAN_ONLY:-1}" = 1 ]; then
+	SRC=unavailable
+	cur='0 0 0'
+elif [ "$SOURCE" = nft ]; then
+	SRC=nft
+	cur=$(sample_nft) || cur='0 0 0'
 else
-	SRC=$SOURCE
-	cur=$(sample_ct) || exit 0
+	SRC=conntrack
+	cur=$(sample_ct) || cur='0 0 0'
 fi
-[ -n "$cur" ] || exit 0
-
-# ready / down / up, parsed by the shell rather than by three more awk
-# processes.  The separator is a tab and every value is an integer, so the
-# default IFS is already the right one - which is also why no literal tab is
-# written here: a tab in a pattern is exactly what an editor turns into spaces
-# without anyone noticing.  A here-document does not word-split, so the tabs
-# reach `read` intact.  The non-numeric guards replace the `+ 0` the awk did.
-ready=; down=; up=
-read -r ready down up <<EOF
+ready=0; down=0; up=0; pd=; pu=; dt_ms=
+read -r ready down up pd pu dt_ms <<EOF
 $cur
 EOF
-case "$ready" in ''|*[!0-9]*) ready=0 ;; esac
-case "$down"  in ''|*[!0-9]*) down=0  ;; esac
-case "$up"    in ''|*[!0-9]*) up=0    ;; esac
-
-# The bytes were counted over however long it has been since the previous
-# sample, which is a second only when nothing delayed the tick; dividing by the
-# real elapsed time is what keeps a slow round from inflating the rate.
 prev_at=
-# Tested before the read for the same reason as the watch file above: this runs
-# once a second and the first tick has no file yet.
 [ -r "$AT" ] && read -r prev_at < "$AT"
-case "$prev_at" in ''|*[!0-9]*) prev_at=0 ;; esac
+case "$prev_at" in ''|*[!0-9]*) prev_at=$now ;; esac
 printf '%s\n' "$now" > "$AT.new" && mv -f "$AT.new" "$AT"
-dt=$((now - prev_at))
-[ "$dt" -lt 1 ] && dt=1
-
-if [ "$ready" != "1" ]; then
-	printf '{"at":%s,"bps_down":0,"bps_up":0,"source":"%s","ready":0}\n' "$now" "$SRC" > "$OUT.new" \
-		&& mv -f "$OUT.new" "$OUT"
-	exit 0
+if [ -z "$dt_ms" ]; then
+	dt_ms=$(((now - prev_at) * 1000))
+	[ "$dt_ms" -gt 0 ] || dt_ms=1000
 fi
-
-# Bytes in the interval divided by the seconds in it, as integers: the page
-# formats them, so the two cannot disagree about what the number means.  The
-# unit does not depend on which source produced the delta: all three report
-# bytes since the previous sample.
-printf '{"at":%s,"bps_down":%s,"bps_up":%s,"source":"%s","ready":1,"dt":%s}\n' \
-	"$now" "$((down / dt))" "$((up / dt))" "$SRC" "$dt" > "$OUT.new" \
-	&& mv -f "$OUT.new" "$OUT"
+# One bounded RAM history, shared by every browser. nulls are real gaps.
+awk -v state="$STATE_DIR/live.series" -v next_state="$STATE_DIR/live.series.new" \
+    -v out="$OUT.new" -v at="$now" -v mono="$mono" -v ready="$ready" \
+    -v down="$down" -v up="$up" -v pd="$pd" -v pu="$pu" -v dt="$dt_ms" \
+    -v source="$SRC" -v dev="$WAN_IF" '
+function nonnegative(x) { return x ~ /^[0-9]+$/ }
+BEGIN {
+    while ((getline line < state) > 0) {
+        n=split(line,f,"\t")
+        if (n==6 && nonnegative(f[1]) && f[1]+0>mono-300000 && f[1]+0<mono) {
+            for (j=1;j<=6;j++) old[++nf]=f[j]
+            count++
+        }
+    }
+    close(state)
+    if (count>300) { drop=count-300; count=300 } else drop=0
+    valid=ready==1 && nonnegative(down) && nonnegative(up) && dt>0
+    d=valid ? int(down*1000/dt) : "-"; u=valid ? int(up*1000/dt) : "-"
+    pdown=valid && nonnegative(pd) ? int(pd*1000/dt) : "-"
+    pup=valid && nonnegative(pu) ? int(pu*1000/dt) : "-"
+    series=""; sep=""; peakd=0; peaku=0; sumd=0; sumu=0; duration=0
+    for (i=drop+1;i<=count+drop+1;i++) {
+        if (i<=count+drop) {
+            k=(i-1)*6; t=old[k+1]; vd=old[k+2]; vu=old[k+3]
+            vpd=old[k+4]; vpu=old[k+5]; span=old[k+6]
+        } else { t=mono; vd=d; vu=u; vpd=pdown; vpu=pup; span=valid ? dt : 0 }
+        printf "%s\t%s\t%s\t%s\t%s\t%s\n",t,vd,vu,vpd,vpu,span > next_state
+        series=series sep "[" t "," (vd=="-"?"null":vd) "," (vu=="-"?"null":vu) "," (vpd=="-"?"null":vpd) "," (vpu=="-"?"null":vpu) "]"; sep=","
+        if (vd!="-" && vu!="-" && span>0) {
+            if (vd>peakd) peakd=vd; if(vu>peaku) peaku=vu
+            sumd+=vd*span; sumu+=vu*span; duration+=span
+        }
+    }
+    close(next_state)
+    printf "{\"at\":%.0f,\"monotonic_ms\":%.0f,\"ready\":%d,\"bps_down\":%.0f,\"bps_up\":%.0f,\"pps_down\":%s,\"pps_up\":%s,\"dt\":%.3f,\"source\":\"%s\",\"device\":\"%s\",\"peak_bps_down\":%.0f,\"peak_bps_up\":%.0f,\"average_bps_down\":%s,\"average_bps_up\":%s,\"series\":[%s]}\n",at,mono,valid,valid?d:0,valid?u:0,pdown=="-"?"null":pdown,pup=="-"?"null":pup,dt/1000,source,dev,peakd,peaku,(duration>0?int(sumd/duration):"null"),(duration>0?int(sumu/duration):"null"),series > out
+}' && mv -f "$STATE_DIR/live.series.new" "$STATE_DIR/live.series" && mv -f "$OUT.new" "$OUT"
 exit 0

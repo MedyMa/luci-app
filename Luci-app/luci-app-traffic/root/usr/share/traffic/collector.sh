@@ -652,58 +652,48 @@ resolve_names() {
 
 # ---------------------------------------------------------------- conntrack deltas
 poll_ct() {
-    # Both files are cleared first: awk only creates them when it has something
-    # to write, so a stale delta would otherwise be counted a second time.
+    local now mono closed
+    now=$(date +%s)
+    mono=$(awk '{ printf "%.0f", $1*1000; exit }' "${TRAFFIC_PROC_UPTIME:-/proc/uptime}" 2>/dev/null)
+    closed=${TRAFFIC_CT_CLOSED:-/proc/net/nf_conntrack_closed}
     rm -f "$STATE_DIR/flow.new" "$STATE_DIR/flow.delta"
-    awk -v state="$STATE_DIR/flow.state" -v delta="$STATE_DIR/flow.delta" -v newst="$STATE_DIR/flow.new" '
-    BEGIN {
-        while ((getline l < state) > 0) {
-            split(l, f, "\t"); if (f[1] != "") prev[f[1]] = f[2] " " f[3]
-        }
-        close(state)
-    }
-    {
-        src=""; dst=""; sport=""; dport=""; np=0; b1=0; b2=0
-        nt=0; tb1=0; tb2=0; badtotal=0
-        for (i = 1; i <= NF; i++) {
-            t = $i
-            if      (t ~ /^src=/)   { if (src   == "") src   = substr(t, 5) }
-            else if (t ~ /^dst=/)   { if (dst   == "") dst   = substr(t, 5) }
-            else if (t ~ /^sport=/) { if (sport == "") sport = substr(t, 7) }
-            else if (t ~ /^dport=/) { if (dport == "") dport = substr(t, 7) }
-            else if (t ~ /^bytes=/) { np++; if (np == 1) b1 = substr(t, 7) + 0
-                                      else if (np == 2) b2 = substr(t, 7) + 0 }
-            else if (t ~ /^bytes_total=/) {
-                nt++
-                if (t !~ /^bytes_total=[0-9]+$/) badtotal=1
-                else if (nt == 1) tb1=substr(t, 13) + 0
-                else if (nt == 2) tb2=substr(t, 13) + 0
-            }
-        }
-        if (src == "" || dst == "") next
-        # Lifetime totals survive another consumer reading GET_CTRZERO. Use
-        # a complete pair only; older kernels retain their legacy behavior.
-        if (nt == 2 && !badtotal) { b1=tb1; b2=tb2 }
-        # $3 is the protocol name; it belongs in the key because the same
-        # address/port pair can exist over both tcp and udp at once
-        key = $1 "|" $3 "|" src "|" sport "|" dst "|" dport
-        if (!(key in seen)) { seen[key] = 1; keys[++nk] = key }
-        cb1[key] = b1; cb2[key] = b2
-    }
-    END {
-        for (i = 1; i <= nk; i++) {
-            k = keys[i]; pb1 = 0; pb2 = 0
-            if (k in prev) { split(prev[k], q, " "); pb1 = q[1] + 0; pb2 = q[2] + 0 }
-            d1 = cb1[k] - pb1; d2 = cb2[k] - pb2
-            # a counter that went backwards means the entry was recreated
-            if (d1 < 0) d1 = cb1[k]
-            if (d2 < 0) d2 = cb2[k]
-            if (d1 + d2 > 0) print k "\t" d1 "\t" d2 > delta
-            print k "\t" cb1[k] "\t" cb2[k] > newst
-        }
-    }' "$CT" 2>/dev/null
-    [ -f "$STATE_DIR/flow.new" ] && mv -f "$STATE_DIR/flow.new" "$STATE_DIR/flow.state"
-    return 0
+    if [ ! -r "$CT" ]; then
+        printf '{"available":false,"coverage":"conntrack_unavailable","sampled_at":%s}\n' "$now" > "$STATE_DIR/conntrack.json.new" &&
+            mv -f "$STATE_DIR/conntrack.json.new" "$STATE_DIR/conntrack.json"
+        return 1
+    fi
+    set -- "$CT"
+    [ ! -r "$closed" ] || set -- "$@" "$closed"
+    if awk -v state="$STATE_DIR/flow.state" -v delta="$STATE_DIR/flow.delta" \
+        -v newst="$STATE_DIR/flow.new" -v status="$STATE_DIR/conntrack.json.new" \
+        -v at="$now" -v mono="${mono:-0}" -v lan4="$CFG_LAN4" -v lan6="$CFG_LAN6" \
+        -v selfip="$CFG_SELF" -f "$SELF_DIR/connections.awk" "$@"; then
+        [ ! -f "$STATE_DIR/flow.new" ] || mv -f "$STATE_DIR/flow.new" "$STATE_DIR/flow.state"
+    else
+        # Keep the previous baseline, so the next valid round spans this gap.
+        rm -f "$STATE_DIR/flow.new" "$STATE_DIR/flow.delta"
+        printf '{"available":false,"coverage":"incomplete_snapshot","sampled_at":%s}\n' "$now" > "$STATE_DIR/conntrack.json.new"
+    fi
+    [ ! -f "$STATE_DIR/conntrack.json.new" ] || mv -f "$STATE_DIR/conntrack.json.new" "$STATE_DIR/conntrack.json"
+}
+
+collect_npu() {
+    local watch now payload rc
+    now=$(date +%s)
+    [ -r "$STATE_DIR/live.watch" ] || return 0
+    read -r watch < "$STATE_DIR/live.watch"
+    case "$watch" in ''|*[!0-9]*) return 0 ;; esac
+    [ "$now" -ge "$watch" ] && [ "$((now-watch))" -le 60 ] || return 0
+    [ -x /usr/bin/mtk-tops-status ] && command -v timeout >/dev/null 2>&1 || return 0
+    payload=$(timeout 12 /usr/bin/mtk-tops-status 2>/dev/null)
+    rc=$?
+    now=$(date +%s)
+    if [ "$rc" -eq 0 ] && [ "${#payload}" -le 32768 ]; then
+        case "$payload" in
+            \{*) printf '{"sampled_at":%s,%s\n' "$now" "${payload#\{}" > "$STATE_DIR/npu.json.new" &&
+                mv -f "$STATE_DIR/npu.json.new" "$STATE_DIR/npu.json" ;;
+        esac
+    fi
 }
 
 # ---------------------------------------------------------------- per-host accounting
@@ -1268,9 +1258,16 @@ classify() {
         # Not a client when the source is the router itself: either it is one of
         # the box own addresses, or it is outside the LAN prefix (a WAN-sourced
         # flow is the far end of the tunnel).
-        if ((src in isself) || !(index(src, lan4) == 1 || index(src, lan6) == 1)) {
-            rb["proxy"] += t
-            next
+        if (!((lan4 != "" && index(src, lan4) == 1) ||
+              (lan6 != "" && index(src, lan6) == 1)) || (src in isself)) {
+            if (!(dst in isself) && ((lan4 != "" && index(dst, lan4) == 1) ||
+                                    (lan6 != "" && index(dst, lan6) == 1))) {
+                peer=src; src=dst; dst=peer; port=k[4]
+                v=u; u=d; d=v
+            } else {
+                rb["proxy"] += t
+                next
+            }
         }
         cb[src] += t
 
@@ -2009,6 +2006,7 @@ run() {
     # that even the very first one carries the total the box really carried
     # rather than an empty one the page would have to explain.
     iface_account
+    publish_live_env
     publish_current
     write_summary
 
@@ -2031,6 +2029,7 @@ run() {
         # what the one-second sampler needs: the same counters this round read,
         # and the same decision about which layer is authoritative
         publish_live_env
+        collect_npu
         # one clock read per round, shared by the sample and the hour check
         now=$(date +%s 2>/dev/null || echo 0)
         record_sample "$now"
@@ -2066,7 +2065,8 @@ run() {
         case "$round_at" in ''|*[!0-9]*) round_at= ;; esac
         PEAK_D=0; PEAK_U=0; PEAK_N=0
         while [ "$tick" -lt "$CFG_INTERVAL" ]; do
-            [ -x /usr/share/traffic/live.sh ] && /usr/share/traffic/live.sh
+            # realtime.sh is an independent procd instance; this loop reads
+            # its cached result for the existing coarse history peak only.
             # The one-second sample is the only reading fine enough to see a
             # burst.  A gigabit speed test lasting a second is a tenth of a
             # round, so a round average can only ever show a tenth of it - which

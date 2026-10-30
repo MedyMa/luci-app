@@ -36,6 +36,12 @@ ck() { # ck <name> <expected> <actual>
 }
 
 export STATE_DIR="$T/state"
+# Explicit compatibility mode only. The procd sampler never scans nft or CT;
+# its default WAN-only contract is exercised by realtime-selftest.py.
+export TRAFFIC_LIVE_WAN_ONLY=0
+export TRAFFIC_PROC_UPTIME="$T/uptime"
+sample_second=100
+printf '%s 0\n' "$sample_second" > "$TRAFFIC_PROC_UPTIME"
 mkdir -p "$STATE_DIR" "$T/bin"
 
 # ---- stub nft: prints one counting rule per chain, value read from a file ----
@@ -71,7 +77,13 @@ EOF
 
 # Sample the way the collector does, but bypassing the watch gate: the gate is
 # exercised on its own below, and every other case must actually run.
-run_live() { date +%s > "$STATE_DIR/live.watch"; sh "$live" --force; }
+run_live() {
+	sample_second=$((sample_second + 1))
+	printf '%s 0\n' "$sample_second" > "$TRAFFIC_PROC_UPTIME"
+	date +%s > "$STATE_DIR/live.watch"
+	printf '%s\n' "$(( $(date +%s) - 1 ))" > "$STATE_DIR/live.at"
+	sh "$live" --force
+}
 
 json()  { sed -n 's/.*"bps_down":\([0-9]*\).*/\1/p' "$STATE_DIR/live.json"; }
 jsonu() { sed -n 's/.*"bps_up":\([0-9]*\).*/\1/p' "$STATE_DIR/live.json"; }

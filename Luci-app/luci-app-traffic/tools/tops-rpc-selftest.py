@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Exercise both real optional NPU RPC functions with real host jshn.
 
-Only the fixed helper path is relocated to an executable fixture. No router,
-service, settings or traffic collection is accessed.
+Traffic reads the collector cache; router.status retains its optional helper.
+Paths are relocated to fixtures. No router or service is accessed.
 """
 import argparse
 import hashlib
@@ -29,11 +29,12 @@ with tempfile.TemporaryDirectory(prefix='tops-rpc-') as temp:
     for source in sources:
         text = source.read_text(); start=text.index('get_npu_status() {'); end=text.index('\n}\n', start)+3
         function=text[start:end]
-        script=t/'rpc.sh'; script.write_text('. "'+str(a.jshn_shell.resolve())+'"\n'+function.replace('/usr/bin/mtk-tops-status',str(helper))+'\nget_npu_status\n')
+        cached=source.name=='luci.traffic'
+        script=t/'rpc.sh'; script.write_text('. "'+str(a.jshn_shell.resolve())+'"\nSTATE_DIR="'+str(t)+'"\n'+function.replace('/usr/bin/mtk-tops-status',str(helper))+'\nget_npu_status\n')
         assert 'getNpuStatus' in text and 'getNpuStatus) get_npu_status' in text
         acl = json.loads((source.parents[2]/'share/rpcd/acl.d'/('router-status.json' if source.name=='router.status' else 'luci-app-traffic.json')).read_text())
         assert any('getNpuStatus' in group.get('read',{}).get('ubus',{}).get(source.name,[]) for group in acl.values())
-        for name,data,expected,exit_code,missing,no_timeout in [
+        cases = [
             ('schema3',json.dumps(valid),None,0,False,False),
             ('schema2',json.dumps(dict(valid,schema=2)),None,0,False,False),
             ('invalid-json','{','provider_invalid',0,False,False),
@@ -44,8 +45,18 @@ with tempfile.TemporaryDirectory(prefix='tops-rpc-') as temp:
             ('oversized',' '*32769,'provider_failed',0,False,False),
             ('missing-helper','{}','provider_missing',0,True,False),
             ('missing-timeout','{}','no_timeout_tool',0,False,True),
-        ]:
+        ]
+        if cached:
+            cases=[(name,data,('collector_invalid' if expected else None),0,False,False)
+                   for name,data,expected,_,_,_ in cases[:6]]+[
+                ('oversized',' '*32769,'collector_invalid',0,False,False),
+                ('missing-cache','{}','collector_pending',0,True,False)]
+        for name,data,expected,exit_code,missing,no_timeout in cases:
             payload.write_text(data); helper.chmod(0o644 if missing else 0o755)
+            if cached:
+                cache=t/'npu.json'
+                if missing: cache.unlink(missing_ok=True)
+                else: cache.write_text(data)
             env=os.environ.copy(); env['PATH']=str(binary)+('' if no_timeout else ':'+env.get('PATH','')); env['TEST_HELPER_EXIT']=str(exit_code)
             r=subprocess.run(['/bin/bash',str(script)],env=env,capture_output=True,text=True,timeout=15)
             d=json.loads(r.stdout)

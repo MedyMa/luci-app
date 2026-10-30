@@ -26,11 +26,13 @@ conntrack bytes  ─┐
 AGH querylog     ─┘
 ```
 
-1. **Byte counters** come from `/proc/net/nf_conntrack`. Every flow carries
-   `packets=`/`bytes=` per direction (`nf_conntrack_acct` is already enabled by
-   default in this tree), so the difference between two samples is that flow's
-   traffic during the interval. The collector samples every
-   `traffic.settings.interval` seconds (default 10).
+1. **Connection counters** come from `/proc/net/nf_conntrack`. The collector
+   prefers paired `bytes_total=` / `packets_total=` lifetime counters and a
+   kernel `traffic_id=` when available. They survive nlbwmon's netlink counter
+   resets; ordinary `bytes=` / `packets=` remain a supported, explicitly less
+   complete fallback. The collector samples every `traffic.settings.interval`
+   seconds (default 10). An optional bounded `/proc/net/nf_conntrack_closed`
+   snapshot supplies final counters and short connections between scans.
 2. **Domains** come from AdGuard Home's query log, read incrementally. Its
    `Answer` field is a base64 DNS message; `ans.lua` decodes it and yields
    `(client, domain, resolved IP)`.
@@ -43,6 +45,8 @@ AGH querylog     ─┘
    matters on a box that runs its own proxy: those connections are sourced from
    the LAN address, and counting them as a client put `192.168.2.1` at the top
    of the client list with 39 MB against it.
+   For inbound DNAT, the translated LAN endpoint comes from the reply tuple.
+   The counter baseline retains the original source and destination.
 4. **Names** — every flow gets a name, in this order:
    1. `/etc/traffic/apps.tsv`, matched against the **host name exactly** first
       (AdGuard Home reports `music.163.com`, so sub-domain rules work) and then
@@ -533,6 +537,45 @@ the corresponding service. The licences the bundled sets declare are recorded
 per row in `root/usr/share/traffic/icons/SOURCES.tsv`; check them before
 redistributing.
 
+## Realtime network and counter integrity
+
+The existing application/client list is unchanged. A separate network panel
+shows WAN download/upload in Mbps and RX/TX packets per second, plus a straight
+five-minute curve sampled every second. One procd worker reads the same WAN
+device for every browser. Rates use monotonic elapsed time; missed ticks,
+counter resets and device recreation produce gaps and a fresh baseline.
+Closing the page stops sampling after the 60-second watch expires. The default
+one-second path never scans conntrack, nft rules, PPE flow tables or hardware MIBs.
+
+The regular collector's connection scan retains uint64 counters as decimal
+strings while calculating deltas, including values above JavaScript's exact
+integer range. No separate current-flow table, ranking cache or browser poll
+is created.
+
+On the matching 24.10 kernel, unique connection IDs prevent a reused tuple from
+inheriting old counters. The optional closed-connection ring recovers final
+snapshots and connections that begin and end between scans; buffer overflow,
+expired watches and missing records have explicit metadata in the private
+`/tmp/traffic/conntrack.json` diagnostic snapshot. This is
+separate from hardware read-clear accounting and does not establish that every
+last packet in flight was captured. Older kernels still work with reduced
+coverage. Upgrading an old baseline does not recredit existing lifetime bytes.
+
+While the page is open, the regular collector also caches the optional NPU
+provider once per round. Browsers read that shared cache. Five-core utilization
+and loaded firmware information are displayed when the provider supplies them;
+unavailable measurements are distinct from zero. NPU busy time, WAN throughput
+and attributed connection bytes remain separate measurements.
+
+Offline regressions for these paths:
+
+```sh
+python3 tools/realtime-selftest.py
+node tools/realtime-view-selftest.js
+node tools/tops-selftest.js
+python3 tools/tops-rpc-selftest.py --jshn-bin /path/to/host/jshn --jshn-shell /path/to/jshn.sh --output /tmp/rpc-receipts
+```
+
 ## Limitations — read before trusting the numbers
 
 * **Coverage is not 100%.** Attribution needs a DNS answer. QUIC, ECH,
@@ -555,6 +598,11 @@ redistributing.
 | Path | Purpose |
 |---|---|
 | `/usr/share/traffic/collector.sh` | sampling, attribution, snapshot |
+| `/usr/share/traffic/connections.awk` | connection deltas and counter quality metadata |
+| `/usr/share/traffic/realtime.sh` | one-second WAN sampling worker |
+| `/tmp/traffic/live.json` | bounded five-minute WAN rates and PPS |
+| `/tmp/traffic/conntrack.json` | bounded private counter coverage diagnostics |
+| `/tmp/traffic/npu.json` | shared optional NPU telemetry cache |
 | `/usr/share/traffic/ans.lua` | base64 DNS answer → A/AAAA records |
 | `/etc/init.d/traffic` | procd service for the collector |
 | `/usr/libexec/rpcd/luci.traffic` | snapshot, hourly aggregation, reset |

@@ -19,6 +19,7 @@ const OUT = process.argv[2] || path.join(__dirname, '..', '..', 'Test', 'luci-ap
 const VIEW = path.join(__dirname, '..', 'htdocs', 'luci-static', 'resources', 'view', 'traffic', 'overview.js');
 // Optional fixture for the actual TOPS pane; never queries a router.
 const TOPS = process.env.TRAFFIC_PREVIEW_TOPS ? JSON.parse(fs.readFileSync(process.env.TRAFFIC_PREVIEW_TOPS, 'utf8')) : null;
+const LIVE = process.env.TRAFFIC_PREVIEW_LIVE ? JSON.parse(fs.readFileSync(process.env.TRAFFIC_PREVIEW_LIVE, 'utf8')) : null;
 const src = fs.readFileSync(VIEW, 'utf8')
   .replace(/^'use strict';\s*$/m, '').replace(/^'require [^']+';\s*$/gm, '');
 
@@ -54,7 +55,7 @@ const documentStub={
   createElementNS(ns,t){ return mk(ns,t); },
   createTextNode(t){ const n=mk(null,'#text'); n._text=String(t); return n; },
   getElementById(){ return null; }, addEventListener(){}, removeEventListener(){},
-  head:{ appendChild(){} }, hidden:false, body:mk(XHTML,'body')
+  head:{ appendChild(n){ if(n.tag==='style') cssParts.push((n.children||[]).map(x=>typeof x==='string'?x:(x._text||'')).join('')); } }, hidden:false, body:mk(XHTML,'body')
 };
 const factory=new Function('view','rpc','dom','poll','_','E','L','document','Image','confirm',
   src.replace(/return view\.extend\(/, 'global.__injectCss = injectCss;\nglobal.__topsModel = topsStatusModel;\nreturn view.extend('));
@@ -124,6 +125,7 @@ const SERIES={ range:'24h', interval:60, points:Array.from({length:180},(_,i)=>{
  * so it has to stand in for that - otherwise the reading the design is about
  * renders as the initial placeholder dash and looks missing. */
 function seedRate(v){
+  if (LIVE) v.networkPanel.live(LIVE);
   const past=Object.assign({},SUMMARY,{ collected_at:SUMMARY.collected_at-10,
     totals:Object.assign({},SUMMARY.totals,
       { down:SUMMARY.totals.down-12700, up:SUMMARY.totals.up-9020 }) });
