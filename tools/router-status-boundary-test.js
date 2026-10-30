@@ -13,6 +13,10 @@ for (const file of ['root/usr/libexec/rpcd/luci.traffic', 'root/etc/init.d/traff
   assert(!/getWireless|wifi-collector|wifi-history|getSystemMetrics|router\.status/.test(read(path.join(traffic, file))), `traffic still owns monitoring in ${file}`);
 }
 const acl = JSON.parse(read(path.join(status, 'root/usr/share/rpcd/acl.d/router-status.json')));
-assert.deepEqual(acl['router-status'].read.ubus['router.status'].sort(), ['getSystemMetrics', 'getWirelessHistory', 'getWirelessStatus'].sort());
+const methods = ['getSystemMetrics', 'getWirelessHistory', 'getWirelessStatus', 'getNpuStatus', 'getNpuUsage'].sort();
+assert.deepEqual(acl['router-status'].read.ubus['router.status'].sort(), methods);
+const backend = read(path.join(status, 'root/usr/libexec/rpcd/router.status'));
+assert.deepEqual([...backend.matchAll(/json_add_object (get[A-Za-z]+); json_close_object/g)].map(m=>m[1]).sort(), methods,
+  'read-only ACL must match the actual status RPC methods');
 assert(!acl['router-status'].write, 'status ACL must be read-only');
 console.log('Independent router status boundaries: PASS');

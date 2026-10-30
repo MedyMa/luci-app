@@ -573,6 +573,7 @@ Offline regressions for these paths:
 python3 tools/realtime-selftest.py
 node tools/realtime-view-selftest.js
 node tools/tops-selftest.js
+node ../../tools/router-status-boundary-test.js
 python3 tools/tops-rpc-selftest.py --jshn-bin /path/to/host/jshn --jshn-shell /path/to/jshn.sh --output /tmp/rpc-receipts
 ```
 
