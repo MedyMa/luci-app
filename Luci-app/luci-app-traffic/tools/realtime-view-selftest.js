@@ -12,38 +12,30 @@ function node(tag, attrs = {}, children = []) {
 const capture = {}, document = { createElementNS(ns,t) { return node(t); }, createElement(t) { return node(t); },
   createTextNode(s) { return s; }, getElementById() { return null; }, head: node('head') };
 new Function('view','rpc','dom','poll','_','E','L','document','Image','capture','Date',
-  source.replace('return view.extend(', 'capture.live = realtimeModel; capture.chart = makeRealtimeChart; capture.panel = makeRealtimePanel; capture.tops = topsStatusModel; return view.extend('))(
-  {extend:v=>v}, {declare:()=>()=>Promise.resolve({})}, {content(n,c) { n.children = c; }}, {add(){}}, s=>s,
+  source.replace('return view.extend(', 'capture.live = realtimeModel; capture.tops = topsStatusModel; return view.extend('))(
+  {extend:v=>{capture.view=v;return v;}}, {declare:()=>()=>Promise.resolve({})}, {content(n,c) { n.children = Array.isArray(c) ? c : [c]; }}, {add(){}}, s=>s,
   node, {bind:(f,c)=>f.bind(c)}, document, function(){}, capture, {now:()=>3000000});
 function text(n) { return typeof n === 'string' ? n : n == null ? '' : (n.textContent || '') + (n.children || []).map(text).join(' '); }
-function all(n, tag) { return (n && n.tag === tag ? [n] : []).concat(...((n && n.children) || []).filter(x=>typeof x === 'object').map(x=>all(x,tag))); }
-const sample = () => ({ at:3000, monotonic_ms:600000, ready:1, bps_down:125000000, bps_up:62500000,
-  pps_down:100000, pps_up:50000, source:'iface', device:'pppoe-wan', peak_bps_down:125000000,
-  peak_bps_up:62500000, average_bps_down:100000000, average_bps_up:50000000,
-  series:[[596000,0,0,0,0],[597000,125000000,62500000,100000,50000],[598000,null,null,null,null],
-    [599000,100000000,50000000,80000,40000],[600000,125000000,62500000,100000,50000]] });
+const sample = () => ({ at:3000, monotonic_ms:600000, ready:1, dt:1, bps_down:125000000, bps_up:62500000,
+  pps_down:100000, pps_up:50000, source:'iface', device:'pppoe-wan' });
 let s = sample(), m = capture.live(s);
-check(m && m.fresh && m.points.length === 5, 'validated WAN samples preserve both rates and gaps');
-let paths = all(capture.chart(m),'path');
-check(paths.length === 2, 'one path per direction');
-check(paths.every(p=>(p.attrs.d.match(/M/g)||[]).length===2 && !/[CQ]/.test(p.attrs.d)), 'nulls break straight paths without smoothing or interpolation');
-global.window={innerWidth:390};
-check(capture.chart(m).attrs.viewBox==='0 0 310 175','phone charts keep readable height and axis labels');
-delete global.window;
-s = sample(); s.series = [[595000,1,1,1,1],[599000,2,2,2,2],[600000,3,3,3,3]];
-check(all(capture.chart(capture.live(s)),'path').every(p=>(p.attrs.d.match(/M/g)||[]).length===2), 'missed intervals break the curve even without an explicit null');
-for (const mutate of [s=>s.series[1][0]=s.series[0][0], s=>s.series[0][0]=1, s=>s.series[0][1]=-1,
-  s=>s.series[0][0]=600001, s=>s.bps_down=Infinity, s=>s.source='conntrack', s=>s.ready='1']) {
-  s=sample(); mutate(s); check(capture.live(s)===null,'invalid samples cannot appear as a fresh WAN curve');
+check(m && m.fresh, 'current WAN sample is validated');
+for (const mutate of [s=>s.at=0,s=>s.at=NaN,s=>s.bps_down=Infinity,s=>s.source='conntrack',s=>s.ready='1',
+  s=>s.dt=0,s=>s.dt=3,s=>s.pps_up=-1,s=>s.pps_down=1.5,s=>s.device='<img>']) {
+  s=sample();mutate(s);check(capture.live(s)===null,'invalid counters and observations cannot reach the headline');
 }
-s=sample();s.at=2990;check(!capture.live(s).fresh,'cached WAN samples become stale');
-const panel = capture.panel(); panel.live(sample());
-check(text(panel.node).includes('1000.0 Mbps') && text(panel.node).includes('100,000 PPS'),'Mbps and PPS use their respective WAN counters');
-s=sample();s.bps_down=0;s.pps_down=0;panel.live(s);
-check(text(panel.node).includes('0.00 Mbps') && text(panel.node).includes('0 PPS'),'a measured zero is displayed as zero');
-s.pps_down=null;s.ready=0;panel.live(s);
-check(text(panel.node).includes('Sample unavailable or establishing a new baseline.') && !text(panel.node).includes('0 PPS'),'missing samples are not displayed as measured zeros');
-check(!text(panel.node).includes('Current large flows') && !source.includes('getConnections'), 'no flow table or dedicated flow RPC polling');
+s=sample();s.at=2990;check(!capture.live(s).fresh,'cached WAN sample becomes stale');
+s=sample();s.at=3010;check(!capture.live(s).fresh,'future observation is not current');
+const v=Object.assign(Object.create(capture.view),{rateDown:node('b'),rateUp:node('b'),packetsDown:node('b'),packetsUp:node('b'),liveNote:node('small')});
+v.renderRealtime(sample());
+check(text(v.rateDown).includes('1000.0 Mbps') && text(v.packetsDown).includes('100,000 PPS'),'bandwidth and packet rate share the WAN sample');
+s=sample();s.bps_down=0;s.pps_down=0;v.renderRealtime(s);
+check(text(v.rateDown)==='0.00 Mbps' && text(v.packetsDown)==='0 PPS','measured zeros remain zeros');
+s.ready=0;v.renderRealtime(s);
+check(text(v.rateDown)==='—' && text(v.packetsDown)==='—','baseline is unavailable, not zero traffic');
+v.renderRealtime(null);check(text(v.rateUp)==='—','failed fetch clears the headline');
+check(!source.includes('makeRealtimeChart') && !source.includes('tf-realtime-card'),'the separate realtime chart has been removed');
+check(!source.includes('getConnections'),'no duplicate client or connection table');
 const tops = {schema:3, npu:{status_node_present:true,firmware_ready:true,mcu_alive:true,registered_tunnel_types:3,
   coverage:'complete',utilization:{available:true,coverage:'complete',unit:'mean_core_busy_percent',core_count:5,
     percent_milli:40000,cores:{Core0:0,Core1:20000,Core2:40000,Core3:60000,CoreM:80000}}},

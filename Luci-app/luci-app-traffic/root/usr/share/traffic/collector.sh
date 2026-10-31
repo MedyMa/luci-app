@@ -1332,7 +1332,7 @@ classify() {
 # is pure shell: a sed or an awk here would be another process charged to every
 # tick, which is the cost the meter was already fixed for once.
 peak_read() {
-    local lj d u
+    local lj d u at now token
     # Tested before the read, not left to the redirect: a failed redirection is
     # reported by the shell itself, so the 2>/dev/null on the read does not
     # silence it, and this runs every second - a router that logged a missing
@@ -1343,10 +1343,20 @@ peak_read() {
         *'"ready":1'*) ;;
         *) return 0 ;;
     esac
+    at=${lj#*'"at":'}; at=${at%%[!0-9]*}
+    case "$at" in ''|*[!0-9]*|0[0-9]*) return 0 ;; esac
+    [ "${#at}" -le 12 ] || return 0
+    now=$(date +%s 2>/dev/null) || return 0
+    [ "$now" -ge "$at" ] && [ "$((now-at))" -le 5 ] || return 0
+    token=${lj#*'"monotonic_ms":'}; token=${token%%[!0-9]*}
+    case "$token" in ''|*[!0-9]*) token=$at ;; esac
+    [ "$token" != "${PEAK_LAST_SAMPLE:-}" ] || return 0
     d=${lj#*'"bps_down":'}; d=${d%%[!0-9]*}
     u=${lj#*'"bps_up":'};   u=${u%%[!0-9]*}
     case "$d" in ''|*[!0-9]*) return 0 ;; esac
-    case "$u" in ''|*[!0-9]*) u=0 ;; esac
+    case "$u" in ''|*[!0-9]*) return 0 ;; esac
+    [ "${#d}" -le 15 ] && [ "${#u}" -le 15 ] || return 0
+    PEAK_LAST_SAMPLE=$token
     [ "$d" -gt "${PEAK_D:-0}" ] && PEAK_D=$d
     [ "$u" -gt "${PEAK_U:-0}" ] && PEAK_U=$u
     PEAK_N=$(( ${PEAK_N:-0} + 1 ))

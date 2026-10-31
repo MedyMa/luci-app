@@ -952,112 +952,24 @@ function fmtMbps(bytes) {
 	return (bytes * 8 / 1000000).toFixed(bytes >= 125000000 ? 1 : 2) + ' Mbps';
 }
 
+/* The headline is one WAN observation. An unavailable or stale sample is
+ * a dash, never a summary-window average presented as an instantaneous rate.
+ * bps_down/up retain the RPC's historical bytes-per-second unit.
+ */
 function realtimeModel(r) {
 	var finite = function(v) { return typeof v === 'number' && Number.isFinite(v) && v >= 0; };
-	if (!r || r.source !== 'iface' || !Number.isInteger(r.at) || !finite(r.monotonic_ms) ||
-		(r.ready !== 0 && r.ready !== 1) || typeof r.device !== 'string' || r.device.length > 64 ||
-		!finite(r.bps_down) || !finite(r.bps_up) || !Array.isArray(r.series) || r.series.length > 301) return null;
-	var last = -1, points = [];
-	for (var i = 0; i < r.series.length; i++) {
-		var row = r.series[i];
-		if (!Array.isArray(row) || row.length !== 5 || !finite(row[0]) || row[0] <= last ||
-			row[0] > r.monotonic_ms || row[0] < r.monotonic_ms - 300000 ||
-			!row.slice(1).every(function(v) { return v === null || finite(v); })) return null;
-		last = row[0]; points.push(row);
-	}
-	return { raw: r, points: points, fresh: Date.now() / 1000 - r.at >= -2 && Date.now() / 1000 - r.at <= 5 };
-}
-
-/* Straight segments join measured samples only. nulls and missed intervals
- * each break both curves; the x-axis is a fixed five-minute monotonic window.
- */
-function makeRealtimeChart(m) {
-	var viewport = typeof window !== 'undefined' && window.innerWidth || 800;
-	var W = Math.max(300, Math.min(720, viewport - 80)), H = 175, left = 8, right = 94, top = 10, bottom = 24;
-	var width = W - left - right, height = H - top - bottom;
-	var points = m.points, end = m.raw.monotonic_ms, maximum = 1;
-	points.forEach(function(p) { maximum = Math.max(maximum, p[1] || 0, p[2] || 0); });
-	maximum = niceTop(maximum);
-	var svg = S('svg', { 'class': 'tf-chart-svg', 'viewBox': '0 0 ' + W + ' ' + H,
-		'role': 'img', 'aria-label': _('WAN throughput over the last five minutes') });
-	for (var g = 0; g <= 2; g++) {
-		var gy = top + height - height * g / 2;
-		svg.appendChild(S('line', { 'x1': left, 'x2': W - right, 'y1': gy, 'y2': gy,
-			'class': 'tf-grid', 'stroke-width': 1 }));
-		svg.appendChild(S('text', { 'x': W - 3, 'y': gy - 3, 'text-anchor': 'end',
-			'class': 'tf-chart-tick', 'text': fmtMbps(maximum * g / 2) }));
-	}
-	[1, 2].forEach(function(direction) {
-		var path = '', connected = false, previous = -1;
-		points.forEach(function(p) {
-			if (p[direction] === null) { connected = false; previous = p[0]; return; }
-			if (previous >= 0 && p[0] - previous > 2500) connected = false;
-			var x = left + (p[0] - end + 300000) * width / 300000;
-			var y = top + height - p[direction] * height / maximum;
-			path += (connected ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1);
-			connected = true; previous = p[0];
-		});
-		svg.appendChild(S('path', { 'd': path, 'class': 'tf-curve tf-curve-' + (direction === 1 ? 'down' : 'up'),
-			'fill': 'none', 'stroke-width': 1.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
-	});
-	svg.appendChild(S('text', { 'x': left, 'y': H - 5, 'class': 'tf-chart-tick', 'text': _('5 minutes ago') }));
-	svg.appendChild(S('text', { 'x': W - right, 'y': H - 5, 'text-anchor': 'end',
-		'class': 'tf-chart-tick', 'text': _('Now') }));
-	return svg;
-}
-
-function makeRealtimePanel() {
-	var meter = el('div', { 'class': 'tf-realtime-meters' });
-	var chart = el('div', { 'class': 'tf-chart tf-realtime-chart' });
-	var note = el('div', { 'class': 'tf-network-note', 'role': 'status' }, [ _('Waiting for a WAN sample…') ]);
-	var stats = el('div', { 'class': 'tf-network-note' }), lastLive = null;
-	function metric(label, value) {
-		return el('div', {}, [ el('small', {}, [ label ]), el('b', {}, [ value ]) ]);
-	}
-	function age(t) { return Math.max(0, Math.floor(Date.now() / 1000 - t)); }
-	return {
-		node: el('div', { 'class': 'tf-network-panels' }, [
-			el('div', { 'class': 'tf-card tf-realtime-card' }, [
-				el('h3', {}, [ _('Realtime network') ]), meter, chart, stats, note
-			])
-		]),
-		live: function(r) {
-			var m = realtimeModel(r), usable = m && m.fresh && r.ready === 1;
-			var pps = function(v) { return typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v.toLocaleString() + ' PPS' : '—'; };
-			dom.content(meter, [ metric(_('Download'), usable ? fmtMbps(r.bps_down) : '—'),
-				metric(_('Upload'), usable ? fmtMbps(r.bps_up) : '—'),
-				metric(_('RX packets'), usable ? pps(r.pps_down) : '—'), metric(_('TX packets'), usable ? pps(r.pps_up) : '—') ]);
-			if (m && lastLive !== r.monotonic_ms) {
-				lastLive = r.monotonic_ms;
-				dom.content(chart, [ makeRealtimeChart(m) ]);
-			}
-			var rate = function(v) { return typeof v === 'number' && Number.isFinite(v) && v >= 0 ? fmtMbps(v) : '—'; };
-			dom.content(stats, m ? [ _('Peak') + ' ↓ ' + rate(r.peak_bps_down) + ' / ↑ ' + rate(r.peak_bps_up) +
-				' · ' + _('Average') + ' ↓ ' + rate(r.average_bps_down) + ' / ↑ ' + rate(r.average_bps_up) ] : []);
-			dom.content(note, m ? [ r.device + ' · ' + _('WAN interface counters') + ' · ' + age(r.at) + ' s · ' +
-				(usable ? _('1-second samples; gaps are left empty.') : _('Sample unavailable or establishing a new baseline.')) ] :
-				[ _('WAN sample unavailable. Interface traffic is separate from application attribution and NPU utilization.') ]);
-		}
-	};
-}
-
-function injectRealtimeCss() {
-	if (document.getElementById('tf-network-css')) return;
-	document.head.appendChild(el('style', { 'id': 'tf-network-css' }, [
-		'.tf-network-panels{display:grid;gap:1rem;margin:1rem 0}.tf-realtime-card{padding:1.1rem;min-width:0}' +
-		'.tf-network-panels h3{font-size:1rem;margin:0 0 .8rem;color:var(--tf-fg)}' +
-		'.tf-realtime-meters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem}.tf-realtime-meters small{display:block;color:var(--tf-dim);font-size:.8rem}' +
-		'.tf-realtime-meters b{display:block;font-variant-numeric:tabular-nums;font-size:1.15rem;margin:.25rem 0}' +
-		'.tf-network-note{color:var(--tf-dim);font-size:.8rem;line-height:1.6;overflow-wrap:anywhere}.tf-realtime-chart{margin-top:.6rem}' +
-		'.tf-tops-details pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.8rem}' +
-		'@media(max-width:600px){.tf-realtime-meters{grid-template-columns:repeat(2,minmax(0,1fr))}.tf-realtime-card{padding:.8rem}}'
-	]));
+	var packet = function(v) { return v === null || Number.isSafeInteger(v) && v >= 0; };
+	if (!r || r.source !== 'iface' || !Number.isSafeInteger(r.at) || r.at <= 0 ||
+		!finite(r.monotonic_ms) || (r.ready !== 0 && r.ready !== 1) ||
+		typeof r.device !== 'string' || !/^[a-zA-Z0-9_.:@-]{1,64}$/.test(r.device) ||
+		!finite(r.bps_down) || !finite(r.bps_up) || !packet(r.pps_down) || !packet(r.pps_up) ||
+		(r.ready === 1 && (!finite(r.dt) || r.dt <= 0 || r.dt > 2.5))) return null;
+	var age = Date.now() / 1000 - r.at;
+	return { raw: r, fresh: age >= -2 && age <= 5 };
 }
 
 return view.extend({
 	summary: null,
-	prev: null,
-	rate: { down: 0, up: 0 },
 	/* One day by default: it is the window the total, the donut and the table
 	 * all describe, and the one the reference layout opens on.  "Since start"
 	 * stays available for watching the current session move. */
@@ -1069,9 +981,11 @@ return view.extend({
 		this.summary = summary || {};
 		var self = this;
 
-		this.networkPanel = makeRealtimePanel();
 		this.rateDown = el('b', {}, [ '—' ]);
 		this.rateUp   = el('b', {}, [ '—' ]);
+		this.packetsDown = el('b', {}, [ '—' ]);
+		this.packetsUp = el('b', {}, [ '—' ]);
+		this.liveNote = el('small', { 'class': 'tf-live-note', 'role': 'status' }, [ _('Waiting for a WAN sample…') ]);
 		this.totalEl  = el('div', { 'class': 'tf-grand-total' }, [ '—' ]);
 		/* The ring and the total laid over its hole.  The total moves on every
 		 * refresh while the ring is only rebuilt when the composition of it
@@ -1138,18 +1052,21 @@ return view.extend({
 					this.heroCapEl = el('div', { 'class': 'tf-hero-cap' }, [ _('total') ]),
 					el('div', { 'class': 'tf-hero-cap' }, [ _('Received') ]),
 					el('div', { 'class': 'tf-hero-cap' }, [ _('Sent') ]),
+					el('div', { 'class': 'tf-hero-cap' }, [ _('RX packets') ]),
+					el('div', { 'class': 'tf-hero-cap' }, [ _('TX packets') ]),
 					this.totalEl,
 					el('div', { 'class': 'tf-rate tf-rate-down' }, [
 						el('span', { 'class': 'tf-rate-arrow' }, [ '↓' ]), this.rateDown
 					]),
 					el('div', { 'class': 'tf-rate tf-rate-up' }, [
 						el('span', { 'class': 'tf-rate-arrow' }, [ '↑' ]), this.rateUp
-					])
+					]),
+					el('div', { 'class': 'tf-rate tf-packets' }, [ this.packetsDown ]),
+					el('div', { 'class': 'tf-rate tf-packets' }, [ this.packetsUp ])
 				]),
-				el('div', { 'class': 'tf-hero-ctl' }, [ this.rangePicker.node ])
+				el('div', { 'class': 'tf-hero-ctl' }, [ this.rangePicker.node, this.liveNote ])
 			]),
 
-			this.networkPanel.node,
 
 			el('div', { 'class': 'tf-mid' }, [
 			el('div', { 'class': 'tf-card tf-chart-card' }, [
@@ -1228,7 +1145,6 @@ return view.extend({
 		]);
 
 		injectCss();
-		injectRealtimeCss();
 		/* which icons exist, shipped and fetched: one small request each, so the
 		 * page never asks for an icon that is not there */
 		ensureIconIndexes();
@@ -1252,18 +1168,15 @@ return view.extend({
 		 * ticks on a 1000 ms setInterval and treats the interval as a number of
 		 * ticks, so 1 is valid and fires on every tick.
 		 *
-		 * It does NOT stop while the tab is hidden - luci.js has no
-		 * visibilitychange handler at all; the slowdown in a background tab is
-		 * the browser throttling its own timers, so a hidden page still samples,
-		 * just far less often.  What ends the sampling is closing the page,
-		 * because then nothing calls getLive and the timestamp live.sh checks
-		 * goes stale. */
+		 * pollLive skips hidden tabs. The shared worker also sleeps after all
+		 * watchers stop asking for samples. */
 		poll.add(L.bind(this.pollLive, this), 1);
 		return node;
 	},
 
 	/* Optional provider, metadata only. Never contributes to totals/rates. */
 	pollTops: function() {
+		if (document.hidden) return Promise.resolve();
 		return callNpuStatus().then(L.bind(function(r) {
 			var model = topsStatusModel(r);
 			if (!model) {
@@ -1272,7 +1185,8 @@ return view.extend({
 				return;
 			}
 			this.lastTops = model;
-			this.renderTops(model, typeof r.sampled_at === 'number' && Date.now() / 1000 - r.sampled_at > 30);
+			var age = Date.now() / 1000 - r.sampled_at;
+			this.renderTops(model, !Number.isSafeInteger(r.sampled_at) || age < -2 || age > 30);
 		}, this)).catch(L.bind(function() {
 			if (this.lastTops) this.renderTops(this.lastTops, true);
 			else this.topsCardEl.style.display = 'none';
@@ -1297,15 +1211,19 @@ return view.extend({
 			el('span', { 'class': 'tf-tops-badge ' + (stale ? 'tf-tops-warning' : m.ready ? 'tf-tops-ready' : '') },
 				[ stale ? _('Snapshot out of date') : firmware ])
 		]);
+		var versions = [], role = '';
+		m.firmwareInfo.split(/\r?\n/).forEach(function(line) {
+			if (/^npu-(mgmt|offload) FW information:$/.test(line)) role = line.indexOf('mgmt') >= 0 ? 'MGMT' : 'Offload';
+			var v = /^version:\s*([0-9]+(?:\.[0-9]+){1,3})\s*$/.exec(line);
+			if (role && v && v[1].length <= 32) { versions.push(role + ' ' + v[1]); role = ''; }
+		});
 		var content = [ header, el('div', { 'class': 'tf-tops-metrics' }, [
-			metric(_('Firmware'), firmware, _('Registered tunnel types') + ': ' + m.types),
-			metric(_('NPU utilization'), m.utilization == null ? '—' : m.utilization.toFixed(1) + '%',
-				m.cores ? m.cores.map(function(c) { return c.id + ': ' + c.percent.toFixed(0) + '%'; }).join(' · ') :
-				m.utilization == null ? _('Utilization unavailable') : _('Average busy time of five NPU cores')),
+			metric(_('Firmware'), firmware, versions.length ? versions.join(' · ') : m.platform),
+			metric(_('NPU utilization'), stale || m.utilization == null ? '—' : m.utilization.toFixed(1) + '%',
+				!stale && m.cores ? m.cores.map(function(c) { return c.id + ': ' + c.percent.toFixed(0) + '%'; }).join(' · ') :
+				stale || m.utilization == null ? _('Utilization unavailable') : _('Average busy time of five NPU cores')),
 			metric(_('Synchronized tunnels'), m.complete ? String(m.synced) : '—',
-				_('Recorded') + ': ' + m.entries.length + ' / ' + m.capacity),
-			metric(_('Hardware forwarding'), m.verified ? _('Verified') : _('Not verified'),
-				_('Parameter synchronization is not packet verification'))
+				_('Recorded') + ': ' + m.entries.length + ' / ' + m.capacity + ' · ' + _('Registered tunnel types') + ': ' + m.types)
 		]) ];
 		if (stale) content.push(el('div', { 'class': 'tf-tops-alert', 'role': 'status' },
 			[ _('Unable to refresh; showing the last snapshot.') ]));
@@ -1339,25 +1257,8 @@ return view.extend({
 				el('thead', {}, [ el('tr', {}, labels.map(function(x) { return el('th', { 'scope': 'col' }, [ x ]); })) ]),
 				el('tbody', {}, rows)
 			]));
-		} else if (m.complete) {
-			content.push(el('div', { 'class': 'tf-tops-empty' }, [
-				el('b', {}, [ _('No tunnel entries') ]),
-				el('span', {}, [ m.ready ? _('Waiting for supported tunnel traffic.') : _('Tunnel learning starts when the firmware is ready.') ]),
-				el('span', {}, [ _('Ordinary Internet traffic is handled by PPE/WED. An empty TOPS table can coexist with active hardware forwarding.') ])
-			]));
 		}
-		var a = m.accounting;
-		var accountingUnknown = a.conntrack_setting_coverage !== 'complete';
-		var accountingNote = accountingUnknown ? _('Conntrack accounting status is unavailable.') :
-			a.conntrack_accounting_enabled !== true ? _('Conntrack accounting is disabled; application attribution may be incomplete.') : '';
-		content.push(el('details', { 'class': 'tf-tops-details' }, [
-			el('summary', {}, [ _('How this status is counted') ]),
-			m.platform ? el('p', {}, [ m.platform ]) : '',
-			m.firmwareInfo ? el('pre', {}, [ m.firmwareInfo ]) : '',
-			el('p', {}, [ _('WAN counters provide total traffic; conntrack provides application attribution. TOPS setup events are not traffic bytes.') ]),
-			accountingNote ? el('p', { 'class': 'tf-tops-account-note' }, [ accountingNote ]) : '',
-			el('p', {}, [ _('Synchronized parameters alone do not confirm hardware packet forwarding.') ])
-		]));
+
 		dom.content(this.topsCardEl, content);
 		this.topsCardEl.style.display = '';
 	},
@@ -1485,10 +1386,6 @@ return view.extend({
 				}
 				self.archiveEmpty = false;
 				self.renderHourly(h);
-				/* the same live rate the session view shows, from the same two
-				 * snapshots, so choosing a range changes the window and not the
-				 * meaning of the two figures under 下载 and 上传 */
-				self.updateRate(self.summary);
 				self.drawStatus(self.summary, self.lastItems || []);
 			});
 		});
@@ -1712,80 +1609,27 @@ return view.extend({
 		this.renderDiag();
 	},
 
-	/* The rate under 下载/上传: the difference between two consecutive snapshots
-	 * over the time between them, so it is the speed right now.
-	 *
-	 * This used to be computed in the session view only, while the ranged view
-	 * replaced it with the window's average.  That average hardly moves on a busy
-	 * router: its denominator is the whole range and its numerator only grows as
-	 * the archive does, so within one hour the figure is nearly constant - and a
-	 * figure under a label that says 下载 is read as "now", which makes a number
-	 * that sits still read as a page that has stopped.  Both views show the live
-	 * rate now.  The window's own average is not lost: it is the window total
-	 * divided by the bucket count, both of which the strip already shows. */
-	updateRate: function(s) {
-		/* The two figures under 下载/上传 describe the moment, not the window, so
-		 * they come from the authoritative counters whenever those exist: an
-		 * interface delta is what the box really moved between the two snapshots,
-		 * where an attributed delta only counts what the accounting layer saw.
-		 * The source is part of the reading - differencing an interface reading
-		 * against an attributed one would report the gap between two different
-		 * meters as traffic - so a change of source between two snapshots keeps
-		 * the previous figure instead. */
-		var cur = headlineTotals(s);
-		var down = cur.down, up = cur.up;
-		/* rates come from the difference between two snapshots */
-		if (this.prev) {
-			var prev = headlineTotals(this.prev);
-			var dt = (Number(s.collected_at) || 0) - (Number(this.prev.collected_at) || 0);
-			if (dt > 0 && prev.source === cur.source && down >= prev.down && up >= prev.up)
-				this.rate = { down: (down - prev.down) / dt, up: (up - prev.up) / dt };
-		}
-		this.prev = s;
-
-		/* a plain rate has no window to explain, so the tooltip that described
-		 * the ranged view's average goes with the average itself */
-		if (this.rateAvg !== false) {
-			this.rateAvg = false;
-			this.rateDown.removeAttribute('title');
-			this.rateUp.removeAttribute('title');
-		}
-		/* The one-second sampler owns these two numbers while it is working; this
-		 * interval rate is the fallback, not a second opinion.  Writing both made
-		 * the number flick back to a ten-second average once per snapshot, which
-		 * reads as a glitch rather than as a rate. */
-		if (this.liveOn) return;
-		dom.content(this.rateDown, fmtRate(this.rate.down));
-		dom.content(this.rateUp, fmtRate(this.rate.up));
+	/* Called only by the one-second WAN sampler, independently of the selected
+	 * history period. All four readings become unavailable together.
+	 */
+	renderRealtime: function(r) {
+		var m = realtimeModel(r), usable = m && m.fresh && r.ready === 1;
+		var pps = function(v) { return Number.isSafeInteger(v) && v >= 0 ? v.toLocaleString() + ' PPS' : '—'; };
+		dom.content(this.rateDown, usable ? fmtMbps(r.bps_down) : '—');
+		dom.content(this.rateUp, usable ? fmtMbps(r.bps_up) : '—');
+		dom.content(this.packetsDown, usable ? pps(r.pps_down) : '—');
+		dom.content(this.packetsUp, usable ? pps(r.pps_up) : '—');
+		dom.content(this.liveNote, usable ? r.device + ' · ' + _('WAN interface counters') :
+			_('Waiting for a WAN sample…'));
 	},
 
-	/* The realtime meter: one call a second, which is also what tells the backend
-	 * that somebody is looking.  rpcd writes the timestamp live.sh checks, so
-	 * closing the page stops the sampling instead of leaving it running forever.
-	 *
-	 * These two numbers are the one-second rate in EVERY range.  They used to
-	 * depend on the selected range - the session view showed the live rate and
-	 * every other range showed a ten-second interval value - and that was a
-	 * hidden mode: a page left on the 24-hour range looked like a meter that had
-	 * stopped refreshing, twice, to the person using it.  A number that means
-	 * something different depending on a control elsewhere on the page is a
-	 * worse idea than a number that always means the same thing.  The window
-	 * averages are still in the chart's own subtitle, where they belong. */
 	pollLive: function() {
-		return callLive().then(L.bind(function(r) {
-			if (this.networkPanel) this.networkPanel.live(r);
-			if (!r || Number(r.ready) !== 1) throw new Error('no live sample yet');
-			this.liveMisses = 0;
-			this.liveOn = true;
-			dom.content(this.rateDown, fmtRate(Number(r.bps_down) || 0));
-			dom.content(this.rateUp, fmtRate(Number(r.bps_up) || 0));
-		}, this)).catch(L.bind(function() {
-			/* Three misses in a row is not a hiccup, it is this build running on
-			 * an older backend: hand the two numbers back to the interval rate
-			 * instead of freezing them at the last live value. */
-			if (this.networkPanel) this.networkPanel.live(null);
-			this.liveMisses = (this.liveMisses || 0) + 1;
-			if (this.liveMisses >= 3) this.liveOn = false;
+		if (document.hidden) {
+			this.renderRealtime(null);
+			return Promise.resolve();
+		}
+		return callLive().then(L.bind(this.renderRealtime, this)).catch(L.bind(function() {
+			this.renderRealtime(null);
 		}, this));
 	},
 
@@ -1830,10 +1674,6 @@ return view.extend({
 		var sig = [ Number(s.collected_at) || 0, down, up, items.length ].join('|');
 		if (sig === this.lastSig) return;
 		this.lastSig = sig;
-
-		/* the live rate, from this snapshot and the one before it; the ranged
-		 * view calls the same method so the two agree */
-		this.updateRate(s);
 
 		/* The grand-total row carries the busiest client overall.  Its share is
 		 * of the attributed total - the same sum the row's own byte columns
@@ -2060,7 +1900,7 @@ return view.extend({
 		});
 		/* The two rates are deliberately not written here.  They describe the
 		 * sampling interval rather than the window, exactly as in the session
-		 * view, and refresh() keeps them current through updateRate().  Dividing
+		 * view, and pollLive() keeps them current from WAN counters.  Dividing
 		 * the window's bytes by the window's length, which is what this used to
 		 * do, gave a figure that barely moved - and next to a total that does
 		 * move, a rate that does not reads as a stalled page. */
@@ -2621,40 +2461,19 @@ function injectCss() {
 		 * size of the number carry the emphasis, so the wash is gone: the palette
 		 * has no violet in it, and a second material for one card is the opposite
 		 * of the layered-but-uniform look the design asks for. */
-		/* The three captions sit on one line and the three readings on the next,
-		 * so the hero reads as a label row over a value row.  Pairing each
-		 * caption with its own reading in a column reads worse: with the bottoms
-		 * aligned - which is what makes the numbers share a line - a 1.7rem line
-		 * box and a 1.05rem one do not start at the same y, so the three captions
-		 * come out at three different heights.  Aligning them by row fixes that,
-		 * and the column widths are the same either way. */
-		'.tf-page .tf-hero-stats{display:grid;grid-template-columns:repeat(3,auto);',
+		/* Align the five captions and readings on shared desktop baselines. */
+		'.tf-page .tf-hero-stats{display:grid;grid-template-columns:repeat(5,auto);',
 		'align-items:end;column-gap:1.6rem;row-gap:.1rem;}',
-		/* The hairline the design draws between the two traffic readings.  It is a
-		 * grid item rather than a border or an absolutely placed box: a border on
-		 * the cells would come out as two stubs, one under the caption and one
-		 * under the figure, and the rows have no fixed height to position against.
-		 * Placing it in the caption's own column, pushed to that column's end and
-		 * pulled back by half the gap, puts it in the middle of the gap spanning
-		 * both rows - here between columns two and three, which is 下载 and 上传.
-		 * The narrow layout moves the same element to the rows the rates occupy on
-		 * a phone, so every width gets the same line between the same two.
-		 *
-		 * Every child is placed explicitly because of it.  A grid item - and a
-		 * pseudo-element counts as one - claims its cells, and auto flow then has
-		 * to steer around them: the six readings are emitted captions-first, so
-		 * with the hairline holding column two's two rows the rest packed into
-		 * columns one and three and the hero came apart, which the desktop render
-		 * showed before this. */
 		'.tf-page .tf-hero-stats>*:nth-child(1){grid-area:1/1;}',
+		'.tf-page .tf-hero-stats>*:nth-child(6){grid-area:2/1;}',
 		'.tf-page .tf-hero-stats>*:nth-child(2){grid-area:1/2;}',
+		'.tf-page .tf-hero-stats>*:nth-child(7){grid-area:2/2;}',
 		'.tf-page .tf-hero-stats>*:nth-child(3){grid-area:1/3;}',
-		'.tf-page .tf-hero-stats>*:nth-child(4){grid-area:2/1;}',
-		'.tf-page .tf-hero-stats>*:nth-child(5){grid-area:2/2;}',
-		'.tf-page .tf-hero-stats>*:nth-child(6){grid-area:2/3;}',
-		'.tf-page .tf-hero-stats::after{content:"";grid-area:1/2/3/3;',
-		'justify-self:end;align-self:stretch;width:1px;margin-right:-.8rem;',
-		'background:var(--tf-line);}',
+		'.tf-page .tf-hero-stats>*:nth-child(8){grid-area:2/3;}',
+		'.tf-page .tf-hero-stats>*:nth-child(4){grid-area:1/4;}',
+		'.tf-page .tf-hero-stats>*:nth-child(9){grid-area:2/4;}',
+		'.tf-page .tf-hero-stats>*:nth-child(5){grid-area:1/5;}',
+		'.tf-page .tf-hero-stats>*:nth-child(10){grid-area:2/5;}',
 		'.tf-page .tf-grand-total{font-size:1.7rem;font-weight:700;line-height:1.1;letter-spacing:.4px;',
 		'font-variant-numeric:tabular-nums;}',
 		'.tf-page .tf-hero-cap{font-size:.74rem;color:var(--tf-dim);letter-spacing:.04em;}',
@@ -2664,7 +2483,9 @@ function injectCss() {
 		'.tf-page .tf-rate-arrow{font-size:1rem;}',
 		'.tf-page .tf-rate-down .tf-rate-arrow,.tf-page .tf-rate-down b{color:var(--tf-down);}',
 		'.tf-page .tf-rate-up .tf-rate-arrow,.tf-page .tf-rate-up b{color:var(--tf-up);}',
-		'.tf-page .tf-hero-ctl{margin-left:auto;display:flex;gap:.6rem;align-items:center;}',
+		'.tf-page .tf-hero-ctl{margin-left:auto;display:flex;flex-direction:column;gap:.4rem;align-items:flex-end;}',
+		'.tf-page .tf-live-note{font-size:.72rem;color:var(--tf-dim);overflow-wrap:anywhere;}',
+		'.tf-page .tf-packets b{font-size:.95rem;}',
 
 		/* throughput chart.  Title and range on one line, the reading and the
 		 * colour key on the next: the title used to sit alone with the controls
@@ -2994,40 +2815,21 @@ function injectCss() {
 		 * every column stays readable and nothing wraps into a second line */
 		'.tf-page .tf-table{min-width:34rem;}}',
 		'@media (max-width:39rem){.tf-page .tf-chart-svg{max-height:none;}}',
-		/* The hero on a phone: the total gets a row of its own, full width, and the
-		 * two rates sit under it as two columns.
-		 *
-		 * Three columns of nowrap figures cannot fit a 305px card at 390px, let
-		 * alone 235px at 320px, and the browser answered by breaking the big number
-		 * across two lines - "181" over "MiB" - which is what the render showed.
-		 * The children are placed explicitly: the markup emits the three captions
-		 * first and the three readings after, so no auto flow can pair them.
-		 *
-		 * The first version of this kept the total beside its caption, in the second
-		 * column of an "auto 1fr" grid.  That column is only what the widest first
-		 * column cell leaves - the down rate, about 130px - so the caption ended up
-		 * far from its figure while the rates below were caption-over-figure pairs.
-		 * The total now spans both columns and stacks like the others, which also
-		 * gives it back the width the 1.45rem override was compensating for. */
-		'@media (max-width:34rem){.tf-page .tf-hero-stats{grid-template-columns:1fr 1fr;',
-		'justify-content:start;column-gap:.9rem;row-gap:.15rem;}',
+		/* Stack totals, byte rates and packet rates as pairs on narrow screens. */
+		'@media (max-width:54rem){.tf-page .tf-hero-stats{grid-template-columns:repeat(2,minmax(0,1fr));width:100%;column-gap:1rem;row-gap:.25rem;}',
 		'.tf-page .tf-hero-stats>*:nth-child(1){grid-area:1/1/2/3;}',
-		'.tf-page .tf-hero-stats>*:nth-child(4){grid-area:2/1/3/3;}',
+		'.tf-page .tf-hero-stats>*:nth-child(6){grid-area:2/1/3/3;margin-bottom:.5rem;}',
 		'.tf-page .tf-hero-stats>*:nth-child(2){grid-area:3/1;}',
+		'.tf-page .tf-hero-stats>*:nth-child(7){grid-area:4/1;margin-bottom:.5rem;}',
 		'.tf-page .tf-hero-stats>*:nth-child(3){grid-area:3/2;}',
-		'.tf-page .tf-hero-stats>*:nth-child(5){grid-area:4/1;}',
-		'.tf-page .tf-hero-stats>*:nth-child(6){grid-area:4/2;}',
-		/* The hairline between the two rates, as the design draws it: one line
-		 * spanning both the caption row and the figure row, not two stubs with a
-		 * gap between them - which is what a border on the cells would give.  It
-		 * is a grid item rather than an absolutely placed box because the rows
-		 * have no fixed height to position against; grid-area 3/1/5/2 covers rows
-		 * three and four, and the negative margin drops it into the middle of the
-		 * column gap.  Written here and not in the markup, so the six children
-		 * stay the six the strip logic and the tests expect. */
-		'.tf-page .tf-hero-stats::after{content:"";grid-area:3/1/5/2;',
-		'justify-self:end;align-self:stretch;width:1px;margin-right:-.45rem;',
-		'background:var(--tf-line);}',
+		'.tf-page .tf-hero-stats>*:nth-child(8){grid-area:4/2;margin-bottom:.5rem;}',
+		'.tf-page .tf-hero-stats>*:nth-child(4){grid-area:5/1;}',
+		'.tf-page .tf-hero-stats>*:nth-child(9){grid-area:6/1;margin-bottom:.5rem;}',
+		'.tf-page .tf-hero-stats>*:nth-child(5){grid-area:5/2;}',
+		'.tf-page .tf-hero-stats>*:nth-child(10){grid-area:6/2;margin-bottom:.5rem;}',
+		'.tf-page .tf-hero-ctl{width:100%;flex-direction:row-reverse;align-items:center;justify-content:space-between;}',
+		'}',
+		'@media (max-width:34rem){.tf-page .tf-rate{gap:.2rem;}.tf-page .tf-rate b{font-size:.875rem;white-space:nowrap;}',
 		'.tf-page .tf-table{font-size:.86rem;min-width:0;}',
 		'.tf-page .tf-table>thead>tr>th,.tf-page .tf-table>tbody>tr>td{padding:.35rem .3rem;}',
 		/* A phone gets three columns: the application, and its two byte figures.

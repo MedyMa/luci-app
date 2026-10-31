@@ -16,7 +16,7 @@ const document = { getElementById() { return null; }, createElement(t) { return 
 new Function('view','rpc','dom','poll','_','E','L','document','Image','capture', source.replace('return view.extend(', 'capture.model = topsStatusModel; return view.extend('))(
   view, rpc, dom, {add(){}}, s=>s, node, {bind:(f,c)=>f.bind(c)}, document, function(){}, capture);
 const fresh = () => Object.assign(Object.create(capture.view), { topsCardEl: node('div'), total: 123, lastRates: {up:99} });
-const base = () => ({ schema:3, npu:{status_node_present:true,firmware_ready:true,mcu_alive:true,registered_tunnel_types:3,coverage:'complete',packet_offload_verified:false},
+const base = () => ({ schema:3, sampled_at:Math.floor(Date.now()/1000), npu:{status_node_present:true,firmware_ready:true,mcu_alive:true,registered_tunnel_types:3,coverage:'complete',packet_offload_verified:false},
   tunnels:{coverage:'complete',capacity:32,count:0,entries:[]},accounting:{conntrack_setting_coverage:'complete',conntrack_accounting_enabled:true} });
 const entry = (index, protocol='gretap') => ({ index,protocol,local_address:'192.0.2.1',remote_address:'198.51.100.1',local_port:0,remote_port:0,encapsulation:true,decapsulation:true,synchronized:true });
 function text(n) { return typeof n === 'string' ? n : n == null ? '' : (n.children || []).map(text).join(' '); }
@@ -27,9 +27,9 @@ async function run() {
   response = {available:false,coverage:'provider_missing'}; await v.pollTops();
   check(v.topsCardEl.style.display === 'none', 'old provider remains optional');
   response = base(); await v.pollTops();
-  check(contains(v.topsCardEl,'No tunnel entries'), 'complete empty snapshot has an explicit empty state');
-  check(contains(v.topsCardEl,'Waiting for supported tunnel traffic.'), 'ready does not mean active tunnel');
-  check(contains(v.topsCardEl,'Not verified'), 'firmware ready never establishes hardware forwarding');
+  check(!contains(v.topsCardEl,'No tunnel entries'), 'empty table does not add an empty-state card');
+  check(contains(v.topsCardEl,'Synchronized tunnels') && contains(v.topsCardEl,'Recorded'), 'compact tunnel count remains visible');
+  check(!contains(v.topsCardEl,'Hardware forwarding') && !contains(v.topsCardEl,'Verified'), 'removed hardware-verification block is not rendered');
   check(!contains(v.topsCardEl,'Parameters synchronized'), 'no fabricated tunnel status for empty table');
   check(v.total === 123 && v.lastRates.up === 99, 'TOPS polling does not change byte totals or rates');
   const data = base(); data.tunnels.entries = [entry(0),entry(1,'vxlan'),entry(2,'l2tpv2')]; data.tunnels.count = 3;
@@ -74,9 +74,9 @@ async function run() {
   response=base(); response.npu.mcu_alive=false; await v.pollTops();
   check(contains(v.topsCardEl,'Not ready'), 'stopped MCU is not ready');
   response=base(); response.accounting.conntrack_accounting_enabled=false; await v.pollTops();
-  check(contains(v.topsCardEl,'Conntrack accounting is disabled'), 'accounting opt-out is explained without changing it');
+  check(!contains(v.topsCardEl,'How this status is counted'), 'diagnostic explanation block is removed');
   response=base(); response.accounting.conntrack_setting_coverage='missing'; await v.pollTops();
-  check(contains(v.topsCardEl,'Conntrack accounting status is unavailable.'), 'missing setting is not labeled disabled');
+  check(!contains(v.topsCardEl,'Conntrack accounting status is unavailable.'), 'missing accounting metadata does not add an explanatory panel');
   response=base(); response.schema=2; await v.pollTops(); check(v.lastTops.ready,'schema 2 remains supported');
   check(!/innerHTML\s*=/.test(source.slice(source.indexOf('renderTops:'),source.indexOf('setRange:'))),'TOPS labels use escaped DOM text');
   console.log(JSON.stringify({checks,failures:0,scope:'Actual view model, rendering and asynchronous poll handlers; DOM/RPC services modeled. No hardware test.'}));

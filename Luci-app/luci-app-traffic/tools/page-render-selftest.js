@@ -116,7 +116,7 @@ function freshView(){
            rowsEl:E('tbody'), donutEl:donutEl, donutFigEl:donutFigEl, donutTotalEl:E('div'),
            legendEl:E('div'), totalEl:E('div'), diagEl:E('div'), diagCardEl:E('div'),
            statusEl:E('div'), chartEl:E('div'), chartNote:E('span'),
-           rateDown:E('b'), rateUp:E('b'),
+           rateDown:E('b'), rateUp:E('b'), packetsDown:E('b'), packetsUp:E('b'), liveNote:E('small'),
            // draw() rewrites the hero caption on every refresh.
            heroCapEl:E('div') });
 }
@@ -327,40 +327,26 @@ chk(txt(v6.statusEl).indexOf('Collector has not produced a snapshot yet')>=0,
     `无快照时明确提示（${txt(v6.statusEl).slice(0,40)}）`);
 chk(boxes(v6.statusEl).length===5, `无快照时五项状态读数仍在（${boxes(v6.statusEl).length}）`);
 
-console.log('=== 速率：两种档位都是相邻快照的实时增量 ===');
-// The two figures under 下载/上传 are the difference between two consecutive
-// snapshots, in every view.  The ranged view used to divide the window's bytes by
-// the window's length instead, which on a real router barely moved - the archive
-// only grows as hours are archived - and a rate that sits still next to a total
-// that moves reads as a stalled page.  The window's average is still derivable
-// from the total and the bucket count, both of which the strip shows.
+console.log('=== 顶部实时速率：WAN 单一样本，Mbps 与 PPS ===');
 const flat=n=>{ let s=''; (function go(x){ if(typeof x==='string'){ s+=x; return; } if(x&&x._text)s+=x._text; ((x&&x.children)||[]).forEach(go); })(n); return s; };
 const mkView=(o)=>Object.assign(Object.create(view),freshView(),o||{});
 const rv=mkView({});
 view.renderHourly.call(rv,{hours:[{hour:'h0',apps:[{name:'YouTube',down:36000,up:18000}],clients:[],router:0}]});
-chk(flat(rv.rateDown)==='' && flat(rv.rateUp)==='',
-    `范围视图不再自己写速率（[${flat(rv.rateDown)}] / [${flat(rv.rateUp)}]）`);
-chk(!/average/.test(String((rv.rateDown.attrs||{}).title||'')), '不再有"区间平均"提示');
-chk((src.match(/updateRate/g)||[]).length>=3,
-    `两条绘制路径共用 updateRate（${(src.match(/updateRate/g)||[]).length} 处）`);
-// 20 KiB down and 1 KiB up in a 10 s window
+chk(flat(rv.rateDown)==='' && flat(rv.rateUp)==='', '范围视图不改写即时速率');
 const live=mkView({});
-view.updateRate.call(live,{collected_at:1000,totals:{down:1000,up:100}});
-chk(flat(live.rateDown)==='0 B/s', `第一次没有前一份快照，速率还是 0（${flat(live.rateDown)}）`);
-view.updateRate.call(live,{collected_at:1010,totals:{down:1000+20480,up:100+1024}});
-chk(/KiB\/s/.test(flat(live.rateDown)), `10 秒 20 KiB → KiB/s 级下行速率（${flat(live.rateDown)}）`);
-chk(/B\/s/.test(flat(live.rateUp)), `上行按同一窗口算（${flat(live.rateUp)}）`);
-chk(flat(live.rateDown)!=='0 B/s', `有前一份快照后速率不再停在 0（${flat(live.rateDown)}）`);
-// The page polls twice as often as the collector writes, so every other poll
-// hands back the very same snapshot.  That must keep the figure rather than
-// divide by a zero interval, which would flash 0 B/s every five seconds.
-view.updateRate.call(live,{collected_at:1010,totals:{down:1000+20480,up:100+1024}});
-chk(flat(live.rateDown)==='2.00 KiB/s',
-    `同一份快照再轮询一次，速率不变（${flat(live.rateDown)}）`);
-// A snapshot that really is ten seconds later with nothing in it is a zero rate:
-// the honest reading, and not the case above.
-view.updateRate.call(live,{collected_at:1020,totals:{down:1000+20480,up:100+1024}});
-chk(flat(live.rateDown)==='0 B/s', `十秒内没有新流量就是 0（${flat(live.rateDown)}）`);
+const wanSample={at:Math.floor(Date.now()/1000),monotonic_ms:1000,source:'iface',device:'eth2',ready:1,dt:1,
+  bps_down:125000000,bps_up:25000000,pps_down:100000,pps_up:20000};
+view.renderRealtime.call(live,wanSample);
+chk(flat(live.rateDown)==='1000.0 Mbps' && flat(live.rateUp)==='200.00 Mbps','WAN 字节速率按十进制 Mbps 显示');
+chk(flat(live.packetsDown)==='100,000 PPS' && flat(live.packetsUp)==='20,000 PPS','PPS 与带宽使用同一接口样本');
+view.renderHourly.call(live,{hours:[{hour:'h0',apps:[],clients:[],router:0}]});
+chk(flat(live.rateDown)==='1000.0 Mbps','切换统计窗口不改写即时 WAN 速率');
+view.renderRealtime.call(live,Object.assign({},wanSample,{bps_down:0,bps_up:0,pps_down:0,pps_up:0}));
+chk(flat(live.rateDown)==='0.00 Mbps' && flat(live.packetsDown)==='0 PPS','实测零值保留');
+view.renderRealtime.call(live,Object.assign({},wanSample,{at:wanSample.at-30}));
+chk(flat(live.rateDown)==='—' && flat(live.packetsDown)==='—','过期样本同时清除四项即时读数');
+view.renderRealtime.call(live,null);
+chk(flat(live.rateUp)==='—' && flat(live.packetsUp)==='—','失败不回退到统计周期均值');
 
 console.log('=== 页面结构：一个下拉、列宽在 colgroup ===');
 const page=view.render.call(Object.assign(Object.create(view),freshView()),{});
@@ -383,13 +369,13 @@ chk(ddItems.length===5, `下拉有 5 个区间选项（${ddItems.length}）`);
 // 1.7rem line box and a 1.05rem one do not start at the same y.
 const heroStats=[]; walk(page,n=>{ if((n.attrs||{}).class==='tf-hero-stats') heroStats.push(n); });
 chk(heroStats.length===1, `hero 是一个网格（${heroStats.length}）`);
-chk(heroStats[0] && heroStats[0].children.length===6,
-    `网格里 6 个单元：三个标题在前、三个读数在后（${heroStats[0]&&heroStats[0].children.length}）`);
+chk(heroStats[0] && heroStats[0].children.length===10,
+    `网格里 10 个单元：五个标题在前、五个读数在后（${heroStats[0]&&heroStats[0].children.length}）`);
 const heroOrder=(heroStats[0]?heroStats[0].children:[]).map(c=>(c.attrs||{}).class);
-chk(heroOrder.slice(0,3).every(c=>/tf-hero-cap/.test(c)),
-    `前三格都是标题（${heroOrder.slice(0,3).join(' / ')}）`);
-chk(/tf-grand-total/.test(heroOrder[3]||'') && /tf-rate/.test(heroOrder[4]||'') && /tf-rate/.test(heroOrder[5]||''),
-    `后三格是总计、下行、上行（${heroOrder.slice(3).join(' / ')}）`);
+chk(heroOrder.slice(0,5).every(c=>/tf-hero-cap/.test(c)),
+    `前五格都是标题（${heroOrder.slice(0,5).join(' / ')}）`);
+chk(/tf-grand-total/.test(heroOrder[5]||'') && heroOrder.slice(6).every(c=>/tf-rate/.test(c)),
+    `后五格是总计、下行、上行和收发 PPS（${heroOrder.slice(5).join(' / ')}）`);
 // the two cards the merge produced: one strip, and the note line under the table
 const cardClasses=[]; walk(page,n=>{ if(/tf-card/.test((n.attrs||{}).class||'')) cardClasses.push((n.attrs||{}).class); });
 chk(cardClasses.some(c=>/tf-stat-card/.test(c)), '有状态条卡片');
@@ -431,18 +417,11 @@ chk(!/;\s*;/.test(css), '没有连续分号（空声明）');
 // the grid's auto first column.  That squeeze is what "总计" sitting far left of
 // "354 MiB" on one row looked like at 486px, and the 1.45rem shrink was there to
 // work around the same narrow column, so it goes with the fix.
-chk(/\.tf-page \.tf-hero-stats\{grid-template-columns:1fr 1fr;/.test(css) &&
-    /\.tf-page \.tf-hero-stats>\*:nth-child\(1\)\{grid-area:1\/1\/2\/3;\}/.test(css) &&
-    /\.tf-page \.tf-hero-stats>\*:nth-child\(4\)\{grid-area:2\/1\/3\/3;\}/.test(css) &&
-    !/\.tf-page \.tf-grand-total\{font-size:1\.45rem;\}/.test(css),
-    '窄屏 hero：总计标签与数值各占整行，不再缩小字号');
-// The hairline between 下载 and 上传 is drawn by the same pseudo-element at every
-// width: between columns two and three on a wide screen, and on the two rows the
-// rates occupy on a phone.  One of the two missing is the bug this guards.
-const heroLine=(css.match(/\.tf-page \.tf-hero-stats::after\{[^}]*\}/g)||[]);
-chk(heroLine.length===2 && /grid-area:1\/2\/3\/3/.test(heroLine[0]) &&
-    /grid-area:3\/1\/5\/2/.test(heroLine[1]),
-    `hero 分隔线在两种宽度各就位（${heroLine.length} 条：${heroLine.map(s=>(s.match(/grid-area:[^;]*/)||[''])[0]).join(' / ')}）`);
+chk(css.includes('grid-template-columns:repeat(2,minmax(0,1fr))') &&
+    css.includes('nth-child(1){grid-area:1/1/2/3;}') &&
+    css.includes('nth-child(6){grid-area:2/1/3/3;margin-bottom:.5rem;}'),
+    '窄屏总计独占一行，带宽与 PPS 分别成对');
+chk(!css.includes('.tf-hero-stats::after'), '不再用占据网格单元的伪元素分隔线');
 // The page carries one range control, not two: the chart tier is derived from
 // the range, so the only dropdown on the page is the picker in the hero.
 for(const sel of ['.tf-page .tf-range','.tf-page .tf-dd-menu','.tf-page .tf-col-app',
@@ -692,19 +671,11 @@ chk(ns.length===2 && greyOf(ns).length===0 && closed(ns) &&
     flat(vRNo.donutTotalEl)==='54.2 KiB' && flat(vRNo.totalEl)==='54.2 KiB',
     `归档没有设备行时未归属 = 0：不多画 0% 的切片，环与旧口径完全一致（段 ${ns.length}，灰 ${greyOf(ns).length}，终点离起点 ${ns.length?(DONUT_C-ringEnd(ns)).toFixed(1):'—'}px，环心 ${flat(vRNo.donutTotalEl)}）`);
 
-console.log('=== 实时速率：优先接口增量，且不跨来源相减 ===');
-const rIf=mkView({});
-view.updateRate.call(rIf, sumOf({iface:IFACE}));
-view.updateRate.call(rIf, sumOf({collected_at:1700000010,
-  iface:{dev:'eth2',down:IFACE.down+20480,up:IFACE.up+1024}}));
-chk(/KiB\/s/.test(flat(rIf.rateDown)) && /B\/s/.test(flat(rIf.rateUp)),
-    `速率由接口增量算出（${flat(rIf.rateDown)} / ${flat(rIf.rateUp)}）`);
-// 接口计数不变而归属值暴涨：若速率还从 totals 取，这里会读出一个巨大的假速率
+console.log('=== 即时速率：统计总量不参与 WAN 瞬时速率 ===');
 const rMix=mkView({});
-view.updateRate.call(rMix, {collected_at:1700000000,iface:{down:1000,up:100},totals:{down:0,up:0}});
-view.updateRate.call(rMix, {collected_at:1700000010,iface:{down:1000,up:100},totals:{down:1e9,up:1e8}});
-chk(flat(rMix.rateDown)==='0 B/s' && flat(rMix.rateUp)==='0 B/s',
-    `接口计数没动就是 0（${flat(rMix.rateDown)} / ${flat(rMix.rateUp)}）`);
+view.renderRealtime.call(rMix,wanSample);
+view.renderLive.call(rMix,sumOf({iface:{dev:'eth2',down:1e9,up:1e8},totals:{down:1e12,up:1e11}}));
+chk(flat(rMix.rateDown)==='1000.0 Mbps' && flat(rMix.rateUp)==='200.00 Mbps','归属总量增长不干扰即时接口速率');
 
 console.log('=== 协议桶与应用同表列出（不再单独成块）===');
 // SSL/TLS、QUIC、HTTP、DNS、STUN 这些「应用名」其实是归属的兜底标签，占了归属流量

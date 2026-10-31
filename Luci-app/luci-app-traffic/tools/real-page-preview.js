@@ -125,12 +125,8 @@ const SERIES={ range:'24h', interval:60, points:Array.from({length:180},(_,i)=>{
  * so it has to stand in for that - otherwise the reading the design is about
  * renders as the initial placeholder dash and looks missing. */
 function seedRate(v){
-  if (LIVE) v.networkPanel.live(LIVE);
-  const past=Object.assign({},SUMMARY,{ collected_at:SUMMARY.collected_at-10,
-    totals:Object.assign({},SUMMARY.totals,
-      { down:SUMMARY.totals.down-12700, up:SUMMARY.totals.up-9020 }) });
-  view.updateRate.call(v,past);
-  view.updateRate.call(v,SUMMARY);
+  view.renderRealtime.call(v,LIVE || {at:Math.floor(Date.now()/1000),monotonic_ms:600000,ready:1,
+    source:'iface',device:'eth2',dt:1,bps_down:125000000,bps_up:25000000,pps_down:100000,pps_up:20000});
   if (TOPS) {
     const model = global.__topsModel(TOPS);
     if (model) { v.lastTops = model; view.renderTops.call(v,model,false); }

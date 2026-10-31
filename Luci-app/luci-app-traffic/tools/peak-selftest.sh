@@ -25,6 +25,7 @@ export STATE_DIR
 . "$T/funcs.sh"
 
 PEAK_D=0; PEAK_U=0; PEAK_N=0
+test_now=$(date +%s)
 
 # ---- 1. nothing to read -----------------------------------------------------
 peak_read
@@ -45,12 +46,22 @@ record_peak
 ck "and it writes no bucket"                 "absent" "$([ -e "$STATE_DIR/peaks.tsv" ] && echo present || echo absent)"
 
 # ---- 3. a real one second sample -------------------------------------------
-printf '{"at":100,"bps_down":118000000,"bps_up":2400000,"source":"conntrack","ready":1,"dt":1}\n' > "$STATE_DIR/live.json"
+printf '{"at":%s,"monotonic_ms":100000,"bps_down":118000000,"bps_up":2400000,"source":"conntrack","ready":1,"dt":1}\n' "$test_now" > "$STATE_DIR/live.json"
 peak_read
 ck "a ready:1 sample is kept"                "118000000 1" "$PEAK_D $PEAK_N"
 
+# Re-reading a shared cache is not another measurement.
+peak_read
+ck "the same cached sample is counted only once" "1" "$PEAK_N"
+printf '{"at":%s,"monotonic_ms":100001,"bps_down":999,"bps_up":999,"ready":1}\n' "$((test_now-60))" > "$STATE_DIR/live.json"
+peak_read
+ck "an expired cache does not become a peak" "1" "$PEAK_N"
+printf '{"at":%s,"monotonic_ms":100002,"bps_down":999,"bps_up":999,"ready":1}\n' "$((test_now+60))" > "$STATE_DIR/live.json"
+peak_read
+ck "a future cache is not sampled" "1" "$PEAK_N"
+
 # ---- 4. the maximum, not the last reading ----------------------------------
-printf '{"at":101,"bps_down":5000,"bps_up":9000000,"source":"conntrack","ready":1,"dt":1}\n' > "$STATE_DIR/live.json"
+printf '{"at":%s,"monotonic_ms":101000,"bps_down":5000,"bps_up":9000000,"source":"conntrack","ready":1,"dt":1}\n' "$test_now" > "$STATE_DIR/live.json"
 peak_read
 ck "the maximum down is kept, not the last"  "118000000" "$PEAK_D"
 ck "up keeps its own maximum"                "9000000"   "$PEAK_U"
@@ -95,7 +106,7 @@ record_peak
 ck "an unwatched round adds no row"          "1"          "$(wc -l < "$STATE_DIR/peaks.tsv")"
 
 # ---- 9. counters that are not numbers must not poison the bucket ------------
-printf '{"at":102,"bps_down":abc,"bps_up":,"source":"conntrack","ready":1,"dt":1}\n' > "$STATE_DIR/live.json"
+printf '{"at":%s,"monotonic_ms":102000,"bps_down":abc,"bps_up":,"source":"conntrack","ready":1,"dt":1}\n' "$test_now" > "$STATE_DIR/live.json"
 PEAK_D=0; PEAK_U=0; PEAK_N=0
 peak_read
 ck "a malformed down reading is refused"     "0"          "$PEAK_D"
@@ -135,6 +146,7 @@ printf 'Inter-|   Receive                                                |  Tran
 CT="$T/absent-conntrack" STATE_DIR="$LD" sh "$LIVE" --force
 
 STATE_DIR="$LD"
+PEAK_LAST_SAMPLE=
 PEAK_D=0; PEAK_U=0; PEAK_N=0
 peak_read
 ck "an interface sample is counted as a sample" "1" "$PEAK_N"

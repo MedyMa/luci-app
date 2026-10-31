@@ -47,7 +47,8 @@ if [ "$force" != "1" ]; then
 	[ -r "$WATCH" ] && read -r seen < "$WATCH"
 	case "$seen" in ''|*[!0-9]*) seen=0 ;; esac
 	# nobody is looking, so there is nothing to publish
-	[ "$now" -gt 0 ] && [ $((now - seen)) -le "$WATCH_AGE" ] || exit 0
+	[ "$now" -gt 0 ] && [ "$now" -ge "$seen" ] &&
+		[ $((now - seen)) -le "$WATCH_AGE" ] || exit 0
 fi
 
 mono=$(awk '{ printf "%.0f", $1 * 1000; exit }' "$UPTIME" 2>/dev/null)
