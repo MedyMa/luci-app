@@ -31,14 +31,44 @@ hnat_module_loaded() {
 }
 
 load_hnat_module() {
-	try_modprobe "mtkhnat" "mediatek_hnat"
+	hnat_module_loaded || try_modprobe "mtkhnat" "mediatek_hnat"
+}
+
+# The two maintained MT7988 sources use different hnat_setting command IDs.
+# Prefer the driver's declared ABI; keep compatibility with existing images.
+hnat_setting_command_ids() {
+	local hnat_path="${1:-/sys/kernel/debug/hnat}"
+	local abi schema
+
+	HNAT_IPV6_CMD=
+	HNAT_BIND_RATE_CMD=
+	if [ -r "$hnat_path/control_abi" ]; then
+		abi=$(cat "$hnat_path/control_abi" 2>/dev/null) || return 1
+		schema=$(printf '%s\n' "$abi" | sed -n 's/^schema=//p')
+		[ "$schema" = 1 ] || return 1
+		HNAT_IPV6_CMD=$(printf '%s\n' "$abi" | sed -n 's/^ipv6_command=//p')
+		HNAT_BIND_RATE_CMD=$(printf '%s\n' "$abi" | sed -n 's/^bind_rate_command=//p')
+	else
+		case "$(uname -r)" in
+		6.6.*) HNAT_IPV6_CMD=8; HNAT_BIND_RATE_CMD=11 ;;
+		6.12.*) HNAT_IPV6_CMD=11; HNAT_BIND_RATE_CMD=1 ;;
+		*) return 1 ;;
+		esac
+	fi
+
+	case "$HNAT_IPV6_CMD:$HNAT_BIND_RATE_CMD" in
+	8:11|11:1) return 0 ;;
+	esac
+	return 1
 }
 
 disable_hnat_runtime() {
 	local hnat_path="${1:-/sys/kernel/debug/hnat}"
 
 	[ -w "$hnat_path/hook_toggle" ] && echo "0" >"$hnat_path/hook_toggle" 2>/dev/null
-	[ -w "$hnat_path/hnat_setting" ] && echo "8 0" >"$hnat_path/hnat_setting" 2>/dev/null
+	if hnat_setting_command_ids "$hnat_path"; then
+		hwrite "$hnat_path/hnat_setting" "$HNAT_IPV6_CMD 0"
+	fi
 }
 
 # Does an HQoS service own the HNAT hook right now?  mtk-hqos (global.enabled)
@@ -205,11 +235,25 @@ start_service() {
 			config_get_bool fastpath_mh_eth_hnat_v6 "config" "fastpath_mh_eth_hnat_v6" "1"
 			config_get fastpath_mh_eth_hnat_bind_rate "config" "fastpath_mh_eth_hnat_bind_rate" "30"
 
-			# hnat_setting: cmd 8 = IPv6 HNAT toggle, cmd 11 = bind rate threshold
-			hwrite "$hnat_path/hnat_setting" "8 $fastpath_mh_eth_hnat_v6" || \
-				logger -t turboacc "WARNING: failed to write hnat_setting (IPv6)"
-			hwrite "$hnat_path/hnat_setting" "11 $fastpath_mh_eth_hnat_bind_rate" || \
-				logger -t turboacc "WARNING: failed to write hnat_setting (bind_rate)"
+			if hnat_setting_command_ids "$hnat_path"; then
+				hwrite "$hnat_path/hnat_setting" "$HNAT_IPV6_CMD $fastpath_mh_eth_hnat_v6" || \
+					logger -t turboacc "WARNING: failed to write hnat_setting (IPv6)"
+				case "$fastpath_mh_eth_hnat_bind_rate" in
+				''|*[!0-9]*) logger -t turboacc "WARNING: invalid HNAT bind rate" ;;
+				*)
+					if [ "${#fastpath_mh_eth_hnat_bind_rate}" -le 2 ] &&
+					   [ "$fastpath_mh_eth_hnat_bind_rate" -ge 1 ] &&
+					   [ "$fastpath_mh_eth_hnat_bind_rate" -le 30 ]; then
+						hwrite "$hnat_path/hnat_setting" "$HNAT_BIND_RATE_CMD $fastpath_mh_eth_hnat_bind_rate" || \
+							logger -t turboacc "WARNING: failed to write hnat_setting (bind_rate)"
+					else
+						logger -t turboacc "WARNING: HNAT bind rate must be between 1 and 30"
+					fi
+					;;
+				esac
+			else
+				logger -t turboacc "WARNING: unknown HNAT control ABI; skipped IPv6/bind-rate commands"
+			fi
 
 			logger -t turboacc "engine=mediatek_hnat eth=$fastpath_mh_eth_hnat v6=$fastpath_mh_eth_hnat_v6 bind_rate=$fastpath_mh_eth_hnat_bind_rate"
 		else

@@ -174,7 +174,7 @@ function getEngineDescription(value) {
 	case 'shortcut_fe_cm':
 		return _('SFE 的轻量连接管理器，路径简单，但平台覆盖面更窄。');
 	case 'mediatek_hnat':
-		return _('mt798x 在 24.10 下的主力有线加速通路，可配合 PPE 实时观察绑定情况。');
+		return _('mt798x 的有线加速通路，支持本项目 24.10 / 25.12，可配合 PPE 观察绑定情况。');
 	default:
 		return _('当前未启用主加速引擎。');
 	}

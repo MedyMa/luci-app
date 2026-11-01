@@ -47,6 +47,8 @@ end
 
 local function is_hnat_enabled(value)
 	value = (value or ""):lower()
+	value = value:match("^value%s*=%s*([01])%s*[,;]") or
+		value:match("^value%s*=%s*([01])%s*$") or value
 
 	return value == "1" or value == "enabled" or value == "enable" or
 		value == "on" or value == "true" or value == "y" or value == "yes"
