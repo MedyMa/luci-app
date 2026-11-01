@@ -577,3 +577,21 @@ msgstr "最近 5 分钟的 WAN 吞吐"
 
 msgid "Waiting for a WAN sample…"
 msgstr "正在等待 WAN 采样…"
+
+msgid "NPU to CPU"
+msgstr "NPU 回送 CPU"
+
+msgid "IPsec context"
+msgstr "IPsec 加密上下文"
+
+msgid "NPU to CPU counts validated tunnel returns only. Traffic kept in hardware is outside this counter."
+msgstr "仅统计经硬件标识核验的 NPU 隧道回送包，不涵盖始终在硬件中转发的流量。"
+
+msgid "Hardware packet counters are unavailable on this firmware."
+msgstr "当前固件未提供可核验的硬件包计数。"
+
+msgid "Interface rates, tunnel parameters and NPU utilization are measured separately."
+msgstr "接口速率、隧道参数和 NPU 使用率分别采集。"
+
+msgid "packets"
+msgstr "包"

@@ -529,6 +529,19 @@ function topsStatusModel(r) {
 			return /^(0|[1-9][0-9]{0,2})$/.test(p) && Number(p) <= 255;
 		});
 	};
+	var d = r.dataplane, observed = {}, dataplaneValid = false;
+	if (d && d.schema === 1 && d.read_coverage === 'complete' &&
+		d.source === 'rx_dma_tunnel_reason' && d.coverage === 'cpu_returns' &&
+		d.unit === 'inner_frame_bytes' && d.complete_hardware_totals === false &&
+		Array.isArray(d.entries) && d.entries.length <= 32) {
+		dataplaneValid = d.entries.every(function(e) {
+			if (!e || !uint(e.index, 31) || observed[e.index] || !u64(e.generation) ||
+				e.generation === '0' || !uint(e.ifindex, 2147483647) || e.ifindex === 0 ||
+				!u64(e.rx_packets) || !u64(e.rx_bytes)) return false;
+			observed[e.index] = e;
+			return true;
+		});
+	}
 	if (!Array.isArray(t.entries)) invalid = true;
 	(Array.isArray(t.entries) ? t.entries : []).slice(0, 32).forEach(function(e) {
 		if (!e || !uint(e.index, 31) || seen[e.index] ||
@@ -547,6 +560,17 @@ function topsStatusModel(r) {
 				delete e.sync_health;
 			}
 		}
+		e = Object.assign({}, e);
+		if (e.cdrt_index != null && !uint(e.cdrt_index, 255)) {
+			delete e.cdrt_index;
+			invalid = true;
+		}
+		// Independently sampled tables can race a tunnel reallocation/rekey.
+		// Join the full live identity and never attach an old slot's counters.
+		var sample = dataplaneValid && observed[e.index];
+		if (sample && sample.generation === e.generation && sample.ifindex === e.ifindex)
+			e.dataplane = sample;
+		else delete e.dataplane;
 		seen[e.index] = true;
 		entries.push(e);
 	});
@@ -578,6 +602,7 @@ function topsStatusModel(r) {
 		capacity: uint(t.capacity, 32) && t.capacity > 0 ? t.capacity : 32,
 		complete: t.coverage === 'complete' && !invalid,
 		entries: entries,
+		dataplaneAvailable: dataplaneValid,
 		synced: entries.filter(function(e) { return e.synchronized; }).length,
 		accounting: r.accounting || {}
 	};
@@ -1230,7 +1255,7 @@ return view.extend({
 		if (!m.complete) content.push(el('div', { 'class': 'tf-tops-alert', 'role': 'status' },
 			[ _('Tunnel state is incomplete or unavailable.') ]));
 		if (m.entries.length) {
-			var labels = [ _('Protocol'), _('Local endpoint'), _('Remote endpoint'), _('Direction'), _('State') ];
+			var labels = [ _('Protocol'), _('Local endpoint'), _('Remote endpoint'), _('Direction'), _('NPU to CPU'), _('State') ];
 			var protocols = { gretap: 'GRETAP', vxlan: 'VXLAN', l2tpv2: 'L2TPv2', pptp: 'PPTP' };
 			var rows = m.entries.map(function(t) {
 				var direction = t.encapsulation && t.decapsulation ? _('Bidirectional') :
@@ -1239,6 +1264,8 @@ return view.extend({
 				var syncLabel = t.synchronized ? _('Parameters synchronized') :
 					syncFailed ? _('Synchronization failed') : _('Pending');
 				var syncContent = [ el('span', { 'class': 'tf-tops-badge ' + (t.synchronized ? 'tf-tops-ready' : '') }, [ syncLabel ]) ];
+				if (t.cdrt_index > 0)
+					syncContent.push(el('small', { 'class': 'tf-tops-index' }, [ _('IPsec context') + ': ' + t.cdrt_index ]));
 				if (syncFailed) {
 					var stages = [ _('Not started'), _('Classifier setup'), _('Pause NPU'), _('Management core ACK'),
 						_('Offload core notification'), _('DIP filter setup'), _('Parameters synchronized') ];
@@ -1249,6 +1276,10 @@ return view.extend({
 					el('span', { 'class': 'tf-tops-endpoint' }, [ topsEndpoint(t.local_address, t.local_port) ]),
 					el('span', { 'class': 'tf-tops-endpoint' }, [ topsEndpoint(t.remote_address, t.remote_port) ]),
 					direction,
+					el('span', {}, !stale && t.dataplane ? [
+						t.dataplane.rx_packets + ' ' + _('packets'),
+						el('small', { 'class': 'tf-tops-index' }, [ fmtBytes(Number(t.dataplane.rx_bytes)) ])
+					] : [ '—' ]),
 					el('span', {}, syncContent)
 				];
 				return el('tr', {}, cells.map(function(c, i) { return el('td', { 'data-label': labels[i] }, [ c ]); }));
@@ -1258,6 +1289,11 @@ return view.extend({
 				el('tbody', {}, rows)
 			]));
 		}
+		content.push(el('p', { 'class': 'tf-tops-note' }, [
+			m.dataplaneAvailable ? _('NPU to CPU counts validated tunnel returns only. Traffic kept in hardware is outside this counter.') :
+			_('Hardware packet counters are unavailable on this firmware.'),
+			' ', _('Interface rates, tunnel parameters and NPU utilization are measured separately.')
+		]));
 
 		dom.content(this.topsCardEl, content);
 		this.topsCardEl.style.display = '';
