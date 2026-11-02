@@ -1010,7 +1010,6 @@ return view.extend({
 		this.rateUp   = el('b', {}, [ '—' ]);
 		this.packetsDown = el('b', {}, [ '—' ]);
 		this.packetsUp = el('b', {}, [ '—' ]);
-		this.liveNote = el('small', { 'class': 'tf-live-note', 'role': 'status' }, [ _('Waiting for a WAN sample…') ]);
 		this.totalEl  = el('div', { 'class': 'tf-grand-total' }, [ '—' ]);
 		/* The ring and the total laid over its hole.  The total moves on every
 		 * refresh while the ring is only rebuilt when the composition of it
@@ -1089,7 +1088,7 @@ return view.extend({
 					el('div', { 'class': 'tf-rate tf-packets' }, [ this.packetsDown ]),
 					el('div', { 'class': 'tf-rate tf-packets' }, [ this.packetsUp ])
 				]),
-				el('div', { 'class': 'tf-hero-ctl' }, [ this.rangePicker.node, this.liveNote ])
+				el('div', { 'class': 'tf-hero-ctl' }, [ this.rangePicker.node ])
 			]),
 
 
@@ -1655,8 +1654,6 @@ return view.extend({
 		dom.content(this.rateUp, usable ? fmtMbps(r.bps_up) : '—');
 		dom.content(this.packetsDown, usable ? pps(r.pps_down) : '—');
 		dom.content(this.packetsUp, usable ? pps(r.pps_up) : '—');
-		dom.content(this.liveNote, usable ? r.device + ' · ' + _('WAN interface counters') :
-			_('Waiting for a WAN sample…'));
 	},
 
 	pollLive: function() {
@@ -2520,7 +2517,6 @@ function injectCss() {
 		'.tf-page .tf-rate-down .tf-rate-arrow,.tf-page .tf-rate-down b{color:var(--tf-down);}',
 		'.tf-page .tf-rate-up .tf-rate-arrow,.tf-page .tf-rate-up b{color:var(--tf-up);}',
 		'.tf-page .tf-hero-ctl{margin-left:auto;display:flex;flex-direction:column;gap:.4rem;align-items:flex-end;}',
-		'.tf-page .tf-live-note{font-size:.72rem;color:var(--tf-dim);overflow-wrap:anywhere;}',
 		'.tf-page .tf-packets b{font-size:.95rem;}',
 
 		/* throughput chart.  Title and range on one line, the reading and the
