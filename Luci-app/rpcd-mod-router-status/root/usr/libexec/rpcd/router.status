@@ -139,7 +139,7 @@ get_npu_status() {
 	fi
 	status=$(timeout 12 /usr/bin/mtk-tops-status 2>/dev/null)
 	rc=$?
-	if [ "$rc" -ne 0 ] || [ "${#status}" -gt 32768 ]; then
+	if [ "$rc" -ne 0 ] || [ "${#status}" -gt 131072 ]; then
 		printf '{"available":false,"coverage":"provider_failed","exit":%s}\n' "$rc"
 		return
 	fi
@@ -150,7 +150,7 @@ get_npu_status() {
 		json_get_type tunnels_type tunnels
 		json_get_type accounting_type accounting
 		case "$schema:$npu_type:$tunnels_type:$accounting_type" in
-			2:object:object:object|3:object:object:object)
+			2:object:object:object|3:object:object:object|4:object:object:object)
 				printf '%s\n' "$status"
 				return ;;
 		esac

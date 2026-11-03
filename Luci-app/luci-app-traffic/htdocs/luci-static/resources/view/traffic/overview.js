@@ -567,6 +567,7 @@ function topsDiagnosisModel(r, tunnels) {
 			var currentCounter = e.hardware_count_available && Number.isSafeInteger(counterAge) && counterAge >= 0 && counterAge <= 10000;
 			flows.push(Object.assign({}, e, {
 				liveTunnel: live,
+				tunnelPaths: t ? (t.encapsulation ? 1 : 0) | (t.decapsulation ? 2 : 0) : 0,
 				classifier: e.classifier >= 0 ? e.classifier : live && uint(t.classifier_index, 65534) ? t.classifier_index : -1,
 				counterCurrent: currentCounter,
 				reasonText: reasons[e.reason],
@@ -600,9 +601,9 @@ function topsDiagnosisModel(r, tunnels) {
 function topsDirectionState(diagnosis, tunnels, path) {
 	var flag = path === 1 ? 'encapsulation' : 'decapsulation';
 	var flows = diagnosis.flows.filter(function(f) { return (f.paths & path) !== 0; });
-	if (flows.some(function(f) { return f.liveTunnel && f.npu_path && f.counterCurrent && f.hardware_packets !== '0'; }))
+	if (flows.some(function(f) { return f.paths === path && (f.tunnelPaths & path) !== 0 && f.liveTunnel && f.npu_path && f.counterCurrent && f.hardware_packets !== '0'; }))
 		return _('PPE counters observed');
-	if (flows.some(function(f) { return f.liveTunnel && f.binding_verified; })) return _('HNAT binding verified');
+	if (flows.some(function(f) { return f.paths === path && (f.tunnelPaths & path) !== 0 && f.liveTunnel && f.binding_verified; })) return _('HNAT binding verified');
 	if (tunnels.some(function(t) { return t[flag] && t.synchronized; })) return _('Parameters synchronized');
 	if (flows.some(function(f) { return f.reason === 'sync_pending' || f.npu_reason === 'sync_pending'; })) return _('Waiting for synchronization');
 	if (flows.length) return _('Not yet verified');
@@ -1392,8 +1393,8 @@ return view.extend({
 
 		var diagnosis = m.diagnosis;
 		content.push(el('div', { 'class': 'tf-tops-metrics' }, [
-			metric(_('Encapsulation'), stale ? '—' : topsDirectionState(diagnosis, m.entries, 1), _('Observed status for this direction')),
-			metric(_('Decapsulation'), stale ? '—' : topsDirectionState(diagnosis, m.entries, 2), _('Observed status for this direction'))
+			metric(_('Encapsulation'), stale ? '—' : !m.ready ? _('NPU not ready') : topsDirectionState(diagnosis, m.entries, 1), _('Observed status for this direction')),
+			metric(_('Decapsulation'), stale ? '—' : !m.ready ? _('NPU not ready') : topsDirectionState(diagnosis, m.entries, 2), _('Observed status for this direction'))
 		]));
 		var flowContent = [];
 		if (!diagnosis.flowAvailable) {
