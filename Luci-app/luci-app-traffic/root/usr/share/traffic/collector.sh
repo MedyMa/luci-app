@@ -688,7 +688,7 @@ collect_npu() {
     payload=$(timeout 12 /usr/bin/mtk-tops-status 2>/dev/null)
     rc=$?
     now=$(date +%s)
-    if [ "$rc" -eq 0 ] && [ "${#payload}" -le 32768 ]; then
+    if [ "$rc" -eq 0 ] && [ "${#payload}" -le 131072 ]; then
         case "$payload" in
             \{*) printf '{"sampled_at":%s,%s\n' "$now" "${payload#\{}" > "$STATE_DIR/npu.json.new" &&
                 mv -f "$STATE_DIR/npu.json.new" "$STATE_DIR/npu.json" ;;

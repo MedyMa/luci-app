@@ -595,3 +595,174 @@ msgstr "接口速率、隧道参数和 NPU 使用率分别采集。"
 
 msgid "packets"
 msgstr "包"
+
+msgid "Tunnel recognized"
+msgstr "已识别隧道"
+
+msgid "Parameters prepared"
+msgstr "参数已准备"
+
+msgid "Waiting for synchronization"
+msgstr "等待参数同步"
+
+msgid "NPU not ready"
+msgstr "NPU 未就绪"
+
+msgid "Security policy restriction"
+msgstr "安全策略限制"
+
+msgid "Invalid offload metadata"
+msgstr "卸载元数据无效"
+
+msgid "Unsupported packet format"
+msgstr "不支持此报文格式"
+
+msgid "Parameter parsing failed"
+msgstr "参数解析失败"
+
+msgid "Tunnel or output device unavailable"
+msgstr "隧道或出口设备不可用"
+
+msgid "Offload resources exhausted"
+msgstr "卸载资源不足"
+
+msgid "Excluded by packet mark"
+msgstr "报文标记排除"
+
+msgid "ALG or offload policy excluded"
+msgstr "ALG 或卸载策略排除"
+
+msgid "Ethernet header unavailable"
+msgstr "缺少以太网头"
+
+msgid "No valid PPE flow slot"
+msgstr "没有有效的 PPE 流项"
+
+msgid "Route or neighbor resolution failed"
+msgstr "路由或邻居解析失败"
+
+msgid "Output device cannot be offloaded"
+msgstr "出口设备不支持卸载"
+
+msgid "Excluded by VLAN policy"
+msgstr "VLAN 策略排除"
+
+msgid "Waiting for traffic identification"
+msgstr "等待流量识别"
+
+msgid "Binding threshold not reached"
+msgstr "未达到绑定门槛"
+
+msgid "Fragmented packet"
+msgstr "分片报文"
+
+msgid "MTU exceeds offload limit"
+msgstr "MTU 超出卸载限制"
+
+msgid "Flow owner or version changed"
+msgstr "流归属或版本已变化"
+
+msgid "Flow accounting unavailable"
+msgstr "单流计数不可用"
+
+msgid "Binding parameters staged"
+msgstr "绑定参数已暂存"
+
+msgid "Binding submitted"
+msgstr "绑定已提交"
+
+msgid "Waiting for decapsulation binding"
+msgstr "等待解封装绑定"
+
+msgid "Binding condition not met"
+msgstr "绑定条件不满足"
+
+msgid "PPE counters observed"
+msgstr "已观察到 PPE 计数"
+
+msgid "HNAT binding verified"
+msgstr "HNAT 绑定已核验"
+
+msgid "Not yet verified"
+msgstr "尚未验证"
+
+msgid "No diagnostic samples"
+msgstr "暂无诊断样本"
+
+msgid "Diagnostics unavailable"
+msgstr "诊断接口不可用"
+
+msgid "Observed status for this direction"
+msgstr "此方向的观测状态"
+
+msgid "Connection"
+msgstr "连接"
+
+msgid "Decision"
+msgstr "处理结果"
+
+msgid "Hardware counter sample"
+msgstr "硬件计数样本"
+
+msgid "Tunnel"
+msgstr "隧道"
+
+msgid "Version"
+msgstr "版本"
+
+msgid "Tunnel association unavailable"
+msgstr "尚未关联隧道"
+
+msgid "Tunnel state changed or pending"
+msgstr "隧道状态已变化或待同步"
+
+msgid "Unavailable"
+msgstr "不可用"
+
+msgid "No connection tracking"
+msgstr "无连接跟踪"
+
+msgid "Reply"
+msgstr "回程"
+
+msgid "Original"
+msgstr "去程"
+
+msgid "Candidate"
+msgstr "候选报文"
+
+msgid "Encapsulation / decapsulation"
+msgstr "封装／解封装"
+
+msgid "No current owner-verified sample"
+msgstr "无当前流归属匹配的计数样本"
+
+msgid "PPE samples belong to the displayed flow and version. They do not measure complete NPU throughput."
+msgstr "PPE 样本仅对应所示连接和版本，不代表完整 NPU 吞吐。"
+
+msgid "Flow diagnostics"
+msgstr "链路诊断"
+
+msgid "No response recorded"
+msgstr "暂无应答记录"
+
+msgid "Last response"
+msgstr "距最近应答"
+
+msgid "Timeouts"
+msgstr "超时次数"
+
+msgid "Last command"
+msgstr "最近命令"
+
+msgid "Command responses are transport observations, not firmware heartbeats."
+msgstr "命令应答用于观察通信状态，不能作为固件心跳。"
+
+msgid "Firmware communication"
+msgstr "固件通信"
+
+msgid "Packet direction unknown"
+msgstr "报文方向未确定"
+
+msgid "Candidate location; owner unverified"
+msgstr "候选流项，归属尚未验证"

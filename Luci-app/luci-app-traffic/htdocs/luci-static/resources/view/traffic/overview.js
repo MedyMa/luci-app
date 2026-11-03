@@ -514,8 +514,103 @@ function el(tag, attrs, children) { return E(tag, attrs || {}, children || []); 
 /* Optional metadata only. Keep malformed or incomplete observations distinct
  * from a genuine empty table, and never feed these fields into byte totals.
  */
+function topsDiagnosisModel(r, tunnels) {
+	var uint = function(v, max) { return Number.isInteger(v) && v >= 0 && v <= max; };
+	var sint = function(v, max) { return Number.isInteger(v) && Math.abs(v) <= max; };
+	var u64 = function(v) { return typeof v === 'string' && /^(0|[1-9][0-9]{0,19})$/.test(v) &&
+		(v.length < 20 || v <= '18446744073709551615'); };
+	var address = function(v) { return typeof v === 'string' && v.length <= 45 && /^[0-9a-fA-F:.]+$/.test(v); };
+	var reasons = {
+		eligible: _('Tunnel recognized'), parameters: _('Parameters prepared'), sync_pending: _('Waiting for synchronization'),
+		npu_not_ready: _('NPU not ready'), security_policy: _('Security policy restriction'),
+		invalid_metadata: _('Invalid offload metadata'), unsupported_protocol: _('Unsupported packet format'),
+		parameter_error: _('Parameter parsing failed'), no_tunnel: _('Tunnel or output device unavailable'),
+		no_memory: _('Offload resources exhausted'), mark_excluded: _('Excluded by packet mark'),
+		algorithm_excluded: _('ALG or offload policy excluded'), no_mac_header: _('Ethernet header unavailable'),
+		no_flow_hash: _('No valid PPE flow slot'), no_route: _('Route or neighbor resolution failed'),
+		unsupported_device: _('Output device cannot be offloaded'), vlan_policy: _('Excluded by VLAN policy'),
+		dpi_wait: _('Waiting for traffic identification'), bind_threshold: _('Binding threshold not reached'),
+		fragment: _('Fragmented packet'), mtu: _('MTU exceeds offload limit'),
+		account_owner: _('Flow owner or version changed'), account_unavailable: _('Flow accounting unavailable'),
+		prefill: _('Binding parameters staged'), bound: _('Binding submitted'),
+		decap_pending: _('Waiting for decapsulation binding'), rejected: _('Binding condition not met')
+	};
+	var f = r.flow_diagnostics, c = r.firmware_communication, flows = [], cores = [], flowValid = false, commValid = false;
+	if (f && f.schema === 1 && f.available === true && f.read_coverage === 'complete' &&
+		f.source === 'hnat_owner_ledger' && f.max_entries === 32 && f.max_age_ms === 60000 &&
+		u64(f.sampled_ms) && Array.isArray(f.entries) && f.entries.length <= 32) {
+		var seen = Object.create(null);
+		flowValid = f.entries.every(function(e) {
+			if (!e || [2, 10].indexOf(e.family) < 0 || !uint(e.protocol, 255) ||
+				!uint(e.ct_id, 4294967295) || !uint(e.netns, 4294967295) || !uint(e.zone, 65535) ||
+				typeof e.tracked !== 'boolean' || typeof e.reply !== 'boolean' ||
+				!address(e.source) || !address(e.destination) || !uint(e.source_port, 65535) ||
+				!uint(e.destination_port, 65535) || !uint(e.paths, 3) ||
+				!sint(e.tunnel, 31) || e.tunnel < -1 || !u64(e.tunnel_generation) ||
+				!sint(e.classifier, 65535) || e.classifier < -1 || !u64(e.events) ||
+				!uint(e.age_ms, 60000) || !Object.prototype.hasOwnProperty.call(reasons, e.reason) ||
+				!sint(e.error, 4095) || typeof e.binding_verified !== 'boolean' ||
+				typeof e.hardware_count_available !== 'boolean' || typeof e.npu_path !== 'boolean' ||
+				e.counter_unit !== 'ppe_mib_bytes') return false;
+			var id = [e.netns, e.zone, e.ct_id, e.reply, e.protocol, e.source, e.source_port, e.destination, e.destination_port].join('/');
+			if (seen[id]) return false;
+			seen[id] = true;
+			if (e.ppe != null && (!uint(e.ppe, 2) || !uint(e.foe, 65535) || !u64(e.foe_generation))) return false;
+			if (e.candidate_ppe != null && (!uint(e.candidate_ppe, 2) || !uint(e.candidate_foe, 32766))) return false;
+			if (e.binding_verified && (!e.tracked || e.ppe == null || e.foe_generation === '0')) return false;
+			if (e.hardware_count_available && (!e.binding_verified || !u64(e.hardware_bytes) ||
+				!u64(e.hardware_packets) || !u64(e.counter_sampled_ms) || e.counter_sampled_ms === '0')) return false;
+			if (e.npu_reason != null && (!Object.prototype.hasOwnProperty.call(reasons, e.npu_reason) || !sint(e.npu_error, 4095))) return false;
+			var t = tunnels.filter(function(t) { return t.index === e.tunnel && t.generation === e.tunnel_generation; })[0];
+			var live = !!t && t.synchronized && e.tunnel_generation !== '0';
+			var counterAge = Number(f.sampled_ms) - Number(e.counter_sampled_ms);
+			var currentCounter = e.hardware_count_available && Number.isSafeInteger(counterAge) && counterAge >= 0 && counterAge <= 10000;
+			flows.push(Object.assign({}, e, {
+				liveTunnel: live,
+				classifier: e.classifier >= 0 ? e.classifier : live && uint(t.classifier_index, 65534) ? t.classifier_index : -1,
+				counterCurrent: currentCounter,
+				reasonText: reasons[e.reason],
+				npuReasonText: e.npu_reason != null ? reasons[e.npu_reason] : '',
+				site: typeof e.decision_site === 'string' && /^[A-Za-z0-9_]{1,47}$/.test(e.decision_site) && uint(e.line, 1000000) ? e.decision_site + ':' + e.line : ''
+			}));
+			return true;
+		});
+		if (!flowValid) flows = [];
+	}
+	if (c && c.schema === 1 && c.available === true && c.read_coverage === 'complete' &&
+		c.source === 'host_mailbox_transport' && c.heartbeat_available === false && u64(c.sampled_ms) &&
+		Array.isArray(c.cores) && c.cores.length === 5) {
+		var coreSeen = {};
+		commValid = c.cores.every(function(e) {
+			if (!e || !uint(e.core, 4) || coreSeen[e.core] || !uint(e.last_command, 31) ||
+				!uint(e.last_argument, 4294967295) || !sint(e.last_error, 4095) ||
+				!['attempts','submitted','acknowledged','timeouts','errors','last_send_ms','last_ack_ms','last_timeout_ms'].every(function(k) { return u64(e[k]); })) return false;
+			coreSeen[e.core] = true;
+			var age = e.last_ack_ms === '0' ? null : Number(c.sampled_ms) - Number(e.last_ack_ms);
+			if (age !== null && (!Number.isSafeInteger(age) || age < 0)) return false;
+			cores.push(Object.assign({}, e, { ackAge: age }));
+			return true;
+		});
+		if (!commValid) cores = [];
+	}
+	flows.sort(function(a, b) { return a.age_ms - b.age_ms; });
+	return { flowAvailable: flowValid, flows: flows, communicationAvailable: commValid, cores: cores };
+}
+
+function topsDirectionState(diagnosis, tunnels, path) {
+	var flag = path === 1 ? 'encapsulation' : 'decapsulation';
+	var flows = diagnosis.flows.filter(function(f) { return (f.paths & path) !== 0; });
+	if (flows.some(function(f) { return f.liveTunnel && f.npu_path && f.counterCurrent && f.hardware_packets !== '0'; }))
+		return _('PPE counters observed');
+	if (flows.some(function(f) { return f.liveTunnel && f.binding_verified; })) return _('HNAT binding verified');
+	if (tunnels.some(function(t) { return t[flag] && t.synchronized; })) return _('Parameters synchronized');
+	if (flows.some(function(f) { return f.reason === 'sync_pending' || f.npu_reason === 'sync_pending'; })) return _('Waiting for synchronization');
+	if (flows.length) return _('Not yet verified');
+	return diagnosis.flowAvailable ? _('No diagnostic samples') : _('Diagnostics unavailable');
+}
+
 function topsStatusModel(r) {
-	if (!r || (r.schema !== 2 && r.schema !== 3) || !r.npu) return null;
+	if (!r || (r.schema !== 2 && r.schema !== 3 && r.schema !== 4) || !r.npu) return null;
 	var n = r.npu, t = r.tunnels || {}, seen = {}, entries = [], invalid = false;
 	var uint = function(x, max) { return Number.isInteger(x) && x >= 0 && x <= max; };
 	var u64 = function(x) { return typeof x === 'string' && /^(0|[1-9][0-9]{0,19})$/.test(x) &&
@@ -590,6 +685,7 @@ function topsStatusModel(r) {
 			cores = ids.map(function(id) { return { id: id, percent: usage.cores[id] / 1000 }; });
 	}
 	return {
+		diagnosis: topsDiagnosisModel(r, entries),
 		cores: cores,
 		platform: typeof r.platform === 'string' && r.platform.length <= 256 ? r.platform : '',
 		firmwareInfo: ready && typeof n.firmware_info === 'string' && n.firmware_info.length <= 4096 ? n.firmware_info : '',
@@ -1293,6 +1389,63 @@ return view.extend({
 			_('Hardware packet counters are unavailable on this firmware.'),
 			' ', _('Interface rates, tunnel parameters and NPU utilization are measured separately.')
 		]));
+
+		var diagnosis = m.diagnosis;
+		content.push(el('div', { 'class': 'tf-tops-metrics' }, [
+			metric(_('Encapsulation'), stale ? '—' : topsDirectionState(diagnosis, m.entries, 1), _('Observed status for this direction')),
+			metric(_('Decapsulation'), stale ? '—' : topsDirectionState(diagnosis, m.entries, 2), _('Observed status for this direction'))
+		]));
+		var flowContent = [];
+		if (!diagnosis.flowAvailable) {
+			flowContent.push(el('p', {}, [ _('Diagnostics unavailable') ]));
+		} else if (!diagnosis.flows.length) {
+			flowContent.push(el('p', {}, [ _('No diagnostic samples') ]));
+		} else {
+			var flowLabels = [ _('Connection'), _('Direction'), _('Decision'), 'PPE / FOE', _('Hardware counter sample') ];
+			var flowRows = diagnosis.flows.map(function(f) {
+				var endpoint = function(address, port) { return (address.indexOf(':') >= 0 ? '[' + address + ']' : address) + (port ? ':' + port : ''); };
+				var a = endpoint(f.source, f.source_port), b = endpoint(f.destination, f.destination_port);
+				var proto = f.protocol === 6 ? 'TCP' : f.protocol === 17 ? 'UDP' : String(f.protocol);
+				var decision = f.binding_verified ? _('HNAT binding verified') : f.reasonText;
+				var link = f.tunnel >= 0 ? _('Tunnel') + ' #' + f.tunnel + ' · ' + _('Version') + ' ' + f.tunnel_generation : _('Tunnel association unavailable');
+				if (f.classifier >= 0) link += ' · CLS ' + f.classifier;
+				if (f.tunnel >= 0 && !f.liveTunnel) link += ' · ' + _('Tunnel state changed or pending');
+				var notes = [];
+				if (f.error) notes.push(String(f.error));
+				if (f.npu_error || f.npu_reason === 'sync_pending') notes.push('NPU: ' + f.npuReasonText + (f.npu_error ? ' (' + f.npu_error + ')' : ''));
+				var count = stale || !f.counterCurrent ? _('Unavailable') :
+					f.hardware_packets + ' ' + _('packets') + ' · ' + fmtBytes(Number(f.hardware_bytes));
+				var cells = [
+					el('span', { 'class': 'tf-tops-endpoint' }, [ proto + ' · ' + (f.reply ? b + ' → ' + a : a + ' → ' + b),
+						el('small', { 'class': 'tf-tops-index' }, [ f.tracked ? 'CT ' + f.ct_id : _('No connection tracking') ]) ]),
+					el('span', {}, [ !f.tracked ? _('Packet direction unknown') : f.reply ? _('Reply') : _('Original'), el('small', { 'class': 'tf-tops-index' },
+						[ f.paths === 3 ? _('Encapsulation / decapsulation') : f.paths === 1 ? _('Encapsulation') : f.paths === 2 ? _('Decapsulation') : _('Candidate') ]) ]),
+					el('span', { 'title': f.site }, [ decision, el('small', { 'class': 'tf-tops-index' }, [ notes.join(' · ') || link ]) ]),
+					el('span', {}, [ f.ppe != null ? f.ppe + ' / ' + f.foe : f.candidate_ppe != null ? f.candidate_ppe + ' / ' + f.candidate_foe : '—',
+						el('small', { 'class': 'tf-tops-index' }, [ f.ppe == null ? (f.candidate_ppe != null ? _('Candidate location; owner unverified') + ' · ' : '') + link : _('Version') + ' ' + f.foe_generation + ' · ' + link ]) ]),
+					el('span', {}, [ count, el('small', { 'class': 'tf-tops-index' },
+						[ f.counterCurrent ? (f.npu_path ? 'PPE → NPU' : 'PPE') : _('No current owner-verified sample') ]) ])
+				];
+				return el('tr', {}, cells.map(function(c, i) { return el('td', { 'data-label': flowLabels[i] }, [ c ]); }));
+			});
+			flowContent.push(el('table', { 'class': 'tf-tops-table tf-tops-flows' }, [
+				el('thead', {}, [ el('tr', {}, flowLabels.map(function(l) { return el('th', { 'scope': 'col' }, [ l ]); })) ]),
+				el('tbody', {}, flowRows)
+			]));
+		}
+		flowContent.push(el('p', { 'class': 'tf-tops-note' },
+			[ _('PPE samples belong to the displayed flow and version. They do not measure complete NPU throughput.') ]));
+		content.push(el('details', { 'class': 'tf-tops-details' }, [ el('summary', {}, [ _('Flow diagnostics') ]) ].concat(flowContent)));
+		var communication = diagnosis.cores.map(function(c) {
+			var name = c.core === 4 ? 'CoreM' : 'Core' + c.core;
+			var ack = c.ackAge == null ? _('No response recorded') : Math.floor(c.ackAge / 1000) + ' s';
+			return el('p', {}, [ name + ' · ' + _('Last response') + ': ' + ack + ' · ' + _('Timeouts') + ': ' + c.timeouts +
+				' · ' + _('Last command') + ': ' + c.last_command + ' / ' + c.last_argument + (c.last_error ? ' (' + c.last_error + ')' : '') ]);
+		});
+		if (!diagnosis.communicationAvailable) communication.push(el('p', {}, [ _('Diagnostics unavailable') ]));
+		communication.push(el('p', { 'class': 'tf-tops-note' }, [ _('Command responses are transport observations, not firmware heartbeats.') ]));
+		content.push(el('details', { 'class': 'tf-tops-details' }, [ el('summary', {}, [ _('Firmware communication') ]) ].concat(communication)));
+
 
 		dom.content(this.topsCardEl, content);
 		this.topsCardEl.style.display = '';
@@ -2459,6 +2612,7 @@ function injectCss() {
 		'border:0;border-bottom:1px solid var(--tf-line);padding:.75rem .4rem;text-align:left;font-size:.8rem;vertical-align:middle;}',
 		'.tf-page .tf-tops-table th{font-size:.73rem;font-weight:500;color:var(--tf-dim);}',
 		'.tf-page .tf-tops-table th:first-child{width:15%;}.tf-page .tf-tops-table th:last-child{width:21%;}',
+		'.tf-page .tf-tops-flows th:first-child{width:30%;}.tf-page .tf-tops-flows th:last-child{width:23%;}',
 		'.tf-page .tf-tops-table tr:last-child td{border-bottom:0;}',
 		'.tf-page .tf-tops-index{display:block;color:var(--tf-dim);font-size:.7rem;margin-top:.15rem;}',
 		'.tf-page .tf-tops-endpoint{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;',

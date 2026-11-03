@@ -444,14 +444,14 @@ get_npu_status() {
         printf '{"available":false,"coverage":"collector_pending"}\n'
         return
     fi
-    status=$(head -c 32769 "$STATE_DIR/npu.json" 2>/dev/null)
-    if [ "${#status}" -le 32768 ] && jshn -r "$status" >/dev/null 2>&1 && json_load "$status" 2>/dev/null; then
+    status=$(head -c 131073 "$STATE_DIR/npu.json" 2>/dev/null)
+    if [ "${#status}" -le 131072 ] && jshn -r "$status" >/dev/null 2>&1 && json_load "$status" 2>/dev/null; then
         json_get_var schema schema
         json_get_type npu_type npu
         json_get_type tunnels_type tunnels
         json_get_type accounting_type accounting
         case "$schema:$npu_type:$tunnels_type:$accounting_type" in
-            2:object:object:object|3:object:object:object) printf '%s\n' "$status"; return ;;
+            2:object:object:object|3:object:object:object|4:object:object:object) printf '%s\n' "$status"; return ;;
         esac
     fi
     printf '{"available":false,"coverage":"collector_invalid"}\n'
