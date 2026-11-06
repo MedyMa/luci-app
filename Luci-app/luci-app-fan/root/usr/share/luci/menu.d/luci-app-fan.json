@@ -1,13 +1,34 @@
 {
-	"admin/status/luci-fan": {
+	"admin/mtk": {
+		"title": "MTK",
+		"order": 80,
+		"action": {
+			"type": "firstchild",
+			"recurse": true
+		}
+	},
+	"admin/mtk/fan": {
 		"title": "风扇控制",
-		"order": 60,
+		"order": 30,
 		"action": {
 			"type": "view",
 			"path": "fan"
 		},
 		"depends": {
-			"acl": [ "luci-app-fan" ]
+			"acl": [
+				"luci-app-fan"
+			]
+		}
+	},
+	"admin/status/luci-fan": {
+		"action": {
+			"type": "alias",
+			"path": "admin/mtk/fan"
+		},
+		"depends": {
+			"acl": [
+				"luci-app-fan"
+			]
 		}
 	}
 }

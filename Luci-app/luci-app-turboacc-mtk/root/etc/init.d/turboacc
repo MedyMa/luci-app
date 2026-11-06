@@ -77,6 +77,7 @@ disable_hnat_runtime() {
 # place that is not accelerating - silently.  uci -q get, not config_get: the
 # caller has turboacc loaded and config_get reads whichever config was last.
 hqos_drives_hnat() {
+	if [ -f /var/run/eqos.active ] || [ -f /var/run/eqos/mode ]; then return 0; fi
 	local v
 
 	v=$(uci -q get mtk-hqos.global.enabled 2>/dev/null)
@@ -95,7 +96,7 @@ wait_hnat_debugfs() {
 
 	for i in 1 2 3 4 5 6 7 8 9 10; do
 		[ -d "$hnat_path" ] && return 0
-		sleep 0.2
+		sleep 1
 	done
 
 	return 1
@@ -138,7 +139,15 @@ default_fullcone_mode() {
 # ---------------------------------------------------------------------------
 # procd lifecycle
 # ---------------------------------------------------------------------------
+hnat_control_lock() {
+	[ "${MTK_HNAT_LOCK_HELD:-0}" = 1 ] && return 0
+	exec 9>/var/lock/mtk-hnat.lock || return 1
+	flock -x 9 || return 1
+	export MTK_HNAT_LOCK_HELD=1
+}
+
 stop_service() {
+	hnat_control_lock || return 1
 	local hnat_path="/sys/kernel/debug/hnat"
 
 	ensure_debugfs
@@ -163,6 +172,7 @@ stop_service() {
 }
 
 start_service() {
+	hnat_control_lock || return 1
 	config_load "turboacc"
 
 	local fastpath
@@ -170,6 +180,13 @@ start_service() {
 	local fastpath_mh_eth_hnat="0"
 	config_get fastpath "config" "fastpath"
 	[ -n "$fastpath" ] || fastpath="none"
+	if [ -f /var/run/eqos.active ] || [ -f /var/run/eqos/mode ]; then
+		config_get_bool fastpath_mh_eth_hnat config fastpath_mh_eth_hnat 1
+		if [ "$fastpath" != mediatek_hnat ] || [ "$fastpath_mh_eth_hnat" -ne 1 ]; then
+			logger -t turboacc "Stop EQoS before disabling HNAT or selecting another acceleration engine"
+			return 1
+		fi
+	fi
 
 	# ---------- pre-clean conflicting engines ----------
 	if [ "$fastpath" != "fast_classifier" ] && lsmod | grep -q "fast_classifier"; then
@@ -223,8 +240,13 @@ start_service() {
 
 		# hook_toggle: 1=enable HNAT for Ethernet, 0=disable
 		if [ -w "$hnat_path/hook_toggle" ]; then
-			echo "$fastpath_mh_eth_hnat" >"$hnat_path/hook_toggle" 2>/dev/null || \
-				logger -t turboacc "WARNING: failed to write hook_toggle=$fastpath_mh_eth_hnat"
+			local current_hook
+			current_hook=$(cat "$hnat_path/hook_toggle" 2>/dev/null)
+			case "$current_hook" in enabled) current_hook=1 ;; disabled) current_hook=0 ;; esac
+			if [ "$current_hook" != "$fastpath_mh_eth_hnat" ]; then
+				echo "$fastpath_mh_eth_hnat" >"$hnat_path/hook_toggle" 2>/dev/null || \
+					logger -t turboacc "WARNING: failed to write hook_toggle=$fastpath_mh_eth_hnat"
+			fi
 		else
 			logger -t turboacc "WARNING: $hnat_path/hook_toggle not writable (debugfs mounted? module loaded?)"
 		fi
@@ -287,8 +309,6 @@ start_service() {
 }
 
 reload_service() {
-	stop_service
-	sleep 1
 	start_service
 }
 

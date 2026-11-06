@@ -14,32 +14,41 @@ has_module_file() {
 	return 1
 }
 
-if has_module_file "mtkhnat" "mediatek_hnat"; then
-	uci -q set "turboacc.config.fastpath"="mediatek_hnat"
-	uci -q set "turboacc.config.fastpath_mh_eth_hnat"="1"
-	uci -q set "turboacc.config.fastpath_mh_eth_hnat_v6"="1"
-	uci -q set "turboacc.config.fastpath_mh_eth_hnat_bind_rate"="30"
+# Initialize absent options only; package upgrades must retain user settings.
+set_default() {
+	uci -q get "$1" >/dev/null 2>&1 || uci -q set "$1=$2"
+}
+
+uci -q get turboacc.config >/dev/null 2>&1 || uci -q set turboacc.config=turboacc
+
+if has_module_file "mtkhnat" "mediatek_hnat" ||
+   [ -d /sys/module/mtkhnat ] || [ -d /sys/module/mediatek_hnat ] ||
+   [ -d /sys/kernel/debug/hnat ]; then
+	set_default "turboacc.config.fastpath" "mediatek_hnat"
+	set_default "turboacc.config.fastpath_mh_eth_hnat" "1"
+	set_default "turboacc.config.fastpath_mh_eth_hnat_v6" "1"
+	set_default "turboacc.config.fastpath_mh_eth_hnat_bind_rate" "30"
 elif has_module_file "fast-classifier"; then
-	uci -q set "turboacc.config.fastpath"="fast_classifier"
-	uci -q set "turboacc.config.fastpath_fc_br"="1"
+	set_default "turboacc.config.fastpath" "fast_classifier"
+	set_default "turboacc.config.fastpath_fc_br" "1"
 	if [ -d "/proc/sys/net/ipv6" ]; then
-		uci -q set "turboacc.config.fastpath_fc_ipv6"="1"
+		set_default "turboacc.config.fastpath_fc_ipv6" "1"
 	else
-		uci -q set "turboacc.config.fastpath_fc_ipv6"="0"
+		set_default "turboacc.config.fastpath_fc_ipv6" "0"
 	fi
 elif has_module_file "shortcut-fe-cm"; then
-	uci -q set "turboacc.config.fastpath"="shortcut_fe_cm"
+	set_default "turboacc.config.fastpath" "shortcut_fe_cm"
 else
-	uci -q set "turboacc.config.fastpath"="none"
+	set_default "turboacc.config.fastpath" "none"
 fi
 
 if has_module_file "xt_FULLCONENAT"; then
-	uci -q set "turboacc.config.fullcone"="1"
+	set_default "turboacc.config.fullcone" "1"
 else
-	uci -q set "turboacc.config.fullcone"="2"
+	set_default "turboacc.config.fullcone" "2"
 fi
 
-uci -q commit "turboacc"
+uci -q commit "turboacc" || exit 1
 
 uci -q batch <<-EOF >/dev/null
 	delete ucitrack.@turboacc[-1]
@@ -48,7 +57,7 @@ uci -q batch <<-EOF >/dev/null
 	set ucitrack.@turboacc[-1].config='turboacc'
 EOF
 
-uci -q commit "ucitrack"
+uci -q commit "ucitrack" || exit 1
 
 rm -f /tmp/luci-indexcache
 exit 0

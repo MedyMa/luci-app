@@ -6,13 +6,13 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-turboacc-mtk
-PKG_RELEASE:=2
+PKG_RELEASE:=3
 PKG_LICENSE:=GPL-3.0-only
 
 LUCI_TITLE:=LuCI support for MTK HNAT
 LUCI_DEPENDS:= \
 	+luci-base \
-	+rpcd \
+	+rpcd +flock \
 	+nftables \
 	+kmod-mediatek_hnat \
 	+luci-lua-runtime \
