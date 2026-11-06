@@ -85,13 +85,28 @@ sample_once() {
     rm -f "$next"
 }
 
+is_watched() {
+    local seen now rest
+    [ -r "$STATE_DIR/acceleration.watch" ] || return 1
+    read -r seen < "$STATE_DIR/acceleration.watch" || return 1
+    read -r now rest < "${ACCEL_UPTIME:-/proc/uptime}" || return 1
+    now=${now%%.*}
+    case "$seen:$now" in *[!0-9:]*|:*|*:) return 1 ;; esac
+    [ "${#seen}" -le 10 ] && [ "${#now}" -le 10 ] &&
+        [ "$now" -ge "$seen" ] && [ "$((now - seen))" -le 60 ]
+}
+
 if [ "${1:-}" = once ]; then
     sample_once
     exit $?
 fi
 trap 'rm -f "$STATE_DIR/acceleration.$$"; exit' TERM INT
 while :; do
-    sample_once
-    sleep 5 &
-    wait $!
+    if is_watched; then
+        sample_once
+        sleep 5 &
+    else
+        sleep 2 &
+    fi
+    wait $! || exit 1
 done

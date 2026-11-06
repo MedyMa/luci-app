@@ -30,6 +30,17 @@ get_system_metrics() {
 # PPE table, read read-clear counters, or issue firmware mailbox requests.
 get_acceleration_status() {
 	local file="$STATE_DIR/acceleration.json" raw sampled now rest schema
+	read -r now rest < "${PROC_UPTIME_PATH:-/proc/uptime}" || now=''
+	now=${now%%.*}
+	case "$now" in
+		''|*[!0-9]*) printf '{"schema":1,"available":false,"coverage":"invalid_uptime"}\n'; return ;;
+	esac
+	# The read request renews interest in this cache, not driver state. Without
+	# a viewer the worker does not scan PPEs or query NPU firmware mailboxes.
+	umask 077
+	[ -d "$STATE_DIR" ] || mkdir -p "$STATE_DIR" || return
+	printf '%s\n' "$now" > "$STATE_DIR/acceleration.watch.new" &&
+		mv -f "$STATE_DIR/acceleration.watch.new" "$STATE_DIR/acceleration.watch"
 	[ -r "$file" ] || {
 		printf '{"schema":1,"available":false,"coverage":"no_sample"}\n'
 		return
@@ -41,8 +52,6 @@ get_acceleration_status() {
 	fi
 	json_get_var sampled sampled_uptime
 	json_get_var schema schema
-	read -r now rest < "${PROC_UPTIME_PATH:-/proc/uptime}" || now=''
-	now=${now%%.*}
 	case "$sampled" in ''|*[!0-9]*) sampled='' ;; esac
 	case "$now" in ''|*[!0-9]*) sampled='' ;; esac
 	if [ "$schema" = 1 ] && [ -n "$sampled" ] && [ "${#sampled}" -le 10 ] &&

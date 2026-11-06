@@ -4,6 +4,8 @@ Version 0.1.4 adds `getAccelerationStatus`, a read-only RAM snapshot for the
 25.12 LuCI overview. One procd collector samples the passive `hnat_stats`
 version 2 summary and optional bounded NPU utilization every five seconds.
 The RPC only reads this cache; it never scans flows or reads hardware MIBs.
+Its requests renew a monotonic interest marker. Collection stops after 60
+seconds without a viewer; an idle router does not repeatedly query NPU firmware.
 Snapshots older than 20 seconds of monotonic uptime are unavailable, including
 after clock corrections. Missing, legacy, partial and invalid summaries have
 no numeric PPE counts. IPv4 and IPv6 counts are bound table entries, with each
