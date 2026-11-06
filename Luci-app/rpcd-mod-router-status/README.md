@@ -1,5 +1,19 @@
 # rpcd-mod-router-status
 
+Version 0.1.4 adds `getAccelerationStatus`, a read-only RAM snapshot for the
+25.12 LuCI overview. One procd collector samples the passive `hnat_stats`
+version 2 summary and optional bounded NPU utilization every five seconds.
+The RPC only reads this cache; it never scans flows or reads hardware MIBs.
+Snapshots older than 20 seconds of monotonic uptime are unavailable, including
+after clock corrections. Missing, legacy, partial and invalid summaries have
+no numeric PPE counts. IPv4 and IPv6 counts are bound table entries, with each
+direction counted separately; mixed tunnel/translation formats are separate.
+They are observational occupancy, not throughput, unique connections or exact
+offload coverage. WED/WARP and NPU module presence is reported independently
+and does not imply that traffic uses either engine. NPU usage is the actual
+five-core mean, or unavailable; an unreadable source is never replaced by zero.
+On other targets, unsupported acceleration sources remain unavailable.
+
 Version 0.1.2 adds `temperatures` to `getSystemMetrics`: sanitized records with `kind` (`cpu`, `wifi`, `disk`), `name`, `celsius`, and epoch `sampled_at`. CPU/SoC thermal zones and NVMe/drivetemp hwmon files are read on demand. BE14 readings reuse the one-minute collector's existing `iwpriv stat` call; cache entries older than 180 seconds are omitted. No new daemon, package dependency, or wireless driver call is added. Unsupported sensors remain absent; the mobile app shows a dash.
 
 Independent, read-only device telemetry for the ImmortalWrt mobile app.
@@ -12,6 +26,7 @@ Version 0.1.3 adds optional `getNpuStatus`, backed by `mtk-tops-status` 0.1-r3 o
 | Object / method | Source | Data |
 |---|---|---|
 | `router.status.getSystemMetrics` | `/proc/stat` | Aggregate CPU counters; usage requires two samples |
+| `router.status.getAccelerationStatus` | Five-second RAM cache | PPE bound IPv4/IPv6/mixed-format counts, WED/WARP and NPU module presence, optional NPU utilization |
 | `router.status.getWirelessStatus` | Local `network.wireless status`, sysfs | Radio name, up state, band, channel, EHT width, AP interface, BSSID |
 | `router.status.getNpuStatus` | Optional `/usr/bin/mtk-tops-status` | Firmware/MCU readiness, bounded tunnel parameter snapshots and accounting coverage |
 | `router.status.getWirelessHistory` | Independent sampler | 24-hour byte rates and interval TX failure / RX CRC percentages |

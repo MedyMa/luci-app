@@ -8,10 +8,27 @@ umask 077
 STATE_DIR=${WIFI_STATE_DIR:-/tmp/router-status}
 RPCD=${WIFI_RPCD:-/usr/libexec/rpcd/router.status}
 IWPRIV=${WIFI_IWPRIV:-iwpriv}
+MWCTL=${WIFI_MWCTL:-mwctl}
 SYS_NET=${WIFI_SYS_NET:-/sys/class/net}
 STAT_AWK=${WIFI_STAT_AWK:-/usr/share/router-status/wifi-stat.awk}
 DELTA_AWK=${WIFI_DELTA_AWK:-/usr/share/router-status/wifi-delta.awk}
 HISTORY_AWK=${WIFI_HISTORY_AWK:-/usr/share/router-status/wifi-history.awk}
+
+get_radio_stats() {
+    local raw
+    # WEXT and standalone cfg80211 expose the same statistics text through
+    # different commands. Reuse this one bounded query for history and temps.
+    if command -v "$IWPRIV" >/dev/null 2>&1; then
+        raw=$(timeout -s KILL 2 "$IWPRIV" "$1" stat 2>/dev/null)
+        if [ "$?" -eq 0 ] && [ -n "$raw" ]; then
+            printf '%s\n' "$raw"
+            return
+        fi
+    fi
+    if command -v "$MWCTL" >/dev/null 2>&1; then
+        timeout -s KILL 2 "$MWCTL" "$1" stat 2>/dev/null
+    fi
+}
 
 sample_once() {
     local now raw indexes index name ifname up rx tx stats
@@ -45,7 +62,7 @@ sample_once() {
         read -r rx < "$SYS_NET/$ifname/statistics/rx_bytes" || continue
         read -r tx < "$SYS_NET/$ifname/statistics/tx_bytes" || continue
         case "$rx:$tx" in *[!0-9:]*|:*|*:) continue ;; esac
-        stats=$("$IWPRIV" "$ifname" stat 2>/dev/null | awk -f "$STAT_AWK")
+        stats=$(get_radio_stats "$ifname" | awk -f "$STAT_AWK")
         set -- $stats
         [ "$#" -eq 5 ] || set -- -1 -1 -1 -1 -1
         case "$5" in ''|*[!0-9]*) : ;; *)

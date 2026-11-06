@@ -26,6 +26,34 @@ get_system_metrics() {
 	json_dump
 }
 
+# Serve the collector's RAM snapshot only. A browser request must not scan the
+# PPE table, read read-clear counters, or issue firmware mailbox requests.
+get_acceleration_status() {
+	local file="$STATE_DIR/acceleration.json" raw sampled now rest schema
+	[ -r "$file" ] || {
+		printf '{"schema":1,"available":false,"coverage":"no_sample"}\n'
+		return
+	}
+	raw=$(head -c 4097 "$file" 2>/dev/null)
+	if [ "${#raw}" -gt 4096 ] || ! json_load "$raw" 2>/dev/null; then
+		printf '{"schema":1,"available":false,"coverage":"invalid"}\n'
+		return
+	fi
+	json_get_var sampled sampled_uptime
+	json_get_var schema schema
+	read -r now rest < "${PROC_UPTIME_PATH:-/proc/uptime}" || now=''
+	now=${now%%.*}
+	case "$sampled" in ''|*[!0-9]*) sampled='' ;; esac
+	case "$now" in ''|*[!0-9]*) sampled='' ;; esac
+	if [ "$schema" = 1 ] && [ -n "$sampled" ] && [ "${#sampled}" -le 10 ] &&
+	   [ "${#now}" -le 10 ] && [ "$sampled" -le "$now" ] 2>/dev/null &&
+	   [ "$((now - sampled))" -le 20 ]; then
+		printf '%s\n' "$raw"
+	else
+		printf '{"schema":1,"available":false,"coverage":"stale"}\n'
+	fi
+}
+
 # Return only operational radio fields. The raw netifd response also contains
 # configured Wi-Fi keys, which must never leave the router through this API.
 get_wireless_status() {
@@ -209,6 +237,7 @@ case "${1:-}" in
         json_add_object getWirelessHistory; json_close_object
         json_add_object getNpuStatus; json_close_object
         json_add_object getNpuUsage; json_close_object
+        json_add_object getAccelerationStatus; json_close_object
         json_dump
         ;;
     call)
@@ -218,6 +247,7 @@ case "${1:-}" in
             getWirelessHistory) get_wireless_history ;;
             getNpuStatus) get_npu_status ;;
             getNpuUsage) get_npu_usage ;;
+            getAccelerationStatus) get_acceleration_status ;;
             *) json_init; json_add_string error 'unknown method'; json_dump ;;
         esac
         ;;
