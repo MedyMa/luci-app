@@ -12,7 +12,7 @@ LUCI_DEPENDS:=+modemband
 
 PKG_NAME:=luci-app-modemband
 PKG_VERSION:=2.0
-PKG_RELEASE:=23
+PKG_RELEASE:=24
 
 define Package/luci-app-modemband/postinst
 #!/bin/sh

@@ -1385,68 +1385,6 @@ return view.extend({
 				el('tbody', {}, rows)
 			]));
 		}
-		content.push(el('p', { 'class': 'tf-tops-note' }, [
-			m.dataplaneAvailable ? _('NPU to CPU counts validated tunnel returns only. Traffic kept in hardware is outside this counter.') :
-			_('Hardware packet counters are unavailable on this firmware.'),
-			' ', _('Interface rates, tunnel parameters and NPU utilization are measured separately.')
-		]));
-
-		var diagnosis = m.diagnosis;
-		content.push(el('div', { 'class': 'tf-tops-metrics' }, [
-			metric(_('Encapsulation'), stale ? '—' : !m.ready ? _('NPU not ready') : topsDirectionState(diagnosis, m.entries, 1), _('Observed status for this direction')),
-			metric(_('Decapsulation'), stale ? '—' : !m.ready ? _('NPU not ready') : topsDirectionState(diagnosis, m.entries, 2), _('Observed status for this direction'))
-		]));
-		var flowContent = [];
-		if (!diagnosis.flowAvailable) {
-			flowContent.push(el('p', {}, [ _('Diagnostics unavailable') ]));
-		} else if (!diagnosis.flows.length) {
-			flowContent.push(el('p', {}, [ _('No diagnostic samples') ]));
-		} else {
-			var flowLabels = [ _('Connection'), _('Direction'), _('Decision'), 'PPE / FOE', _('Hardware counter sample') ];
-			var flowRows = diagnosis.flows.map(function(f) {
-				var endpoint = function(address, port) { return (address.indexOf(':') >= 0 ? '[' + address + ']' : address) + (port ? ':' + port : ''); };
-				var a = endpoint(f.source, f.source_port), b = endpoint(f.destination, f.destination_port);
-				var proto = f.protocol === 6 ? 'TCP' : f.protocol === 17 ? 'UDP' : String(f.protocol);
-				var decision = f.binding_verified ? _('HNAT binding verified') : f.reasonText;
-				var link = f.tunnel >= 0 ? _('Tunnel') + ' #' + f.tunnel + ' · ' + _('Version') + ' ' + f.tunnel_generation : _('Tunnel association unavailable');
-				if (f.classifier >= 0) link += ' · CLS ' + f.classifier;
-				if (f.tunnel >= 0 && !f.liveTunnel) link += ' · ' + _('Tunnel state changed or pending');
-				var notes = [];
-				if (f.error) notes.push(String(f.error));
-				if (f.npu_error || f.npu_reason === 'sync_pending') notes.push('NPU: ' + f.npuReasonText + (f.npu_error ? ' (' + f.npu_error + ')' : ''));
-				var count = stale || !f.counterCurrent ? _('Unavailable') :
-					f.hardware_packets + ' ' + _('packets') + ' · ' + fmtBytes(Number(f.hardware_bytes));
-				var cells = [
-					el('span', { 'class': 'tf-tops-endpoint' }, [ proto + ' · ' + (f.reply ? b + ' → ' + a : a + ' → ' + b),
-						el('small', { 'class': 'tf-tops-index' }, [ f.tracked ? 'CT ' + f.ct_id : _('No connection tracking') ]) ]),
-					el('span', {}, [ !f.tracked ? _('Packet direction unknown') : f.reply ? _('Reply') : _('Original'), el('small', { 'class': 'tf-tops-index' },
-						[ f.paths === 3 ? _('Encapsulation / decapsulation') : f.paths === 1 ? _('Encapsulation') : f.paths === 2 ? _('Decapsulation') : _('Candidate') ]) ]),
-					el('span', { 'title': f.site }, [ decision, el('small', { 'class': 'tf-tops-index' }, [ notes.join(' · ') || link ]) ]),
-					el('span', {}, [ f.ppe != null ? f.ppe + ' / ' + f.foe : f.candidate_ppe != null ? f.candidate_ppe + ' / ' + f.candidate_foe : '—',
-						el('small', { 'class': 'tf-tops-index' }, [ f.ppe == null ? (f.candidate_ppe != null ? _('Candidate location; owner unverified') + ' · ' : '') + link : _('Version') + ' ' + f.foe_generation + ' · ' + link ]) ]),
-					el('span', {}, [ count, el('small', { 'class': 'tf-tops-index' },
-						[ f.counterCurrent ? (f.npu_path ? 'PPE → NPU' : 'PPE') : _('No current owner-verified sample') ]) ])
-				];
-				return el('tr', {}, cells.map(function(c, i) { return el('td', { 'data-label': flowLabels[i] }, [ c ]); }));
-			});
-			flowContent.push(el('table', { 'class': 'tf-tops-table tf-tops-flows' }, [
-				el('thead', {}, [ el('tr', {}, flowLabels.map(function(l) { return el('th', { 'scope': 'col' }, [ l ]); })) ]),
-				el('tbody', {}, flowRows)
-			]));
-		}
-		flowContent.push(el('p', { 'class': 'tf-tops-note' },
-			[ _('PPE samples belong to the displayed flow and version. They do not measure complete NPU throughput.') ]));
-		content.push(el('details', { 'class': 'tf-tops-details' }, [ el('summary', {}, [ _('Flow diagnostics') ]) ].concat(flowContent)));
-		var communication = diagnosis.cores.map(function(c) {
-			var name = c.core === 4 ? 'CoreM' : 'Core' + c.core;
-			var ack = c.ackAge == null ? _('No response recorded') : Math.floor(c.ackAge / 1000) + ' s';
-			return el('p', {}, [ name + ' · ' + _('Last response') + ': ' + ack + ' · ' + _('Timeouts') + ': ' + c.timeouts +
-				' · ' + _('Last command') + ': ' + c.last_command + ' / ' + c.last_argument + (c.last_error ? ' (' + c.last_error + ')' : '') ]);
-		});
-		if (!diagnosis.communicationAvailable) communication.push(el('p', {}, [ _('Diagnostics unavailable') ]));
-		communication.push(el('p', { 'class': 'tf-tops-note' }, [ _('Command responses are transport observations, not firmware heartbeats.') ]));
-		content.push(el('details', { 'class': 'tf-tops-details' }, [ el('summary', {}, [ _('Firmware communication') ]) ].concat(communication)));
-
 
 		dom.content(this.topsCardEl, content);
 		this.topsCardEl.style.display = '';
