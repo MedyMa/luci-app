@@ -32,6 +32,7 @@ end
 function F.new(M,io)
   local deadline=io.now()+16
   local stats={requests=0}
+  local dns={}
   local function fetch(url,limit)
     local seen={}
     for hop=0,3 do
@@ -41,7 +42,8 @@ function F.new(M,io)
       seen[url]=true
       if stats.requests>=8 or io.now()>=deadline then return nil,nil,'budget' end
       local host=url:match('^https://([^/]+)/')
-      local addresses=io.resolve(host)
+      local addresses=dns[host]
+      if addresses==nil then addresses=io.resolve(host); dns[host]=addresses or false end
       if not addresses or #addresses==0 then return nil,nil,'dns' end
       local ipv6,ipv4,known={},{},{}
       for _,a in ipairs(addresses) do

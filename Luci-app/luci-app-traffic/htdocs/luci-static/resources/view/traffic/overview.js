@@ -148,6 +148,10 @@ var SERVICE_ALIASES = {
 var SERVICE_TARGETS = {};
 Object.keys(SERVICE_ALIASES).forEach(function(k) { SERVICE_TARGETS[SERVICE_ALIASES[k]] = 1; });
 var ICON_ALIASES = {
+	'小米': 'xiaomi', '红米': 'xiaomi', '联想': 'lenovo', '华为': 'huawei',
+	'苹果': 'apple', '荣耀': 'honor', '三星': 'samsung', '一加': 'oneplus',
+	'华硕': 'asus', '戴尔': 'dell', '惠普': 'hp', '群晖': 'synology',
+	'威联通': 'qnap', '海康威视': 'hikvision', '佳能': 'canon', '大疆': 'dji',
 	'WangSuKeJi': 'cdn', 'WangXinKeJi': 'cdn', 'z1cdn.com': 'cdn',
 	'Product Hunt': 'producthunt', 'DigiCert': 'certificate',
 	'digicert.com': 'certificate',
@@ -164,8 +168,8 @@ var ICON_ALIASES = {
 function iconName(name) { return ICON_ALIASES[name] || SERVICE_ALIASES[name] || name; }
 
 function avatarLabel(name) {
-	var m = /^([a-z0-9-]{2,})\.[a-z0-9.-]+$/i.exec(String(name));
-	return m ? m[1].slice(0, 2).toUpperCase() : (name || '?').charAt(0).toUpperCase();
+	var host = websiteHost(name);
+	return host ? host.replace(/^www\./, '').split('.')[0].slice(0, 2).toUpperCase() : (name || '?').charAt(0).toUpperCase();
 }
 
 function groupServices(items) {
@@ -265,20 +269,88 @@ function fmtRate(bps) {
 var shippedIcons = null, cachedIcons = null, shippedIndexFailed = false,
 	iconIndexPromise = null, domainIcons = {}, websiteIcons = {};
 
+/* These public resources must not carry an RPC cookie to a redirected origin.
+ * Bound the response while streaming, rather than after allocating its body. */
+function fetchIconIndex(url, limit, fresh) {
+	var controller = typeof AbortController === 'function' ? new AbortController() : null;
+	var timer = controller ? setTimeout(function() { controller.abort(); }, 4000) : null;
+	var options = { credentials: 'omit', redirect: 'error', cache: fresh ? 'no-cache' : 'default' };
+	if (controller) options.signal = controller.signal;
+	return fetch(url, options).then(function(r) {
+		var length = r.headers && Number(r.headers.get('content-length'));
+		var type = r.headers && r.headers.get('content-type');
+		if (!r.ok || length > limit || /^text\/html\b/i.test(type || '')) {
+			if (controller) controller.abort();
+			return null;
+		}
+		if (!r.body || typeof r.body.getReader !== 'function')
+			return r.text().then(function(text) { return text.length <= limit ? text : null; });
+		var reader = r.body.getReader(), chunks = [], size = 0;
+		function next() {
+			return reader.read().then(function(part) {
+				if (part.done) {
+					var bytes = new Uint8Array(size), at = 0;
+					chunks.forEach(function(b) { bytes.set(b, at); at += b.length; });
+					return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+				}
+				size += part.value.length;
+				if (size > limit) { reader.cancel().catch(function() {}); return null; }
+				chunks.push(part.value); return next();
+			});
+		}
+		return next();
+	}).catch(function() { return null; }).finally(function() { if (timer !== null) clearTimeout(timer); });
+}
+
+function websiteHost(name) {
+	var host = String(name).trim().toLowerCase();
+	if (/^https?:\/\//.test(host)) {
+		try { var url = new URL(host); if (url.username || url.password) return null; host = url.hostname; }
+		catch (e) { return null; }
+	}
+	host = host.replace(/\.$/, '');
+	if (host.length > 253 || host.indexOf('.') < 0) return null;
+	var labels = host.split('.'), tld = labels[labels.length - 1];
+	if (labels.some(function(label) { return !label || label.length > 63 || !/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(label); }) ||
+		(!/^[a-z]{2,}$/.test(tld) && !/^xn--[a-z0-9-]+$/.test(tld)) ||
+		/^(?:local|localhost|internal|invalid|test|example|home|lan)$/.test(tld)) return null;
+	return host;
+}
+
+/* Keep in sync with the App's WebsiteHost and the Lua cache discoverer. */
+var WEBSITE_SUFFIXES = {};
+('com net org io cn ai app dev co tv me com.cn net.cn org.cn gov.cn edu.cn ' +
+	'co.uk org.uk ac.uk gov.uk net.uk com.au net.au org.au edu.au gov.au ' +
+	'co.jp ne.jp or.jp ac.jp go.jp co.nz net.nz org.nz co.kr com.tw com.hk com.sg com.br co.in co.za ' +
+	'github.io gitlab.io codeberg.page pages.dev workers.dev vercel.app netlify.app appspot.com ' +
+	'firebaseapp.com web.app blogspot.com blogspot.co.uk wordpress.com notion.site cloudfront.net ' +
+	'azurewebsites.net azurestaticapps.net herokuapp.com readthedocs.io readthedocs.org surge.sh ' +
+	'duckdns.org ddns.net synology.me myqnapcloud.com r2.dev').split(' ').forEach(function(s) { WEBSITE_SUFFIXES[s] = 1; });
+function websiteParents(host) {
+	var labels = host.split('.'), result = [];
+	if (/\.amazonaws\.com$/.test(host)) return result;
+	for (var i = 1; i < labels.length; i++) {
+		if (WEBSITE_SUFFIXES[labels.slice(i).join('.')]) {
+			for (var p = 1; p < i; p++) result.push(labels.slice(p).join('.'));
+			break;
+		}
+	}
+	return result;
+}
+
 function loadWebsiteIndex() {
-	return fetch('/traffic-site-icons/websites.tsv', { cache: 'no-cache' })
-		.then(function(r) { return r.ok ? r.text() : null; })
+	return fetchIconIndex('/traffic-site-icons/websites.tsv', 4 * 1024 * 1024, true)
 		.then(function(text) {
 			if (text === null) return websiteIcons;
 			var map = {};
 			text.split('\n').forEach(function(line) {
 				var cols = line.trim().split('\t'), host = cols[0];
-				if (cols.length < 2 || cols.length > 3 || !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(host) || host.indexOf('..') >= 0) return;
+				if (cols.length < 2 || cols.length > 3 || websiteHost(host) !== host) return;
 				if (cols[1] !== host + '.png' && cols[1] !== host + '.ico' && cols[1] !== host + '.svg') return;
-				if (cols.length === 3 && !/^\d+$/.test(cols[2])) return;
+				if (cols.length === 3 && !/^\d{1,16}$/.test(cols[2])) return;
 				map[host] = cols[1] + (cols.length === 3 ? '?v=' + cols[2] : '');
 			});
-			return map;
+			return Object.keys(map).length || !text.trim() ? map : websiteIcons;
 		}).catch(function() { return websiteIcons; });
 }
 
@@ -286,17 +358,12 @@ function loadWebsiteIndex() {
  * Unknown suffixes stay exact-only. Shared hosting suffixes are boundaries too;
  * this conservative set is not a complete public-suffix database. */
 function websiteIconFile(name, map) {
-	var host = String(name).toLowerCase();
+	var host = websiteHost(name);
+	if (!host) return null;
 	if (map[host]) return map[host];
-	if (!/^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(host)) return null;
-	var labels = host.split('.'), lastTwo = labels.slice(-2).join('.');
-	var compound = /^(?:com\.cn|net\.cn|org\.cn|gov\.cn|edu\.cn|co\.uk|org\.uk|ac\.uk|gov\.uk|net\.uk|com\.au|net\.au|org\.au|edu\.au|gov\.au|co\.jp|ne\.jp|or\.jp|ac\.jp|go\.jp|co\.nz|net\.nz|org\.nz|co\.kr|com\.tw|com\.hk|com\.sg|com\.br|co\.in|co\.za)$/;
-	var shared = /^(?:github\.io|pages\.dev|workers\.dev|vercel\.app|netlify\.app|appspot\.com|blogspot\.com|cloudfront\.net|azurewebsites\.net|herokuapp\.com)$/;
-	var suffixLabels = compound.test(lastTwo) || shared.test(lastTwo) ? 2 :
-		/^(?:com|net|org|io|cn|ai|app|dev|co|tv|me)$/.test(labels[labels.length - 1]) ? 1 : 0;
-	if (!suffixLabels) return null;
-	for (var i = 1; i < labels.length - suffixLabels; i++) {
-		var file = map[labels.slice(i).join('.')];
+	var parents = websiteParents(host);
+	for (var i = 0; i < parents.length; i++) {
+		var file = map[parents[i]];
 		if (file) return file;
 	}
 	return null;
@@ -314,14 +381,13 @@ function refreshWebsiteIcons() {
 }
 
 function loadIndex(url, onFail) {
-	return fetch(url)
-		.then(function(r) { return r.ok ? r.text() : null; })
+	return fetchIconIndex(url, 128 * 1024, false)
 		.then(function(t) {
 			if (t === null) { onFail(); return {}; }
 			var m = {};
 			t.split('\n').forEach(function(l) {
 				l = l.trim();
-				if (l) m[l] = 1;
+				if (l.length <= 128 && /^[a-z0-9-]+$/.test(l)) m[l] = 1;
 			});
 			return m;
 		})
@@ -329,14 +395,13 @@ function loadIndex(url, onFail) {
 }
 
 function loadDomainIndex() {
-	return fetch(L.resource('traffic/icons/domains.tsv'))
-		.then(function(r) { return r.ok ? r.text() : ''; })
+	return fetchIconIndex(L.resource('traffic/icons/domains.tsv'), 1024 * 1024, false)
 		.then(function(t) {
 			var m = {};
-			t.split('\n').forEach(function(line) {
+			(t || '').split('\n').forEach(function(line) {
 				if (!line || line.charAt(0) === '#') return;
 				var cols = line.trim().split('\t');
-				if (cols.length === 2 && /^[a-z0-9.-]+\.[a-z]{2,}$/.test(cols[0]) &&
+				if (cols.length === 2 && websiteHost(cols[0]) === cols[0] &&
 					/^[a-z0-9-]+$/.test(cols[1])) m[cols[0]] = cols[1];
 			});
 			return m;
@@ -363,11 +428,11 @@ function iconKey(name) {
 	/* A packaged domain index connects verified brand-owned sites to artwork
 	 * even when the domain and official icon slugs differ.  Longest suffix first
 	 * lets a subdomain use its parent's mark without querying a third party. */
-	var host = String(name).toLowerCase();
-	if (/^[a-z0-9.-]+\.[a-z]{2,}$/.test(host)) {
-		var labels = host.split('.');
-		for (var i = 0; i < labels.length - 1; i++) {
-			var mapped = domainIcons[labels.slice(i).join('.')];
+	var host = websiteHost(name);
+	if (host) {
+		var parents = [host].concat(websiteParents(host));
+		for (var i = 0; i < parents.length; i++) {
+			var mapped = domainIcons[parents[i]];
 			if (mapped && shippedIcons && shippedIcons[mapped]) return mapped;
 		}
 	}
@@ -455,7 +520,7 @@ function makeIcon(name, color) {
 	img.decoding = 'async';
 	img.onload = function() {
 		box.textContent = '';
-		box.style.background = site || /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(name) ? '#f8fafc' : 'transparent';
+		box.style.background = site || websiteHost(name) ? '#f8fafc' : 'transparent';
 		box.style.boxShadow = 'none';
 		img.className = 'tf-icon-img';
 		box.appendChild(img);

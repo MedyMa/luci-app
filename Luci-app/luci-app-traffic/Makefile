@@ -2,13 +2,13 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-traffic
 PKG_VERSION:=2.0.0
-PKG_RELEASE:=8
+PKG_RELEASE:=9
 PKG_LICENSE:=Apache-2.0
 LUCI_PKGARCH:=all
 
 LUCI_TITLE:=LuCI per-application traffic statistics
 LUCI_DESCRIPTION:=Per-application traffic statistics, UCG style: the totals come from the WAN interface counters, so they stay right with flow offloading on; the per-application breakdown comes from conntrack correlated with AdGuard Home DNS answers, and the proxy tunnel is accounted separately.
-LUCI_DEPENDS:=+luci-base +lua +luci-lib-nixio +curl +ca-bundle +coreutils-timeout
+LUCI_DEPENDS:=+luci-base +lua +luci-lib-nixio +luci-lib-jsonc +curl +ca-bundle +coreutils-timeout
 
 define Build/Prepare/$(PKG_NAME)
 	$(call Build/Prepare/Default)

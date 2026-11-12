@@ -2,6 +2,7 @@
 local nixio,fs=require('nixio'),require('nixio.fs')
 local M=dofile('/usr/share/traffic/website-icons-core.lua')
 local F=dofile('/usr/share/traffic/website-icons-fetch.lua')
+local have_json,jsonc=pcall(require,'luci.jsonc')
 local lock=nixio.open('/tmp/traffic-website-icons.lock','w','600')
 if not lock or not lock:lock('tlock') then os.exit(0) end
 local started=os.clock()
@@ -23,8 +24,8 @@ local fetch,network_stats=F.new(M,{
   request=function(url,host,ips,limit,seconds)
     -- Every hop is pinned separately. Headers/body are bounded in memory, with
     -- no temporary download files, proxy credentials, cookies or unchecked -L.
-    local cmd='curl --silent --include --max-time '..seconds..' --connect-timeout '..math.min(3,seconds)..
-      ' --max-filesize '..limit..' --proto "=https" --noproxy "*" --user-agent "TrafficIconCache/1.1" --resolve '..
+    local cmd='curl --silent --compressed --include --max-time '..seconds..' --connect-timeout '..math.min(3,seconds)..
+      ' --max-filesize '..limit..' --proto "=https" --noproxy "*" --user-agent "TrafficIconCache/1.2" --resolve '..
       quote(host..':443:'..table.concat(ips,','))..' --url '..quote(url)..
       ' 2>/dev/null; printf "\\nTRAFFIC_CURL_EXIT:%s\\n" "$?"'
     local p=io.popen(cmd,'r'); if not p then return {reason='transfer'} end
@@ -55,9 +56,8 @@ if not snapshot or now<scan_at or now-scan_at>=3600 then
     local host=M.host(line:match('^([^\t]+)') or '')
     if host then
       local matched=slugs[host:gsub('[^a-z0-9]+','-')] or packaged[host]
-      local parent=host
-      while not matched and parent:find('.',1,true) do
-        parent=parent:match('^[^.]+%.(.+)$'); matched=packaged[parent]
+      for _,parent in ipairs(M.parents(host)) do
+        if packaged[parent] then matched=true; break end
       end
       local root,suffix=host:match('^([^.]+)%.(.+)$')
       local suffixes={com=true,net=true,org=true,io=true,cn=true,ai=true,app=true,dev=true,co=true,tv=true,me=true,['com.cn']=true,['net.cn']=true,['org.cn']=true}
@@ -80,7 +80,7 @@ else
 end
 -- Full hourly discovery, serial minute-by-minute downloads with a fair cursor.
 local result=M.run({
-  now=os.time, fetch=fetch,
+  now=os.time, fetch=fetch, decode=have_json and jsonc.parse or nil,
   read=function(file) return fs.readfile(cache..'/'..file,4*1024*1024) end,
   stat=function(file) return fs.stat(cache..'/'..file) end,
   list=function()

@@ -1072,10 +1072,10 @@
   "canon": {
    "file": "canon.svg",
    "application": "Canon",
-   "source": "dashboard-icons",
-   "upstream": "canonical",
-   "licence": "see upstream LICENSE",
-   "url": "https://github.com/homarr-labs/dashboard-icons/blob/main/LICENSE"
+   "source": "Wikimedia Commons",
+   "upstream": "File:Canon wordmark.svg",
+   "licence": "Public domain; trademarks of their owners",
+   "url": "https://commons.wikimedia.org/wiki/File:Canon_wordmark.svg"
   },
   "csdn": {
    "file": "csdn.svg",
@@ -5216,10 +5216,10 @@
   "tcl": {
    "file": "tcl.svg",
    "application": "TCL",
-   "source": "iconify:material-icon-theme",
-   "upstream": "material-icon-theme:tcl",
-   "licence": "MIT",
-   "url": "https://github.com/material-extensions/vscode-material-icon-theme/blob/main/LICENSE"
+   "source": "Wikimedia Commons",
+   "upstream": "File:Logo of the TCL Corporation.svg",
+   "licence": "Public domain; trademarks of their owners",
+   "url": "https://commons.wikimedia.org/wiki/File:Logo_of_the_TCL_Corporation.svg"
   },
   "tbank-ru": {
    "file": "tbank-ru.svg",

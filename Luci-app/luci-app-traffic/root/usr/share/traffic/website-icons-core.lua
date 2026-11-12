@@ -1,18 +1,42 @@
 -- Bounded website icon cache policy. Lua 5.1; IO/network supplied by the runner.
-local M = {limit=65536, budget=16*1024*1024, count=4096}
+local M = {limit=65536, page_limit=131072, budget=16*1024*1024, count=4096}
 local source=debug.getinfo(1,'S').source:sub(2)
 local S=dofile(source:gsub('website%-icons%-core.lua$','website-icons-formats.lua'))
 function M.host(name)
   if type(name)~='string' or #name>253 then return nil end
-  name=name:lower()
-  if not name:match('^[a-z0-9][a-z0-9%.%-]*%.[a-z]+$') then return nil end
+  name=name:lower():gsub('%.$','')
+  if not name:match('^[a-z0-9][a-z0-9%.%-]*%.[a-z0-9%-]+$') then return nil end
   for part in name:gmatch('[^.]+') do
     if #part>63 or not part:match('^[a-z0-9]') or not part:match('[a-z0-9]$') then return nil end
   end
   if name:find('..',1,true) then return nil end
   local suffix=name:match('%.([^.]+)$')
-  if #suffix<2 or ({['local']=true,localhost=true,internal=true,invalid=true,test=true,example=true,home=true,lan=true})[suffix] then return nil end
+  if #suffix<2 or not(suffix:match('^[a-z]+$') or suffix:match('^xn%-%-[a-z0-9%-]+$')) or
+    ({['local']=true,localhost=true,internal=true,invalid=true,test=true,example=true,home=true,lan=true})[suffix] then return nil end
   return name
+end
+-- Match the App/LuCI lookup boundary. Unknown suffixes stay exact-only. Never
+-- turn a tenant's favicon into the mark for a different shared-hosting tenant.
+local suffixes={}
+for suffix in ('com net org io cn ai app dev co tv me com.cn net.cn org.cn gov.cn edu.cn '..
+  'co.uk org.uk ac.uk gov.uk net.uk com.au net.au org.au edu.au gov.au '..
+  'co.jp ne.jp or.jp ac.jp go.jp co.nz net.nz org.nz co.kr com.tw com.hk com.sg com.br co.in co.za '..
+  'github.io gitlab.io codeberg.page pages.dev workers.dev vercel.app netlify.app appspot.com '..
+  'firebaseapp.com web.app blogspot.com blogspot.co.uk wordpress.com notion.site cloudfront.net '..
+  'azurewebsites.net azurestaticapps.net herokuapp.com readthedocs.io readthedocs.org surge.sh '..
+  'duckdns.org ddns.net synology.me myqnapcloud.com r2.dev'):gmatch('%S+') do suffixes[suffix]=true end
+function M.parents(host)
+  local result,labels={},{}
+  if not M.host(host) or host:match('%.amazonaws%.com$') then return result end
+  for word in host:gmatch('[^.]+') do labels[#labels+1]=word end
+  local boundary
+  for i=2,#labels do
+    if suffixes[table.concat(labels,'.',i)] then boundary=i; break end
+  end
+  if boundary then
+    for i=2,boundary-1 do result[#result+1]=table.concat(labels,'.',i) end
+  end
+  return result
 end
 function M.public(ip)
   if type(ip)~='string' then return false end
@@ -97,22 +121,30 @@ function M.image(s)
   return nil,nil,'unsupported_format'
 end
 function M.inline(uri)
-  if type(uri)~='string' then return nil end
-  local mime,encoded=uri:match('^data:(image/[%w.+-]+);base64,(.+)$')
-  local kinds={['image/png']='png',['image/x-icon']='ico',['image/vnd.microsoft.icon']='ico',['image/svg+xml']='svg'}
-  if not kinds[mime] then return nil end
-  local decoded=S.base64(encoded,M.limit)
+  if type(uri)~='string' or #uri>3*M.limit then return nil end
+  local mime,params,encoded=uri:match('^data:(image/[%w.+-]+)([^,]*),(.+)$')
+  local kinds={['image/png']='png',['image/x-icon']='ico',['image/ico']='ico',['image/icon']='ico',['image/vnd.microsoft.icon']='ico',['image/svg+xml']='svg'}
+  if not mime or not kinds[mime:lower()] then return nil end
+  mime,params=mime:lower(),params:lower()
+  local decoded
+  if params==';base64' or params==';charset=utf-8;base64' then decoded=S.base64(encoded,M.limit)
+  elseif mime=='image/svg+xml' and (params=='' or params==';charset=utf-8') then
+    if encoded:gsub('%%%x%x',''):find('%%') then return nil end
+    decoded=encoded:gsub('%%(%x%x)',function(n) return string.char(tonumber(n,16)) end)
+  end
   local data,kind=M.image(decoded)
   if kind==kinds[mime] then return data,kind end
 end
 local function entity(s)
-  return (s:gsub('&amp;','&'):gsub('&quot;','"'):gsub('&#(%d+);',function(n)
+  return (s:gsub('&amp;','&'):gsub('&quot;','"'):gsub('&apos;',"'"):gsub('&#[xX](%x+);',function(n)
+    n=tonumber(n,16); return n and n>=32 and n<127 and string.char(n) or ''
+  end):gsub('&#(%d+);',function(n)
     n=tonumber(n); return n and n>=32 and n<127 and string.char(n) or ''
   end))
 end
 -- Resolve only ordinary HTTPS URLs. Redirect destinations use the same parser.
 function M.url(base, href)
-  if type(href)~='string' or #href>2048 or href:find('[%s%c\\]') then return nil end
+  if type(base)~='string' or type(href)~='string' or #href>2048 or href:find('[%s%c\\]') then return nil end
   href=href:gsub('#.*$','')
   if href:sub(1,2)=='//' then href='https:'..href end
   if not href:match('^[%a][%w+.-]*:') then
@@ -128,7 +160,8 @@ function M.url(base, href)
   local authority,path=href:match('^https://([^/?#]+)(.*)$')
   if not authority then return nil end
   authority=authority:lower():gsub(':443$','')
-  if not M.host(authority) then return nil end
+  authority=M.host(authority)
+  if not authority then return nil end
   if path=='' or path:sub(1,1)=='?' then path='/'..path end
   local query=path:match('(%?.*)$') or ''
   local raw=path:gsub('%?.*$','')
@@ -156,9 +189,13 @@ local function attributes(tag)
   end
   return attrs
 end
-function M.candidates(page, host)
+local function links(page, host)
   local base=host:match('^https://') and host or 'https://'..host..'/'
-  page=(page or ''):gsub('<!%-%-.-%-%->','')
+  page=(page or ''):sub(1,M.page_limit):gsub('<!%-%-.-%-%->','')
+  page=page:gsub('<[sS][cC][rR][iI][pP][tT][^>]*>.-</[sS][cC][rR][iI][pP][tT]%s*>','')
+    :gsub('<[sS][tT][yY][lL][eE][^>]*>.-</[sS][tT][yY][lL][eE]%s*>','')
+  local head_end=page:lower():find('</head',1,true)
+  if head_end then page=page:sub(1,head_end-1) end
   for tag in page:gmatch('<[^>]+>') do
     if tag:lower():match('^<base[%s>]') then
       local href=attributes(tag).href
@@ -167,27 +204,81 @@ function M.candidates(page, host)
       if href~=nil then base=M.url(base,href); break end
     end
   end
-  local result,vectors,seen={},{},{}
+  local result={}
   for tag in page:gmatch('<[^>]+>') do
     if tag:lower():match('^<link[%s>]') then
       local attrs=attributes(tag)
-      local rel=(attrs.rel or ''):lower()
-      local href=attrs.href
-      if href and ((' '..rel..' '):find(' icon ',1,true) or rel=='apple-touch-icon' or rel=='apple-touch-icon-precomposed') then
-        href=href:match('^data:') and (M.inline(href) and href) or M.url(base or '',href)
-        local ext=href and href:lower():gsub('%?.*$',''):match('%.([a-z]+)$')
-        local unsupported=({webp=true,gif=true,jpg=true,jpeg=true,avif=true})[ext or '']
-        if href and not unsupported and not seen[href] then
-          seen[href]=true
-          local target=(ext=='svg' or href:match('^data:image/svg')) and vectors or result
-          if #target<3 then target[#target+1]=href end
-          if #result>=3 then break end
-        end
-      end
+      attrs.rel=(attrs.rel or ''):lower():gsub('%s+',' ')
+      result[#result+1]=attrs
+      if #result>=128 then break end
     end
   end
-  for _,href in ipairs(vectors) do if #result<3 then result[#result+1]=href end end
+  return result,base
+end
+local function ranked(entries,base,limit)
+  local all,seen={},{}
+  for _,attrs in ipairs(entries) do
+    local href=type(attrs.href)=='string' and attrs.href or attrs.src
+    if type(href)~='string' then href=nil end
+    href=href and (href:match('^data:') and (M.inline(href) and href) or M.url(base or '',href))
+    local ext=href and href:lower():gsub('%?.*$',''):match('%.([a-z]+)$')
+    local mime=(attrs.type or ''):lower():gsub(';.*$',''):gsub('^%s+',''):gsub('%s+$','')
+    local unsupported=({webp=true,gif=true,jpg=true,jpeg=true,avif=true})[ext or ''] or
+      (mime~='' and not ({['image/png']=true,['image/x-icon']=true,['image/ico']=true,['image/icon']=true,['image/vnd.microsoft.icon']=true,['image/svg+xml']=true,['application/octet-stream']=true})[mime])
+    if href and not unsupported and not seen[href] then
+      seen[href]=true
+      local vector=ext=='svg' or mime=='image/svg+xml' or href:match('^data:image/svg')
+      local score=vector and 0 or 100
+      if ext=='png' or mime=='image/png' then score=score+10 end
+      local size=0
+      for w,h in (attrs.sizes or ''):lower():gmatch('(%d+)x(%d+)') do
+        w,h=tonumber(w),tonumber(h)
+        if w==h and w>=32 and w<=256 then size=math.max(size,w) end
+      end
+      if size>0 then score=score+20+size/256 end
+      all[#all+1]={href=href,score=score,order=#all+1}
+    end
+  end
+  table.sort(all,function(a,b) return a.score==b.score and a.order<b.order or a.score>b.score end)
+  local result={}; for i=1,math.min(limit,#all) do result[#result+1]=all[i].href end
   return result
+end
+function M.candidates(page, host)
+  local found,base=links(page,host)
+  local icons={}
+  for _,attrs in ipairs(found) do
+    local rel=' '..attrs.rel..' '
+    if rel:find(' icon ',1,true) or rel:find(' apple-touch-icon ',1,true) or
+      rel:find(' apple-touch-icon-precomposed ',1,true) then icons[#icons+1]=attrs end
+  end
+  return ranked(icons,base,3)
+end
+function M.manifests(page, host)
+  local found,base=links(page,host)
+  local result={}
+  for _,attrs in ipairs(found) do
+    if (' '..attrs.rel..' '):find(' manifest ',1,true) then
+      local href=M.url(base or '',attrs.href)
+      if href then result[#result+1]=href; if #result>=2 then break end end
+    end
+  end
+  return result
+end
+function M.manifest_candidates(value, base)
+  local entries={}
+  if type(value)=='table' and type(value.icons)=='table' then
+    for i,icon in ipairs(value.icons) do
+      if i>32 then break end
+      if type(icon)=='table' and type(icon.src)=='string' and
+        (icon.type==nil or type(icon.type)=='string') and
+        (icon.sizes==nil or type(icon.sizes)=='string') then entries[#entries+1]=icon end
+    end
+  end
+  return ranked(entries,base,2)
+end
+local function cooldown(reason)
+  if ({dns=true,connect=true,timeout=true,tls=true,transfer=true,budget=true,interrupted=true,storage=true,http_429=true,http_500=true,http_502=true,http_503=true,http_504=true})[reason] then return 900 end
+  return 86400
 end
 local function trim(env, records)
   local entries,bytes,dirty,metadata={},0,false,0
@@ -261,7 +352,7 @@ function M.run(env, names, packaged)
     local r=host and records[host]
     if host and not packaged[host] and (not r or
        ((r.good==0 or now-r.good>=7*86400 or now<r.good) and
-        (r.bad==0 or now-r.bad>=86400 or now<r.bad))) then
+        (r.bad==0 or now-r.bad>=cooldown(r.reason) or now<r.bad))) then
       r=r or {good=0,bad=0,file=''}
       -- Persist cooldown BEFORE DNS/download. A killed/timed-out task must not
       -- retry the same unresponsive site on every minute of the collector.
@@ -270,23 +361,44 @@ function M.run(env, names, packaged)
       local count,bytes=trim(env,records)
       if not publish(env,records) then return {index='',entries=count,bytes=bytes,dirty=true} end
       local data,kind,reason
-      local origins={host}
-      if host:sub(1,4)~='www.' then origins[2]='www.'..host end
+      local origins,seen={host},{[host]=true}
+      local parents=M.parents(host)
+      local root=parents[#parents] or host
+      for _,origin in ipairs({root,'www.'..root}) do
+        if M.host(origin) and not seen[origin] then origins[#origins+1]=origin; seen[origin]=true end
+      end
       for _,origin in ipairs(origins) do
         local final,why
-        data,final,why=env.fetch('https://'..origin..'/favicon.ico',M.limit)
-        data,kind=M.image(data); reason=why or (not kind and 'unsupported_format') or reason
+        local function icon(url)
+          if url:match('^data:') then data,kind=M.inline(url); why=nil
+          else data,final,why=env.fetch(url,M.limit); data,kind=M.image(data) end
+          reason=why or (not kind and 'unsupported_format') or reason
+          return kind~=nil
+        end
+        -- Keep the inexpensive conventional icon path. Modern declarations and
+        -- manifests fill the gaps, under the same shared fetch/deadline budget.
+        icon('https://'..origin..'/favicon.ico')
+        local page,page_url,page_why
         if not kind then
-          local page,page_url,page_why=env.fetch('https://'..origin..'/',M.limit)
+          page,page_url,page_why=env.fetch('https://'..origin..'/',M.page_limit)
           reason=page_why or (page and 'no_supported_icon') or reason
-          for _,url in ipairs(M.candidates(page,page_url or origin)) do
-            if url:match('^data:') then data,kind=M.inline(url); why=nil
-            else data,final,why=env.fetch(url,M.limit); data,kind=M.image(data) end
-            reason=why or (not kind and 'unsupported_format') or reason
+          for _,url in ipairs(M.candidates(page,page_url or origin)) do if icon(url) then break end end
+        end
+        if not kind and env.decode then
+          for _,url in ipairs(M.manifests(page,page_url or origin)) do
+            local text,manifest_url,manifest_why=env.fetch(url,M.limit)
+            reason=manifest_why or reason
+            if text then
+              local ok,value=pcall(env.decode,text)
+              if ok then
+                for _,candidate in ipairs(M.manifest_candidates(value,manifest_url or url)) do if icon(candidate) then break end end
+              end
+            end
             if kind then break end
           end
         end
         if kind then break end
+        if reason=='budget' then break end
       end
       if kind then
         local file=host..'.'..kind
