@@ -1,0 +1,14 @@
+#!/bin/sh
+# Shared with TurboACC so QDMA ownership and HNAT engine changes serialize.
+case "$1" in apply|refresh|stop|migrate|status) ;; *) echo "Usage: mtk-hqos {apply|refresh|stop|migrate|status}" >&2; exit 2 ;; esac
+umask 077
+if [ "${MTK_HNAT_LOCK_HELD:-0}" != 1 ]; then
+	exec 9>/var/lock/mtk-hnat.lock || exit 1
+	if [ "$1" = status ]; then
+		flock -w 1 9 || { echo '{"schema":1,"busy":true}'; exit 0; }
+	else
+		flock -w 20 9 || { echo 'mtk-hqos: HNAT control is busy' >&2; exit 1; }
+	fi
+	export MTK_HNAT_LOCK_HELD=1
+fi
+exec /usr/bin/lua /usr/share/mtk-hqos/main.lua "$1"

@@ -1,0 +1,30 @@
+#!/bin/sh /etc/rc.common
+START=95
+STOP=05
+USE_PROCD=1
+
+start_service() {
+	config_load mtk-hqos
+	local enabled
+	config_get_bool enabled global enabled 0
+	if [ "$enabled" -ne 1 ]; then /usr/sbin/mtk-hqos stop; return $?; fi
+	# Keep retrying when WAN comes up after this service during boot.
+	/usr/sbin/mtk-hqos apply
+	procd_open_instance
+	procd_set_param command /usr/share/mtk-hqos/watch.sh
+	procd_set_param respawn 3600 5 5
+	procd_close_instance
+}
+
+reload_service() {
+	start_service
+}
+
+stop_service() {
+	/usr/sbin/mtk-hqos stop
+}
+
+service_triggers() {
+	procd_add_reload_trigger mtk-hqos
+	procd_add_interface_trigger "interface.*" "*" /etc/init.d/mtk-hqos reload
+}

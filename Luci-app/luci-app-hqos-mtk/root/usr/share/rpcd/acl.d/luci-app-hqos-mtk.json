@@ -1,0 +1,10 @@
+{
+  "luci-app-hqos-mtk": {
+    "description": "Manage MediaTek HQoS",
+    "read": {
+      "uci": [ "mtk-hqos" ],
+      "ubus": { "luci.hqos": [ "getStatus" ], "luci-rpc": [ "getHostHints" ], "network.interface": [ "dump" ] }
+    },
+    "write": { "uci": [ "mtk-hqos" ], "ubus": { "luci.hqos": [ "apply" ] } }
+  }
+}

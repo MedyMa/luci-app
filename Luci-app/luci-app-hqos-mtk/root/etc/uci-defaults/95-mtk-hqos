@@ -1,0 +1,17 @@
+#!/bin/sh
+/usr/sbin/mtk-hqos migrate || exit 1
+# Remove only the exact restart line installed by the old EQoS backend.
+if [ -f /etc/firewall.user ]; then
+	sed -i '\|^/etc/init\.d/eqos start$|d' /etc/firewall.user
+fi
+uci -q batch <<'EOF'
+delete ucitrack.@eqos[-1]
+delete ucitrack.@mtk-hqos[-1]
+add ucitrack mtk-hqos
+set ucitrack.@mtk-hqos[-1].init=mtk-hqos
+commit ucitrack
+EOF
+/etc/init.d/mtk-hqos enable
+rm -f /tmp/luci-indexcache /tmp/luci-indexcache.*
+/etc/init.d/rpcd reload >/dev/null 2>&1 || true
+exit 0

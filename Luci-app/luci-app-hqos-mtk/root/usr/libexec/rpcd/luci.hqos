@@ -1,0 +1,14 @@
+#!/bin/sh
+case "$1:$2" in
+list:*) printf '%s\n' '{"getStatus":{},"apply":{}}' ;;
+call:getStatus) exec /usr/sbin/mtk-hqos status ;;
+call:apply)
+	if /usr/sbin/mtk-hqos apply >/dev/null 2>&1 &&
+	   /etc/init.d/mtk-hqos reload >/dev/null 2>&1 && [ ! -s /var/run/mtk-hqos/error ]; then
+		printf '%s\n' '{"success":true}'
+	else
+		printf '%s\n' '{"success":false}'
+	fi
+	;;
+*) exit 1 ;;
+esac

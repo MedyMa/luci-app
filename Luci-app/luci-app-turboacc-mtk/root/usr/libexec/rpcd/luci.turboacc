@@ -69,6 +69,7 @@ local methods = {
 			local boardinfo = util.ubus("system", "board") or {}
 			local kernel    = tostring(boardinfo.kernel or "")
 			local features  = {
+				hqosActive        = fs.access("/var/run/mtk-hqos/baseline.json") or fs.access("/var/run/eqos.active") or fs.access("/var/run/eqos/mode"),
 				eqosActive        = fs.access("/var/run/eqos.active") or fs.access("/var/run/eqos/mode"),
 				hasIPV6           = fs.access("/proc/net/ipv6_route"),
 				-- mt798x primary path is HNAT; other engines are user-selectable (kernel modules may be absent, init script handles gracefully)

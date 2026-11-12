@@ -1,0 +1,21 @@
+{
+  "admin/mtk": {
+    "title": "MTK",
+    "order": 80,
+    "action": { "type": "firstchild", "recurse": true }
+  },
+  "admin/mtk/hqos": {
+    "title": "HQoS",
+    "order": 40,
+    "action": { "type": "view", "path": "hqos" },
+    "depends": { "acl": [ "luci-app-hqos-mtk" ], "uci": { "mtk-hqos": true } }
+  },
+  "admin/mtk/eqos": {
+    "action": { "type": "alias", "path": "admin/mtk/hqos" },
+    "depends": { "acl": [ "luci-app-hqos-mtk" ] }
+  },
+  "admin/services/eqos": {
+    "action": { "type": "alias", "path": "admin/mtk/hqos" },
+    "depends": { "acl": [ "luci-app-hqos-mtk" ] }
+  }
+}

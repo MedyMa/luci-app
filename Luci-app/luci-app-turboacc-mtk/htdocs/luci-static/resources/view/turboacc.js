@@ -1045,8 +1045,8 @@ function buildForm(features, config) {
 		o.value('shortcut_fe_cm', _('SFE 连接管理器'));
 	o.value('mediatek_hnat', features.hasMEDIATEKHNAT ? _('MediaTek HNAT') : _('MediaTek HNAT（保存后尝试）'));
 	o.validate = function(section, value) {
-		if (features.eqosActive && value !== 'mediatek_hnat')
-			return _('请先在 EQoS 页面关闭限速服务，再切换加速引擎。');
+		if ((features.hqosActive || features.eqosActive) && value !== 'mediatek_hnat')
+			return _('请先在 HQoS 页面关闭限速服务，再切换加速引擎。');
 		if ((value === 'flow_offloading' && !features.hasFLOWOFFLOADING) ||
 			(value === 'fast_classifier' && !features.hasFASTCLASSIFIER) ||
 			(value === 'shortcut_fe_cm' && !features.hasSHORTCUTFECM))
@@ -1208,8 +1208,8 @@ function buildForm(features, config) {
 		o = s.taboption('hnat', form.Flag, 'fastpath_mh_eth_hnat', _('启用有线 HNAT'),
 			_('启用 MediaTek HNAT hook_toggle；保存并应用后由 turboacc 服务写入内核开关。'));
 		o.validate = function(section, value) {
-			return !features.eqosActive || value === '1' ||
-				_('EQoS 正在使用 HNAT，请先关闭 EQoS 限速服务。');
+			return !(features.hqosActive || features.eqosActive) || value === '1' ||
+				_('HQoS 正在使用 HNAT，请先关闭 HQoS 限速服务。');
 		};
 		o.default = o.enabled;
 		o.rmempty = false;

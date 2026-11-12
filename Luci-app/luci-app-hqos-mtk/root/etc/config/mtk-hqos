@@ -1,0 +1,7 @@
+config hqos 'global'
+	option enabled '0'
+	option lan 'lan'
+	list wan 'wan'
+	list wan 'wan6'
+	option download '0'
+	option upload '0'
