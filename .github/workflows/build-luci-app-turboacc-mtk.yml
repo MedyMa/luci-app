@@ -215,6 +215,11 @@ jobs:
           # Match the upstream prerequisite check on runners using uutils install.
           sed -i 's/^\([[:space:]]*install --version | \)grep GNU/\1grep -E "GNU|uutils"/' include/prereq-build.mk
           install --version | head -n 1
+          # C23 treats empty parameter lists as void; match Lemon's definitions.
+          lemon_source=feeds/luci/modules/luci-base/src/contrib/lemon.c
+          if [ -f "$lemon_source" ]; then
+            sed -i -E 's/^void (FindRulePrecedences|FindFirstSets|FindStates|FindLinks|FindFollowSets|FindActions)\(\);$/void \1(struct lemon *);/' "$lemon_source"
+          fi
           package_po_dir="$SDK_DIR/feeds/luci/applications/${PKG_NAME}/po"
           turboacc_i18n_langs=''
 
