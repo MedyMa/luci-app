@@ -212,6 +212,9 @@ jobs:
         working-directory: ${{ env.SDK_DIR }}
         run: |
           set -eux
+          # Match the upstream prerequisite check on runners using uutils install.
+          sed -i 's/^\([[:space:]]*install --version | \)grep GNU/\1grep -E "GNU|uutils"/' include/prereq-build.mk
+          install --version | head -n 1
           package_po_dir="$SDK_DIR/feeds/luci/applications/${PKG_NAME}/po"
           turboacc_i18n_langs=''
 
