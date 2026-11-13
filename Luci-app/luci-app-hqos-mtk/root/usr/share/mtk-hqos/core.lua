@@ -260,9 +260,13 @@ function M.nft(plan)
 				local reply = direction == "up" and rule.down_qid or rule.up_qid
 				lines[#lines + 1] = "\tchain save_" .. index .. "_" .. direction .. " {"
 				for _, ct_direction in ipairs({ "original", "reply" }) do
-					local value = 0x80008000 + (ct_direction == "original" and original or reply) * 65536 + (ct_direction == "original" and reply or original)
+					-- OpenWrt Lua uses signed 32-bit integers. Format each half
+					-- separately so the validity bits never overflow %x.
+					local high = 0x8000 + (ct_direction == "original" and original or reply)
+					local low = 0x8000 + (ct_direction == "original" and reply or original)
+					local value = string.format("0x%04x%04x", high, low)
 					for _, guard in ipairs({ "ct mark & 0x803f803f == 0", "ct mark & 0x80008000 == 0x80008000" }) do
-						lines[#lines + 1] = "\t\tct direction " .. ct_direction .. " " .. guard .. " ct mark set (ct mark & 0x7fc07fc0) | " .. string.format("0x%08x", value) .. " update @selected { ct id timeout 6h } return"
+						lines[#lines + 1] = "\t\tct direction " .. ct_direction .. " " .. guard .. " ct mark set (ct mark & 0x7fc07fc0) | " .. value .. " update @selected { ct id timeout 6h } return"
 					end
 				end
 				lines[#lines + 1] = "\t}"
