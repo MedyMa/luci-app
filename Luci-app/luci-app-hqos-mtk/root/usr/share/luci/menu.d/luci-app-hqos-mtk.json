@@ -5,7 +5,7 @@
     "action": { "type": "firstchild", "recurse": true }
   },
   "admin/mtk/hqos": {
-    "title": "HQoS",
+    "title": "网速控制",
     "order": 40,
     "action": { "type": "view", "path": "hqos" },
     "depends": { "acl": [ "luci-app-hqos-mtk" ], "uci": { "mtk-hqos": true } }

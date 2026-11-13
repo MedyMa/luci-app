@@ -4,7 +4,6 @@
 'require view';
 'require rpc';
 'require poll';
-'require ui';
 'require network';
 
 var style = `
@@ -34,7 +33,7 @@ var style = `
 .mtk-hqos .cbi-map>h2,.mtk-hqos .cbi-map-descr{display:none}
 .mtk-hqos .cbi-section>h3{margin:0 0 18px;padding:0;background:none;border:0;box-shadow:none;color:inherit;font-size:19px;overflow:visible}
 .mtk-hqos .cbi-section-node{padding:0;background:none;border:0;box-shadow:none}
-.mtk-hqos .cbi-section-node>.cbi-value{display:flex;align-items:center;gap:18px;margin:0;padding:12px 0;background:none;border:0}
+.mtk-hqos .cbi-section-node>.cbi-value:not(.hidden){display:flex;align-items:center;gap:18px;margin:0;padding:12px 0;background:none;border:0}
 .mtk-hqos .cbi-value-title{float:none;flex:0 0 160px;width:160px;padding:0;text-align:left;color:inherit;overflow:visible}
 .mtk-hqos .cbi-value-field{margin:0;min-width:0;padding:0;flex:1;line-height:1.5}
 #cbi-mtk-hqos input[type=text],#cbi-mtk-hqos input[type=number]{width:100%;max-width:420px;min-height:40px;border-radius:10px;background:var(--hqos-input)!important;color:var(--hqos-accent)!important;box-shadow:none}
@@ -65,11 +64,9 @@ var style = `
 .mtk-hqos .hqos-queues .tr,.mtk-hqos .hqos-queues .table-titles{display:table-row}
 .mtk-hqos .hqos-queues .td,.mtk-hqos .hqos-queues .th{display:table-cell;white-space:nowrap}
 .mtk-hqos .hqos-queues .td,.mtk-hqos .hqos-queues .th{padding:12px 14px;font-variant-numeric:tabular-nums}
-.mtk-hqos .hqos-actions{display:flex;justify-content:flex-end;align-items:center;gap:12px;margin-top:16px}
-.mtk-hqos .hqos-actions p{flex:1;margin:0;font-size:.85rem;opacity:.7}
+.mtk-hqos .hqos-note{margin:12px 0 0;font-size:12px;opacity:.7}
 .mtk-hqos.hqos-dark,body:has(.mtk-hqos.hqos-dark) #cbi-mtk-hqos{--hqos-accent:var(--dark-link-color,#b0c1ff)}
 .mtk-hqos.hqos-dark .hqos-icon{background:linear-gradient(140deg,var(--dark-primary,#5a6cc5),#6f83d4)}
-@media(max-width:700px){.mtk-hqos .hqos-actions{align-items:flex-start;flex-direction:column}.mtk-hqos .hqos-actions button{align-self:flex-end}}
 #cbi-mtk-hqos{font-family:inherit;font-size:14px;line-height:1.5;text-transform:none}
 #cbi-mtk-hqos-global{display:block}
 #cbi-mtk-hqos .cbi-section-node>.cbi-value{padding:10px 0;align-items:flex-start}
@@ -96,11 +93,24 @@ var style = `
  #cbi-mtk-hqos-rule .cbi-section-actions>div{display:flex;justify-content:flex-end;gap:8px}
 }
 @media(max-width:430px){#cbi-mtk-hqos .cbi-section-node>.cbi-value>.cbi-value-title{padding-top:0}#cbi-mtk-hqos .cbi-section-node>.cbi-value{gap:8px}}
+#modal_overlay .modal.cbi-modal:has(>#cbi-mtk-hqos){box-sizing:border-box;width:calc(100% - 32px);max-width:720px;min-width:0;max-height:calc(100vh - 48px);max-height:calc(100dvh - 48px);margin:24px auto;padding:22px;overflow-y:auto;font-family:inherit;font-size:14px;line-height:1.5;text-transform:none}
+#modal_overlay #cbi-mtk-hqos .cbi-section-node{gap:0}
+#modal_overlay #cbi-mtk-hqos .cbi-section-node>.cbi-value:not(.hidden){display:flex;align-items:flex-start;gap:16px;margin:0;padding:8px 0}
+#modal_overlay #cbi-mtk-hqos .cbi-value-title{float:none;flex:0 0 150px;width:150px;padding:10px 0 0;text-align:left;line-height:20px}
+#modal_overlay #cbi-mtk-hqos .cbi-value-field{flex:1;min-width:0;margin:0;padding:0;line-height:1.5}
+#modal_overlay #cbi-mtk-hqos .cbi-value-description{padding:0;margin:6px 0 0;font-size:12px;line-height:1.6}
+#modal_overlay .modal.cbi-modal:has(>#cbi-mtk-hqos)>.button-row{flex-wrap:nowrap;gap:10px;padding-top:12px}
+#modal_overlay .modal.cbi-modal:has(>#cbi-mtk-hqos)>.button-row>.cbi-button{flex:0 0 auto;font:inherit;min-height:40px;border-radius:8px;text-transform:none}
+@media(max-width:560px){
+ #modal_overlay .modal.cbi-modal:has(>#cbi-mtk-hqos){width:calc(100% - 24px);max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px);margin:12px auto;padding:16px}
+ #modal_overlay #cbi-mtk-hqos .cbi-section-node>.cbi-value{flex-direction:column;gap:7px;padding:8px 0}
+ #modal_overlay #cbi-mtk-hqos .cbi-value-title{flex-basis:auto;width:auto;padding:0}
+ #modal_overlay #cbi-mtk-hqos .cbi-value-field{width:100%}
+}
 
 `;
 
 var callStatus = rpc.declare({ object: 'luci.hqos', method: 'getStatus', expect: { '': {} } });
-var callApply = rpc.declare({ object: 'luci.hqos', method: 'apply', expect: { '': {} } });
 var callInterfaces = rpc.declare({ object: 'network.interface', method: 'dump', expect: { 'interface': [] } });
 var CONFIG = 'mtk-hqos';
 
@@ -152,17 +162,9 @@ return view.extend({
 		var message = E('div', { 'class': 'hqos-error', 'role': 'status' });
 		var queues = E('div', { 'class': 'table hqos-queues', 'role': 'table', 'aria-label': _('QDMA 队列') });
 		var paths = {};
-		var reapply = E('button', { 'class': 'cbi-button cbi-button-action', 'type': 'button', 'disabled': !L.hasViewPermission() || null, 'click': ui.createHandlerFn(this, function() {
-			return callApply().then(function(result) {
-				return callStatus().then(function(updated) {
-					update(updated);
-					if (!result.success) ui.addNotification(null, E('p', {}, updated.error || _('应用失败，请检查配置。')), 'error');
-				});
-			});
-		}) }, _('重新应用'));
 		var header = E('div', { 'class': 'hqos-header' }, [
 			E('div', { 'class': 'hqos-identity' }, [ speedIcon(), E('div', {}, [
-				E('h2', { 'class': 'hqos-title' }, 'HQoS'), service,
+				E('h2', { 'class': 'hqos-title' }, _('网速控制')), service,
 				E('p', { 'style': 'margin:12px 0 0;opacity:.75' }, _('设备与端口限速'))
 			]) ]),
 			E('div', { 'class': 'hqos-metrics', 'style': 'grid-template-columns:repeat(2,minmax(0,1fr))' }, [
@@ -254,7 +256,7 @@ return view.extend({
 		});
 
 		function update(updated) {
-			if (!updated || updated.schema !== 1) updated = { schema: 0, error: _('无法获取 HQoS 状态') };
+			if (!updated || updated.schema !== 1) updated = { schema: 0, error: _('无法获取网速控制状态') };
 			if (updated.busy) { service.textContent = label(updated); return; }
 			state = updated;
 			paths = {};
@@ -294,7 +296,7 @@ return view.extend({
 			page = E('div', { 'class': 'mtk-hqos' }, [ E('style', {}, style), header, message, formNode,
 				E('section', { 'class': 'cbi-section' }, [ E('h3', {}, _('QDMA 队列')),
 					E('div', { 'class': 'hqos-queue-scroll' }, queues),
-					E('div', { 'class': 'hqos-actions' }, [ E('p', {}, _('计数来自驱动；缺失时显示不可用。')), reapply ]) ]) ]);
+					E('p', { 'class': 'hqos-note' }, _('计数来自驱动；缺失时显示不可用。')) ]) ]);
 			update(state);
 			return page;
 		});
