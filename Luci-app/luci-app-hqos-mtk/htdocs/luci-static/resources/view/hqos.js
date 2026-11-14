@@ -15,10 +15,10 @@ var style = `
 .mtk-hqos .cbi-section{display:block}
 .mtk-hqos .cbi-section:has(.cbi-dropdown[open]){z-index:10}
 .mtk-hqos .hqos-header{background:var(--hqos-hero)!important;display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,.8fr);gap:16px;align-items:center}
-.mtk-hqos .hqos-identity{display:flex;align-items:center;gap:12px;min-width:0}
+.mtk-hqos .hqos-identity{display:flex;align-items:center;gap:14px;min-width:0}
 .mtk-hqos .hqos-identity>div{min-width:0}
-.mtk-hqos .hqos-icon{display:grid;place-items:center;width:52px;height:52px;flex-shrink:0;border-radius:14px;background:linear-gradient(140deg,var(--primary,#5e72e4),color-mix(in srgb,var(--primary,#5e72e4) 74%,white));color:#fff;box-shadow:inset 0 1px rgba(255,255,255,.20)}
-.mtk-hqos .hqos-icon svg{width:34px;height:34px}
+.mtk-hqos .hqos-icon{display:grid;place-items:center;width:72px;height:72px;flex-shrink:0;border-radius:20px;background:linear-gradient(140deg,var(--primary,#5e72e4),color-mix(in srgb,var(--primary,#5e72e4) 74%,white));color:#fff;box-shadow:inset 0 1px rgba(255,255,255,.20)}
+.mtk-hqos .hqos-icon svg{width:52px;height:52px}
 .mtk-hqos .hqos-title{margin:0 0 6px;padding:0;border:0;background:none;box-shadow:none;font-size:20px;font-weight:700;line-height:1.3;color:inherit}
 .mtk-hqos .hqos-subtitle{margin:5px 0 0;font-size:12px;opacity:.7}
 .mtk-hqos .hqos-status{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;font-size:12px;line-height:1.5;background:rgba(128,128,128,.12);color:inherit}
@@ -88,7 +88,7 @@ var style = `
  #cbi-mtk-hqos input[type=text],#cbi-mtk-hqos input[type=number],#cbi-mtk-hqos select,#cbi-mtk-hqos .cbi-dropdown,#cbi-mtk-hqos .cbi-dynlist{font-size:16px}
  .mtk-hqos .hqos-header,.mtk-hqos .cbi-section{padding:12px;border-radius:14px}
  .mtk-hqos .hqos-header{grid-template-columns:minmax(0,1fr);gap:10px}
- .mtk-hqos .hqos-identity{gap:10px}.mtk-hqos .hqos-icon{width:44px;height:44px;border-radius:12px}.mtk-hqos .hqos-icon svg{width:30px;height:30px}.mtk-hqos .hqos-title{font-size:18px}
+ .mtk-hqos .hqos-identity{gap:12px}.mtk-hqos .hqos-icon{width:64px;height:64px;border-radius:18px}.mtk-hqos .hqos-icon svg{width:46px;height:46px}.mtk-hqos .hqos-title{font-size:18px}
  .mtk-hqos .hqos-metric{padding:7px 10px}.mtk-hqos .hqos-metric>strong{font-size:18px}
  .mtk-hqos .cbi-section>h3{font-size:16px;margin-bottom:8px}
  #cbi-mtk-hqos-rule tbody{display:block}
