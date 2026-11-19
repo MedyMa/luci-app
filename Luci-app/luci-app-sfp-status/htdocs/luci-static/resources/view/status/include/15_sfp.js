@@ -121,7 +121,7 @@ function buildMergedOverview(modules) {
 		{ label: _('Voltage'), key: 'voltage' },
 		{ label: _('Bias Current'), key: 'bias_current' },
 		{ label: _('RX Power'), key: 'rx_power' },
-		{ label: _('TX Power'), key: 'tx_power' }
+		{ label: 'TX Power', key: 'tx_power' }
 	];
 	const table = E('table', { 'class': 'table' });
 	const headerCells = [
@@ -193,7 +193,7 @@ function buildModuleFields(status, options) {
 		{ label: _('Voltage'), key: 'voltage' },
 		{ label: _('Bias Current'), key: 'bias_current' },
 		{ label: _('RX Power'), key: 'rx_power' },
-		{ label: _('TX Power'), key: 'tx_power' }
+		{ label: 'TX Power', key: 'tx_power' }
 	);
 
 	return fields;
