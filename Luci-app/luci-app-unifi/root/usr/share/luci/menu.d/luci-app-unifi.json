@@ -1,0 +1,13 @@
+{
+	"admin/mtk": {
+		"title": "MTK",
+		"order": 80,
+		"action": { "type": "firstchild", "recurse": true }
+	},
+	"admin/mtk/unifi": {
+		"title": "UniFi",
+		"order": 35,
+		"action": { "type": "view", "path": "unifi/overview" },
+		"depends": { "acl": [ "luci-app-unifi" ] }
+	}
+}

@@ -1,0 +1,98 @@
+.uf-page, .uf-settings {
+	--uf-line: var(--border-color, #a2aab540);
+	--uf-bg: var(--surface-color, Canvas);
+	--uf-soft: var(--surface-muted, color-mix(in srgb, CanvasText 4%, Canvas));
+	--uf-ink: var(--text-strong, CanvasText);
+	--uf-muted: var(--muted-text, GrayText);
+	--uf-accent: var(--primary, #5e72e4);
+	--uf-good: var(--strength-strong-text, #18815f);
+	color: var(--uf-ink);
+}
+.uf-page { display: grid; gap: 18px; min-width: 0; }
+.uf-page *, .uf-settings * { box-sizing: border-box; }
+.uf-page .uf-head, .uf-card-head, .uf-actions, .uf-ssid { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.uf-page .uf-head { padding: 14px 20px; background: var(--uf-bg); border: 1px solid var(--uf-line); border-radius: 14px; }
+.uf-page .uf-title h2, .uf-page .uf-card h3 { margin: 0; padding: 0; border: 0; background: transparent; box-shadow: none; text-align: start; color: var(--uf-ink); }
+.uf-page .uf-title h2 { font-size: clamp(24px, 3vw, 34px); font-weight: 700; line-height: 1.15; letter-spacing: -.04em; }
+.uf-title p { margin: 4px 0 0; color: var(--uf-muted); font-size: 13px; }
+.uf-page .uf-card h3 { width: auto; flex: 1; font-weight: 650; font-size: 16px; line-height: 1.4; }
+.uf-actions button { margin: 0; }
+.uf-card, .uf-summary { margin: 0; min-width: 0; border: 1px solid var(--uf-line); background: var(--uf-bg); border-radius: 14px; overflow: hidden; box-shadow: 0 3px 16px #15223909; }
+.uf-card-head { padding: 17px 20px; border-bottom: 1px solid var(--uf-line); flex-wrap: wrap; }
+.uf-summary { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); }
+.uf-summary .uf-metric { padding: 16px 20px; border-inline-start: 1px solid var(--uf-line); }
+.uf-summary .uf-metric:first-child { border: 0; }
+.uf-metric dt { display: block; float: none; width: auto; margin: 0; color: var(--uf-muted); font-weight: 500; font-size: 12px; }
+.uf-metric dd { margin: 0; color: var(--uf-ink); overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.uf-summary dd { margin-top: 5px; font-size: clamp(18px, 2.2vw, 26px); font-weight: 650; letter-spacing: -.03em; }
+.uf-overview { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(245px, 1fr); gap: 18px; }
+.uf-topology { display: flex; flex-direction: column; }
+.uf-diagram { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 22px; background-color: var(--uf-soft); background-image: radial-gradient(circle, color-mix(in srgb,var(--uf-muted) 24%, transparent) 1px, transparent 1px); background-size: 13px 13px; }
+.uf-backbone { display: grid; grid-template-columns: minmax(0,1fr) minmax(18px, .28fr) minmax(0,1fr); align-items: center; }
+.uf-device, .uf-page .uf-band { position: relative; display: flex; align-items: center; gap: 12px; padding: 14px; border: 1px solid var(--uf-line); border-radius: 10px; background: var(--uf-bg); color: var(--uf-ink); min-width: 0; }
+.uf-device { min-height: 68px; }
+.uf-device strong, .uf-band-label { font-size: 14px; font-weight: 650; }
+.uf-device-text { min-width: 0; }
+.uf-device-text small, .uf-band small, .uf-table small { display: block; margin-top: 3px; font-size: 12px; color: var(--uf-muted); overflow-wrap: anywhere; }
+.uf-glyph { position: relative; flex: none; width: 32px; height: 27px; }
+.uf-gateway { height: 23px; margin-block: 2px; border-radius: 5px; background: linear-gradient(145deg,#cbd4e3,#8698b2); box-shadow: inset 0 -4px 0 #5b6987; }
+.uf-gateway i { display: block; width: 8px; height: 7px; margin: 6px 4px; border-radius: 2px; background: #344766; box-shadow: inset 2px 2px #5be2e1; }
+.uf-board { border: 2px solid #66899b; border-radius: 6px; background: #d4ece9; box-shadow: inset 0 -4px 0 #a3c2c1; }
+.uf-board i { display: block; width: 10px; height: 10px; background: #43747c; margin: 5px 4px; border-radius: 2px; }
+.uf-board b { position: absolute; right: 2px; top: 4px; width: 6px; height: 4px; background: #648796; box-shadow: 0 6px #648796; }
+.uf-wire { border-top: 2px solid var(--uf-accent); opacity: .7; }
+.uf-branches { position: relative; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; padding-top: 36px; }
+.uf-branches::before, .uf-branches::after, .uf-band::before { content: ''; position: absolute; pointer-events: none; }
+.uf-branches::before { top: 0; height: 19px; left: 78%; border-left: 2px solid var(--uf-accent); opacity: .65; }
+.uf-branches::after { top: 18px; left: calc((100% - 16px) / 6); right: calc((100% - 16px) / 6); border-top: 2px solid var(--uf-accent); opacity: .65; }
+.uf-page .uf-band { display: block; min-height: 79px; padding: 10px; text-align: start; box-shadow: none; cursor: pointer; }
+.uf-band::before { left: 50%; top: -18px; height: 17px; border-left: 2px solid var(--uf-accent); opacity: .65; }
+.uf-band-label { display: flex; align-items: center; gap: 6px; }
+.uf-band-label i, .uf-chip i { display: inline-block; width: 7px; height: 7px; border-radius: 100%; background: currentColor; }
+.uf-band-label i { color: var(--uf-muted); }
+.uf-band-label i.on { color: var(--uf-good); }
+.uf-band-count { display: block; margin-top: 5px; font-size: 12px; }
+.uf-page .uf-band:hover, .uf-page .uf-band[aria-pressed=true] { border-color: var(--uf-accent); background: color-mix(in srgb,var(--uf-accent) 8%,var(--uf-bg)); }
+.uf-page button:focus-visible, .uf-settings :focus-visible { outline: 2px solid var(--focus-ring, Highlight); outline-offset: 2px; }
+.uf-details dl { margin: 0; padding: 6px 20px 12px; }
+.uf-details .uf-metric { display: grid; grid-template-columns: minmax(76px, .86fr) minmax(0, 1.35fr); align-items: baseline; gap: 8px; padding: 7px 0; }
+.uf-details dd { text-align: end; font-size: 13px; }
+.uf-chip, .uf-page .uf-filter { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--uf-line); border-radius: 20px; padding: 2px 8px; width: fit-content; background: var(--uf-soft); color: var(--uf-muted); font-size: 11px; font-weight: 600; line-height: 1.6; }
+.uf-chip.ok { color: var(--uf-good); }
+.uf-chip.warn { color: var(--strength-medium-text, #805600); }
+.uf-page .uf-filter { font-size: 13px; cursor: pointer; }
+.uf-scroll { overflow-x: auto; }
+.uf-page .uf-table { width: 100%; margin: 0; border: 0; border-collapse: collapse; text-align: start; background: transparent; font-size: 13px; }
+.uf-page .uf-table th, .uf-page .uf-table td { text-align: start; border: 0; border-bottom: 1px solid var(--uf-line); padding: 11px 16px; background: transparent; vertical-align: middle; font-variant-numeric: tabular-nums; overflow-wrap: break-word; }
+.uf-table tbody tr:last-child > * { border-bottom: 0; }
+.uf-page .uf-table thead th { color: var(--uf-muted); background: var(--uf-soft); white-space: nowrap; font-size: 12px; font-weight: 550; }
+.uf-ssid { justify-content: flex-start; flex-wrap: wrap; overflow-wrap: anywhere; }
+.uf-empty { padding: 20px; margin: 0; color: var(--uf-muted); }
+.uf-settings { display: grid; gap: 15px; margin: 10px 0 18px; }
+.uf-settings details { border-top: 1px solid var(--uf-line); padding-top: 10px; }
+.uf-settings summary { cursor: pointer; }
+.uf-settings .uf-field { display: grid; gap: 5px; }
+.uf-settings .uf-field input, .uf-settings .uf-field select { width: 100%; }
+.uf-settings .uf-field span, .uf-settings summary { font-weight: 600; }
+.uf-settings small { font-size: 12px; color: var(--uf-muted); line-height: 1.5; }
+.uf-settings details .uf-field { margin: 12px 0; }
+.uf-check { display: flex; align-items: center; gap: 8px; }
+.uf-error { margin: 0; color: var(--strength-weak-text, #a52c26); }
+.uf-error:empty { display: none; }
+@media (max-width: 1020px) { .uf-overview { grid-template-columns: 1fr; } }
+@media (max-width: 620px) {
+	.uf-page, .uf-overview { gap: 12px; }
+	.uf-summary { grid-template-columns: 1fr 1fr; }
+	.uf-summary .uf-metric { padding: 10px 13px; }
+	.uf-summary .uf-metric:nth-child(3) { border-inline-start: 0; }
+	.uf-summary .uf-metric:nth-child(n+3) { border-top: 1px solid var(--uf-line); }
+	.uf-diagram, .uf-card-head { padding: 12px; }
+	.uf-device { flex-direction: column; gap: 4px; min-height: 85px; padding: 8px; text-align: center; }
+	.uf-page .uf-band { padding: 8px; }
+	.uf-branches { gap: 6px; }
+	.uf-page .uf-table { min-width: 550px; }
+	.uf-actions { gap: 5px; }
+	.uf-actions button { padding-inline: 10px; }
+}
+.uf-page .uf-edit-model { background: transparent; color: var(--link-color, LinkText); font: inherit; padding: 0; border: 0; cursor: pointer; text-align: start; }
+.uf-page .uf-edit-model:hover { text-decoration: underline; }

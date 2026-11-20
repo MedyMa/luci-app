@@ -1,0 +1,7 @@
+{
+	"luci-app-unifi": {
+		"description": "View the BE14 topology and configure its UniFi inform agent",
+		"read": { "ubus": { "luci.unifi": [ "status" ] } },
+		"write": { "ubus": { "luci.unifi": [ "configure", "set_model" ] } }
+	}
+}

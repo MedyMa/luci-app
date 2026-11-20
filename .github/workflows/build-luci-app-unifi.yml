@@ -1,0 +1,111 @@
+name: Build luci-app-unifi
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'Luci-app/luci-app-unifi/**'
+      - '.github/workflows/build-luci-app-unifi.yml'
+  pull_request:
+    paths:
+      - 'Luci-app/luci-app-unifi/**'
+      - '.github/workflows/build-luci-app-unifi.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - release: '24.10.6'
+            gcc: '13.3.0'
+            format: ipk
+            sha256: bf9821b98fe810e2cc3ab53b8faa13bc919b9d98d703cba5e53906c17bd23864
+          - release: '25.12.0'
+            gcc: '14.3.0'
+            format: apk
+            sha256: 7e45a85b4af8af53ff17ca610ad6a7df312568cb52b730f93a21a91899f33139
+    name: MediaTek Filogic · ${{ matrix.release }} · ${{ matrix.format }}
+    steps:
+      - uses: actions/checkout@v6.0.2
+
+      - name: Get the BE14 package and its vendor dependency definitions
+        uses: actions/checkout@v6.0.2
+        with:
+          repository: MedyMa/immortalwrt-mt798x-25.12
+          ref: 36dee9484497ef27fb76eefdd9c9fdb3d3589ce5
+          path: vendor
+          sparse-checkout: |
+            package/mtk/applications/be14-ucg
+            package/mtk/applications/datconf
+            package/mtk/applications/mtwifi-cfg
+            package/mtk/applications/mtwifi-dot1x
+            package/mtk/drivers/wifi-profile
+
+      - name: Prepare OpenWrt SDK
+        env:
+          RELEASE: ${{ matrix.release }}
+          GCC: ${{ matrix.gcc }}
+          SHA256: ${{ matrix.sha256 }}
+        run: |
+          sudo apt-get -q update
+          sudo apt-get install -y build-essential file gawk gettext libncurses-dev python3-pyelftools rsync zstd
+          archive="openwrt-sdk-${RELEASE}-mediatek-filogic_gcc-${GCC}_musl.Linux-x86_64.tar.zst"
+          curl -fL --retry 4 --output "$RUNNER_TEMP/sdk.tar.zst" \
+            "https://downloads.openwrt.org/releases/${RELEASE}/targets/mediatek/filogic/$archive"
+          echo "$SHA256  $RUNNER_TEMP/sdk.tar.zst" | sha256sum --check
+          mkdir sdk
+          tar --zstd --strip-components=1 -xf "$RUNNER_TEMP/sdk.tar.zst" -C sdk
+
+      - name: Configure packages
+        working-directory: sdk
+        run: |
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a -p packages
+          ./scripts/feeds install -a -p luci
+          mkdir -p package/local
+          cp -a ../vendor/package/mtk/applications/{be14-ucg,datconf,mtwifi-cfg,mtwifi-dot1x} package/local/
+          cp -a ../vendor/package/mtk/drivers/wifi-profile ../Luci-app/luci-app-unifi package/local/
+          cat >> .config <<'CONFIG'
+          # CONFIG_ALL is not set
+          # CONFIG_ALL_KMODS is not set
+          # CONFIG_ALL_NONSHARED is not set
+          CONFIG_PACKAGE_be14-ucg=m
+          CONFIG_PACKAGE_luci-app-unifi=m
+          CONFIG_LUCI_LANG_zh_Hans=y
+          CONFIG_PACKAGE_luci-i18n-unifi-zh-cn=m
+          CONFIG
+          make defconfig
+          for pkg in be14-ucg luci-app-unifi luci-i18n-unifi-zh-cn; do
+            grep -Eq "^CONFIG_PACKAGE_${pkg}=[ym]$" .config
+          done
+
+      - name: Build the agent, LuCI application and Simplified Chinese translation
+        working-directory: sdk
+        run: |
+          make -j2 package/feeds/luci/luci-base/host/compile V=s
+          make -C package/local/be14-ucg TOPDIR="$PWD" compile V=s
+          make -C package/local/luci-app-unifi TOPDIR="$PWD" compile V=s
+
+      - name: Collect packages
+        env:
+          FORMAT: ${{ matrix.format }}
+        run: |
+          mkdir artifacts
+          for pkg in be14-ucg luci-app-unifi luci-i18n-unifi-zh-cn; do
+            mapfile -t files < <(find sdk/bin/packages -type f \( -name "${pkg}_*.$FORMAT" -o -name "${pkg}-[0-9]*.$FORMAT" \))
+            test "${#files[@]}" -eq 1
+            cp "${files[0]}" artifacts/
+          done
+          (cd artifacts && sha256sum * > SHA256SUMS)
+
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: luci-app-unifi-mediatek-filogic-${{ matrix.release }}-${{ matrix.format }}
+          path: artifacts/
+          if-no-files-found: error

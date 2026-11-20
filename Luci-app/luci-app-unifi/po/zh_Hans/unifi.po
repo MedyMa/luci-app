@@ -1,0 +1,241 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: zh_Hans\n"
+
+msgid "%s clients"
+msgstr "%s 台终端"
+
+msgid "Access point management"
+msgstr "接入点管理"
+
+msgid "Active radios"
+msgstr "已启用射频"
+
+msgid "Agent stopped"
+msgstr "代理已停止"
+
+msgid "Associated clients"
+msgstr "关联终端"
+
+msgid "Association data is unavailable."
+msgstr "无法读取关联状态。"
+
+msgid "Awaiting adoption"
+msgstr "等待采用"
+
+msgid "Awaiting inform response"
+msgstr "等待控制器应答"
+
+msgid "Band"
+msgstr "频段"
+
+msgid "Band / SSID"
+msgstr "频段 / SSID"
+
+msgid "Cancel"
+msgstr "取消"
+
+msgid "Channel"
+msgstr "信道"
+
+msgid "Channel %s"
+msgstr "信道 %s"
+
+msgid "Check adoption"
+msgstr "请检查采用状态"
+
+msgid "Client"
+msgstr "终端"
+
+msgid "Configured mode"
+msgstr "配置模式"
+
+msgid "Controller"
+msgstr "控制器"
+
+msgid "Controller WLAN"
+msgstr "控制器 WLAN"
+
+msgid "Controller WLAN ID"
+msgstr "控制器 WLAN ID"
+
+msgid "Controller inform URL"
+msgstr "控制器 Inform 地址"
+
+msgid "Controller responded"
+msgstr "控制器已应答"
+
+msgid "Could not apply settings."
+msgstr "无法应用设置。"
+
+msgid "Device information"
+msgstr "设备信息"
+
+msgid "Device model"
+msgstr "设备型号"
+
+msgid "Disabled"
+msgstr "已禁用"
+
+msgid "Down"
+msgstr "未启动"
+
+msgid "Enable UniFi agent"
+msgstr "启用 UniFi 代理"
+
+msgid "Enter a controller IP URL ending in /inform."
+msgstr "请输入包含控制器 IP 且以 /inform 结尾的地址。"
+
+msgid "Hardware"
+msgstr "硬件型号"
+
+msgid "IP address"
+msgstr "IP 地址"
+
+msgid "Last inform response"
+msgstr "最近一次应答"
+
+msgid "Last response is stale"
+msgstr "控制器应答超时"
+
+msgid "Leave empty to use %s. This value is sent to UniFi Network."
+msgstr "留空使用默认值 %s。此版本号会发送给 UniFi Network。"
+
+msgid "Leave unbound to report existing SSIDs. Select independent BSS interfaces to allow provisioning."
+msgstr "留空时上报现有 SSID。绑定独立 BSS 接口后，允许控制器向这些接口下发配置。"
+
+msgid "Management MAC"
+msgstr "管理 MAC"
+
+msgid "Management interface"
+msgstr "管理接口"
+
+msgid "Matched"
+msgstr "已匹配"
+
+msgid "Network topology"
+msgstr "网络拓扑"
+
+msgid "No associated clients."
+msgstr "当前没有关联终端。"
+
+msgid "No eligible independent BSS interfaces."
+msgstr "没有可绑定的独立 BSS 接口。"
+
+msgid "No radios reported."
+msgstr "尚无射频上报。"
+
+msgid "Not identified"
+msgstr "尚未识别"
+
+msgid "Operating system"
+msgstr "操作系统"
+
+msgid "Operating width"
+msgstr "实际带宽"
+
+msgid "RX / TX bytes"
+msgstr "接收 / 发送总量"
+
+msgid "Radio data could not be read."
+msgstr "无法读取射频数据。"
+
+msgid "Radio down"
+msgstr "射频未启动"
+
+msgid "Radios"
+msgstr "射频"
+
+msgid "Refresh"
+msgstr "刷新"
+
+msgid "Reported E7 firmware"
+msgstr "E7 上报固件版本"
+
+msgid "Reported firmware"
+msgstr "上报的固件版本"
+
+msgid "Save and apply"
+msgstr "保存并应用"
+
+msgid "Select an available management interface."
+msgstr "请选择可用的管理接口。"
+
+msgid "Select one independent AP at most per band and enter its controller WLAN ID."
+msgstr "每个频段最多选择一个独立 AP，并填写对应的控制器 WLAN ID。"
+
+msgid "Settings"
+msgstr "设置"
+
+msgid "Settings changed in another session. Close and reopen this form."
+msgstr "设置已在其他会话中修改。请关闭并重新打开此窗口。"
+
+msgid "Settings were saved. The service could not be applied. Reopen the form to retry."
+msgstr "配置已保存，但服务应用失败。请重新打开此窗口后重试。"
+
+msgid "Signal"
+msgstr "信号"
+
+msgid "Status"
+msgstr "状态"
+
+msgid "The saved adoption belongs to another controller. Complete re-adoption before changing this URL."
+msgstr "已保存的采用记录属于其他控制器。请先处理原有采用记录。"
+
+msgid "Unable to read the UniFi agent."
+msgstr "无法读取 UniFi 代理状态。"
+
+msgid "Unavailable"
+msgstr "无法读取"
+
+msgid "UniFi model"
+msgstr "UniFi 型号"
+
+msgid "UniFi settings"
+msgstr "UniFi 设置"
+
+msgid "Unmatched"
+msgstr "未匹配"
+
+msgid "Up"
+msgstr "已启动"
+
+msgid "Use three or four numeric components, for example 8.8.14.20179."
+msgstr "请输入三段或四段数字版本号，例如 8.8.14.20179。"
+
+msgid "WLAN provisioning"
+msgstr "WLAN 配置下发"
+
+msgid "Wi-Fi standard"
+msgstr "Wi-Fi 标准"
+
+msgid "Wireless RX total"
+msgstr "无线接收总量"
+
+msgid "Wireless TX total"
+msgstr "无线发送总量"
+
+msgid "Save"
+msgstr "保存"
+
+msgid "Enter a printable model name of up to 96 bytes."
+msgstr "请输入不超过 96 字节的设备型号。"
+
+msgid "Client or settings changed. Close and refresh before retrying."
+msgstr "客户端或设置已变化，请关闭窗口并刷新后重试。"
+
+msgid "Client model"
+msgstr "终端型号"
+
+msgid "Enter the model of this device, or leave empty to use discovery."
+msgstr "填写这台终端的实际型号。留空则使用自动发现的型号。"
+
+msgid "Set model"
+msgstr "填写型号"
+
+msgid "Manual"
+msgstr "手动指定"
+
+msgid "1 client"
+msgstr "1 台终端"

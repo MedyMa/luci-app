@@ -1,0 +1,208 @@
+#!/usr/bin/python3 -B
+"""LuCI RPC boundary. Only return fields intended for the management page."""
+import json
+import re
+import subprocess
+import sys
+import tempfile
+import time
+
+sys.path.insert(0, "/usr/lib/be14-ucg")
+from agent import (DEFAULT_VERSION, FACTORY_KEY, LAST_INFORM, MODEL, STATE, endpoint,
+                   firmware_version, local, locked, run, state_for)
+from telemetry import wireless_report
+from wlan import valid_wlan_id
+
+METHODS = {"status": {}, "configure": {"previous": "", "settings": ""},
+           "set_model": {"mac": "", "previous": "", "model": ""}}
+OPTIONS = ("enabled", "inform_url", "management_network", "firmware_version", "wlan_id")
+INIT = "/etc/init.d/be14-ucg"
+
+
+def ubus(obj, method, args=None):
+    return json.loads(run(["/bin/ubus", "call", obj, method, json.dumps(args or {})]))
+
+
+def settings():
+    raw = ubus("uci", "get", {"config": "be14_ucg", "section": "main"})["values"]
+    values = {key: raw.get(key, "") for key in OPTIONS}
+    values["enabled"] = values["enabled"] == "1"
+    sections = raw.get("section", [])
+    values["sections"] = sorted([sections] if isinstance(sections, str) else sections)
+    return values
+
+
+def networks():
+    return sorted({row["interface"] for row in ubus("network.interface", "dump").get("interface", [])
+                   if re.fullmatch(r"[A-Za-z0-9_]+", row.get("interface", ""))})
+
+
+def station_mode(row):
+    for field, generation in (("is_11be", 7), ("is_11ax", 6), ("is_11ac", 5), ("is_11n", 4)):
+        if row.get(field):
+            return generation
+
+
+def status():
+    cfg = settings()
+    board = ubus("system", "board")
+    svc = ubus("service", "list", {"name": "be14-ucg"}).get("be14-ucg", {})
+    out = dict(settings=cfg, networks=networks(), model=MODEL, default_version=DEFAULT_VERSION,
+               board=board.get("model"), hostname=board.get("hostname"), system=(board.get("release") or {}).get("description"),
+               running=any(i.get("running") for i in svc.get("instances", {}).values()),
+               paired=False, settings_received=False, radios=[], clients=[], candidates=[])
+    try:
+        state = state_for(cfg["inform_url"]) if cfg["inform_url"] else {}
+    except (OSError, KeyError, ValueError):
+        state = {}
+        out["state_error"] = True
+    out["paired"] = state.get("key") not in (None, FACTORY_KEY)
+    out["settings_received"] = state.get("wlan_model") == MODEL
+    try:
+        snap = local("overview")
+        data = wireless_report(snap, state.get("report_wlans", {}))
+    except (OSError, ValueError, KeyError, subprocess.SubprocessError):
+        out["radio_error"] = True
+        return out
+    out.update(ip=snap.get("ip"), mac=snap.get("mac"), total=data.get("num_sta"), candidates=snap.get("candidates") or [])
+    try:
+        url, mac, version, stamp = json.loads(LAST_INFORM.read_text())
+        if out["paired"] and url == cfg["inform_url"] and mac == out["mac"]:
+            out.update(last_inform=stamp, inform_age=max(0, int(time.time()) - stamp), last_version=version)
+    except (OSError, TypeError, ValueError):
+        pass
+    for radio in data["radio_table_stats"]:
+        band = radio["radio"]
+        live = snap["radios"][band]
+        row = dict(band=band, up=radio["up"], ifname=live.get("ifname"), channel=radio.get("channel"),
+                   configured=live.get("applied_htmode"), width=radio.get("bw"), clients=radio.get("num_sta"), aps=[])
+        for ap in data["vap_table"]:
+            if ap["radio"] != band:
+                continue
+            row["aps"].append(dict(ifname=ap["name"], ssid=ap["essid"], matched=bool(ap.get("id")),
+                                   rx=ap.get("rx_bytes"), tx=ap.get("tx_bytes")))
+            local_ap = next(bss for bss in snap["aps"] if bss["name"] == ap["name"])
+            for sta in local_ap.get("sta_table", []):
+                out["clients"].append(dict(mac=sta["mac"], name=sta.get("hostname"), model=sta.get("device_name"),
+                    model_source=sta.get("model_source"),
+                    ip=sta.get("ip"), ipv6=sta.get("ipv6") or [], wifi=station_mode(sta), signal=sta.get("signal"),
+                    rx=sta.get("rx_bytes"), tx=sta.get("tx_bytes"), band=band, ssid=ap["essid"]))
+        out["radios"].append(row)
+    return out
+
+
+def check(cfg, before):
+    if set(cfg) != set(before) or type(cfg["enabled"]) is not bool:
+        return "settings"
+    if any(not isinstance(cfg[k], str) or len(cfg[k]) > 250 for k in OPTIONS[1:]):
+        return "settings"
+    url = cfg["inform_url"]
+    if cfg["enabled"] or url:
+        try:
+            target = endpoint(url)
+            if target.port == 0 or any(c.isspace() for c in url):
+                return "url"
+        except (TypeError, ValueError):
+            return "url"
+    try:
+        firmware_version(cfg["firmware_version"])
+    except ValueError:
+        return "version"
+    if cfg["management_network"] != before["management_network"] and cfg["management_network"] not in networks():
+        return "network"
+    if STATE.exists() and url != before["inform_url"]:
+        try:
+            state_for(url)
+        except (OSError, ValueError, KeyError):
+            return "paired_url"
+    selected, wid = cfg["sections"], cfg["wlan_id"]
+    if (not isinstance(selected, list) or len(selected) > 3 or
+        any(not isinstance(s, str) or not re.fullmatch(r"be14_ucg_[A-Za-z0-9_]+", s) for s in selected)):
+        return "binding"
+    if selected != before["sections"] or wid != before["wlan_id"]:
+        if bool(wid) != bool(selected) or (wid and not valid_wlan_id(wid)):
+            return "binding"
+        if selected:
+            available = {s["section"]: s["band"] for s in local("overview").get("candidates", [])}
+            if not all(s in available for s in selected) or len({available[s] for s in selected}) != len(selected):
+                return "binding"
+    return None
+
+
+def configure(args):
+    change = json.loads(args["settings"])
+    with locked():
+        old = settings()
+        if old != json.loads(args["previous"]) or run(["/sbin/uci", "-q", "changes", "be14_ucg"]).strip():
+            return {"error": "conflict"}
+        error = check(change, old)
+        if error:
+            return {"error": error}
+        with tempfile.TemporaryDirectory(prefix="unifi-settings-") as delta:
+            def uci(*cmd):
+                run(["/sbin/uci", "-t", delta, *cmd])
+            for key in OPTIONS:
+                if change[key] != old[key]:
+                    value = str(int(change[key])) if key == "enabled" else change[key]
+                    uci("set", "be14_ucg.main." + key + "=" + value)
+            if old["sections"] != change["sections"]:
+                if old["sections"]:
+                    uci("delete", "be14_ucg.main.section")
+                for section in change["sections"]:
+                    uci("add_list", "be14_ucg.main.section=" + section)
+            if change != old:
+                uci("commit", "be14_ucg")
+    # Do not hold the inform lock while procd is stopping a worker.
+    try:
+        run([INIT, "enable"])
+        run([INIT, "restart" if change["enabled"] else "stop"])
+    except (OSError, subprocess.SubprocessError):
+        return {"error": "service", "saved": True}
+    return {"saved": True}
+
+
+def set_model(args):
+    mac, value = args["mac"], args["model"].strip()
+    if (not re.fullmatch(r"(?:[0-9a-f]{2}:){5}[0-9a-f]{2}", mac) or mac == "00:00:00:00:00:00"
+            or int(mac[:2], 16) & 1 or len(value.encode()) > 96 or
+            any(not c.isprintable() or c in "<>" for c in value)):
+        return {"error": "model"}
+    name = "be14_ucg.client_" + mac.replace(":", "")
+    with locked(), tempfile.TemporaryDirectory(prefix="unifi-model-") as delta:
+        if run(["/sbin/uci", "-q", "changes", "be14_ucg"]).strip():
+            return {"error": "conflict"}
+        rows = (s for ap in local("overview")["aps"] for s in ap.get("sta_table", []))
+        station = next((s for s in rows if s["mac"] == mac), None)
+        if not station:
+            return {"error": "disconnected"}
+        previous = station["device_name"] if station.get("model_source") == "manual" else ""
+        if previous != args["previous"]:
+            return {"error": "conflict"}
+        if previous != value:
+            cmd = ["/sbin/uci", "-t", delta]
+            if value:
+                run(cmd + ["set", name + "=client"])
+                run(cmd + ["set", name + ".model=" + value])
+            else:
+                run(cmd + ["delete", name + ".model"])
+            run(cmd + ["commit", "be14_ucg"])
+    return {"saved": True}
+
+
+if __name__ == "__main__":
+    if sys.argv[1:] == ["list"]:
+        print(json.dumps(METHODS))
+    elif len(sys.argv) == 3 and sys.argv[1] == "call" and sys.argv[2] in METHODS:
+        try:
+            request = json.load(sys.stdin)
+            if sys.argv[2] == "status":
+                result = status()
+            elif sys.argv[2] == "set_model":
+                result = set_model(request)
+            else:
+                result = configure(request)
+        except (KeyError, TypeError, ValueError, OSError, subprocess.SubprocessError):
+            result = {"error": "unavailable"}
+        print(json.dumps(result, allow_nan=False))
+    else:
+        sys.exit(1)
