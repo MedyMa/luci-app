@@ -377,3 +377,6 @@ msgstr "请选择 UCG 已分配给 E7 的原生网络 Wi-Fi，支持个人认证
 
 msgid "WLAN withdrawn by controller"
 msgstr "UCG 已撤下此 Wi-Fi"
+
+msgid "Paused on %s due to an unsupported access policy"
+msgstr "%s 的独立 AP 已暂停，BE14 暂不支持该接入策略"

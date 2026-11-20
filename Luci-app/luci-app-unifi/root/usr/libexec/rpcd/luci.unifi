@@ -85,7 +85,8 @@ def status():
                               all((not b.get("observed") and (b.get("missing") or b.get("disabled") == "1")) if band in inactive
                                   else b.get("bridge_attached") and b.get("observed") == b.get("ssid") and
                                   b.get("be14_ucg_managed") == "1" for band, b in snap["bindings"].items()))
-    out["withdrawn"] = out["provisioned"] and set(inactive) == set(snap["bindings"])
+    out["restricted_bands"] = state.get("restricted_bands", []) if out["provisioned"] else []
+    out["withdrawn"] = out["provisioned"] and not out["restricted_bands"] and set(inactive) == set(snap["bindings"])
     try:
         url, mac, version, stamp = json.loads(LAST_INFORM.read_text())
         if out["paired"] and url == cfg["inform_url"] and mac == out["mac"]:

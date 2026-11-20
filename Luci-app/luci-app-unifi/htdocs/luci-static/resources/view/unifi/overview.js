@@ -430,12 +430,15 @@ function showSettings(d, reload) {
 	}
 	wlan.addEventListener('change', () => { targetsEdited = true; chooseTargets(); });
 	chooseTargets();
+	let provisionState = d.withdrawn ? _('WLAN withdrawn by controller') : d.provisioned ?
+		_('Controller Wi-Fi applied') : _('Waiting for an applicable controller configuration');
+	if (d.restricted_bands?.length)
+		provisionState = _('Paused on %s due to an unsupported access policy').format(d.restricted_bands.map(b => bands[b]).join(', '));
 	const quick = div('uf-quick', [field(_('Controller Wi-Fi'), wlan,
 		_('Choose a native personal or OWE network assigned to the E7. Create a secondary AP here or select an unused, disabled AP.')), bandFields,
 		E('small', {}, t(!d.upstream_ready ? _('A direct Ethernet bridge to the UCG default gateway is required.') :
 			_('New APs use %s. UCG supplies DHCP and classifies client traffic. Applying may briefly reconnect this radio.').format(old.management_network))),
-		...(old.auto_provision ? [E('small', { 'class': 'uf-provision-state' }, t(d.withdrawn ? _('WLAN withdrawn by controller') : d.provisioned ?
-			_('Controller Wi-Fi applied') : _('Waiting for an applicable controller configuration')))] : [])]);
+		...(old.auto_provision ? [E('small', { 'class': 'uf-provision-state' }, t(provisionState))] : [])]);
 	const manual = div('uf-manual', [
 		field(_('Controller WLAN ID'), wid, _('Leave unbound to report existing SSIDs. Select independent BSS interfaces to allow provisioning.')),
 		...(checks.length ? checks.map(c => c.node) : [E('small', {}, t(_('No eligible independent BSS interfaces.')))])]);
