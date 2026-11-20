@@ -38,7 +38,7 @@ jobs:
         uses: actions/checkout@v6.0.2
         with:
           repository: MedyMa/immortalwrt-mt798x-25.12
-          ref: 11dfe323781c3cfcfe6a3f1b19c20f096412b869
+          ref: d85dae81e11a9d1bcbf3fff892c048d90a40b5e5
           path: vendor
           sparse-checkout: |
             package/mtk/applications/be14-ucg
