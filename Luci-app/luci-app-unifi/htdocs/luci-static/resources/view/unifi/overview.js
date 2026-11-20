@@ -37,6 +37,11 @@ function bytes(n) {
 	return (n / Math.pow(1024, index)).toLocaleString(undefined, { maximumFractionDigits: 1 }) + ' ' + units[index];
 }
 
+function phyRate(kbps) {
+	return Number.isFinite(kbps) && kbps > 0
+		? (kbps / 1000).toLocaleString(undefined, { maximumFractionDigits: 1 }) + ' Mbps' : unknown;
+}
+
 function traffic(aps, key) {
 	return aps.length && aps.every(a => Number.isFinite(a[key]))
 		? bytes(aps.reduce((total, ap) => total + ap[key], 0)) : unknown;
@@ -136,8 +141,24 @@ function hostState(d) {
 	const host = d.wired_host || {};
 	if (host.state === 'leased' && host.ip) return host.ip;
 	if (host.state === 'dhcp') return _('Waiting for DHCP');
+	if (host.state === 'retrying') return _('Retrying DHCP');
+	if (host.state === 'starting') return _('Awaiting wired client status');
+	if (host.state === 'stopped') return _('Wired client stopped');
 	if (host.state === 'error') return _('Interface unavailable');
 	return _('Waiting for Ethernet');
+}
+
+function gatewayState(d) {
+	const host = d.wired_host || {};
+	if (!d.settings.enabled || !d.settings.wired_host) return _('Disabled');
+	if (host.state === 'dhcp' || host.state === 'retrying') return _('Waiting for a lease to check the gateway');
+	if (host.state !== 'leased') return hostState(d);
+	if (typeof host.gateway_reachable === 'boolean') {
+		const result = host.gateway_reachable ? _('Gateway replied') : _('No ping response');
+		return host.gateway ? host.gateway + ' · ' + result : result;
+	}
+	if (host.probe_error) return _('Gateway probe unavailable');
+	return host.gateway ? _('Checking gateway') : _('No gateway in DHCP lease');
 }
 
 function topology(d, band, showAll, stale) {
@@ -229,8 +250,7 @@ function managementFacts(d) {
 	const facts = [metric(_('Operating system'), d.system), metric(_('Management MAC'), d.mac?.toUpperCase()),
 		metric(_('Last inform response'), d.last_inform ? new Date(d.last_inform * 1000).toLocaleTimeString() : unknown)];
 	if (d.settings.wired_host) {
-		const reachable = d.wired_host?.gateway_reachable;
-		facts.push(metric(_('Wired gateway check'), reachable == null ? unknown : reachable ? _('Gateway replied') : _('No ping response')));
+		facts.push(metric(_('Wired gateway check'), gatewayState(d)));
 	}
 	return facts;
 }
@@ -307,9 +327,10 @@ function clientsPanel(d, band, reload) {
 			...(c.model_source ? [E('small', {}, t(c.model_source === 'manual' ? _('Manual') : 'mDNS'))] : [])],
 		t(c.ip || c.ipv6[0]), [t(bands[c.band]), E('small', {}, t(c.ssid))],
 		[t(c.wifi ? 'Wi-Fi ' + c.wifi : unknown), E('small', {}, t(c.signal != null ? c.signal + ' dBm' : unknown))],
+		[t('RX ' + phyRate(c.rx_rate)), E('small', {}, t('TX ' + phyRate(c.tx_rate)))],
 		[E('span', { 'class': 'uf-received' }, t('↓ ' + bytes(c.rx))), E('small', { 'class': 'uf-sent' }, t('↑ ' + bytes(c.tx)))]
 	]);
-	return dataTable([_('Client'), _('Device model'), _('IP address'), _('Band / SSID'), _('Link / signal'), _('RX / TX bytes')], rows,
+	return dataTable([_('Client'), _('Device model'), _('IP address'), _('Band / SSID'), _('Link / signal'), _('AP PHY rate'), _('RX / TX bytes')], rows,
 		d.radio_error || (band ? d.radios.find(r => r.band === band)?.clients == null : d.total == null)
 			? _('Association data is unavailable.') : _('No associated clients.'));
 }
@@ -435,6 +456,7 @@ return view.extend({
 			if (tab === key) return;
 			tab = key;
 			keepReadingPosition(detail, visuals, () => detail.update(latest, tab, band), true);
+			if (key === 'device') reload();
 		}
 		function choose(key) {
 			band = band === key ? null : key;
@@ -463,8 +485,14 @@ return view.extend({
 		}
 		function accept(data) {
 			const failed = !data?.settings || data.error;
-			if (latest && (failed || (data.radio_error && !latest.radio_error))) {
+			if (latest && failed) {
 				if (stale) return;
+				stale = true;
+			} else if (latest && data.radio_error && !latest.radio_error &&
+				latest.settings.management_network === data.settings.management_network &&
+				latest.settings.inform_url === data.settings.inform_url && latest.settings.enabled === data.settings.enabled) {
+				// The wired worker publishes independently of the wireless snapshot.
+				latest = Object.assign({}, latest, { settings: data.settings, wired_host: data.wired_host, running: data.running });
 				stale = true;
 			} else if (failed) {
 				if (!root.firstElementChild)

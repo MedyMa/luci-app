@@ -9,6 +9,9 @@ msgstr "%s / 3 个射频已启动"
 msgid "%s more"
 msgstr "另有 %s 台"
 
+msgid "AP PHY rate"
+msgstr "AP 收发链路速率"
+
 msgid "Access point management"
 msgstr "接入点管理"
 
@@ -29,6 +32,9 @@ msgstr "等待采用"
 
 msgid "Awaiting inform response"
 msgstr "等待控制器应答"
+
+msgid "Awaiting wired client status"
+msgstr "等待有线客户端状态"
 
 msgid "BPI-R4 wired client"
 msgstr "BPI-R4 有线客户端"
@@ -57,8 +63,17 @@ msgstr "信道带宽"
 msgid "%s MHz (configured)"
 msgstr "%s MHz（配置值）"
 
+msgid "Checking gateway"
+msgstr "正在探测网关"
+
 msgid "Driver did not report a width"
 msgstr "驱动未上报实际带宽"
+
+msgid "Gateway probe unavailable"
+msgstr "网关探测不可用"
+
+msgid "No gateway in DHCP lease"
+msgstr "DHCP 租约未提供网关"
 
 msgid "Refresh failed · showing last data"
 msgstr "刷新失败，显示上次数据"
@@ -225,6 +240,9 @@ msgstr "上报的固件版本"
 msgid "Requests a separate DHCP address on the Ethernet uplink. The gateway can list BPI-R4 alongside the adopted E7."
 msgstr "通过有线上联单独申请一个 DHCP 地址，以便网关同时列出 BPI-R4 和已采用的 E7。"
 
+msgid "Retrying DHCP"
+msgstr "尚未获取租约，正在重试"
+
 msgid "Save"
 msgstr "保存"
 
@@ -288,8 +306,14 @@ msgstr "正在获取 DHCP 地址"
 msgid "Waiting for Ethernet"
 msgstr "等待有线上联"
 
+msgid "Waiting for a lease to check the gateway"
+msgstr "获取租约后探测网关"
+
 msgid "Wired client MAC"
 msgstr "有线客户端 MAC"
+
+msgid "Wired client stopped"
+msgstr "有线客户端已停止"
 
 msgid "Wired gateway check"
 msgstr "有线网关探测"
