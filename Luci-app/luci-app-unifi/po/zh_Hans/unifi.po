@@ -6,9 +6,6 @@ msgstr ""
 msgid "%s / 3 radios up"
 msgstr "%s / 3 个射频已启动"
 
-msgid "%s more"
-msgstr "另有 %s 台"
-
 msgid "AP PHY rate"
 msgstr "AP 收发链路速率"
 
@@ -326,3 +323,57 @@ msgstr "无线发送总量"
 
 msgid "Wireless clients"
 msgstr "无线终端"
+
+msgid "Report only"
+msgstr "仅上报（保留已有 AP）"
+
+msgid "Automatic · dedicated AP"
+msgstr "自动下发 · 独立 AP"
+
+msgid "Manual binding"
+msgstr "手动绑定"
+
+msgid "Choose a controller Wi-Fi network"
+msgstr "选择 UCG 已分配给 E7 的 Wi-Fi"
+
+msgid "Skip this band"
+msgstr "跳过此频段"
+
+msgid "No spare secondary AP"
+msgstr "暂无可用的独立 AP"
+
+msgid "Create a dedicated AP"
+msgstr "新建独立 AP"
+
+msgid "Controller Wi-Fi"
+msgstr "UCG Wi-Fi"
+
+msgid "A direct Ethernet bridge to the UCG default gateway is required."
+msgstr "需要直连 UCG 默认网关的上联网桥，由 UCG 提供 DHCP。"
+
+msgid "New APs use %s. UCG supplies DHCP and classifies client traffic. Applying may briefly reconnect this radio."
+msgstr "新 AP 接入 %s 网桥，由 UCG 提供 DHCP 并识别客户端流量。应用时该频段可能短暂重连。"
+
+msgid "Controller Wi-Fi applied"
+msgstr "UCG 配置已生效"
+
+msgid "Waiting for an applicable controller configuration"
+msgstr "正在等待可用的 UCG 配置"
+
+msgid "The chosen secondary AP is no longer available. Reopen settings to refresh."
+msgstr "所选频段没有可用的独立 AP，请重新打开设置刷新。"
+
+msgid "Select a new, distinctly named WLAN assigned to this E7 in UniFi Network."
+msgstr "请在 UniFi Network 新建一个名称与现有 SSID 不同的 Wi-Fi，分配给 E7 后再选择。"
+
+msgid "Provisioning mode"
+msgstr "配置方式"
+
+msgid "SSID already in use"
+msgstr "已有 AP 正在使用"
+
+msgid "Choose a native personal or OWE network assigned to the E7. Create a secondary AP here or select an unused, disabled AP."
+msgstr "请选择 UCG 已分配给 E7 的原生网络 Wi-Fi，支持个人认证和 OWE。可在此新建独立 AP，或选择已停用的备用 AP。"
+
+msgid "WLAN withdrawn by controller"
+msgstr "UCG 已撤下此 Wi-Fi"

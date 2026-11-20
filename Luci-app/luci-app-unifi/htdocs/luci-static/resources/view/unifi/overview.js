@@ -161,16 +161,8 @@ function gatewayState(d) {
 	return host.gateway ? _('Checking gateway') : _('No gateway in DHCP lease');
 }
 
-function topology(d, band, showAll, stale) {
+function topology(d, stale) {
 	const port = d.uplink?.name;
-	const nodes = d.clients.filter(c => !band || c.band === band);
-	const leaves = nodes.slice(0, 3).map(c => E('li', { 'class': 'uf-leaf' }, [
-		clientMark(c), div('', [E('strong', {}, t(c.name || c.model || c.mac)), E('small', {}, t(
-			[bands[c.band], c.signal != null ? c.signal + ' dBm' : null].filter(Boolean).join(' · ')))])]));
-	if (nodes.length > leaves.length) {
-		const more = btn(_('%s more').format(nodes.length - leaves.length), 'uf-link', showAll);
-		leaves.push(E('li', { 'class': 'uf-more' }, [more]));
-	}
 	const [status, tone] = stale ? [_('Refresh failed · showing last data'), 'warn'] : connection(d);
 	const online = tone === 'ok' && d.uplink?.up !== false;
 	const linkRate = d.uplink?.up === false ? _('Down') : rate(d.uplink);
@@ -189,13 +181,8 @@ function topology(d, band, showAll, stale) {
 	return E('section', { 'class': 'uf-card uf-topology' }, [
 		div('uf-card-head', [E('h3', {}, t(_('Network topology'))), chip(status, tone)]),
 		graph,
-		E('dl', { 'class': 'uf-path-facts' }, [
-			metric(_('Management interface'), [d.settings.management_network, d.management_device].filter(Boolean).join(' · ')),
-			metric(_('Reported firmware'), reportedVersion(d))
-		]),
 		...(d.settings.wired_host && d.settings.enabled ? [div('uf-host', [
-			icon('wire'), E('strong', {}, t(_('BPI-R4 wired client'))), E('small', {}, t(hostState(d)))])] : []),
-		...(leaves.length ? [E('ul', { 'class': 'uf-leaves' }, leaves)] : [])
+			icon('wire'), E('strong', {}, t(_('BPI-R4 wired client'))), E('small', {}, t(hostState(d)))])] : [])
 	]);
 }
 
@@ -409,19 +396,75 @@ function showSettings(d, reload) {
 		return { section, field, node: E('label', { 'class': 'uf-check' }, [field, t([section, band].filter(Boolean).join(' · '))]) };
 	});
 	const field = (name, el, help) => E('label', { 'class': 'uf-field' }, [E('span', {}, t(name)), el, ...(help ? [E('small', {}, t(help))] : [])]);
+	const option = (value, label) => E('option', { value: value }, t(label));
+	const mode = E('select', {}, [option('off', _('Report only')), option('auto', _('Automatic · dedicated AP')),
+		option('manual', _('Manual binding'))]);
+	mode.value = old.auto_provision ? 'auto' : old.wlan_id ? 'manual' : 'off';
+	const wlans = d.controller_wlans || [];
+	const wlan = E('select', {}, [option('', _('Choose a controller Wi-Fi network')),
+		...wlans.map(w => {
+			const item = option(w.id, w.ssid + ' · ' + (w.in_use ? _('SSID already in use') : w.bands.map(b => bands[b]).join(' / ')));
+			item.disabled = w.in_use;
+			return item;
+		})]);
+	if (old.auto_provision && !wlans.some(w => w.id === old.wlan_id)) wlan.appendChild(option(old.wlan_id, old.wlan_id));
+	wlan.value = old.auto_provision ? old.wlan_id : '';
+	const bandFields = div('uf-slot-fields');
+	let targets = [], targetsEdited = false;
+	function chooseTargets() {
+		const selected = wlans.find(w => w.id === wlan.value);
+		targets = [];
+		bandFields.replaceChildren();
+		if (!selected) return;
+		for (const b of Object.keys(bands).filter(b => selected.bands.includes(b))) {
+			const slots = (d.slots || []).filter(s => s.band === b);
+			const select = E('select', {}, [option('', slots.length ? _('Skip this band') : _('No spare secondary AP')),
+				...slots.map(s => option(s.section, s.create ? _('Create a dedicated AP') : [s.ssid, s.section].filter(Boolean).join(' · ')))]);
+			const saved = old.auto_provision && old.wlan_id === selected.id;
+			select.value = (saved ? slots.find(s => old.sections.includes(s.section)) : slots.find(s => s.create))?.section || '';
+			select.disabled = !slots.length;
+			select.addEventListener('change', () => { targetsEdited = true; });
+			targets.push(select);
+			bandFields.appendChild(field(bands[b], select));
+		}
+	}
+	wlan.addEventListener('change', () => { targetsEdited = true; chooseTargets(); });
+	chooseTargets();
+	const quick = div('uf-quick', [field(_('Controller Wi-Fi'), wlan,
+		_('Choose a native personal or OWE network assigned to the E7. Create a secondary AP here or select an unused, disabled AP.')), bandFields,
+		E('small', {}, t(!d.upstream_ready ? _('A direct Ethernet bridge to the UCG default gateway is required.') :
+			_('New APs use %s. UCG supplies DHCP and classifies client traffic. Applying may briefly reconnect this radio.').format(old.management_network))),
+		...(old.auto_provision ? [E('small', { 'class': 'uf-provision-state' }, t(d.withdrawn ? _('WLAN withdrawn by controller') : d.provisioned ?
+			_('Controller Wi-Fi applied') : _('Waiting for an applicable controller configuration')))] : [])]);
+	const manual = div('uf-manual', [
+		field(_('Controller WLAN ID'), wid, _('Leave unbound to report existing SSIDs. Select independent BSS interfaces to allow provisioning.')),
+		...(checks.length ? checks.map(c => c.node) : [E('small', {}, t(_('No eligible independent BSS interfaces.')))])]);
+	function switchMode() {
+		quick.hidden = mode.value !== 'auto';
+		manual.hidden = mode.value !== 'manual';
+	}
+	mode.addEventListener('change', switchMode);
+	switchMode();
 	const err = E('p', { 'class': 'uf-error', role: 'alert' });
 	const errors = { url: _('Enter a controller IP URL ending in /inform.'), network: _('Select an available management interface.'),
 		version: _('Use three or four numeric components, for example 8.8.14.20179.'),
 		paired_url: _('The saved adoption belongs to another controller. Complete re-adoption before changing this URL.'),
 		binding: _('Select one independent AP at most per band and enter its controller WLAN ID.'),
+		slot: _('The chosen secondary AP is no longer available. Reopen settings to refresh.'),
+		controller_wlan: _('Select a new, distinctly named WLAN assigned to this E7 in UniFi Network.'),
+		upstream: _('A direct Ethernet bridge to the UCG default gateway is required.'),
 		conflict: _('Settings changed in another session. Close and reopen this form.'),
 		service: _('Settings were saved. The service could not be applied. Reopen the form to retry.') };
 	const save = btn(_('Save and apply'), 'btn cbi-button cbi-button-positive important', async () => {
 		err.textContent = '';
 		save.disabled = true;
 		try {
+			const auto = mode.value === 'auto', manualMode = mode.value === 'manual';
+			const sections = auto && old.auto_provision && !targetsEdited ? old.sections.slice() : auto ? targets.map(f => f.value).filter(Boolean) :
+				manualMode ? checks.filter(c => c.field.checked).map(c => c.section) : [];
 			const cfg = { enabled: enabled.checked, wired_host: wired.checked, inform_url: url.value.trim(), firmware_version: version.value.trim(),
-				management_network: net.value, wlan_id: wid.value.trim(), sections: checks.filter(c => c.field.checked).map(c => c.section).sort() };
+				management_network: net.value, auto_provision: auto, wlan_id: auto ? wlan.value : manualMode ? wid.value.trim() : '', sections: sections.sort() };
+			if (auto && (!cfg.wlan_id || !sections.length)) { err.textContent = errors[cfg.wlan_id ? 'slot' : 'controller_wlan']; return; }
 			const reply = await configure(JSON.stringify(old), JSON.stringify(cfg));
 			if (!reply.saved || reply.error) { err.textContent = errors[reply.error] || _('Could not apply settings.'); return; }
 			await reload(true);
@@ -437,8 +480,7 @@ function showSettings(d, reload) {
 				E('small', {}, t(_('Requests a separate DHCP address on the Ethernet uplink. The gateway can list BPI-R4 alongside the adopted E7.')))]),
 			field(_('Reported E7 firmware'), version, _('Leave empty to use %s. This value is sent to UniFi Network.').format(d.default_version)),
 			E('details', {}, [E('summary', {}, t(_('WLAN provisioning'))),
-				field(_('Controller WLAN ID'), wid, _('Leave unbound to report existing SSIDs. Select independent BSS interfaces to allow provisioning.')),
-				...(checks.length ? checks.map(c => c.node) : [E('small', {}, t(_('No eligible independent BSS interfaces.')))])]),
+				field(_('Provisioning mode'), mode), quick, manual]),
 			err
 		]),
 		div('right', [btn(_('Cancel'), 'btn cbi-button', ui.hideModal), t(' '), save])]);
@@ -462,12 +504,8 @@ return view.extend({
 			tab = 'clients';
 			keepReadingPosition(detail, visuals, draw);
 		}
-		function jump() {
-			show('clients');
-			detail.panel.scrollIntoView({ block: 'start' });
-		}
 		function draw() {
-			const graph = topology(latest, band, jump, stale);
+			const graph = topology(latest, stale);
 			if (root.contains(detail.node)) {
 				const summary = root.firstElementChild;
 				summary.querySelector('.uf-title p').textContent = subtitle(latest);

@@ -185,18 +185,9 @@
 	45% { opacity: .65; }
 	68%, 100% { transform: scale(1.25); opacity: 0; }
 }
-.uf-page .uf-path-facts { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 22px; border-top: 1px solid var(--uf-line); padding-block: 8px; }
-.uf-path-facts .uf-metric { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 7px; }
-.uf-path-facts dt, .uf-host small { font-size: 12px; }
-.uf-path-facts dd { overflow-wrap: anywhere; font-size: 12px; font-weight: 550; }
 .uf-host { display: flex; align-items: center; gap: 7px; padding-block: 6px; border-top: 1px solid var(--uf-line); }
 .uf-host .uf-icon { width: 16px; height: 16px; color: var(--uf-blue); }
 .uf-host strong { font-size: 12px; font-weight: 550; }.uf-host small { margin-inline-start: auto; }
-.uf-page .uf-leaves { list-style: none; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 8px 0 0; border-top: 1px solid var(--uf-line); }
-.uf-leaf { display: flex; align-items: center; gap: 6px; padding: 4px 8px 4px 5px; max-width: 100%; border-radius: 8px; background: var(--uf-wash); }
-.uf-leaf > div { min-width: 0; line-height: 1.2; }
-.uf-leaf strong { display: block; max-width: 13em; font-size: 11px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; font-weight: 600; }
-.uf-leaf small { font-size: 10px; }
 .uf-client-mark {
 	display: inline-grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 9px;
 	color: var(--uf-muted); background: color-mix(in srgb, currentColor 9%, var(--uf-paper));
@@ -204,8 +195,6 @@
 .uf-client-mark[data-kind=phone], .uf-client-mark[data-kind=tablet] { color: var(--uf-teal); }
 .uf-client-mark[data-kind=laptop], .uf-client-mark[data-kind=desktop] { color: var(--uf-blue); }
 .uf-client-mark[data-kind=speaker], .uf-client-mark[data-kind=television] { color: var(--uf-violet); }
-.uf-leaf .uf-client-mark { width: 24px; height: 24px; border-radius: 6px; }
-.uf-leaf .uf-client-mark .uf-icon { width: 17px; height: 17px; }
 
 .uf-composition { display: flex; flex-direction: column; }
 .uf-composition-body {
@@ -321,7 +310,7 @@
 	.uf-page .uf-tabs button { min-height: 38px; padding: 7px 10px; }
 }
 @container unifi (max-width: 340px) {
-	.uf-path-facts { column-gap: 12px; }.uf-band-name { flex-wrap: wrap; gap: 0 5px; }
+	.uf-band-name { flex-wrap: wrap; gap: 0 5px; }
 	.uf-band-name span { max-width: 100%; }.uf-page .uf-tabs button { padding-inline: 7px; }
 }
 @supports not (container-type: inline-size) {

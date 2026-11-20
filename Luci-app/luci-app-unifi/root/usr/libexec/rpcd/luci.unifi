@@ -8,16 +8,16 @@ import tempfile
 import time
 
 sys.path.insert(0, "/usr/lib/be14-ucg")
-from agent import (DEFAULT_VERSION, FACTORY_KEY, LAST_INFORM, MODEL, STATE, endpoint,
+from agent import (DEFAULT_VERSION, FACTORY_KEY, LAST_INFORM, MODEL, STATE, binding_signature, endpoint,
                    firmware_version, local, locked, run, state_for)
 from telemetry import wireless_report
-from wired import wired_uplink
+from wired import controller_bridge, wired_uplink
 from wired_host import status as wired_host_status
 from wlan import valid_wlan_id
 
 METHODS = {"status": {}, "configure": {"previous": "", "settings": ""},
            "set_model": {"mac": "", "previous": "", "model": ""}}
-FLAGS = ("enabled", "wired_host")
+FLAGS = ("enabled", "wired_host", "auto_provision")
 OPTIONS = ("inform_url", "management_network", "firmware_version", "wlan_id")
 INIT = "/etc/init.d/be14-ucg"
 
@@ -54,7 +54,8 @@ def status():
                board=board.get("model"), hostname=board.get("hostname"), system=(board.get("release") or {}).get("description"),
                running=any(i.get("running") for name, i in svc.get("instances", {}).items() if name != "wired_host"),
                wired_host=wired_host_status() if cfg["enabled"] and cfg["wired_host"] else {},
-               paired=False, settings_received=False, radios=[], clients=[], candidates=[])
+               paired=False, settings_received=False, radios=[], clients=[], candidates=[],
+               controller_wlans=[], slots=[], upstream_ready=False, provisioned=False)
     if cfg["enabled"] and cfg["wired_host"] and not out["wired_host"]:
         worker = svc.get("instances", {}).get("wired_host", {})
         out["wired_host"] = {"state": "starting" if worker.get("running") else "stopped"}
@@ -65,6 +66,8 @@ def status():
         out["state_error"] = True
     out["paired"] = state.get("key") not in (None, FACTORY_KEY)
     out["settings_received"] = state.get("wlan_model") == MODEL
+    if out["paired"] and out["settings_received"]:
+        out["controller_wlans"] = state.get("automatic_wlans", [])
     try:
         snap = local("overview")
         data = wireless_report(snap, state.get("report_wlans", {}))
@@ -73,6 +76,16 @@ def status():
         return out
     out.update(uplink=wired_uplink(snap), management_device=snap.get("management_device"),
                ip=snap.get("ip"), mac=snap.get("mac"), total=data.get("num_sta"), candidates=snap.get("candidates") or [])
+    out["slots"] = snap.get("slots") or []
+    out["upstream_ready"] = controller_bridge(snap)
+    out["controller_wlans"] = [dict(w, in_use=w["ssid"] in snap["other_ssids"]) for w in out["controller_wlans"]]
+    inactive = state.get("inactive_bands", [])
+    out["provisioned"] = bool(cfg["auto_provision"] and snap["bindings"] and not snap.get("missing_selection") and
+                              state.get("applied_binding") == binding_signature(snap) and "pending" not in state and
+                              all((not b.get("observed") and (b.get("missing") or b.get("disabled") == "1")) if band in inactive
+                                  else b.get("bridge_attached") and b.get("observed") == b.get("ssid") and
+                                  b.get("be14_ucg_managed") == "1" for band, b in snap["bindings"].items()))
+    out["withdrawn"] = out["provisioned"] and set(inactive) == set(snap["bindings"])
     try:
         url, mac, version, stamp = json.loads(LAST_INFORM.read_text())
         if out["paired"] and url == cfg["inform_url"] and mac == out["mac"]:
@@ -127,12 +140,34 @@ def check(cfg, before):
         except (OSError, ValueError, KeyError):
             return "paired_url"
     selected, wid = cfg["sections"], cfg["wlan_id"]
+    automatic = cfg["auto_provision"]
+    pattern = r"[A-Za-z0-9_]+" if automatic else r"be14_ucg_[A-Za-z0-9_]+"
     if (not isinstance(selected, list) or len(selected) > 3 or
-        any(not isinstance(s, str) or not re.fullmatch(r"be14_ucg_[A-Za-z0-9_]+", s) for s in selected)):
+        any(not isinstance(s, str) or not re.fullmatch(pattern, s) for s in selected)):
         return "binding"
-    if selected != before["sections"] or wid != before["wlan_id"]:
+    if automatic and cfg["management_network"] != before["management_network"]:
+        return "upstream"
+    if (selected != before["sections"] or wid != before["wlan_id"] or automatic != before["auto_provision"]
+            or (automatic and cfg["enabled"] and not before["enabled"])):
         if bool(wid) != bool(selected) or (wid and not valid_wlan_id(wid)):
             return "binding"
+        if automatic:
+            if not cfg["enabled"] or not selected:
+                return "binding"
+            state = state_for(url)
+            if state.get("wlan_model") != MODEL or state["key"] == FACTORY_KEY:
+                return "controller_wlan"
+            snap = local("overview")
+            if not controller_bridge(snap):
+                return "upstream"
+            slots = {s["section"]: s["band"] for s in snap["slots"]} if snap["slots"] else {}
+            bands = {slots.get(s) for s in selected}
+            if None in bands or len(bands) != len(selected):
+                return "slot"
+            if not any(w["id"] == wid and bands <= set(w["bands"]) and w["ssid"] not in snap["other_ssids"]
+                       for w in state.get("automatic_wlans", [])):
+                return "controller_wlan"
+            return None
         if selected:
             available = {s["section"]: s["band"] for s in local("overview").get("candidates", [])}
             if not all(s in available for s in selected) or len({available[s] for s in selected}) != len(selected):
@@ -163,10 +198,10 @@ def configure(args):
                     uci("add_list", "be14_ucg.main.section=" + section)
             if change != old:
                 uci("commit", "be14_ucg")
-    # Do not hold the inform lock while procd is stopping a worker.
+    # procd reconciles instances from the current UCI config, even if a later save won the race.
     try:
         run([INIT, "enable"])
-        run([INIT, "restart" if change["enabled"] else "stop"])
+        run([INIT, "reload"])
     except (OSError, subprocess.SubprocessError):
         return {"error": "service", "saved": True}
     return {"saved": True}
