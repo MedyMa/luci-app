@@ -93,14 +93,18 @@ function rate(link) {
 	return link.speed >= 1000 ? (link.speed / 1000).toLocaleString() + ' GbE' : link.speed + ' Mb/s';
 }
 
-function heading(d, reload, valid) {
+function subtitle(d) {
+	return [d.hostname || _('Access point management'), d.model].filter(Boolean).join(' · ');
+}
+
+function heading(d, reload, openSettings) {
 	const buttons = [E('button', { type: 'button', 'class': 'uf-cmd uf-icon-only',
 		title: _('Refresh'), 'aria-label': _('Refresh'), click: reload }, [icon('refresh')])];
-	if (valid && L.hasViewPermission() !== false)
-		buttons.push(btn(_('Settings'), 'uf-cmd uf-primary', () => showSettings(d, reload)));
+	if (openSettings && L.hasViewPermission() !== false)
+		buttons.push(btn(_('Settings'), 'uf-cmd uf-primary', openSettings));
 	return div('uf-mast', [div('uf-id', [
 		div('uf-mark', [icon('access-point')]),
-		div('uf-title', [E('h2', {}, t('UniFi')), E('p', {}, t([d.hostname || _('Access point management'), d.model].filter(Boolean).join(' · ')))])
+		div('uf-title', [E('h2', {}, t('UniFi')), E('p', {}, t(subtitle(d)))])
 	]), div('uf-actions', buttons)]);
 }
 
@@ -108,15 +112,14 @@ function summaryMetric(label, value, cls, glyph) {
 	return div('uf-metric ' + cls, [E('dt', {}, [icon(glyph), t(label)]), E('dd', {}, t(value))]);
 }
 
-function hero(d, reload) {
+function metrics(d) {
 	const aps = d.radio_error ? [] : d.radios.flatMap(r => r.aps);
-	return E('section', { 'class': 'uf-card uf-hero uf-summary' }, [heading(d, reload, true),
-		E('dl', { 'class': 'uf-metrics' }, [
-			summaryMetric(_('Wireless clients'), d.total, 'uf-total', 'clients'),
-			summaryMetric(_('Wired uplink'), rate(d.uplink), 'uf-speed', 'wire'),
-			summaryMetric(_('Wireless RX total'), traffic(aps, 'rx'), 'uf-rx', 'receive'),
-			summaryMetric(_('Wireless TX total'), traffic(aps, 'tx'), 'uf-tx', 'send')
-		])]);
+	return E('dl', { 'class': 'uf-metrics' }, [
+		summaryMetric(_('Wireless clients'), d.total, 'uf-total', 'clients'),
+		summaryMetric(_('Wired uplink'), rate(d.uplink), 'uf-speed', 'wire'),
+		summaryMetric(_('Wireless RX total'), traffic(aps, 'rx'), 'uf-rx', 'receive'),
+		summaryMetric(_('Wireless TX total'), traffic(aps, 'tx'), 'uf-tx', 'send')
+	]);
 }
 
 function topologyNode(glyph, title, value) {
@@ -137,7 +140,7 @@ function hostState(d) {
 	return _('Waiting for Ethernet');
 }
 
-function topology(d, band, showAll) {
+function topology(d, band, showAll, stale) {
 	const port = d.uplink?.name;
 	const nodes = d.clients.filter(c => !band || c.band === band);
 	const leaves = nodes.slice(0, 3).map(c => E('li', { 'class': 'uf-leaf' }, [
@@ -147,7 +150,7 @@ function topology(d, band, showAll) {
 		const more = btn(_('%s more').format(nodes.length - leaves.length), 'uf-link', showAll);
 		leaves.push(E('li', { 'class': 'uf-more' }, [more]));
 	}
-	const [status, tone] = connection(d);
+	const [status, tone] = stale ? [_('Refresh failed · showing last data'), 'warn'] : connection(d);
 	const online = tone === 'ok' && d.uplink?.up !== false;
 	const linkRate = d.uplink?.up === false ? _('Down') : rate(d.uplink);
 	const connectionLabel = port ? [port, linkRate].filter(x => x !== unknown).join(' · ') : _('Inform');
@@ -160,7 +163,7 @@ function topology(d, band, showAll) {
 		]),
 		topologyNode('radio', 'BPI-R4 · BE14', d.ip)
 	]);
-	// Keep the pulse in phase when polling or changing tabs rebuilds the graph.
+	// Keep the pulse in phase when fresh telemetry rebuilds the graph.
 	if (online) graph.style.setProperty('--uf-phase', -Math.round(performance.now()) + 'ms');
 	return E('section', { 'class': 'uf-card uf-topology' }, [
 		div('uf-card-head', [E('h3', {}, t(_('Network topology'))), chip(status, tone)]),
@@ -175,7 +178,7 @@ function topology(d, band, showAll) {
 	]);
 }
 
-function distribution(d, active, select) {
+function distribution(d, active, select, current) {
 	const radio = new Map(d.radios.map(r => [r.band, r]));
 	const complete = Object.keys(bands).every(k => Number.isInteger(radio.get(k)?.clients));
 	const count = complete ? d.radios.reduce((sum, r) => sum + r.clients, 0) : null;
@@ -206,10 +209,19 @@ function distribution(d, active, select) {
 	const ring = div('uf-ring', [E('i', { 'aria-hidden': 'true',
 		style: stops.length ? 'background:conic-gradient(' + stops.join(',') + ')' : '' }),
 		div('uf-ring-value', [E('b', {}, t(count)), E('small', {}, t(_('Associations')))])]);
+	const caption = !complete ? _('Unavailable') : _('%s / 3 radios up').format(d.radios.filter(r => r.up).length);
+	if (current) {
+		current.querySelector('.uf-caption').textContent = caption;
+		current.querySelector('.uf-ring').replaceWith(ring);
+		current.querySelectorAll('.uf-legend-row').forEach((row, i) => {
+			row.setAttribute('aria-pressed', legend[i].getAttribute('aria-pressed'));
+			if (!row.isEqualNode(legend[i])) row.replaceChildren(...legend[i].childNodes);
+		});
+		return current;
+	}
 	return E('section', { 'class': 'uf-card uf-composition' }, [
 		div('uf-card-head', [E('h3', {}, t(_('Band distribution'))),
-			E('small', { 'class': 'uf-caption' }, t(!complete ? _('Unavailable') :
-				_('%s / 3 radios up').format(d.radios.filter(r => r.up).length)))]),
+			E('small', { 'class': 'uf-caption' }, t(caption))]),
 		div('uf-composition-body', [ring, div('uf-legend', legend)])]);
 }
 
@@ -245,12 +257,20 @@ function dataTable(columns, rows, empty) {
 }
 
 function radiosPanel(d) {
-	return dataTable([_('Band'), _('Status'), _('Channel'), _('Configured mode'), _('Operating width'), _('Controller WLAN')],
+	return dataTable([_('Band'), _('Status'), _('Channel'), _('Configured mode'), _('Channel width'), _('Controller WLAN')],
 		d.radios.map(r => [[E('strong', {}, t(bands[r.band])), E('small', {}, t(r.ifname))],
 			chip(r.up ? _('Up') : _('Down'), r.up ? 'ok' : ''), t(r.channel), t(r.configured),
-			t(r.width ? r.width + ' MHz' : unknown), r.aps.length ? r.aps.map(ap =>
+			radioWidth(r), r.aps.length ? r.aps.map(ap =>
 				div('uf-ssid', [t(ap.ssid), chip(ap.matched ? _('Matched') : _('Unmatched'), ap.matched ? 'ok' : '')])) : t(unknown)]),
 		d.radio_error ? _('Radio data could not be read.') : _('No radios reported.'));
+}
+
+function radioWidth(r) {
+	if (!r.up) return t(_('Radio down'));
+	if (r.width) return [t(r.width + ' MHz'), E('small', {}, t(_('Operating width')))];
+	if (r.configured_width) return [t(_('%s MHz (configured)').format(r.configured_width)),
+		E('small', {}, t(_('Driver did not report a width')))];
+	return t(_('Driver did not report a width'));
 }
 
 function editModel(client, reload) {
@@ -294,19 +314,58 @@ function clientsPanel(d, band, reload) {
 			? _('Association data is unavailable.') : _('No associated clients.'));
 }
 
-function detailPanel(d, tab, band, change, clear, reload) {
+function detailPanel(change, clear, reload) {
 	const tabs = [['clients', _('Associated clients')], ['radios', _('Radios')], ['device', _('Device information')]];
 	const buttons = tabs.map(([key, name]) => E('button', { type: 'button', 'data-panel': key,
-		'aria-pressed': String(tab === key), 'aria-controls': 'uf-detail-body', click: () => change(key) }, t(name)));
-	const controls = [div('uf-tabs', buttons)];
-	if (tab === 'clients' && band) controls.push(btn(bands[band] + ' ×', 'uf-filter', clear));
-	const panel = E('section', { 'class': 'uf-card uf-detail' }, [div('uf-detail-head', controls),
-		E('div', { id: 'uf-detail-body' }, [tab === 'device' ? devices(d) : tab === 'radios' ? radiosPanel(d) : clientsPanel(d, band, reload)])]);
-	if (tab === 'device') return panel;
-	return div('uf-lower', [panel, E('aside', { 'class': 'uf-card uf-management' }, [
-		div('uf-card-head', [E('h3', {}, t(_('Management status')))]),
-		E('dl', {}, managementFacts(d))
-	])]);
+		'aria-controls': 'uf-detail-body', click: () => change(key) }, t(name)));
+	const filter = btn('', 'uf-filter', clear);
+	const head = div('uf-detail-head', [div('uf-tabs', buttons), filter]);
+	const body = E('div', { id: 'uf-detail-body' });
+	const panel = E('section', { 'class': 'uf-card uf-detail' }, [head, body]);
+	const facts = E('dl');
+	const aside = E('aside', { 'class': 'uf-card uf-management' }, [
+		div('uf-card-head', [E('h3', {}, t(_('Management status')))]), facts]);
+	const node = div('uf-lower', [panel, aside]);
+	return { node, head, panel, update(d, tab, band) {
+		for (const button of buttons) button.setAttribute('aria-pressed', String(button.dataset.panel === tab));
+		filter.hidden = tab !== 'clients' || !band;
+		if (!filter.hidden) filter.textContent = bands[band] + ' ×';
+		node.classList.toggle('uf-full', tab === 'device');
+		const next = tab === 'device' ? devices(d) : tab === 'radios' ? radiosPanel(d) : clientsPanel(d, band, reload);
+		if (!body.firstElementChild?.isEqualNode(next)) body.replaceChildren(next);
+		facts.replaceChildren(...managementFacts(d));
+	} };
+}
+
+// Argon scrolls .main-right; other LuCI themes scroll the document.
+function scrollParent(node) {
+	for (let p = node.parentElement; p && p !== document.body; p = p.parentElement)
+		if (/(auto|scroll)/.test(getComputedStyle(p).overflowY) && p.scrollHeight > p.clientHeight) return p;
+	return document.scrollingElement;
+}
+
+function keepReadingPosition(detail, visuals, draw, switching) {
+	if (!detail.node.isConnected || getComputedStyle(detail.head).position !== 'sticky') return draw();
+	const scroll = scrollParent(detail.node);
+	const scrolled = scroll.scrollTop > 0;
+	const top = scroll === document.scrollingElement ? 0 : scroll.getBoundingClientRect().top + scroll.clientTop;
+	const bottom = Math.min(window.innerHeight, top + scroll.clientHeight);
+	const bar = detail.head.getBoundingClientRect();
+	let anchor = visuals.lastElementChild;
+	if (anchor.getBoundingClientRect().top > top) anchor = visuals;
+	let wanted = anchor.getBoundingClientRect().top;
+	if (bar.top < bottom && bar.bottom > top) {
+		anchor = detail.panel;
+		const inset = anchor.clientTop + parseFloat(getComputedStyle(anchor).paddingTop);
+		wanted = switching ? bar.top - inset : anchor.getBoundingClientRect().top;
+		// A shorter tab needs just enough room below the visible buttons to avoid scroll clamping.
+		anchor.style.setProperty('--uf-reading-room', Math.ceil(bottom - bar.top + inset) + 'px');
+	} else {
+		detail.panel.style.removeProperty('--uf-reading-room');
+	}
+	draw();
+	const shift = anchor.getBoundingClientRect().top - wanted;
+	if (scrolled && Math.abs(shift) > 1) scroll.scrollTop += shift;
 }
 
 function showSettings(d, reload) {
@@ -369,31 +428,62 @@ return view.extend({
 	load() { return getStatus().catch(() => ({})); },
 	render(initial) {
 		const root = div('uf-page');
-		let band = null, tab = 'clients', latest = initial, inFlight = null;
-		const show = key => { tab = key; update(); };
-		const choose = key => { band = band === key ? null : key; show('clients'); };
-		const jump = () => { show('clients'); root.querySelector('.uf-detail').scrollIntoView({ block: 'start' }); };
-		const update = () => {
-			const active = root.contains(document.activeElement) ? document.activeElement.dataset : {};
-			const d = latest;
-			if (!d.settings || d.error) {
-				root.replaceChildren(E('section', { 'class': 'uf-card uf-hero' }, [heading(d, reload, false),
-					E('p', { 'class': 'uf-empty' }, t(_('Unable to read the UniFi agent.')))]));
-				return;
+		const visuals = div('uf-visuals');
+		const detail = detailPanel(show, () => choose(band), reload);
+		let band = null, tab = 'clients', latest = null, stale = false, inFlight = null;
+		function show(key) {
+			if (tab === key) return;
+			tab = key;
+			keepReadingPosition(detail, visuals, () => detail.update(latest, tab, band), true);
+		}
+		function choose(key) {
+			band = band === key ? null : key;
+			tab = 'clients';
+			keepReadingPosition(detail, visuals, draw);
+		}
+		function jump() {
+			show('clients');
+			detail.panel.scrollIntoView({ block: 'start' });
+		}
+		function draw() {
+			const graph = topology(latest, band, jump, stale);
+			if (root.contains(detail.node)) {
+				const summary = root.firstElementChild;
+				summary.querySelector('.uf-title p').textContent = subtitle(latest);
+				summary.querySelector('.uf-metrics').replaceWith(metrics(latest));
+				visuals.firstElementChild.replaceWith(graph);
+				distribution(latest, band, choose, visuals.lastElementChild);
+			} else {
+				const summary = E('section', { 'class': 'uf-card uf-hero uf-summary' }, [
+					heading(latest, reload, () => showSettings(latest, reload)), metrics(latest)]);
+				visuals.replaceChildren(graph, distribution(latest, band, choose));
+				root.replaceChildren(summary, visuals, detail.node);
 			}
-			root.replaceChildren(hero(d, reload), div('uf-visuals', [topology(d, band, jump), distribution(d, band, choose)]),
-				detailPanel(d, tab, band, show, () => choose(band), reload));
-			if (bands[active.band]) root.querySelector('[data-band="' + active.band + '"]')?.focus({ preventScroll: true });
-			if (['clients', 'radios', 'device'].includes(active.panel))
-				root.querySelector('[data-panel="' + active.panel + '"]')?.focus({ preventScroll: true });
-		};
+			detail.update(latest, tab, band);
+		}
+		function accept(data) {
+			const failed = !data?.settings || data.error;
+			if (latest && (failed || (data.radio_error && !latest.radio_error))) {
+				if (stale) return;
+				stale = true;
+			} else if (failed) {
+				if (!root.firstElementChild)
+					root.appendChild(E('section', { 'class': 'uf-card uf-hero' }, [heading({}, reload),
+						E('p', { 'class': 'uf-empty' }, t(_('Unable to read the UniFi agent.')))]));
+				return;
+			} else {
+				latest = data;
+				stale = false;
+			}
+			keepReadingPosition(detail, visuals, draw);
+		}
 		function reload(fresh) {
 			if (inFlight) return fresh === true ? inFlight.then(() => reload(true)) : inFlight;
-			inFlight = getStatus().catch(() => ({})).then(data => { latest = data; update(); })
+			inFlight = getStatus().catch(() => ({})).then(accept)
 				.finally(() => { inFlight = null; });
 			return inFlight;
 		}
-		update();
+		accept(initial);
 		poll.add(reload, 15);
 		return E('div', {}, [E('link', { rel: 'stylesheet', href: L.resource('view/unifi/style.css') }), root]);
 	},

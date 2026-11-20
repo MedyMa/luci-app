@@ -51,6 +51,18 @@ msgstr "信道"
 msgid "Channel %s"
 msgstr "信道 %s"
 
+msgid "Channel width"
+msgstr "信道带宽"
+
+msgid "%s MHz (configured)"
+msgstr "%s MHz（配置值）"
+
+msgid "Driver did not report a width"
+msgstr "驱动未上报实际带宽"
+
+msgid "Refresh failed · showing last data"
+msgstr "刷新失败，显示上次数据"
+
 msgid "Check adoption"
 msgstr "请检查采用状态"
 

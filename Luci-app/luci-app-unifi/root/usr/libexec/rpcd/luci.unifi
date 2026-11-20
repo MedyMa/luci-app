@@ -76,11 +76,13 @@ def status():
             out.update(last_inform=stamp, inform_age=max(0, int(time.time()) - stamp), last_version=version)
     except (OSError, TypeError, ValueError):
         pass
+    configured_widths = {r["radio"]: r.get("ht") for r in data["radio_table"]}
     for radio in data["radio_table_stats"]:
         band = radio["radio"]
         live = snap["radios"][band]
         row = dict(band=band, up=radio["up"], ifname=live.get("ifname"), channel=radio.get("channel"),
-                   configured=live.get("applied_htmode"), width=radio.get("bw"), clients=radio.get("num_sta"), aps=[])
+                   configured=live.get("applied_htmode"), configured_width=configured_widths.get(band),
+                   width=radio.get("bw"), clients=radio.get("num_sta"), aps=[])
         for ap in data["vap_table"]:
             if ap["radio"] != band:
                 continue
