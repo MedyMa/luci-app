@@ -52,6 +52,12 @@
 .uf-band-label i { color: var(--uf-muted); }
 .uf-band-label i.on { color: var(--uf-good); }
 .uf-band-count { display: block; margin-top: 5px; font-size: 12px; }
+.uf-lane { min-width: 0; }
+.uf-lane .uf-band { width: 100%; }
+.uf-leaves { list-style: none; margin: 0 0 0 12px; padding: 4px 0 0 10px; border-inline-start: 1px solid var(--uf-accent); }
+.uf-leaves li { position: relative; padding: 3px 0; color: var(--uf-ink); font-size: 11px; overflow-wrap: anywhere; }
+.uf-leaves li::before { content: ''; position: absolute; width: 7px; top: 50%; inset-inline-start: -10px; border-top: 1px solid var(--uf-accent); }
+.uf-endpoint { display: inline-block; width: 8px; height: 10px; border: 1px solid var(--uf-muted); border-radius: 2px; margin-inline-end: 5px; vertical-align: middle; }
 .uf-page .uf-band:hover, .uf-page .uf-band[aria-pressed=true] { border-color: var(--uf-accent); background: color-mix(in srgb,var(--uf-accent) 8%,var(--uf-bg)); }
 .uf-page button:focus-visible, .uf-settings :focus-visible { outline: 2px solid var(--focus-ring, Highlight); outline-offset: 2px; }
 .uf-details dl { margin: 0; padding: 6px 20px 12px; }

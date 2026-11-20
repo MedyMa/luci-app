@@ -239,3 +239,6 @@ msgstr "手动指定"
 
 msgid "1 client"
 msgstr "1 台终端"
+
+msgid "%s more"
+msgstr "另有 %s 台"

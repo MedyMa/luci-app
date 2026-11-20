@@ -70,7 +70,12 @@ function topology(d, active, select) {
 			E('small', {}, t(!radio ? _('Unavailable') : !radio.up ? _('Radio down') :
 				_('Channel %s').format(radio.channel ?? unknown))),
 			E('span', { 'class': 'uf-band-count' }, t(radio?.clients === 1 ? _('1 client') : _('%s clients').format(radio?.clients ?? unknown)))]);
-		return node;
+		const stations = d.clients.filter(c => c.band === key);
+		const leaves = stations.slice(0, 2).map(c => E('li', { title: c.mac },
+			[E('span', { 'class': 'uf-endpoint' }), t(c.name || c.model || c.mac)]));
+		if (stations.length > leaves.length)
+			leaves.push(E('li', {}, t(_('%s more').format(stations.length - leaves.length))));
+		return div('uf-lane', [node, ...(leaves.length ? [E('ul', { 'class': 'uf-leaves' }, leaves)] : [])]);
 	});
 	return E('section', { 'class': 'uf-card uf-topology' }, [
 		div('uf-card-head', [E('h3', {}, t(_('Network topology'))), chip(...connection(d))]),
@@ -130,8 +135,8 @@ function editModel(client, reload) {
 					_('Client or settings changed. Close and refresh before retrying.');
 				return;
 			}
+			await reload(true);
 			ui.hideModal();
-			await reload();
 		} catch (e) { err.textContent = _('Could not apply settings.'); }
 		finally { save.disabled = false; }
 	});
@@ -195,8 +200,8 @@ function showSettings(d, reload) {
 				management_network: net.value, wlan_id: wid.value.trim(), sections: checks.filter(c => c.field.checked).map(c => c.section).sort() };
 			const reply = await configure(JSON.stringify(old), JSON.stringify(cfg));
 			if (!reply.saved || reply.error) { err.textContent = errors[reply.error] || _('Could not apply settings.'); return; }
+			await reload(true);
 			ui.hideModal();
-			await reload();
 		} catch (e) { err.textContent = _('Could not apply settings.'); }
 		finally { save.disabled = false; }
 	});
@@ -217,7 +222,7 @@ return view.extend({
 	load() { return getStatus().catch(() => ({})); },
 	render(initial) {
 		const root = div('uf-page');
-		let band = null, latest = initial, loading = false;
+		let band = null, latest = initial, inFlight = null;
 		const update = () => {
 			const focus = root.contains(document.activeElement) ? document.activeElement.dataset.band : null;
 			const d = latest;
@@ -235,11 +240,13 @@ return view.extend({
 				radiosPanel(d), clientsPanel(d, band, () => select(band), reload));
 			if (focus && bands[focus]) root.querySelector('[data-band="' + focus + '"]')?.focus({ preventScroll: true });
 		};
-		async function reload() {
-			if (loading) return;
-			loading = true;
-			try { latest = await getStatus(); } catch (e) { latest = {}; }
-			finally { loading = false; update(); }
+		function reload(fresh) {
+			if (inFlight) return fresh === true ? inFlight.then(() => reload(true)) : inFlight;
+			inFlight = getStatus().catch(() => ({})).then(data => {
+				latest = data;
+				update();
+			}).finally(() => { inFlight = null; });
+			return inFlight;
 		}
 		update();
 		poll.add(reload, 15);
