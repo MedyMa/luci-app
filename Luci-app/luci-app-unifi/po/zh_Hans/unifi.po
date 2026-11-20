@@ -3,14 +3,14 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Language: zh_Hans\n"
 
-msgid "%s clients"
-msgstr "%s 台终端"
+msgid "%s / 3 radios up"
+msgstr "%s / 3 个射频已启动"
+
+msgid "%s more"
+msgstr "另有 %s 台"
 
 msgid "Access point management"
 msgstr "接入点管理"
-
-msgid "Active radios"
-msgstr "已启用射频"
 
 msgid "Agent stopped"
 msgstr "代理已停止"
@@ -21,17 +21,26 @@ msgstr "关联终端"
 msgid "Association data is unavailable."
 msgstr "无法读取关联状态。"
 
+msgid "Associations"
+msgstr "关联数"
+
 msgid "Awaiting adoption"
 msgstr "等待采用"
 
 msgid "Awaiting inform response"
 msgstr "等待控制器应答"
 
+msgid "BPI-R4 wired client"
+msgstr "BPI-R4 有线客户端"
+
 msgid "Band"
 msgstr "频段"
 
 msgid "Band / SSID"
 msgstr "频段 / SSID"
+
+msgid "Band distribution"
+msgstr "频段分布"
 
 msgid "Cancel"
 msgstr "取消"
@@ -47,6 +56,12 @@ msgstr "请检查采用状态"
 
 msgid "Client"
 msgstr "终端"
+
+msgid "Client model"
+msgstr "终端型号"
+
+msgid "Client or settings changed. Close and refresh before retrying."
+msgstr "客户端或设置已变化，请关闭窗口并刷新后重试。"
 
 msgid "Configured mode"
 msgstr "配置模式"
@@ -87,11 +102,29 @@ msgstr "启用 UniFi 代理"
 msgid "Enter a controller IP URL ending in /inform."
 msgstr "请输入包含控制器 IP 且以 /inform 结尾的地址。"
 
+msgid "Enter a printable model name of up to 96 bytes."
+msgstr "请输入不超过 96 字节的设备型号。"
+
+msgid "Enter the model of this device, or leave empty to use discovery."
+msgstr "填写这台终端的实际型号。留空则使用自动发现的型号。"
+
+msgid "Ethernet port"
+msgstr "物理网口"
+
+msgid "Gateway replied"
+msgstr "网关已响应"
+
 msgid "Hardware"
 msgstr "硬件型号"
 
 msgid "IP address"
 msgstr "IP 地址"
+
+msgid "Inform"
+msgstr "Inform"
+
+msgid "Interface unavailable"
+msgstr "接口不可用"
 
 msgid "Last inform response"
 msgstr "最近一次应答"
@@ -105,14 +138,23 @@ msgstr "留空使用默认值 %s。此版本号会发送给 UniFi Network。"
 msgid "Leave unbound to report existing SSIDs. Select independent BSS interfaces to allow provisioning."
 msgstr "留空时上报现有 SSID。绑定独立 BSS 接口后，允许控制器向这些接口下发配置。"
 
+msgid "Link / signal"
+msgstr "无线标准 / 信号"
+
 msgid "Management MAC"
 msgstr "管理 MAC"
 
 msgid "Management interface"
 msgstr "管理接口"
 
+msgid "Manual"
+msgstr "手动指定"
+
 msgid "Matched"
 msgstr "已匹配"
+
+msgid "Negotiated link"
+msgstr "协商速率"
 
 msgid "Network topology"
 msgstr "网络拓扑"
@@ -122,6 +164,9 @@ msgstr "当前没有关联终端。"
 
 msgid "No eligible independent BSS interfaces."
 msgstr "没有可绑定的独立 BSS 接口。"
+
+msgid "No ping response"
+msgstr "未收到 Ping 响应"
 
 msgid "No radios reported."
 msgstr "尚无射频上报。"
@@ -134,6 +179,9 @@ msgstr "操作系统"
 
 msgid "Operating width"
 msgstr "实际带宽"
+
+msgid "R4 uplink"
+msgstr "R4 的本地上联网口"
 
 msgid "RX / TX bytes"
 msgstr "接收 / 发送总量"
@@ -156,6 +204,12 @@ msgstr "E7 上报固件版本"
 msgid "Reported firmware"
 msgstr "上报的固件版本"
 
+msgid "Requests a separate DHCP address on the Ethernet uplink. The gateway can list BPI-R4 alongside the adopted E7."
+msgstr "通过有线上联单独申请一个 DHCP 地址，以便网关同时列出 BPI-R4 和已采用的 E7。"
+
+msgid "Save"
+msgstr "保存"
+
 msgid "Save and apply"
 msgstr "保存并应用"
 
@@ -164,6 +218,9 @@ msgstr "请选择可用的管理接口。"
 
 msgid "Select one independent AP at most per band and enter its controller WLAN ID."
 msgstr "每个频段最多选择一个独立 AP，并填写对应的控制器 WLAN ID。"
+
+msgid "Set model"
+msgstr "填写型号"
 
 msgid "Settings"
 msgstr "设置"
@@ -174,8 +231,8 @@ msgstr "设置已在其他会话中修改。请关闭并重新打开此窗口。
 msgid "Settings were saved. The service could not be applied. Reopen the form to retry."
 msgstr "配置已保存，但服务应用失败。请重新打开此窗口后重试。"
 
-msgid "Signal"
-msgstr "信号"
+msgid "Show BPI-R4 as a wired client"
+msgstr "在有线客户端中显示 BPI-R4"
 
 msgid "Status"
 msgstr "状态"
@@ -207,8 +264,20 @@ msgstr "请输入三段或四段数字版本号，例如 8.8.14.20179。"
 msgid "WLAN provisioning"
 msgstr "WLAN 配置下发"
 
-msgid "Wi-Fi standard"
-msgstr "Wi-Fi 标准"
+msgid "Waiting for DHCP"
+msgstr "正在获取 DHCP 地址"
+
+msgid "Waiting for Ethernet"
+msgstr "等待有线上联"
+
+msgid "Wired client MAC"
+msgstr "有线客户端 MAC"
+
+msgid "Wired gateway check"
+msgstr "有线网关探测"
+
+msgid "Wired uplink"
+msgstr "有线上联"
 
 msgid "Wireless RX total"
 msgstr "无线接收总量"
@@ -216,29 +285,5 @@ msgstr "无线接收总量"
 msgid "Wireless TX total"
 msgstr "无线发送总量"
 
-msgid "Save"
-msgstr "保存"
-
-msgid "Enter a printable model name of up to 96 bytes."
-msgstr "请输入不超过 96 字节的设备型号。"
-
-msgid "Client or settings changed. Close and refresh before retrying."
-msgstr "客户端或设置已变化，请关闭窗口并刷新后重试。"
-
-msgid "Client model"
-msgstr "终端型号"
-
-msgid "Enter the model of this device, or leave empty to use discovery."
-msgstr "填写这台终端的实际型号。留空则使用自动发现的型号。"
-
-msgid "Set model"
-msgstr "填写型号"
-
-msgid "Manual"
-msgstr "手动指定"
-
-msgid "1 client"
-msgstr "1 台终端"
-
-msgid "%s more"
-msgstr "另有 %s 台"
+msgid "Wireless clients"
+msgstr "无线终端"

@@ -11,11 +11,14 @@ sys.path.insert(0, "/usr/lib/be14-ucg")
 from agent import (DEFAULT_VERSION, FACTORY_KEY, LAST_INFORM, MODEL, STATE, endpoint,
                    firmware_version, local, locked, run, state_for)
 from telemetry import wireless_report
+from wired import wired_uplink
+from wired_host import status as wired_host_status
 from wlan import valid_wlan_id
 
 METHODS = {"status": {}, "configure": {"previous": "", "settings": ""},
            "set_model": {"mac": "", "previous": "", "model": ""}}
-OPTIONS = ("enabled", "inform_url", "management_network", "firmware_version", "wlan_id")
+FLAGS = ("enabled", "wired_host")
+OPTIONS = ("inform_url", "management_network", "firmware_version", "wlan_id")
 INIT = "/etc/init.d/be14-ucg"
 
 
@@ -26,7 +29,7 @@ def ubus(obj, method, args=None):
 def settings():
     raw = ubus("uci", "get", {"config": "be14_ucg", "section": "main"})["values"]
     values = {key: raw.get(key, "") for key in OPTIONS}
-    values["enabled"] = values["enabled"] == "1"
+    values.update({key: raw.get(key) == "1" for key in FLAGS})
     sections = raw.get("section", [])
     values["sections"] = sorted([sections] if isinstance(sections, str) else sections)
     return values
@@ -49,7 +52,8 @@ def status():
     svc = ubus("service", "list", {"name": "be14-ucg"}).get("be14-ucg", {})
     out = dict(settings=cfg, networks=networks(), model=MODEL, default_version=DEFAULT_VERSION,
                board=board.get("model"), hostname=board.get("hostname"), system=(board.get("release") or {}).get("description"),
-               running=any(i.get("running") for i in svc.get("instances", {}).values()),
+               running=any(i.get("running") for name, i in svc.get("instances", {}).items() if name != "wired_host"),
+               wired_host=wired_host_status() if cfg["enabled"] and cfg["wired_host"] else {},
                paired=False, settings_received=False, radios=[], clients=[], candidates=[])
     try:
         state = state_for(cfg["inform_url"]) if cfg["inform_url"] else {}
@@ -64,7 +68,8 @@ def status():
     except (OSError, ValueError, KeyError, subprocess.SubprocessError):
         out["radio_error"] = True
         return out
-    out.update(ip=snap.get("ip"), mac=snap.get("mac"), total=data.get("num_sta"), candidates=snap.get("candidates") or [])
+    out.update(uplink=wired_uplink(snap), management_device=snap.get("management_device"),
+               ip=snap.get("ip"), mac=snap.get("mac"), total=data.get("num_sta"), candidates=snap.get("candidates") or [])
     try:
         url, mac, version, stamp = json.loads(LAST_INFORM.read_text())
         if out["paired"] and url == cfg["inform_url"] and mac == out["mac"]:
@@ -92,9 +97,9 @@ def status():
 
 
 def check(cfg, before):
-    if set(cfg) != set(before) or type(cfg["enabled"]) is not bool:
+    if set(cfg) != set(before) or any(type(cfg[k]) is not bool for k in FLAGS):
         return "settings"
-    if any(not isinstance(cfg[k], str) or len(cfg[k]) > 250 for k in OPTIONS[1:]):
+    if any(not isinstance(cfg[k], str) or len(cfg[k]) > 250 for k in OPTIONS):
         return "settings"
     url = cfg["inform_url"]
     if cfg["enabled"] or url:
@@ -141,9 +146,9 @@ def configure(args):
         with tempfile.TemporaryDirectory(prefix="unifi-settings-") as delta:
             def uci(*cmd):
                 run(["/sbin/uci", "-t", delta, *cmd])
-            for key in OPTIONS:
+            for key in OPTIONS + FLAGS:
                 if change[key] != old[key]:
-                    value = str(int(change[key])) if key == "enabled" else change[key]
+                    value = str(int(change[key])) if key in FLAGS else change[key]
                     uci("set", "be14_ucg.main." + key + "=" + value)
             if old["sections"] != change["sections"]:
                 if old["sections"]:
