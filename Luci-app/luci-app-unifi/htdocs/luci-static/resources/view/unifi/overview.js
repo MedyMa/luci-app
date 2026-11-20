@@ -288,9 +288,8 @@ function radiosPanel(d) {
 function radioWidth(r) {
 	if (!r.up) return t(_('Radio down'));
 	if (r.width) return [t(r.width + ' MHz'), E('small', {}, t(_('Operating width')))];
-	if (r.configured_width) return [t(_('%s MHz (configured)').format(r.configured_width)),
-		E('small', {}, t(_('Driver did not report a width')))];
-	return t(_('Driver did not report a width'));
+	if (r.configured_width) return t(_('%s MHz (configured)').format(r.configured_width));
+	return t(unknown);
 }
 
 function editModel(client, reload) {

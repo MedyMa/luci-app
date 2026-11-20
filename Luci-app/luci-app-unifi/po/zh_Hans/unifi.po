@@ -66,9 +66,6 @@ msgstr "%s MHz（配置值）"
 msgid "Checking gateway"
 msgstr "正在探测网关"
 
-msgid "Driver did not report a width"
-msgstr "驱动未上报实际带宽"
-
 msgid "Gateway probe unavailable"
 msgstr "网关探测不可用"
 
