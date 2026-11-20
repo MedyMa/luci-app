@@ -119,10 +119,8 @@ function hero(d, reload) {
 		])]);
 }
 
-function hardware(image, fallback, title, value) {
-	const picture = E('img', { src: L.resource('view/unifi/assets/' + image + '.webp'),
-		width: 324, height: 188, alt: '', decoding: 'async', error: e => e.currentTarget.replaceWith(icon(fallback)) });
-	return div('uf-device', [div('uf-hardware', [picture]),
+function topologyNode(glyph, title, value) {
+	return div('uf-device uf-' + glyph, [div('uf-node-mark', [icon(glyph)]),
 		E('strong', {}, t(title)), E('small', {}, t(value))]);
 }
 
@@ -149,12 +147,24 @@ function topology(d, band, showAll) {
 		const more = btn(_('%s more').format(nodes.length - leaves.length), 'uf-link', showAll);
 		leaves.push(E('li', { 'class': 'uf-more' }, [more]));
 	}
-	const connectionLabel = port ? [port, rate(d.uplink)].filter(x => x !== unknown).join(' · ') : _('Inform');
+	const [status, tone] = connection(d);
+	const online = tone === 'ok' && d.uplink?.up !== false;
+	const linkRate = d.uplink?.up === false ? _('Down') : rate(d.uplink);
+	const connectionLabel = port ? [port, linkRate].filter(x => x !== unknown).join(' · ') : _('Inform');
+	const graph = div('uf-graph' + (online ? ' uf-online' : ''), [
+		topologyNode('controller', _('Controller'), endpointHost(d.settings.inform_url)),
+		E('div', { 'class': 'uf-edge' + (d.uplink?.up ? ' uf-carrier' : ''), title: _('R4 uplink') }, [
+			E('span', { 'class': 'uf-edge-label', title: connectionLabel }, t(connectionLabel)),
+			E('span', { 'class': 'uf-rail', 'aria-hidden': 'true' }, [
+				E('i', { 'class': 'uf-report' }), E('i', { 'class': 'uf-reply' })])
+		]),
+		topologyNode('radio', 'BPI-R4 · BE14', d.ip)
+	]);
+	// Keep the pulse in phase when polling or changing tabs rebuilds the graph.
+	if (online) graph.style.setProperty('--uf-phase', -Math.round(performance.now()) + 'ms');
 	return E('section', { 'class': 'uf-card uf-topology' }, [
-		div('uf-card-head', [E('h3', {}, t(_('Network topology'))), chip(...connection(d))]),
-		div('uf-graph', [hardware('gateway', 'wire', _('Controller'), endpointHost(d.settings.inform_url)),
-			E('div', { 'class': 'uf-edge' + (d.uplink?.up ? ' uf-carrier' : ''), title: _('R4 uplink') }, [E('span', {}, t(connectionLabel)), E('i')]),
-			hardware('bpi-r4', 'board', 'BPI-R4 · BE14', d.ip)]),
+		div('uf-card-head', [E('h3', {}, t(_('Network topology'))), chip(status, tone)]),
+		graph,
 		E('dl', { 'class': 'uf-path-facts' }, [
 			metric(_('Management interface'), [d.settings.management_network, d.management_device].filter(Boolean).join(' · ')),
 			metric(_('Reported firmware'), reportedVersion(d))
