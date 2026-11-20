@@ -23,10 +23,14 @@ jobs:
       matrix:
         include:
           - release: '24.10.6'
+            vendor: MedyMa/immortalwrt-mt798x-6.6
+            revision: 18edefa7a150647cbe981c5b33e72baeaba6acd2
             gcc: '13.3.0'
             format: ipk
             sha256: bf9821b98fe810e2cc3ab53b8faa13bc919b9d98d703cba5e53906c17bd23864
           - release: '25.12.0'
+            vendor: MedyMa/immortalwrt-mt798x-25.12
+            revision: 753f4a0d71a5e00d5018c75f95d5ee9bc821d2e5
             gcc: '14.3.0'
             format: apk
             sha256: 7e45a85b4af8af53ff17ca610ad6a7df312568cb52b730f93a21a91899f33139
@@ -37,8 +41,8 @@ jobs:
       - name: Get the BE14 package and its vendor dependency definitions
         uses: actions/checkout@v6.0.2
         with:
-          repository: MedyMa/immortalwrt-mt798x-25.12
-          ref: d85dae81e11a9d1bcbf3fff892c048d90a40b5e5
+          repository: ${{ matrix.vendor }}
+          ref: ${{ matrix.revision }}
           path: vendor
           sparse-checkout: |
             package/mtk/applications/be14-ucg
