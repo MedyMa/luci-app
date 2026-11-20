@@ -66,6 +66,9 @@ msgstr "客户端或设置已变化，请关闭窗口并刷新后重试。"
 msgid "Configured mode"
 msgstr "配置模式"
 
+msgid "Configured %s"
+msgstr "配置 %s"
+
 msgid "Controller"
 msgstr "控制器"
 
@@ -146,6 +149,9 @@ msgstr "管理 MAC"
 
 msgid "Management interface"
 msgstr "管理接口"
+
+msgid "Management status"
+msgstr "管理状态"
 
 msgid "Manual"
 msgstr "手动指定"
