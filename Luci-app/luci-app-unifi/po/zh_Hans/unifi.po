@@ -2,9 +2,20 @@ msgid ""
 msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Language: zh_Hans\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
 
 msgid "%s / 3 radios up"
 msgstr "%s / 3 个射频已启动"
+
+msgid "%d AP interface"
+msgid_plural "%d AP interfaces"
+msgstr[0] "%d 个无线接口"
+
+msgid "Radio up"
+msgstr "射频已启动"
+
+msgid "No wireless interfaces reported."
+msgstr "暂无已上报的无线接口。"
 
 msgid "AP PHY rate"
 msgstr "AP 收发链路速率"

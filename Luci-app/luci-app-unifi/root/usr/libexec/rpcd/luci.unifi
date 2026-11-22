@@ -105,7 +105,8 @@ def status():
         for ap in data["vap_table"]:
             if ap["radio"] != band:
                 continue
-            row["aps"].append(dict(ifname=ap["name"], ssid=ap["essid"], matched=bool(ap.get("id")),
+            row["aps"].append(dict(ifname=ap["name"], ssid=ap["essid"], bssid=ap.get("bssid"),
+                                   matched=bool(ap.get("id")), clients=ap.get("num_sta"),
                                    rx=ap.get("rx_bytes"), tx=ap.get("tx_bytes")))
             local_ap = next(bss for bss in snap["aps"] if bss["name"] == ap["name"])
             for sta in local_ap.get("sta_table", []):
@@ -113,7 +114,7 @@ def status():
                     model_source=sta.get("model_source"),
                     ip=sta.get("ip"), ipv6=sta.get("ipv6") or [], wifi=station_mode(sta), signal=sta.get("signal"),
                     rx_rate=sta.get("rx_rate"), tx_rate=sta.get("tx_rate"),
-                    rx=sta.get("rx_bytes"), tx=sta.get("tx_bytes"), band=band, ssid=ap["essid"]))
+                    rx=sta.get("rx_bytes"), tx=sta.get("tx_bytes"), band=band, ssid=ap["essid"], ifname=ap["name"]))
         out["radios"].append(row)
     return out
 

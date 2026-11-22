@@ -53,7 +53,7 @@
 	fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round;
 }
 .uf-hero { padding: 18px 21px; }
-.uf-mast, .uf-id, .uf-actions, .uf-card-head, .uf-detail-head, .uf-client, .uf-ssid { display: flex; align-items: center; gap: 9px; }
+.uf-mast, .uf-id, .uf-actions, .uf-card-head, .uf-detail-head, .uf-client { display: flex; align-items: center; gap: 9px; }
 .uf-mast, .uf-card-head, .uf-detail-head { justify-content: space-between; }
 .uf-id, .uf-title { min-width: 0; }
 .uf-title p { margin-top: 1px; overflow-wrap: anywhere; }
@@ -197,6 +197,7 @@
 .uf-client-mark[data-kind=speaker], .uf-client-mark[data-kind=television] { color: var(--uf-violet); }
 
 .uf-composition { display: flex; flex-direction: column; }
+.uf-composition .uf-caption { text-align: end; }
 .uf-composition-body {
 	display: grid; grid-template-columns: minmax(92px,.76fr) minmax(0,1.35fr); gap: clamp(14px,2vw,28px);
 	align-items: center; width: 100%; max-width: 526px; margin: auto; padding-block: 12px 4px;
@@ -208,7 +209,7 @@
 .uf-ring-value small { font-size: 12px; }
 .uf-legend { display: grid; min-width: 0; }
 .uf-page .uf-legend-row {
-	display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 8px;
+	display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: start; gap: 8px;
 	min-height: 49px; height: auto; width: 100%; text-align: start; padding: 7px 8px; line-height: 1.3;
 	background: transparent; color: inherit; border: 1px solid transparent; border-radius: 9px; cursor: pointer;
 }
@@ -216,13 +217,16 @@
 .uf-band-mark { display: grid; place-items: center; width: 28px; height: 28px; color: var(--band-color); border-radius: 8px; background: color-mix(in srgb, var(--band-color) 11%, var(--uf-paper)); }
 .uf-band-mark .uf-icon { width: 17px; height: 17px; stroke-width: 1.8; }
 .uf-legend-row b { font-size: 17px; font-weight: 620; }
-.uf-band-name { display: flex; align-items: baseline; gap: 7px; min-width: 0; }
-.uf-band-name strong { flex: none; font-size: 14px; font-weight: 630; }
-.uf-band-name span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--uf-muted); }
+.uf-band-name { font-size: 14px; font-weight: 630; }
+.uf-band-aps { display: grid; gap: 3px; margin-block: 4px; }
+.uf-band-ap { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.uf-band-ap > span { flex: none; padding: 1px 4px; border-radius: 4px; background: var(--uf-wash); color: var(--uf-muted); font: 11px/1.3 ui-monospace, monospace; }
+.uf-band-ap bdi, .uf-ap-identity bdi { min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.uf-band-ap bdi { font-size: 12px; }
 .uf-legend-name { min-width: 0; }.uf-legend-name small { display: block; margin-top: 2px; font-size: 12px; }
-.uf-band-traffic { display: flex; flex-wrap: wrap; gap: 1px 9px; margin-top: 2px; font-size: 11px; }
-.uf-band-traffic span { white-space: nowrap; color: var(--uf-blue); }
-.uf-band-traffic span + span { color: var(--uf-green); }
+.uf-traffic-pair { display: flex; flex-wrap: wrap; gap: 1px 9px; font-size: 11px; }
+.uf-traffic-pair span { white-space: nowrap; color: var(--uf-blue); }
+.uf-traffic-pair span + span { color: var(--uf-green); }
 
 .uf-detail { padding: 14px 20px 4px; }
 .uf-management { display: none; padding: 15px 18px; }
@@ -242,7 +246,21 @@
 .uf-page .uf-table tbody th strong { color: var(--uf-ink); font-weight: 600; }
 .uf-page .uf-table small { display: block; font-size: 12px; margin-top: 1px; font-weight: 400; }
 .uf-client > div { min-width: 0; }
-.uf-ssid { flex-wrap: wrap; gap: 6px; }
+.uf-radio-group { padding: 14px 0; border-top: 1px solid var(--uf-line); }
+.uf-radio-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.uf-page .uf-radio-head h4 { margin: 0; padding: 0; color: inherit; font-family: inherit; font-size: 15px; font-weight: 620; line-height: 1.4; }
+.uf-page .uf-radio-facts { display: grid; grid-template-columns: minmax(0,.7fr) minmax(0,1fr) minmax(0,1.5fr); gap: 10px; margin: 9px 0; }
+.uf-radio-facts dt { font-size: 11px; }.uf-radio-facts dd { margin-top: 2px; font-size: 13px; overflow-wrap: anywhere; }
+.uf-page .uf-aps { padding: 0 10px; list-style: none; border: 1px solid var(--uf-line); border-radius: 9px; }
+.uf-ap { display: grid; grid-template-columns: minmax(0,1fr) auto auto minmax(90px,auto); grid-template-areas: "id match clients traffic"; align-items: center; gap: 5px 12px; padding: 8px 0; }
+.uf-ap + .uf-ap { border-top: 1px solid var(--uf-line); }
+.uf-ap-identity { grid-area: id; min-width: 0; }
+.uf-ap-identity bdi { display: block; font-size: 14px; font-weight: 550; }
+.uf-ap-identity small { display: block; overflow-wrap: anywhere; font-size: 11px; }
+.uf-ap .uf-chip { grid-area: match; justify-self: end; }
+.uf-ap-clients { grid-area: clients; text-align: end; }
+.uf-ap .uf-traffic-pair { grid-area: traffic; justify-content: end; }
+.uf-ap-empty { display: block; padding-block: 4px; }
 .uf-page .uf-link { background: transparent; color: var(--link-color, LinkText); border: 0; padding: 0; margin: 0; height: auto; font: inherit; text-align: start; cursor: pointer; }
 .uf-page .uf-link:hover { text-decoration: underline; }
 .uf-page .uf-facts { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); }
@@ -298,7 +316,7 @@
 	.uf-page .uf-cmd { height: 40px; }.uf-page .uf-cmd.uf-icon-only { width: 40px; }
 	.uf-graph { --uf-node-size: 44px; margin-block: 14px 11px; }
 	.uf-device strong { font-size: 13px; }.uf-device small { font-size: 11px; }
-	.uf-composition-body { grid-template-columns: minmax(74px,.62fr) minmax(0,1.4fr); gap: 9px; }
+	.uf-composition-body { grid-template-columns: clamp(66px,23%,100px) minmax(0,1fr); gap: 9px; }
 	.uf-ring { max-width: 112px; }.uf-page .uf-legend-row { padding: 6px 2px; gap: 6px; }
 	.uf-band-mark { width: 23px; height: 23px; border-radius: 6px; }.uf-band-mark .uf-icon { width: 15px; height: 15px; }
 	.uf-page .uf-table, .uf-page .uf-table tbody { display: block; }
@@ -307,12 +325,13 @@
 	.uf-page .uf-table tbody th { grid-column: 1/-1; }
 	.uf-page .uf-table tbody th, .uf-page .uf-table tbody td { display: block; padding: 0; border: 0; }
 	.uf-page .uf-table td::before { display: block; content: attr(data-label); margin-bottom: 2px; color: var(--uf-muted); font-size: 11px; }
+	.uf-ap { grid-template-columns: minmax(0,1fr) auto; grid-template-areas: "id match" "traffic clients"; }
+	.uf-ap .uf-traffic-pair { justify-content: start; }
 	.uf-page .uf-facts { grid-template-columns: 1fr 1fr; }
 	.uf-page .uf-tabs button { min-height: 38px; padding: 7px 10px; }
 }
 @container unifi (max-width: 340px) {
-	.uf-band-name { flex-wrap: wrap; gap: 0 5px; }
-	.uf-band-name span { max-width: 100%; }.uf-page .uf-tabs button { padding-inline: 7px; }
+	.uf-page .uf-tabs button { padding-inline: 7px; }
 }
 @supports not (container-type: inline-size) {
 	@media (max-width: 1024px) {
@@ -324,5 +343,7 @@
 		.uf-metrics > .uf-metric { padding: 0; border: 0; }
 		.uf-page .uf-table { display: block; overflow-x: auto; }
 		.uf-composition-body { grid-template-columns: minmax(70px,.6fr) minmax(0,1.4fr); gap: 8px; }
+		.uf-ap { grid-template-columns: minmax(0,1fr) auto; grid-template-areas: "id match" "traffic clients"; }
+		.uf-ap .uf-traffic-pair { justify-content: start; }
 	}
 }

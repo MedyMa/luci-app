@@ -47,6 +47,13 @@ function traffic(aps, key) {
 		? bytes(aps.reduce((total, ap) => total + ap[key], 0)) : unknown;
 }
 
+function trafficPair(aps) {
+	return div('uf-traffic-pair', [
+		E('span', { title: _('Wireless RX total') }, t('RX ' + traffic(aps, 'rx'))),
+		E('span', { title: _('Wireless TX total') }, t('TX ' + traffic(aps, 'tx')))
+	]);
+}
+
 function endpointHost(url) {
 	try { return new URL(url).host; } catch (e) { return unknown; }
 }
@@ -194,7 +201,7 @@ function distribution(d, active, select, current) {
 	let used = 0;
 	const legend = Object.entries(bands).map(([key, title]) => {
 		const r = radio.get(key);
-		const ssids = [...new Set((r?.aps || []).map(ap => ap.ssid).filter(Boolean))].join(' · ');
+		const aps = r?.aps || [];
 		const channel = !r ? _('Unavailable') : !r.up ? _('Radio down') : _('Channel %s').format(r.channel ?? unknown);
 		const width = r?.up && (r.width ? r.width + ' MHz' : r.configured && _('Configured %s').format(r.configured));
 		if (count && r.clients) {
@@ -205,19 +212,21 @@ function distribution(d, active, select, current) {
 		return E('button', { type: 'button', 'class': 'uf-legend-row', 'data-band': key,
 			'aria-pressed': String(active === key), click: () => select(key) }, [
 			E('span', { 'class': 'uf-band-mark', style: '--band-color:' + colors[key] }, [icon('radio')]), div('uf-legend-name', [
-				div('uf-band-name', [E('strong', {}, t(title)),
-					...(ssids ? [E('span', { title: ssids }, t(ssids))] : [])]),
+				E('strong', { 'class': 'uf-band-name' }, t(title)),
 				E('small', {}, t([channel, width].filter(Boolean).join(' · '))),
-				...(r?.aps.length ? [div('uf-band-traffic', [
-					E('span', { title: _('Wireless RX total') }, [t('RX ' + traffic(r.aps, 'rx'))]),
-					E('span', { title: _('Wireless TX total') }, [t('TX ' + traffic(r.aps, 'tx'))])
-				])] : [])
-			]), E('b', {}, t(r?.clients))]);
+				...(aps.length ? [div('uf-band-aps', aps.map(ap => div('uf-band-ap', [
+					E('span', { dir: 'ltr' }, t(ap.ifname)), E('bdi', {}, t(ap.ssid))
+				]))), trafficPair(aps)] : [])
+			]), E('b', { title: _('Associated clients') }, t(r?.clients))]);
 	});
 	const ring = div('uf-ring', [E('i', { 'aria-hidden': 'true',
 		style: stops.length ? 'background:conic-gradient(' + stops.join(',') + ')' : '' }),
 		div('uf-ring-value', [E('b', {}, t(count)), E('small', {}, t(_('Associations')))])]);
-	const caption = !complete ? _('Unavailable') : _('%s / 3 radios up').format(d.radios.filter(r => r.up).length);
+	const apCount = d.radios.reduce((n, r) => n + r.aps.length, 0);
+	const caption = Object.keys(bands).every(k => typeof radio.get(k)?.up === 'boolean')
+		? _('%s / 3 radios up').format(d.radios.filter(r => r.up).length) + ' · ' +
+			N_(apCount, '%d AP interface', '%d AP interfaces').format(apCount)
+		: _('Unavailable');
 	if (current) {
 		current.querySelector('.uf-caption').textContent = caption;
 		current.querySelector('.uf-ring').replaceWith(ring);
@@ -264,19 +273,30 @@ function dataTable(columns, rows, empty) {
 }
 
 function radiosPanel(d) {
-	return dataTable([_('Band'), _('Status'), _('Channel'), _('Configured mode'), _('Channel width'), _('Controller WLAN')],
-		d.radios.map(r => [[E('strong', {}, t(bands[r.band])), E('small', {}, t(r.ifname))],
-			chip(r.up ? _('Up') : _('Down'), r.up ? 'ok' : ''), t(r.channel), t(r.configured),
-			radioWidth(r), r.aps.length ? r.aps.map(ap =>
-				div('uf-ssid', [t(ap.ssid), chip(ap.matched ? _('Matched') : _('Unmatched'), ap.matched ? 'ok' : '')])) : t(unknown)]),
-		d.radio_error ? _('Radio data could not be read.') : _('No radios reported.'));
+	if (!d.radios.length)
+		return E('p', { 'class': 'uf-empty' }, t(d.radio_error ? _('Radio data could not be read.') : _('No radios reported.')));
+	return div('uf-radios', d.radios.map(r => E('section', { 'class': 'uf-radio-group' }, [
+		div('uf-radio-head', [E('h4', {}, t(bands[r.band])),
+			chip(r.up ? _('Radio up') : _('Radio down'), r.up ? 'ok' : '')]),
+		E('dl', { 'class': 'uf-radio-facts' }, [
+			metric(_('Channel'), r.channel), metric(_('Configured mode'), r.configured),
+			metric(r.up && r.width ? _('Operating width') : _('Channel width'), radioWidth(r))
+		]),
+		r.aps.length ? E('ul', { 'class': 'uf-aps', 'aria-label': _('Controller WLAN') }, r.aps.map(ap =>
+			E('li', { 'class': 'uf-ap' }, [
+				div('uf-ap-identity', [E('bdi', {}, t(ap.ssid)), E('small', { dir: 'ltr' },
+					t([ap.ifname, ap.bssid?.toUpperCase()].filter(Boolean).join(' · ')))]),
+				chip(ap.matched ? _('Matched') : _('Unmatched'), ap.matched ? 'ok' : ''),
+				E('small', { 'class': 'uf-ap-clients' }, t(_('Associated clients') + ' ' + (ap.clients ?? unknown))),
+				trafficPair([ap])
+			]))) : E('small', { 'class': 'uf-ap-empty' }, t([r.ifname, _('No wireless interfaces reported.')].filter(Boolean).join(' · ')))
+	])));
 }
 
 function radioWidth(r) {
-	if (!r.up) return t(_('Radio down'));
-	if (r.width) return [t(r.width + ' MHz'), E('small', {}, t(_('Operating width')))];
-	if (r.configured_width) return t(_('%s MHz (configured)').format(r.configured_width));
-	return t(unknown);
+	if (!r.up) return _('Radio down');
+	if (r.width) return r.width + ' MHz';
+	return r.configured_width ? _('%s MHz (configured)').format(r.configured_width) : unknown;
 }
 
 function saveButtons(label, form, error, submit, reload) {
@@ -343,7 +363,7 @@ function clientsPanel(d, band, reload) {
 		[L.hasViewPermission() === false ? t(c.model || _('Not identified')) :
 			btn(c.model || _('Set model'), 'uf-link', () => editModel(c, reload)),
 			...(c.model_source ? [E('small', {}, t(c.model_source === 'manual' ? _('Manual') : 'mDNS'))] : [])],
-		t(c.ip || c.ipv6[0]), [t(bands[c.band]), E('small', {}, t(c.ssid))],
+		t(c.ip || c.ipv6[0]), [t(bands[c.band]), E('small', {}, t([c.ssid, c.ifname].filter(Boolean).join(' · ')))],
 		[t(c.wifi ? 'Wi-Fi ' + c.wifi : unknown), E('small', {}, t(c.signal != null ? c.signal + ' dBm' : unknown))],
 		[t('RX ' + phyRate(c.rx_rate)), E('small', {}, t('TX ' + phyRate(c.tx_rate)))],
 		[E('span', { 'class': 'uf-received' }, t('↓ ' + bytes(c.rx))), E('small', { 'class': 'uf-sent' }, t('↑ ' + bytes(c.tx)))]
