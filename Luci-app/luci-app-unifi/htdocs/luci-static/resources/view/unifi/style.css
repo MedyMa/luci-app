@@ -254,6 +254,7 @@
 .uf-settings .uf-field input, .uf-settings .uf-field select { width: 100%; }
 .uf-settings .uf-field span, .uf-settings summary { font-weight: 600; }
 .uf-settings small { font-size: 12px; color: var(--uf-muted); line-height: 1.5; }
+.uf-settings small.uf-error { color: var(--strength-weak-text,#a52c26); }
 .uf-settings details { border-top: 1px solid var(--uf-line); padding-top: 10px; }
 .uf-settings summary { cursor: pointer; }.uf-settings details .uf-field { margin: 12px 0; }
 .uf-check { display: flex; align-items: center; gap: 8px; }.uf-error { margin: 0; color: var(--strength-weak-text,#a52c26); }.uf-error:empty { display: none; }

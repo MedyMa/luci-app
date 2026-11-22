@@ -434,10 +434,33 @@ function showSettings(d, reload) {
 		_('Controller Wi-Fi applied') : _('Waiting for an applicable controller configuration');
 	if (d.restricted_bands?.length)
 		provisionState = _('Paused on %s due to an unsupported access policy').format(d.restricted_bands.map(b => bands[b]).join(', '));
+	const uplinkMessages = {
+		upstream_device: _('No active network device was found for %s.'),
+		upstream_bridge: _('%s is not a network bridge. Select the bridge connected to the UCG.'),
+		upstream_dhcp: _('Local DHCP or router advertisements are enabled on %s. Select the uplink served by the UCG.'),
+		upstream_ipv4: _('Dedicated APs require the UCG IPv4 address in the inform URL.'),
+		upstream_route: _('The route to the UCG does not go directly through %s.'),
+		upstream_gateway: _('The UCG could not be confirmed as the client gateway on %s. Check the gateway assigned by DHCP.'),
+		upstream_identity: _('%s uses a different management MAC. Select the interface of the adopted E7.')
+	};
+	const uplinkNote = E('small', { 'aria-live': 'polite' });
+	function showUplink(issue, rejected) {
+		const iface = net.value === old.management_network && d.management_device && d.management_device !== net.value
+			? net.value + ' · ' + d.management_device : net.value;
+		const edited = net.value !== old.management_network || url.value.trim() !== old.inform_url;
+		uplinkNote.classList.toggle('uf-error', !!rejected);
+		if (edited && !rejected)
+			uplinkNote.textContent = _('The uplink will be checked when you apply the settings.');
+		else if (issue || (!edited && !d.upstream_ready))
+			uplinkNote.textContent = (uplinkMessages[issue] || _('Could not verify the uplink for %s.')).format(iface);
+		else
+			uplinkNote.textContent = _('New APs use %s. UCG supplies DHCP and classifies client traffic. Applying may briefly reconnect this radio.').format(net.value);
+	}
+	showUplink(d.upstream_error);
+	net.addEventListener('change', () => showUplink(d.upstream_error));
+	url.addEventListener('input', () => showUplink(d.upstream_error));
 	const quick = div('uf-quick', [field(_('Controller Wi-Fi'), wlan,
-		_('Choose a native personal or OWE network assigned to the E7. Create a secondary AP here or select an unused, disabled AP.')), bandFields,
-		E('small', {}, t(!d.upstream_ready ? _('A direct Ethernet bridge to the UCG default gateway is required.') :
-			_('New APs use %s. UCG supplies DHCP and classifies client traffic. Applying may briefly reconnect this radio.').format(old.management_network))),
+		_('Choose a native personal or OWE network assigned to the E7. Create a secondary AP here or select an unused, disabled AP.')), bandFields, uplinkNote,
 		...(old.auto_provision ? [E('small', { 'class': 'uf-provision-state' }, t(provisionState))] : [])]);
 	const manual = div('uf-manual', [
 		field(_('Controller WLAN ID'), wid, _('Leave unbound to report existing SSIDs. Select independent BSS interfaces to allow provisioning.')),
@@ -455,7 +478,6 @@ function showSettings(d, reload) {
 		binding: _('Select one independent AP at most per band and enter its controller WLAN ID.'),
 		slot: _('The chosen secondary AP is no longer available. Reopen settings to refresh.'),
 		controller_wlan: _('Select a new, distinctly named WLAN assigned to this E7 in UniFi Network.'),
-		upstream: _('A direct Ethernet bridge to the UCG default gateway is required.'),
 		conflict: _('Settings changed in another session. Close and reopen this form.'),
 		service: _('Settings were saved. The service could not be applied. Reopen the form to retry.') };
 	const save = btn(_('Save and apply'), 'btn cbi-button cbi-button-positive important', async () => {
@@ -469,6 +491,7 @@ function showSettings(d, reload) {
 				management_network: net.value, auto_provision: auto, wlan_id: auto ? wlan.value : manualMode ? wid.value.trim() : '', sections: sections.sort() };
 			if (auto && (!cfg.wlan_id || !sections.length)) { err.textContent = errors[cfg.wlan_id ? 'slot' : 'controller_wlan']; return; }
 			const reply = await configure(JSON.stringify(old), JSON.stringify(cfg));
+			if (reply.error && Object.hasOwn(uplinkMessages, reply.error)) { showUplink(reply.error, true); return; }
 			if (!reply.saved || reply.error) { err.textContent = errors[reply.error] || _('Could not apply settings.'); return; }
 			await reload(true);
 			ui.hideModal();

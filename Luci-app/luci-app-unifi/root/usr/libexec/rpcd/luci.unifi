@@ -11,7 +11,7 @@ sys.path.insert(0, "/usr/lib/be14-ucg")
 from agent import (DEFAULT_VERSION, FACTORY_KEY, LAST_INFORM, MODEL, STATE, binding_signature, endpoint,
                    firmware_version, local, locked, run, state_for)
 from telemetry import wireless_report
-from wired import controller_bridge, wired_uplink
+from wired import controller_bridge_error, wired_uplink
 from wired_host import status as wired_host_status
 from wlan import valid_wlan_id
 
@@ -77,7 +77,8 @@ def status():
     out.update(uplink=wired_uplink(snap), management_device=snap.get("management_device"),
                ip=snap.get("ip"), mac=snap.get("mac"), total=data.get("num_sta"), candidates=snap.get("candidates") or [])
     out["slots"] = snap.get("slots") or []
-    out["upstream_ready"] = controller_bridge(snap)
+    out["upstream_error"] = controller_bridge_error(snap)
+    out["upstream_ready"] = out["upstream_error"] is None
     out["controller_wlans"] = [dict(w, in_use=w["ssid"] in snap["other_ssids"]) for w in out["controller_wlans"]]
     inactive = state.get("inactive_bands", [])
     out["provisioned"] = bool(cfg["auto_provision"] and snap["bindings"] and not snap.get("missing_selection") and
@@ -133,7 +134,8 @@ def check(cfg, before):
         firmware_version(cfg["firmware_version"])
     except ValueError:
         return "version"
-    if cfg["management_network"] != before["management_network"] and cfg["management_network"] not in networks():
+    network_changed = cfg["management_network"] != before["management_network"]
+    if network_changed and cfg["management_network"] not in networks():
         return "network"
     if STATE.exists() and url != before["inform_url"]:
         try:
@@ -146,10 +148,8 @@ def check(cfg, before):
     if (not isinstance(selected, list) or len(selected) > 3 or
         any(not isinstance(s, str) or not re.fullmatch(pattern, s) for s in selected)):
         return "binding"
-    if automatic and cfg["management_network"] != before["management_network"]:
-        return "upstream"
     if (selected != before["sections"] or wid != before["wlan_id"] or automatic != before["auto_provision"]
-            or (automatic and cfg["enabled"] and not before["enabled"])):
+            or (automatic and (network_changed or (cfg["enabled"] and not before["enabled"])))):
         if bool(wid) != bool(selected) or (wid and not valid_wlan_id(wid)):
             return "binding"
         if automatic:
@@ -158,9 +158,12 @@ def check(cfg, before):
             state = state_for(url)
             if state.get("wlan_model") != MODEL or state["key"] == FACTORY_KEY:
                 return "controller_wlan"
-            snap = local("overview")
-            if not controller_bridge(snap):
-                return "upstream"
+            snap = local("overview", network=cfg["management_network"])
+            issue = controller_bridge_error(snap)
+            if issue:
+                return issue
+            if network_changed and (not snap.get("mac") or snap["mac"] != local("overview").get("mac")):
+                return "upstream_identity"
             slots = {s["section"]: s["band"] for s in snap["slots"]} if snap["slots"] else {}
             bands = {slots.get(s) for s in selected}
             if None in bands or len(bands) != len(selected):

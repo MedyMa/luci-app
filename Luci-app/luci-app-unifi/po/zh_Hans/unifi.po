@@ -348,8 +348,32 @@ msgstr "新建独立 AP"
 msgid "Controller Wi-Fi"
 msgstr "UCG Wi-Fi"
 
-msgid "A direct Ethernet bridge to the UCG default gateway is required."
-msgstr "需要直连 UCG 默认网关的上联网桥，由 UCG 提供 DHCP。"
+msgid "No active network device was found for %s."
+msgstr "管理接口 %s 当前没有可用的网络设备。"
+
+msgid "%s is not a network bridge. Select the bridge connected to the UCG."
+msgstr "%s 当前不是网桥。请选择连接 UCG 的上联网桥。"
+
+msgid "Local DHCP or router advertisements are enabled on %s. Select the uplink served by the UCG."
+msgstr "%s 已配置本地 DHCP 或路由通告。请选择由 UCG 分配地址的上联网桥。"
+
+msgid "Dedicated APs require the UCG IPv4 address in the inform URL."
+msgstr "使用独立 AP 时，请在 inform 地址中填写 UCG 的 IPv4 地址。"
+
+msgid "The route to the UCG does not go directly through %s."
+msgstr "当前到 UCG 的路由未通过 %s 直连。"
+
+msgid "The UCG could not be confirmed as the client gateway on %s. Check the gateway assigned by DHCP."
+msgstr "未能确认 %s 上的客户端网关是 UCG。请核对 DHCP 分配的网关地址。"
+
+msgid "%s uses a different management MAC. Select the interface of the adopted E7."
+msgstr "%s 的管理 MAC 与已采用的 E7 不同。请选择采用 E7 时使用的管理接口。"
+
+msgid "Could not verify the uplink for %s."
+msgstr "暂时无法核实 %s 的上联状态。"
+
+msgid "The uplink will be checked when you apply the settings."
+msgstr "应用设置时将检查所选上联。"
 
 msgid "New APs use %s. UCG supplies DHCP and classifies client traffic. Applying may briefly reconnect this radio."
 msgstr "新 AP 接入 %s 网桥，由 UCG 提供 DHCP 并识别客户端流量。应用时该频段可能短暂重连。"
