@@ -5,8 +5,8 @@
 'require ui';
 
 const getStatus = rpc.declare({ object: 'luci.unifi', method: 'status', expect: { '': {} } });
-const configure = rpc.declare({ object: 'luci.unifi', method: 'configure', params: ['previous', 'settings'], expect: { '': {} } });
-const setModel = rpc.declare({ object: 'luci.unifi', method: 'set_model', params: ['mac', 'previous', 'model'], expect: { '': {} } });
+const configure = rpc.declare({ object: 'luci.unifi', method: 'configure', nobatch: true, params: ['previous', 'settings'], expect: { '': {} } });
+const setModel = rpc.declare({ object: 'luci.unifi', method: 'set_model', nobatch: true, params: ['mac', 'previous', 'model'], expect: { '': {} } });
 const bands = { ng: '2.4 GHz', na: '5 GHz', '6e': '6 GHz' };
 const unknown = '—';
 
@@ -279,28 +279,60 @@ function radioWidth(r) {
 	return t(unknown);
 }
 
+function saveButtons(label, form, error, submit, reload) {
+	const cancel = btn(_('Cancel'), 'btn cbi-button', ui.hideModal);
+	const save = btn(label, 'btn cbi-button cbi-button-positive important', async () => {
+		if (save.disabled) return;
+		form.disabled = cancel.disabled = save.disabled = true;
+		save.textContent = _('Saving…');
+		error.textContent = '';
+
+		// Only an explicit busy reply guarantees that this attempt wrote nothing.
+		async function send(request) {
+			const deadline = Date.now() + 30000;
+			while (true) {
+				let reply;
+				try { reply = await request(); }
+				catch (e) { throw new Error(_('R4 did not confirm the save. Reopen settings to check the current values.')); }
+				if (reply.error !== 'busy') return reply;
+				if (Date.now() >= deadline) throw new Error(_('Another configuration is still being applied. Please try again.'));
+				save.textContent = _('Waiting for agent…');
+				await new Promise(resolve => window.setTimeout(resolve, 1500));
+			}
+		}
+
+		try {
+			if (await submit(send)) {
+				if (save.isConnected) ui.hideModal();
+				ui.addTimeLimitedNotification(null, E('p', {}, _('Settings saved.')), 4000, 'info');
+				reload(true);
+			}
+		} catch (e) {
+			error.textContent = e.message || _('Could not apply settings.');
+			error.scrollIntoView({ block: 'nearest' });
+		} finally {
+			form.disabled = cancel.disabled = save.disabled = false;
+			save.textContent = label;
+		}
+	});
+	save.setAttribute('aria-live', 'polite');
+	return div('right', [cancel, t(' '), save]);
+}
+
 function editModel(client, reload) {
 	const manual = client.model_source === 'manual' ? client.model : '';
 	const input = E('input', { type: 'text', value: manual, maxlength: 96, placeholder: client.model || '' });
 	const err = E('p', { 'class': 'uf-error', role: 'alert' });
-	const save = btn(_('Save'), 'btn cbi-button cbi-button-positive important', async () => {
-		save.disabled = true;
-		try {
-			const res = await setModel(client.mac, manual, input.value.trim());
-			if (!res.saved) {
-				err.textContent = res.error === 'model' ? _('Enter a printable model name of up to 96 bytes.') :
-					_('Client or settings changed. Close and refresh before retrying.');
-				return;
-			}
-			await reload(true);
-			ui.hideModal();
-		} catch (e) { err.textContent = _('Could not apply settings.'); }
-		finally { save.disabled = false; }
-	});
-	ui.showModal(_('Client model'), [div('uf-settings', [
+	const form = E('fieldset', { 'class': 'uf-settings' }, [
 		E('label', { 'class': 'uf-field' }, [E('span', {}, t(client.mac)), input,
-			E('small', {}, t(_('Enter the model of this device, or leave empty to use discovery.')))]), err]),
-		div('right', [btn(_('Cancel'), 'btn cbi-button', ui.hideModal), t(' '), save])]);
+			E('small', {}, t(_('Enter the model of this device, or leave empty to use discovery.')))]), err]);
+	const buttons = saveButtons(_('Save'), form, err, async send => {
+		const res = await send(() => setModel(client.mac, manual, input.value.trim()));
+		if (!res.saved) throw new Error(res.error === 'model' ? _('Enter a printable model name of up to 96 bytes.') :
+			_('Client or settings changed. Close and refresh before retrying.'));
+		return true;
+	}, reload);
+	ui.showModal(_('Client model'), [form, buttons]);
 }
 
 function clientsPanel(d, band, reload) {
@@ -377,6 +409,7 @@ function keepReadingPosition(detail, visuals, draw, switching) {
 
 function showSettings(d, reload) {
 	const old = d.settings;
+	let previous = old;
 	const input = (value, attrs) => E('input', Object.assign({ type: 'text', value: value || '', autocomplete: 'off' }, attrs));
 	const enabled = E('input', { type: 'checkbox' });
 	enabled.checked = old.enabled;
@@ -479,37 +512,36 @@ function showSettings(d, reload) {
 		slot: _('The chosen secondary AP is no longer available. Reopen settings to refresh.'),
 		controller_wlan: _('Select a new, distinctly named WLAN assigned to this E7 in UniFi Network.'),
 		conflict: _('Settings changed in another session. Close and reopen this form.'),
-		service: _('Settings were saved. The service could not be applied. Reopen the form to retry.') };
-	const save = btn(_('Save and apply'), 'btn cbi-button cbi-button-positive important', async () => {
-		err.textContent = '';
-		save.disabled = true;
-		try {
-			const auto = mode.value === 'auto', manualMode = mode.value === 'manual';
-			const sections = auto && old.auto_provision && !targetsEdited ? old.sections.slice() : auto ? targets.map(f => f.value).filter(Boolean) :
-				manualMode ? checks.filter(c => c.field.checked).map(c => c.section) : [];
-			const cfg = { enabled: enabled.checked, wired_host: wired.checked, inform_url: url.value.trim(), firmware_version: version.value.trim(),
-				management_network: net.value, auto_provision: auto, wlan_id: auto ? wlan.value : manualMode ? wid.value.trim() : '', sections: sections.sort() };
-			if (auto && (!cfg.wlan_id || !sections.length)) { err.textContent = errors[cfg.wlan_id ? 'slot' : 'controller_wlan']; return; }
-			const reply = await configure(JSON.stringify(old), JSON.stringify(cfg));
-			if (reply.error && Object.hasOwn(uplinkMessages, reply.error)) { showUplink(reply.error, true); return; }
-			if (!reply.saved || reply.error) { err.textContent = errors[reply.error] || _('Could not apply settings.'); return; }
-			await reload(true);
-			ui.hideModal();
-		} catch (e) { err.textContent = _('Could not apply settings.'); }
-		finally { save.disabled = false; }
-	});
-	ui.showModal(_('UniFi settings'), [
-		div('uf-settings', [
-			E('label', { 'class': 'uf-check' }, [enabled, t(_('Enable UniFi agent'))]),
-			field(_('Controller inform URL'), url), field(_('Management interface'), net),
-			div('uf-field', [E('label', { 'class': 'uf-check' }, [wired, t(_('Show BPI-R4 as a wired client'))]),
-				E('small', {}, t(_('Requests a separate DHCP address on the Ethernet uplink. The gateway can list BPI-R4 alongside the adopted E7.')))]),
-			field(_('Reported E7 firmware'), version, _('Leave empty to use %s. This value is sent to UniFi Network.').format(d.default_version)),
-			E('details', {}, [E('summary', {}, t(_('WLAN provisioning'))),
-				field(_('Provisioning mode'), mode), quick, manual]),
-			err
-		]),
-		div('right', [btn(_('Cancel'), 'btn cbi-button', ui.hideModal), t(' '), save])]);
+		service: _('Settings were saved. The agent could not reload. Tap Save and apply to retry.') };
+	const form = E('fieldset', { 'class': 'uf-settings' }, [
+		E('label', { 'class': 'uf-check' }, [enabled, t(_('Enable UniFi agent'))]),
+		field(_('Controller inform URL'), url), field(_('Management interface'), net),
+		div('uf-field', [E('label', { 'class': 'uf-check' }, [wired, t(_('Show BPI-R4 as a wired client'))]),
+			E('small', {}, t(_('Requests a separate DHCP address on the Ethernet uplink. The gateway can list BPI-R4 alongside the adopted E7.')))]),
+		field(_('Reported E7 firmware'), version, _('Leave empty to use %s. This value is sent to UniFi Network.').format(d.default_version)),
+		E('details', {}, [E('summary', {}, t(_('WLAN provisioning'))),
+			field(_('Provisioning mode'), mode), quick, manual]),
+		err
+	]);
+	const buttons = saveButtons(_('Save and apply'), form, err, async send => {
+		const auto = mode.value === 'auto', manualMode = mode.value === 'manual';
+		const sections = auto && old.auto_provision && !targetsEdited ? old.sections.slice() : auto ? targets.map(f => f.value).filter(Boolean) :
+			manualMode ? checks.filter(c => c.field.checked).map(c => c.section) : [];
+		const cfg = { enabled: enabled.checked, wired_host: wired.checked, inform_url: url.value.trim(), firmware_version: version.value.trim(),
+			management_network: net.value, auto_provision: auto, wlan_id: auto ? wlan.value : manualMode ? wid.value.trim() : '', sections: sections.sort() };
+		if (auto && (!cfg.wlan_id || !sections.length)) throw new Error(errors[cfg.wlan_id ? 'slot' : 'controller_wlan']);
+		const reply = await send(() => configure(JSON.stringify(previous), JSON.stringify(cfg)));
+		if (reply.saved) previous = cfg;
+		if (Object.prototype.hasOwnProperty.call(uplinkMessages, reply.error)) {
+			form.querySelector('details').open = true;
+			showUplink(reply.error, true);
+			uplinkNote.scrollIntoView({ block: 'nearest' });
+			return false;
+		}
+		if (!reply.saved || reply.error) throw new Error(errors[reply.error] || _('Could not apply settings.'));
+		return true;
+	}, reload);
+	ui.showModal(_('UniFi settings'), [form, buttons]);
 }
 
 return view.extend({

@@ -24,13 +24,13 @@ jobs:
         include:
           - release: '24.10.6'
             vendor: MedyMa/immortalwrt-mt798x-6.6
-            revision: bb2f083027d80d783a3c9562f2fb9651cf34c544
+            revision: 126b31e2b42f5684ef213889c7eb5e9b8d316e27
             gcc: '13.3.0'
             format: ipk
             sha256: bf9821b98fe810e2cc3ab53b8faa13bc919b9d98d703cba5e53906c17bd23864
           - release: '25.12.0'
             vendor: MedyMa/immortalwrt-mt798x-25.12
-            revision: b0e775d7dbce3486b6a37b40b0f395bbd27c9b2b
+            revision: c1b76ec8a75956072b670fb845558b7068895183
             gcc: '14.3.0'
             format: apk
             sha256: 7e45a85b4af8af53ff17ca610ad6a7df312568cb52b730f93a21a91899f33139

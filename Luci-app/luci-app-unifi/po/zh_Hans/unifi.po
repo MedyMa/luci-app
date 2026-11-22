@@ -258,8 +258,8 @@ msgstr "设置"
 msgid "Settings changed in another session. Close and reopen this form."
 msgstr "设置已在其他会话中修改。请关闭并重新打开此窗口。"
 
-msgid "Settings were saved. The service could not be applied. Reopen the form to retry."
-msgstr "配置已保存，但服务应用失败。请重新打开此窗口后重试。"
+msgid "Settings were saved. The agent could not reload. Tap Save and apply to retry."
+msgstr "设置已保存，代理重载失败。请再次点击「保存并应用」重试。"
 
 msgid "Show BPI-R4 as a wired client"
 msgstr "在有线客户端中显示 BPI-R4"
@@ -404,3 +404,18 @@ msgstr "UCG 已撤下此 Wi-Fi"
 
 msgid "Paused on %s due to an unsupported access policy"
 msgstr "%s 的独立 AP 已暂停，BE14 暂不支持该接入策略"
+
+msgid "Saving…"
+msgstr "正在保存…"
+
+msgid "Waiting for agent…"
+msgstr "等待代理完成当前配置…"
+
+msgid "Another configuration is still being applied. Please try again."
+msgstr "代理仍在应用上一项配置，请稍后重试。"
+
+msgid "R4 did not confirm the save. Reopen settings to check the current values."
+msgstr "尚未收到 R4 的保存确认，请刷新并重新打开设置核对。"
+
+msgid "Settings saved."
+msgstr "设置已保存。"

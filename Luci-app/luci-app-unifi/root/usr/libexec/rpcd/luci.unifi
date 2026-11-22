@@ -8,7 +8,7 @@ import tempfile
 import time
 
 sys.path.insert(0, "/usr/lib/be14-ucg")
-from agent import (DEFAULT_VERSION, FACTORY_KEY, LAST_INFORM, MODEL, STATE, binding_signature, endpoint,
+from agent import (AgentBusy, DEFAULT_VERSION, FACTORY_KEY, LAST_INFORM, MODEL, STATE, binding_signature, endpoint,
                    firmware_version, local, locked, run, state_for)
 from telemetry import wireless_report
 from wired import controller_bridge_error, wired_uplink
@@ -158,11 +158,12 @@ def check(cfg, before):
             state = state_for(url)
             if state.get("wlan_model") != MODEL or state["key"] == FACTORY_KEY:
                 return "controller_wlan"
-            snap = local("overview", network=cfg["management_network"])
+            snap = local("overview", network=cfg["management_network"], stations=False)
+            snap["url"] = url
             issue = controller_bridge_error(snap)
             if issue:
                 return issue
-            if network_changed and (not snap.get("mac") or snap["mac"] != local("overview").get("mac")):
+            if network_changed and (not snap.get("mac") or snap["mac"] != local("overview", stations=False).get("mac")):
                 return "upstream_identity"
             slots = {s["section"]: s["band"] for s in snap["slots"]} if snap["slots"] else {}
             bands = {slots.get(s) for s in selected}
@@ -173,7 +174,7 @@ def check(cfg, before):
                 return "controller_wlan"
             return None
         if selected:
-            available = {s["section"]: s["band"] for s in local("overview").get("candidates", [])}
+            available = {s["section"]: s["band"] for s in local("overview", stations=False).get("candidates", [])}
             if not all(s in available for s in selected) or len({available[s] for s in selected}) != len(selected):
                 return "binding"
     return None
@@ -181,9 +182,10 @@ def check(cfg, before):
 
 def configure(args):
     change = json.loads(args["settings"])
-    with locked():
+    with locked(blocking=False):
         old = settings()
-        if old != json.loads(args["previous"]) or run(["/sbin/uci", "-q", "changes", "be14_ucg"]).strip():
+        previous = json.loads(args["previous"])
+        if (old != previous and old != change) or run(["/sbin/uci", "-q", "changes", "be14_ucg"]).strip():
             return {"error": "conflict"}
         error = check(change, old)
         if error:
@@ -218,7 +220,7 @@ def set_model(args):
             any(not c.isprintable() or c in "<>" for c in value)):
         return {"error": "model"}
     name = "be14_ucg.client_" + mac.replace(":", "")
-    with locked(), tempfile.TemporaryDirectory(prefix="unifi-model-") as delta:
+    with locked(blocking=False), tempfile.TemporaryDirectory(prefix="unifi-model-") as delta:
         if run(["/sbin/uci", "-q", "changes", "be14_ucg"]).strip():
             return {"error": "conflict"}
         rows = (s for ap in local("overview")["aps"] for s in ap.get("sta_table", []))
@@ -226,7 +228,7 @@ def set_model(args):
         if not station:
             return {"error": "disconnected"}
         previous = station["device_name"] if station.get("model_source") == "manual" else ""
-        if previous != args["previous"]:
+        if previous != args["previous"] and previous != value:
             return {"error": "conflict"}
         if previous != value:
             cmd = ["/sbin/uci", "-t", delta]
@@ -251,6 +253,8 @@ if __name__ == "__main__":
                 result = set_model(request)
             else:
                 result = configure(request)
+        except AgentBusy:
+            result = {"error": "busy"}
         except (KeyError, TypeError, ValueError, OSError, subprocess.SubprocessError):
             result = {"error": "unavailable"}
         print(json.dumps(result, allow_nan=False))
