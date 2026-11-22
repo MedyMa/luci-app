@@ -477,21 +477,30 @@ function showSettings(d, reload) {
 		upstream_identity: _('%s uses a different management MAC. Select the interface of the adopted E7.')
 	};
 	const uplinkNote = E('small', { 'aria-live': 'polite' });
-	function showUplink(issue, rejected) {
+	function showUplink(issue, rejected, conflicts) {
 		const iface = net.value === old.management_network && d.management_device && d.management_device !== net.value
 			? net.value + ' · ' + d.management_device : net.value;
 		const edited = net.value !== old.management_network || url.value.trim() !== old.inform_url;
 		uplinkNote.classList.toggle('uf-error', !!rejected);
 		if (edited && !rejected)
 			uplinkNote.textContent = _('The uplink will be checked when you apply the settings.');
+		else if (issue === 'upstream_dhcp' && Array.isArray(conflicts) && conflicts.length) {
+			const modes = { server: _('Server mode'), relay: _('Relay mode'), hybrid: _('Hybrid mode') };
+			const services = { dhcpv4: 'DHCPv4', ra: 'RA', dhcpv6: 'DHCPv6' };
+			uplinkNote.textContent = conflicts.map(row => {
+				const configured = Object.keys(services).filter(k => row[k])
+					.map(k => '%s (%s)'.format(services[k], modes[row[k]] || row[k]));
+				return _('Under Network → Interfaces → %s → DHCP Server, check %s.').format(row.interface, configured.join(', '));
+			}).concat(_('To use UCG for client addresses, disable the listed services on this uplink.')).join(' ');
+		}
 		else if (issue || (!edited && !d.upstream_ready))
 			uplinkNote.textContent = (uplinkMessages[issue] || _('Could not verify the uplink for %s.')).format(iface);
 		else
 			uplinkNote.textContent = _('New APs use %s. UCG supplies DHCP and classifies client traffic. Applying may briefly reconnect this radio.').format(net.value);
 	}
-	showUplink(d.upstream_error);
-	net.addEventListener('change', () => showUplink(d.upstream_error));
-	url.addEventListener('input', () => showUplink(d.upstream_error));
+	showUplink(d.upstream_error, false, d.upstream_conflicts);
+	net.addEventListener('change', () => showUplink(d.upstream_error, false, d.upstream_conflicts));
+	url.addEventListener('input', () => showUplink(d.upstream_error, false, d.upstream_conflicts));
 	const quick = div('uf-quick', [field(_('Controller Wi-Fi'), wlan,
 		_('Choose a native personal or OWE network assigned to the E7. Create a secondary AP here or select an unused, disabled AP.')), bandFields, uplinkNote,
 		...(old.auto_provision ? [E('small', { 'class': 'uf-provision-state' }, t(provisionState))] : [])]);
@@ -534,7 +543,7 @@ function showSettings(d, reload) {
 		if (reply.saved) previous = cfg;
 		if (Object.prototype.hasOwnProperty.call(uplinkMessages, reply.error)) {
 			form.querySelector('details').open = true;
-			showUplink(reply.error, true);
+			showUplink(reply.error, true, reply.upstream_conflicts);
 			uplinkNote.scrollIntoView({ block: 'nearest' });
 			return false;
 		}

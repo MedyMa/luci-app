@@ -419,3 +419,18 @@ msgstr "尚未收到 R4 的保存确认，请刷新并重新打开设置核对�
 
 msgid "Settings saved."
 msgstr "设置已保存。"
+
+msgid "Server mode"
+msgstr "服务器模式"
+
+msgid "Relay mode"
+msgstr "中继模式"
+
+msgid "Hybrid mode"
+msgstr "混合模式"
+
+msgid "Under Network → Interfaces → %s → DHCP Server, check %s."
+msgstr "请到「网络 → 接口 → %s → DHCP 服务器」检查 %s。"
+
+msgid "To use UCG for client addresses, disable the listed services on this uplink."
+msgstr "要让 UCG 给客户端分配地址，请在此上联关闭列出的服务。"
